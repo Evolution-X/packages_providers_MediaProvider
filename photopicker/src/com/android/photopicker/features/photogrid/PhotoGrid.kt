@@ -49,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -386,6 +387,7 @@ fun PhotoGridNavButton(modifier: Modifier) {
         },
         modifier = modifier,
         isCurrentRoute = { route -> route == PHOTO_GRID.route },
+        currentTabLabel = buttonText,
     ) {
         when {
             categoryFeatureEnabled && searchFeatureEnabled -> {

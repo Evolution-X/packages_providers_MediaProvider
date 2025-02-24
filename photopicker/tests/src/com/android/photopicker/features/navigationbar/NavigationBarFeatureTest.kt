@@ -32,8 +32,9 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.performClick
 import androidx.test.filters.SdkSuppress
 import com.android.photopicker.R
 import com.android.photopicker.core.ActivityModule
@@ -74,6 +75,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -226,6 +228,13 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
             getTestableContext()
                 .getResources()
                 .getString(R.string.photopicker_photos_nav_button_label)
+        val photosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
         val albumsGridNavButtonLabel =
             getTestableContext()
                 .getResources()
@@ -244,12 +253,12 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Photos Grid Nav Button and Albums Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
 
             composeTestRule
-                .onNode(hasText(albumsGridNavButtonLabel))
+                .onNode(hasContentDescription(albumsGridNavButtonLabel))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
@@ -274,6 +283,13 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
             getTestableContext()
                 .getResources()
                 .getString(R.string.photopicker_photos_nav_button_label)
+        val photosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
         val categoryGridNavButtonLabel =
             getTestableContext()
                 .getResources()
@@ -292,12 +308,12 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Photos Grid Nav Button and Category Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
 
             composeTestRule
-                .onNode(hasText(categoryGridNavButtonLabel))
+                .onNode(hasContentDescription(categoryGridNavButtonLabel))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
@@ -312,6 +328,13 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
             getTestableContext()
                 .getResources()
                 .getString(R.string.photopicker_photos_nav_button_label)
+        val photosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
         val albumsGridNavButtonLabel =
             getTestableContext()
                 .getResources()
@@ -330,12 +353,12 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Photos Grid Nav Button and Albums Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
 
             composeTestRule
-                .onNode(hasText(albumsGridNavButtonLabel))
+                .onNode(hasContentDescription(albumsGridNavButtonLabel))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
@@ -350,6 +373,13 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
             getTestableContext()
                 .getResources()
                 .getString(R.string.photopicker_photos_nav_button_label)
+        val photosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
         val categoryGridNavButtonLabel =
             getTestableContext()
                 .getResources()
@@ -366,14 +396,150 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
 
             composeTestRule.waitForIdle()
 
-            // Photos Grid Nav Button and Albums Grid Nav Button
+            // Photos Grid Nav Button and Category Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
 
             composeTestRule
-                .onNode(hasText(categoryGridNavButtonLabel))
+                .onNode(hasContentDescription(categoryGridNavButtonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+        }
+    }
+
+    /* Verify Navigation Bar when search flag disabled has correct content description for both
+    photos and albums grid.*/
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testNavigationBar_withSearchFlagDisabled_correctContentDescriptionForSelectedTab() {
+        val photosGridNavButtonLabel =
+            getTestableContext()
+                .getResources()
+                .getString(R.string.photopicker_photos_nav_button_label)
+        val photosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
+        val albumsGridNavButtonLabel =
+            getTestableContext()
+                .getResources()
+                .getString(R.string.photopicker_albums_nav_button_label)
+        val albumsGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    albumsGridNavButtonLabel,
+                )
+
+        testScope.runTest {
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            composeTestRule.waitForIdle()
+
+            // Photos Grid Nav Button and Albums Grid Nav Button
+            composeTestRule
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+
+            composeTestRule
+                .onNode(hasContentDescription(albumsGridNavButtonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+                .performClick()
+
+            // wait for the photo picker to switch tab
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNode(hasContentDescription(photosGridNavButtonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+
+            composeTestRule
+                .onNode(hasContentDescription(albumsGridNavButtonDescription))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+        }
+    }
+
+    /* Verify Navigation Bar when search flag enabled has correct content description for both
+    photos and categories grid.*/
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testNavigationBar_withSearchFlagEnabled_correctContentDescriptionForSelectedTab() {
+        val photosGridNavButtonLabel =
+            getTestableContext()
+                .getResources()
+                .getString(R.string.photopicker_photos_nav_button_label)
+        val photosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
+        val categoryGridNavButtonLabel =
+            getTestableContext()
+                .getResources()
+                .getString(R.string.photopicker_categories_nav_button_label)
+        val categoryGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    categoryGridNavButtonLabel,
+                )
+
+        testScope.runTest {
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            composeTestRule.waitForIdle()
+
+            // Photos Grid Nav Button and Albums Grid Nav Button
+            composeTestRule
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+
+            composeTestRule
+                .onNode(hasContentDescription(categoryGridNavButtonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+                .performClick()
+
+            // wait for the photo picker to switch tab
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNode(hasContentDescription(photosGridNavButtonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+
+            composeTestRule
+                .onNode(hasContentDescription(categoryGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
@@ -385,6 +551,13 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
             getTestableContext()
                 .getResources()
                 .getString(R.string.photopicker_videos_nav_button_label)
+        val videosGridNavButtonDescription =
+            getTestableContext()
+                .getResources()
+                .getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    videosGridNavButtonLabel,
+                )
 
         testScope.runTest {
             val testIntent =
@@ -405,7 +578,7 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Photos Grid Nav Button with Videos title
             composeTestRule
-                .onNode(hasText(videosGridNavButtonLabel))
+                .onNode(hasContentDescription(videosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }

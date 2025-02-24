@@ -43,11 +43,14 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.filterToOne
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.viewinterop.AndroidView
@@ -854,9 +857,23 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             val resources = getTestableContext().getResources()
             // This is the label for the "Photos" tab in the picker.
             val photosTabLabel = resources.getString(R.string.photopicker_photos_nav_button_label)
+            val photosTabDescription =
+                resources.getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosTabLabel,
+                )
 
-            val node = composeTestRule.onNodeWithText(photosTabLabel)
-            node.assertIsDisplayed()
+            val node =
+                composeTestRule
+                    // semantic is unmerged to get text separate from the button
+                    .onNodeWithContentDescription(
+                        label = photosTabDescription,
+                        useUnmergedTree = true,
+                    )
+                    .assertIsDisplayed()
+                    // extract the text node from the nav bar button
+                    .onChildren()
+                    .filterToOne(hasText(photosTabLabel))
             val initialColor = node.extractTextColor()
 
             // Create new configuration which will update theme to dark
@@ -897,13 +914,21 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             val resources = getTestableContext().getResources()
             // This is the label for the "Photos" tab in the picker.
             val photosTabLabel = resources.getString(R.string.photopicker_photos_nav_button_label)
+            val photosTabDescription =
+                resources.getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosTabLabel,
+                )
 
-            composeTestRule.onNodeWithText(photosTabLabel).assertDoesNotExist()
+            composeTestRule.onNodeWithContentDescription(photosTabDescription).assertDoesNotExist()
 
             session.notifyPhotopickerExpanded(true)
             advanceTimeBy(100)
 
-            composeTestRule.onNodeWithText(photosTabLabel).assertExists().assertIsDisplayed()
+            composeTestRule
+                .onNodeWithContentDescription(photosTabDescription)
+                .assertExists()
+                .assertIsDisplayed()
         }
 
     /** Gets the correct nodes of media item for given indices and performs click. */
