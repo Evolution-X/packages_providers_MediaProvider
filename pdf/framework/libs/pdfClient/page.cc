@@ -32,8 +32,10 @@
 #include "fpdf_doc.h"
 #include "fpdf_text.h"
 #include "fpdfview.h"
+#include "image_object.h"
 #include "logging.h"
 #include "normalize.h"
+#include "path_object.h"
 #include "rect.h"
 #include "utf.h"
 #include "utils/annot_hider.h"
@@ -867,6 +869,10 @@ void Page::PopulateAnnotations() {
             }
             case FPDF_ANNOT_HIGHLIGHT: {
                 annotation = std::make_unique<HighlightAnnotation>(bounds);
+                break;
+            }
+            case FPDF_ANNOT_FREETEXT: {
+                annotation = std::make_unique<FreeTextAnnotation>(bounds);
                 break;
             }
             default: {
