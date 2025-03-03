@@ -35,6 +35,9 @@ import com.android.providers.media.photopicker.data.PickerDbFacade;
 public class PickerDbTestUtils {
     public static final long SIZE_BYTES = 7000;
     public static final long DATE_TAKEN_MS = 1623852851911L;
+    public static final long DATE_TAKEN_MS_1 = 1646352000000L; // 4th March 2022
+    public static final long DATE_TAKEN_MS_2 = 1646870400000L; // 10th March 2022
+    public static final long DATE_TAKEN_MS_3 = 1686441600000L; // 11 June 2023
     public static final long GENERATION_MODIFIED = 1L;
     public static final long DURATION_MS = 5;
     public static final int HEIGHT = 720;

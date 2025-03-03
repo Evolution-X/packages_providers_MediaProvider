@@ -26,6 +26,9 @@ import static com.android.providers.media.photopicker.util.PickerDbTestUtils.CLO
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.CLOUD_ID_4;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.CLOUD_PROVIDER;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.DATE_TAKEN_MS;
+import static com.android.providers.media.photopicker.util.PickerDbTestUtils.DATE_TAKEN_MS_1;
+import static com.android.providers.media.photopicker.util.PickerDbTestUtils.DATE_TAKEN_MS_2;
+import static com.android.providers.media.photopicker.util.PickerDbTestUtils.DATE_TAKEN_MS_3;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.DURATION_MS;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.GENERATION_MODIFIED;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.GIF_IMAGE_MIME_TYPE;
@@ -95,6 +98,7 @@ import android.provider.CloudMediaProviderContract;
 import android.provider.MediaStore;
 import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
+import android.util.Pair;
 
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SdkSuppress;
@@ -133,6 +137,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
 
+import kotlin.Triple;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -143,6 +149,9 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 
 import java.io.File;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -463,6 +472,318 @@ public class PickerDataLayerV2Test {
             cr.moveToFirst();
             assertMediaCursor(cr, LOCAL_ID, LOCAL_PROVIDER, DATE_TAKEN_MS, MP4_VIDEO_MIME_TYPE);
         }
+    }
+
+
+    @Test
+    public void testItemsPerMonthQueryWithInvalidProviders() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS_1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS_3, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS_2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1);
+
+
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
+
+        try (Cursor cr = PickerDataLayerV2.queryItemsPerMonth(
+                mMockContext, getItemsPerMonthQueryExtras(
+                        new ArrayList<>(Arrays.asList("invalid.provider"))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(0);
+        }
+    }
+
+    @Test
+    public void testItemsPerMonthQueryWithCloudQueryDisabled() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS_1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS_3, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS_2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1);
+
+
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
+
+        List<Long> dateTakenMsList = Arrays.asList(DATE_TAKEN_MS_1, DATE_TAKEN_MS_3);
+        //Triple<Integer, Integer, Integer> represents  Triple<Year , Month, ItemsCount>
+        List<Triple<Integer, Integer, Integer>> expectedItemsPerMonthList =
+                getExpectedItemsPerMonth(dateTakenMsList);
+
+        try (Cursor cr = PickerDataLayerV2.queryItemsPerMonth(
+                mMockContext, getItemsPerMonthQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(expectedItemsPerMonthList.size());
+
+            int currIndexInExpectedList = 0;
+            cr.moveToFirst();
+            while (currIndexInExpectedList < expectedItemsPerMonthList.size()) {
+                Triple<Integer, Integer, Integer> currItemsPerMonth =
+                        expectedItemsPerMonthList.get(currIndexInExpectedList);
+                assertItemsPerMonthCursor(cr, currItemsPerMonth.getFirst(),
+                        currItemsPerMonth.getSecond(), currItemsPerMonth.getThird());
+                cr.moveToNext();
+                currIndexInExpectedList++;
+            }
+        }
+    }
+
+    @Test
+    public void testItemsPerMonthQueryWithCloudQueryEnabled() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS_1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS_3, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS_2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1);
+
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        List<Long> dateTakenMsList = Arrays.asList(
+                DATE_TAKEN_MS_1, DATE_TAKEN_MS_2, DATE_TAKEN_MS_3);
+        //Triple<Integer, Integer, Integer> represents  Triple<Year , Month, ItemsCount>
+        List<Triple<Integer, Integer, Integer>> expectedItemsPerMonthList =
+                getExpectedItemsPerMonth(dateTakenMsList);
+
+        try (Cursor cr = PickerDataLayerV2.queryItemsPerMonth(
+                mMockContext, getItemsPerMonthQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(expectedItemsPerMonthList.size());
+
+            int currIndexInExpectedList = 0;
+            cr.moveToFirst();
+            while (currIndexInExpectedList < expectedItemsPerMonthList.size()) {
+                Triple<Integer, Integer, Integer> currItemsPerMonth =
+                        expectedItemsPerMonthList.get(currIndexInExpectedList);
+                assertItemsPerMonthCursor(cr, currItemsPerMonth.getFirst(),
+                        currItemsPerMonth.getSecond(), currItemsPerMonth.getThird());
+                cr.moveToNext();
+                currIndexInExpectedList++;
+            }
+        }
+    }
+
+    @Test
+    public void testItemsPerMonthQueryWithLocalAndCloudDedupe() {
+        Cursor cursor1 = getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS - 1);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1,
+                GENERATION_MODIFIED, /* mediaStoreUri */ null, /* sizeBytes */ 1,
+                MP4_VIDEO_MIME_TYPE, STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(CLOUD_ID_2, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1);
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        List<Long> dateTakenMsList = Arrays.asList(DATE_TAKEN_MS + 1, DATE_TAKEN_MS);
+        //Triple<Integer, Integer, Integer> represents  Triple<Year , Month, ItemsCount>
+        List<Triple<Integer, Integer, Integer>> expectedItemsPerMonthList =
+                getExpectedItemsPerMonth(dateTakenMsList);
+
+        try (Cursor cr = PickerDataLayerV2.queryItemsPerMonth(
+                mMockContext, getItemsPerMonthQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(expectedItemsPerMonthList.size());
+
+            int currIndexInExpectedList = 0;
+            cr.moveToFirst();
+            while (currIndexInExpectedList < expectedItemsPerMonthList.size()) {
+                Triple<Integer, Integer, Integer> currItemsPerMonth =
+                        expectedItemsPerMonthList.get(currIndexInExpectedList);
+                assertItemsPerMonthCursor(cr, currItemsPerMonth.getFirst(),
+                        currItemsPerMonth.getSecond(), currItemsPerMonth.getThird());
+                cr.moveToNext();
+                currIndexInExpectedList++;
+            }
+        }
+    }
+
+    @Test
+    public void testItemsPerMonthQueryWithAllVideoMimeTypeFilter() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, JPEG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS_1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_3, DATE_TAKEN_MS_2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, PNG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor4 = getMediaCursor(LOCAL_ID_4, DATE_TAKEN_MS_3, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, GIF_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor4, 1);
+
+        // Only video media's date taken is considered.
+        List<Long> dateTakenMsList = Arrays.asList(DATE_TAKEN_MS_1);
+        //Triple<Integer, Integer, Integer> represents  Triple<Year , Month, ItemsCount>
+        List<Triple<Integer, Integer, Integer>> expectedItemsPerMonthList =
+                getExpectedItemsPerMonth(dateTakenMsList);
+
+        try (Cursor cr = PickerDataLayerV2.queryItemsPerMonth(
+                mMockContext, getItemsPerMonthQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)),
+                        new ArrayList<>(Arrays.asList("video/*"))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(expectedItemsPerMonthList.size());
+
+            int currIndexInExpectedList = 0;
+            cr.moveToFirst();
+            while (currIndexInExpectedList < expectedItemsPerMonthList.size()) {
+                Triple<Integer, Integer, Integer> currItemsPerMonth =
+                        expectedItemsPerMonthList.get(currIndexInExpectedList);
+                assertItemsPerMonthCursor(cr, currItemsPerMonth.getFirst(),
+                        currItemsPerMonth.getSecond(), currItemsPerMonth.getThird());
+                cr.moveToNext();
+                currIndexInExpectedList++;
+            }
+        }
+    }
+
+    @Test
+    public void testItemsPerMonthQueryWithAllImageMimeTypeFilter() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, JPEG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS_1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_3, DATE_TAKEN_MS_2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, PNG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor4 = getMediaCursor(LOCAL_ID_4, DATE_TAKEN_MS_3, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, GIF_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor4, 1);
+
+        // Only image media's date taken are considered.
+        List<Long> dateTakenMsList = Arrays.asList(DATE_TAKEN_MS, DATE_TAKEN_MS_2, DATE_TAKEN_MS_3);
+        //Triple<Integer, Integer, Integer> represents  Triple<Year , Month, ItemsCount>
+        List<Triple<Integer, Integer, Integer>> expectedItemsPerMonthList =
+                getExpectedItemsPerMonth(dateTakenMsList);
+
+        try (Cursor cr = PickerDataLayerV2.queryItemsPerMonth(
+                mMockContext, getItemsPerMonthQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)),
+                        new ArrayList<>(Arrays.asList("image/*"))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(expectedItemsPerMonthList.size());
+
+            int currIndexInExpectedList = 0;
+            cr.moveToFirst();
+            while (currIndexInExpectedList < expectedItemsPerMonthList.size()) {
+                Triple<Integer, Integer, Integer> currItemsPerMonth =
+                        expectedItemsPerMonthList.get(currIndexInExpectedList);
+                assertItemsPerMonthCursor(cr, currItemsPerMonth.getFirst(),
+                        currItemsPerMonth.getSecond(), currItemsPerMonth.getThird());
+                cr.moveToNext();
+                currIndexInExpectedList++;
+            }
+        }
+    }
+
+    /**
+     * Calculates the count of items per year and month from a list of dateTakenMs values,
+     * considering the device's local time zone, and returns the results in descending
+     * order of year and month.
+     *
+     * @param dateTakenMsList A list of timestamps (milliseconds since epoch).
+     * @return A list of {@literal Triple<Integer, Integer, Integer>} representing the year, month,
+     * and count of items for each year-month combination, sorted in descending
+     * order of year and then month.
+     */
+    public static List<Triple<Integer, Integer, Integer>> getExpectedItemsPerMonth(
+            List<Long> dateTakenMsList) {
+        Map<Pair<Integer, Integer>, Integer> yearMonthCounts = new HashMap<>();
+
+        for (long dateTakenMs : dateTakenMsList) {
+            Pair<Integer, Integer> yearMonth = getYearAndMonth(dateTakenMs);
+            yearMonthCounts.put(yearMonth, yearMonthCounts.getOrDefault(yearMonth, 0) + 1);
+        }
+        List<Triple<Integer, Integer, Integer>> result = new ArrayList<>();
+        for (Map.Entry<Pair<Integer, Integer>, Integer> entry : yearMonthCounts.entrySet()) {
+            result.add(new Triple<>(entry.getKey().first, entry.getKey().second, entry.getValue()));
+        }
+
+        result.sort((a, b) -> {
+            int yearComparison = Integer.compare(b.getFirst(), a.getFirst()); // Descending year
+            if (yearComparison != 0) return yearComparison;
+            return Integer.compare(b.getSecond(), a.getSecond()); // Descending month
+        });
+        return result;
+    }
+
+    /**
+     * Extracts the year and month from a given timestamp (milliseconds since epoch),
+     * considering the device's local time zone.
+     *
+     * @param dateTaken The timestamp in milliseconds since the Unix epoch.
+     * @return A Pair containing the year (as an Integer) and the month (as an Integer),
+     * or null if an error occurs during date/time conversion.
+     */
+    private static Pair<Integer, Integer> getYearAndMonth(long dateTaken) {
+        long dateTakenSeconds = dateTaken / 1000;
+
+        // Get the device's local time zone offset at the given timestamp.
+        ZoneOffset localOffset = ZoneOffset.systemDefault().getRules().getOffset(
+                Instant.ofEpochSecond(dateTakenSeconds));
+
+        LocalDateTime localDateTime = LocalDateTime.ofEpochSecond(
+                dateTakenSeconds,
+                0,
+                localOffset
+        );
+        int year = localDateTime.getYear();
+        int month = localDateTime.getMonthValue();
+        return new Pair<>(year, month);
     }
 
     @Test
@@ -2913,6 +3234,22 @@ public class PickerDataLayerV2Test {
                 .isEqualTo(isPreGranted ? 1 : 0);
     }
 
+    private static void assertItemsPerMonthCursor(
+            Cursor cursor, int year, int month, int itemsCount) {
+        assertWithMessage("Unexpected year value in the Items per month cursor.")
+                .that(Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow(
+                        PickerSQLConstants.ItemsPerMonthResponse.YEAR_TAKEN.getProjectedName()))))
+                .isEqualTo(year);
+        assertWithMessage("Unexpected month value in the Items per month cursor.")
+                .that(Integer.parseInt(cursor.getString(cursor.getColumnIndexOrThrow(
+                        PickerSQLConstants.ItemsPerMonthResponse.MONTH_TAKEN.getProjectedName()))))
+                .isEqualTo(month);
+        assertWithMessage("Unexpected value of items count in the Items per month cursor.")
+                .that(cursor.getInt(cursor.getColumnIndexOrThrow(
+                        PickerSQLConstants.ItemsPerMonthResponse.ITEM_COUNT.getProjectedName())))
+                .isEqualTo(itemsCount);
+    }
+
     private static void assertAlbumCursor(Cursor cursor, String albumId, String authority,
             Long dateTaken, String coverMediaId) {
         final MediaSource mediaSource = LOCAL_PROVIDER.equals(authority)
@@ -2975,6 +3312,19 @@ public class PickerDataLayerV2Test {
         extras.putInt("page_size", pageSize);
         extras.putStringArrayList("providers", new ArrayList<>(providers));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+        return extras;
+    }
+
+    private Bundle getItemsPerMonthQueryExtras(List<String> providers) {
+        Bundle extras = new Bundle();
+        extras.putStringArrayList("providers", new ArrayList<>(providers));
+        extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+        return extras;
+    }
+
+    private Bundle getItemsPerMonthQueryExtras(List<String> providers, List<String> mimeTypes) {
+        Bundle extras = getItemsPerMonthQueryExtras(providers);
+        extras.putStringArrayList("mime_types", new ArrayList<>(mimeTypes));
         return extras;
     }
 
