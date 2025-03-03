@@ -29,6 +29,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.CancellationSignal;
+import android.os.OperationCanceledException;
 import android.provider.CloudMediaProviderContract;
 import android.util.Log;
 import android.util.Pair;
@@ -101,8 +102,6 @@ public class MediaInMediaSetsSyncWorker extends Worker {
             Log.i(TAG, "Starting media in media sets sync from sync source " + syncSource
                     + " with mediaSetId " + mediaSetId);
 
-            checkIfWorkerHasStopped();
-
             checkValidityOfWorkerInputParams(
                     mediaSetId, syncSource, mediaSetPickerId, mediaSetAuthority);
 
@@ -135,7 +134,7 @@ public class MediaInMediaSetsSyncWorker extends Worker {
             int syncSource, @NonNull String mediaSetId,
             @NonNull Long mediaSetPickerId, @NonNull String mediaSetAuthority,
             @Nullable String[] mimeTypes)
-            throws RequestObsoleteException, IllegalArgumentException {
+            throws RequestObsoleteException, IllegalArgumentException, OperationCanceledException {
         final PickerSearchProviderClient searchClient =
                 PickerSearchProviderClient.create(mContext, mediaSetAuthority);
 
@@ -160,6 +159,9 @@ public class MediaInMediaSetsSyncWorker extends Worker {
 
                 try (Cursor mediaInMediaSetsCursor = fetchMediaInMediaSetFromCmp(
                         searchClient, mediaSetId, resumePageToken, mimeTypes)) {
+                    Log.d(TAG, "Fetching media set content for request id " + mediaSetPickerId
+                            + " and next page token " + resumePageToken);
+
                     // Cache the media items in this media set
                     List<ContentValues> mediaItemsToInsert =
                             MediaInMediaSetsDatabaseUtil.getMediaContentValuesFromCursor(
@@ -167,6 +169,9 @@ public class MediaInMediaSetsSyncWorker extends Worker {
                                     mediaSetPickerId,
                                     isAuthorityLocal(mediaSetAuthority)
                             );
+
+                    checkIfWorkerHasStopped();
+                    checkIfCurrentCloudProviderAuthorityHasChanged(mediaSetAuthority);
                     int numberOfRowsInserted = MediaInMediaSetsDatabaseUtil.cacheMediaOfMediaSet(
                             mDatabase, mediaItemsToInsert, mediaSetAuthority
                     );
@@ -198,9 +203,14 @@ public class MediaInMediaSetsSyncWorker extends Worker {
                 }
             }
         } finally {
-            MediaSetsDatabaseUtil.updateMediaInMediaSetSyncResumeKey(
-                    mDatabase, mediaSetPickerId, resumePageToken
-            );
+            // Save progress in DB
+            // TODO(b/398221732): Resume syncs.
+            if (SYNC_COMPLETE_RESUME_KEY.equals(resumePageToken)) {
+                checkIfWorkerHasStopped();
+                MediaSetsDatabaseUtil.updateMediaInMediaSetSyncResumeKey(
+                        mDatabase, mediaSetPickerId, SYNC_COMPLETE_RESUME_KEY
+                );
+            }
         }
     }
 
@@ -214,7 +224,7 @@ public class MediaInMediaSetsSyncWorker extends Worker {
     private Cursor fetchMediaInMediaSetFromCmp(
             @NonNull PickerSearchProviderClient pickerSearchProviderClient,
             @NonNull String mediaSetId, @Nullable String resumePageToken,
-            @Nullable String[] mimeTypes) {
+            @Nullable String[] mimeTypes) throws OperationCanceledException {
         final Cursor cursor = pickerSearchProviderClient.fetchMediasInMediaSetFromCmp(
                 mediaSetId,
                 resumePageToken,
@@ -300,5 +310,11 @@ public class MediaInMediaSetsSyncWorker extends Worker {
 
     private SQLiteDatabase getDatabase() {
         return PickerSyncController.getInstanceOrThrow().getDbFacade().getDatabase();
+    }
+
+    @Override
+    public void onStopped() {
+        // Mark the request as cancelled so that the cancellation can be propagated to subtasks.
+        mCancellationSignal.cancel();
     }
 }

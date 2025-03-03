@@ -19,12 +19,14 @@
 #include <android/bitmap.h>
 #include <string.h>
 
+#include "image_object.h"
 #include "logging.h"
 #include "rect.h"
 
 using pdfClient::Annotation;
 using pdfClient::Color;
 using pdfClient::Document;
+using pdfClient::FreeTextAnnotation;
 using pdfClient::HighlightAnnotation;
 using pdfClient::ICoordinateConverter;
 using pdfClient::ImageObject;
@@ -63,6 +65,7 @@ static const char* kImageObject = "android/graphics/pdf/component/PdfPageImageOb
 static const char* kStampAnnotation = "android/graphics/pdf/component/StampAnnotation";
 static const char* kPdfAnnotation = "android/graphics/pdf/component/PdfAnnotation";
 static const char* kHighlightAnnotation = "android/graphics/pdf/component/HighlightAnnotation";
+static const char* kFreeTextAnnotation = "android/graphics/pdf/component/FreeTextAnnotation";
 
 static const char* kBitmap = "android/graphics/Bitmap";
 static const char* kBitmapConfig = "android/graphics/Bitmap$Config";
@@ -124,6 +127,10 @@ jobject ToJavaInteger(JNIEnv* env, const int& i) {
 
 jobject ToJavaString(JNIEnv* env, const std::string& s) {
     return env->NewStringUTF(s.c_str());
+}
+
+jobject ToJavaString(JNIEnv* env, const std::wstring& s) {
+    return env->NewString((jchar*)s.c_str(), s.length());
 }
 
 // Copy a C++ vector to a java ArrayList, using the given function to convert.
@@ -432,6 +439,35 @@ jobject ToJavaBitmap(JNIEnv* env, void* buffer, int width, int height) {
     return java_bitmap;
 }
 
+jstring wstringToJstringUTF16(JNIEnv* env, const std::wstring& wstr) {
+    jsize len = wstr.length();
+    jchar* jchars = new jchar[len + 1];  // +1 for null terminator
+
+    for (size_t i = 0; i < len; ++i) {
+        jchars[i] = static_cast<jchar>(wstr[i]);
+    }
+    jchars[len] = 0;
+
+    jstring result = env->NewString(jchars, len);
+
+    delete[] jchars;
+
+    return result;
+}
+
+std::wstring jStringToWstring(JNIEnv* env, jstring java_string) {
+    std::wstring value;
+
+    const jchar* raw = env->GetStringChars(java_string, 0);
+    jsize len = env->GetStringLength(java_string);
+
+    value.assign(raw, raw + len);
+
+    env->ReleaseStringChars(java_string, raw);
+
+    return value;
+}
+
 int ToJavaColorInt(Color color) {
     // Get ARGB values from Native Color
     uint A = color.a;
@@ -559,33 +595,33 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
                     env->GetMethodID(path_object_class, "<init>", funcsig("V", kPath).c_str());
 
             // Create Java Path from Native PathSegments.
-            jobject java_path = ToJavaPath(env, path_object->segments, converter);
+            jobject java_path = ToJavaPath(env, path_object->segments_, converter);
 
             // Create Java PathObject Instance.
             java_page_object = env->NewObject(path_object_class, init_path, java_path);
 
             // Set Java PathObject FillColor.
-            if (path_object->is_fill_mode) {
+            if (path_object->is_fill_) {
                 static jmethodID set_fill_color = env->GetMethodID(
                         path_object_class, "setFillColor", funcsig("V", kColor).c_str());
 
                 env->CallVoidMethod(java_page_object, set_fill_color,
-                                    ToJavaColor(env, path_object->fill_color));
+                                    ToJavaColor(env, path_object->fill_color_));
             }
 
             // Set Java PathObject StrokeColor.
-            if (path_object->is_stroke) {
+            if (path_object->is_stroke_) {
                 static jmethodID set_stroke_color = env->GetMethodID(
                         path_object_class, "setStrokeColor", funcsig("V", kColor).c_str());
 
                 env->CallVoidMethod(java_page_object, set_stroke_color,
-                                    ToJavaColor(env, path_object->stroke_color));
+                                    ToJavaColor(env, path_object->stroke_color_));
             }
 
             // Set Java Stroke Width.
             static jmethodID set_stroke_width =
                     env->GetMethodID(path_object_class, "setStrokeWidth", "(F)V");
-            env->CallVoidMethod(java_page_object, set_stroke_width, path_object->stroke_width);
+            env->CallVoidMethod(java_page_object, set_stroke_width, path_object->stroke_width_);
 
             break;
         }
@@ -604,7 +640,7 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
 
             // Create Java Bitmap from Native Bitmap Buffer.
             jobject java_bitmap =
-                    ToJavaBitmap(env, buffer, image_object->width, image_object->height);
+                    ToJavaBitmap(env, buffer, image_object->width_, image_object->height_);
 
             // Create Java ImageObject Instance.
             java_page_object = env->NewObject(image_object_class, init_image, java_bitmap);
@@ -626,7 +662,7 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
     // Set Java Matrix
     static jmethodID set_matrix =
             env->GetMethodID(page_object_class, "setMatrix", funcsig("V", kMatrix).c_str());
-    env->CallVoidMethod(java_page_object, set_matrix, ToJavaMatrix(env, page_object->matrix));
+    env->CallVoidMethod(java_page_object, set_matrix, ToJavaMatrix(env, page_object->matrix_));
 
     return java_page_object;
 }
@@ -696,7 +732,7 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             env->GetFloatArrayRegion(java_approximate, 0, size, path_approximate);
 
             // Set PathObject Data PathSegments.
-            auto& segments = path_object->segments;
+            auto& segments = path_object->segments_;
             for (int i = 0; i < size; i += 3) {
                 // Get DeviceToPage Coordinates
                 Point_f output =
@@ -714,9 +750,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             jobject java_fill_color = env->CallObjectMethod(java_page_object, get_fill_color);
 
             // Set PathObject Data Fill Mode and Fill Color
-            path_object->is_fill_mode = (java_fill_color != NULL);
-            if (path_object->is_fill_mode) {
-                path_object->fill_color = ToNativeColor(env, java_fill_color);
+            path_object->is_fill_ = (java_fill_color != NULL);
+            if (path_object->is_fill_) {
+                path_object->fill_color_ = ToNativeColor(env, java_fill_color);
             }
 
             // Get Java PathObject Stroke Color.
@@ -725,9 +761,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             jobject java_stroke_color = env->CallObjectMethod(java_page_object, get_stroke_color);
 
             // Set PathObject Data Stroke Mode and Stroke Color.
-            path_object->is_stroke = (java_stroke_color != NULL);
-            if (path_object->is_stroke) {
-                path_object->stroke_color = ToNativeColor(env, java_stroke_color);
+            path_object->is_stroke_ = (java_stroke_color != NULL);
+            if (path_object->is_stroke_) {
+                path_object->stroke_color_ = ToNativeColor(env, java_stroke_color);
             }
 
             // Get Java PathObject Stroke Width.
@@ -736,7 +772,7 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             jfloat stroke_width = env->CallFloatMethod(java_page_object, get_stroke_width);
 
             // Set PathObject Data Stroke Width.
-            path_object->stroke_width = stroke_width;
+            path_object->stroke_width_ = stroke_width;
 
             page_object = std::move(path_object);
             break;
@@ -764,7 +800,7 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
             const int stride = bitmap_info.width * 4;
 
             // Set ImageObject Data Bitmap
-            image_object->bitmap = ScopedFPDFBitmap(FPDFBitmap_CreateEx(
+            image_object->bitmap_ = ScopedFPDFBitmap(FPDFBitmap_CreateEx(
                     bitmap_info.width, bitmap_info.height, FPDFBitmap_BGRA, bitmap_pixels, stride));
 
             // Unlock the Android Bitmap
@@ -791,9 +827,9 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
     env->GetFloatArrayRegion(java_matrix_array, 0, 9, transform);
 
     // Set PageObject Data Matrix.
-    page_object->matrix = {transform[0 /*kMScaleX*/], transform[3 /*kMSkewY*/],
-                           transform[1 /*kMSkewX*/],  transform[4 /*kMScaleY*/],
-                           transform[2 /*kMTransX*/], transform[5 /*kMTransY*/]};
+    page_object->matrix_ = {transform[0 /*kMScaleX*/], transform[3 /*kMSkewY*/],
+                            transform[1 /*kMSkewX*/],  transform[4 /*kMScaleY*/],
+                            transform[2 /*kMTransX*/], transform[5 /*kMTransY*/]};
 
     return page_object;
 }
@@ -859,6 +895,43 @@ jobject ToJavaHighlightAnnotation(JNIEnv* env, const Annotation* annotation,
 
     return java_annotation;
 }
+
+jobject ToJavaFreeTextAnnotation(JNIEnv* env, const Annotation* annotation,
+                                 ICoordinateConverter* converter) {
+    jobject java_bounds = ToJavaRectF(env, annotation->GetBounds(), converter);
+
+    // Cast to FreeText Annotation
+    const FreeTextAnnotation* freetext_annotation =
+            static_cast<const FreeTextAnnotation*>(annotation);
+    // Find Java FreeTextAnnotation class.
+    static jclass freetext_annotation_class = GetPermClassRef(env, kFreeTextAnnotation);
+    // Get Constructor Id.
+    static jmethodID init = env->GetMethodID(freetext_annotation_class, "<init>",
+                                             funcsig("V", kRectF, kString).c_str());
+
+    // Get Java String for text content.
+    jobject java_string = wstringToJstringUTF16(env, freetext_annotation->GetTextContent());
+    // Create Java FreeTextAnnotation Object.
+    jobject java_freetext_annotation =
+            env->NewObject(freetext_annotation_class, init, java_bounds, java_string);
+
+    // Set Text color.
+    static jmethodID set_text_color =
+            env->GetMethodID(freetext_annotation_class, "setTextColor", funcsig("V", "I").c_str());
+    // call setTextColor
+    env->CallVoidMethod(java_freetext_annotation, set_text_color,
+                        ToJavaColorInt(freetext_annotation->GetTextColor()));
+
+    // Set Background color.
+    static jmethodID set_background_color = env->GetMethodID(
+            freetext_annotation_class, "setBackgroundColor", funcsig("V", "I").c_str());
+    // call setBackgroundColor
+    env->CallVoidMethod(java_freetext_annotation, set_background_color,
+                        ToJavaColorInt(freetext_annotation->GetBackgroundColor()));
+
+    return java_freetext_annotation;
+}
+
 jobject ToJavaPageAnnotation(JNIEnv* env, const Annotation* annotation,
                              ICoordinateConverter* converter) {
     if (!annotation) {
@@ -874,6 +947,10 @@ jobject ToJavaPageAnnotation(JNIEnv* env, const Annotation* annotation,
         }
         case Annotation::Type::Highlight: {
             java_annotation = ToJavaHighlightAnnotation(env, annotation, converter);
+            break;
+        }
+        case Annotation::Type::FreeText: {
+            java_annotation = ToJavaFreeTextAnnotation(env, annotation, converter);
             break;
         }
         default:
@@ -931,6 +1008,41 @@ std::unique_ptr<Annotation> ToNativeHighlightAnnotation(JNIEnv* env, jobject jav
     return highlight_annotation;
 }
 
+std::unique_ptr<Annotation> ToNativeFreeTextAnnotation(JNIEnv* env, jobject java_annotation,
+                                                       Rectangle_f native_bounds) {
+    // Create FreeTextAnnotation Instance.
+    auto freetext_annotation = std::make_unique<FreeTextAnnotation>(native_bounds);
+
+    // Get Ref to Java FreeTextAnnotation Class.
+    static jclass freetext_annotation_class = GetPermClassRef(env, kFreeTextAnnotation);
+
+    // Get the TextContent from Java layer.
+    static jmethodID get_text_content =
+            env->GetMethodID(freetext_annotation_class, "getTextContent", funcsig(kString).c_str());
+    auto java_text_content =
+            static_cast<jstring>(env->CallObjectMethod(java_annotation, get_text_content));
+
+    // Set the TextContent
+    std::wstring native_text_content = jStringToWstring(env, java_text_content);
+    freetext_annotation->SetTextContent(native_text_content);
+
+    // Get the text color
+    static jmethodID get_text_color =
+            env->GetMethodID(freetext_annotation_class, "getTextColor", funcsig("I").c_str());
+    jint java_text_color_int = env->CallIntMethod(java_annotation, get_text_color);
+
+    freetext_annotation->SetTextColor(ToNativeColor(java_text_color_int));
+
+    // Get the background color
+    static jmethodID get_background_color =
+            env->GetMethodID(freetext_annotation_class, "getBackgroundColor", funcsig("I").c_str());
+    jint java_background_color_int = env->CallIntMethod(java_annotation, get_background_color);
+
+    freetext_annotation->SetBackgroundColor(ToNativeColor(java_background_color_int));
+
+    return freetext_annotation;
+}
+
 std::unique_ptr<Annotation> ToNativePageAnnotation(JNIEnv* env, jobject java_annotation,
                                                    ICoordinateConverter* converter) {
     // Find Java PdfAnnotation class and GetType
@@ -953,6 +1065,10 @@ std::unique_ptr<Annotation> ToNativePageAnnotation(JNIEnv* env, jobject java_ann
         }
         case Annotation::Type::Highlight: {
             annotation = ToNativeHighlightAnnotation(env, java_annotation, native_bounds);
+            break;
+        }
+        case Annotation::Type::FreeText: {
+            annotation = ToNativeFreeTextAnnotation(env, java_annotation, native_bounds);
             break;
         }
         default:
