@@ -25,6 +25,7 @@ import static android.provider.CloudMediaProviderContract.EXTRA_ALBUM_ID;
 import static android.provider.CloudMediaProviderContract.EXTRA_MEDIA_COLLECTION_ID;
 import static android.provider.CloudMediaProviderContract.EXTRA_PAGE_SIZE;
 import static android.provider.CloudMediaProviderContract.EXTRA_PAGE_TOKEN;
+import static android.provider.CloudMediaProviderContract.EXTRA_SORT_ORDER;
 import static android.provider.CloudMediaProviderContract.EXTRA_SYNC_GENERATION;
 import static android.provider.CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS;
 import static android.provider.CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS;
@@ -292,6 +293,18 @@ public class ExternalDbFacade {
             "%s.%s = 1",
             TABLE_SUBQUERY, COLUMN_ROW_NUMBER);
 
+    private static final String WHERE_BUCKET_ID_IS = MediaColumns.BUCKET_ID + " IS ?";
+    private static final String WHERE_OWNER_PACKAGE_NAME_IS =
+            MediaColumns.OWNER_PACKAGE_NAME + " IS ?";
+
+    // Include all the media items that are either downloaded
+    // or are moved/copied to the "Download/" folder
+    private static final String WHERE_IS_DOWNLOAD_MEDIA_SET = String.format(
+            Locale.ROOT,
+            "%s OR %s",
+            WHERE_IS_DOWNLOAD,
+            WHERE_RELATIVE_PATH_IS_DOWNLOAD);
+
     @VisibleForTesting
     static String[] LOCAL_ALBUM_IDS = {
             ALBUM_ID_CAMERA,
@@ -433,8 +446,8 @@ public class ExternalDbFacade {
                     /* having */ null, /* orderBy */ null);
         });
 
-        cursor.setExtras(getCursorExtras(generation, /* albumId */ null, /*pageSize*/ -1,
-                /*pageToken*/ null));
+        cursor.setExtras(getCursorExtras(generation, /* albumId */ null, /* pageSize */ -1,
+                /* pageToken */ null));
         return cursor;
     }
 
@@ -442,8 +455,8 @@ public class ExternalDbFacade {
      * Returns all items from the files table where {@link MediaColumns#GENERATION_MODIFIED}
      * is greater than {@code generation}.
      */
-    public Cursor queryMedia(long generation, String albumId, String[] mimeTypes, int pageSize,
-            String pageToken) {
+    public Cursor queryMedia(long generation, String albumId, String[] mimeTypes,
+            int pageSize, String pageToken, int sortOrder) {
         final List<String> selectionArgs = new ArrayList<>();
         final String orderBy = getOrderByClause();
 
@@ -822,8 +835,8 @@ public class ExternalDbFacade {
      * @param mediaCategoryId The identifier for the desired category.
      *                        See {@code CloudMediaProviderContract} for specific constants.
      * @param mimeTypes       Optional array of MIME types to filter the media within sets
-     * (e.g., "image/png", "video/mp4"). If null or empty, defaults to
-     * including all image and video media types.
+     *                        (e.g., "image/png", "video/mp4"). If null or empty, defaults to
+     *                        including all image and video media types.
      * @param pageSize        The maximum number of media sets to return in this page.
      * @param pageToken       A token representing the starting point for the next page of results.
      * @return A {@link Cursor} containing the requested media sets, ordered appropriately.
@@ -878,6 +891,57 @@ public class ExternalDbFacade {
         }
     }
 
+    /**
+     * Retrieves a paginated and sorted list of media items belonging to a specified media set.
+     *
+     * @param mediaSetId The unique identifier for the media set from which to query media.
+     * @param mimeTypes  Optional array of MIME types to filter the media within sets
+     *                   (e.g., "image/png", "video/mp4"). If null or empty, defaults to
+     *                   including all image and video media types.
+     * @param pageSize   The maximum number of media sets to return in this page.
+     * @param pageToken  A token representing the starting point for the next page of results.
+     * @param sortOrder  An integer constant defining the sorting criteria for the returned media.
+     * @return A {@link Cursor} containing the queried media items, matching the specified criteria.
+     */
+    public Cursor queryMediaInMediaSet(String mediaSetId, String[] mimeTypes,
+            int pageSize, String pageToken, int sortOrder) {
+        final List<String> selectionArgs = new ArrayList<>();
+        final String orderBy = getOrderByClauseForMediaInMediaSet(sortOrder);
+
+        Log.d(TAG, "Token received for queryMediaInMediaSet = " + pageToken);
+
+        final Cursor cursor = mDatabaseHelper.runWithTransaction(db -> {
+            SQLiteQueryBuilder qb = createMediaQueryBuilder();
+
+            if (pageToken != null) {
+                String[] lastMedia = parsePageToken(pageToken);
+                if (lastMedia != null) {
+                    qb.appendWhereStandalone(getDateTakenWhereClause());
+                    addSelectionArgsForWhereClause(lastMedia, selectionArgs);
+                }
+            }
+
+            List<String> mediaSetSelectionArgs = appendWhereForMediaSets(qb, mediaSetId, mimeTypes);
+            if (mediaSetSelectionArgs == null) {
+                return new MatrixCursor(PROJECTION_MEDIA_COLUMNS);
+            }
+            selectionArgs.addAll(mediaSetSelectionArgs);
+
+            return qb.query(db, PROJECTION_MEDIA_COLUMNS, /* select */ null,
+                    selectionArgs.toArray(new String[selectionArgs.size()]), /* groupBy */ null,
+                    /* having */ null, orderBy, String.valueOf(pageSize));
+        });
+
+        String nextPageToken = null;
+        if (cursor.getCount() > 0 && pageSize != INT_DEFAULT) {
+            nextPageToken = setPageToken(cursor);
+
+        }
+        cursor.setExtras(getCursorExtrasForMediaSet(nextPageToken, pageSize, sortOrder, mimeTypes));
+        return cursor;
+    }
+
+    @NonNull
     private Cursor getDownloadsMediaSet(@Nullable String[] mimeTypes) {
         final MatrixCursor downloadMediaSet = new MatrixCursor(MediaSetColumns.ALL_PROJECTION);
         final String orderBy = getMediaSetOrderByClause();
@@ -885,15 +949,8 @@ public class ExternalDbFacade {
         try (Cursor downloadCursor = mDatabaseHelper.runWithoutTransaction(db -> {
             final SQLiteQueryBuilder qb = createMediaQueryBuilder();
             final List<String> selectionArgs =
-                    new ArrayList<>(appendWhere(qb, null, mimeTypes));
-            // Include all the media items that are either downloaded
-            // or are moved/copied to the "Download/" folder
-            String combinedOrClause = String.format(
-                    Locale.ROOT,
-                    "%s OR %s",
-                    WHERE_IS_DOWNLOAD,
-                    WHERE_RELATIVE_PATH_IS_DOWNLOAD);
-            qb.appendWhereStandalone(combinedOrClause);
+                    new ArrayList<>(appendWhereForMediaSets(qb, null, mimeTypes));
+            qb.appendWhereStandalone(WHERE_IS_DOWNLOAD_MEDIA_SET);
             return qb.query(db, PROJECTION_DOWNLOADS_FOLDER, /* selection */ null,
                     selectionArgs.toArray(new String[selectionArgs.size()]),
                     /* groupBy */ null, /* having */ null, orderBy, /* limit */ "1");
@@ -915,7 +972,7 @@ public class ExternalDbFacade {
 
             final String[] projectionValue = new String[]{
                     /*mediaSetId*/ String.format(
-                            Locale.ROOT,
+                    Locale.ROOT,
                     "%s:%s",
                     MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                     ALBUM_ID_DOWNLOADS),
@@ -939,6 +996,7 @@ public class ExternalDbFacade {
                 WHERE_RELATIVE_PATH_IS_DOWNLOAD);
     }
 
+    @NonNull
     private Cursor getLocalMediaSets(
             @Nullable String[] mimeTypes,
             int pageSize,
@@ -991,17 +1049,8 @@ public class ExternalDbFacade {
             nextPageToken = setPageToken(cursor);
         }
 
-        Bundle cursorExtrasBundle = getCursorExtras(LONG_DEFAULT, null, pageSize, nextPageToken);
-        ArrayList<String> honoredArgsList = cursorExtrasBundle.getStringArrayList(
-                EXTRA_HONORED_ARGS);
-        if (honoredArgsList == null) {
-            honoredArgsList = new ArrayList<>();
-        }
-        if (mimeTypes != null && mimeTypes.length != 0) {
-            honoredArgsList.add(Intent.EXTRA_MIME_TYPES);
-        }
-        cursorExtrasBundle.putStringArrayList(EXTRA_HONORED_ARGS, honoredArgsList);
-        cursor.setExtras(cursorExtrasBundle);
+        cursor.setExtras(getCursorExtrasForMediaSet(nextPageToken, pageSize,
+                /* sortOrder */ INT_DEFAULT, mimeTypes));
 
         if (MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.equals(categoryType)) {
             return cursor;
@@ -1010,6 +1059,7 @@ public class ExternalDbFacade {
         return createAppsMediaSetsCursor(cursor);
     }
 
+    @NonNull
     private Cursor createAppsMediaSetsCursor(@NonNull Cursor cursor) {
         List<String> projectionList =
                 new ArrayList<>(Arrays.asList(MediaSetColumns.ALL_PROJECTION));
@@ -1061,11 +1111,11 @@ public class ExternalDbFacade {
             @NonNull List<String> selectionArgs,
             @Nullable String[] mimeTypes) {
         final SQLiteQueryBuilder subQueryBuilder = createMediaQueryBuilder();
-        selectionArgs.addAll(appendWhere(subQueryBuilder, null, mimeTypes));
+        selectionArgs.addAll(appendWhereForMediaSets(subQueryBuilder, null, mimeTypes));
 
         final String subQueryString = switch (categoryType) {
-            case MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS ->
-                    appendWhereForDeviceMediaSet(subQueryBuilder, selectionArgs);
+            case MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS -> appendWhereForDeviceMediaSet(subQueryBuilder,
+                    selectionArgs);
             case MEDIA_CATEGORY_TYPE_APP_FOLDERS -> appendWhereForAppsMediaSet(subQueryBuilder);
             default -> {
                 Log.e(TAG, "Unrecognized media category type received: " + categoryType);
@@ -1080,6 +1130,49 @@ public class ExternalDbFacade {
                 "(%s) AS %s",
                 subQueryString,
                 TABLE_SUBQUERY);
+    }
+
+    private static List<String> appendWhereForMediaSets(
+            @NonNull SQLiteQueryBuilder qb,
+            @Nullable String mediaSetId,
+            @Nullable String[] mimeTypes) {
+        final List<String> selectionArgs = new ArrayList<>();
+
+        addMimeTypesToQueryBuilderAndSelectionArgs(qb, selectionArgs, mimeTypes);
+
+        if (mediaSetId == null) {
+            return selectionArgs;
+        }
+
+        try {
+            String[] mediaSetIdSplit = mediaSetId.split(":");
+            String categoryType = mediaSetIdSplit[0];
+            String id = mediaSetIdSplit[1];
+            switch (categoryType) {
+                case MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS -> {
+                    if (ALBUM_ID_DOWNLOADS.equals(id)) {
+                        qb.appendWhereStandalone(WHERE_IS_DOWNLOAD_MEDIA_SET);
+                    } else {
+                        qb.appendWhereStandalone(WHERE_BUCKET_ID_IS);
+                        selectionArgs.add(id);
+                    }
+                }
+                case MEDIA_CATEGORY_TYPE_APP_FOLDERS -> {
+                    qb.appendWhereStandalone(WHERE_OWNER_PACKAGE_NAME_IS);
+                    selectionArgs.add(id);
+                }
+                default -> {
+                    Log.w(TAG, "No match for category type: " + categoryType);
+                    return null;
+                }
+            }
+        } catch (Exception exception) {
+            Log.e(TAG, "Error occurred while appending where clause for " + mediaSetId,
+                    exception);
+            return null;
+        }
+
+        return selectionArgs;
     }
 
     private String appendWhereForDeviceMediaSet(
@@ -1117,6 +1210,42 @@ public class ExternalDbFacade {
     private static String getMediaSetOrderByClause() {
         return CloudMediaProviderContract.MediaColumns.DATE_TAKEN_MILLIS + " DESC, "
                 + MediaColumns._ID + " DESC";
+    }
+
+    private static String getOrderByClauseForMediaInMediaSet(int sortOrder) {
+        // Currently sortOrder can only be SORT_ORDER_DESC_DATE_TAKEN
+        if (sortOrder != CloudMediaProviderContract.SORT_ORDER_DESC_DATE_TAKEN) {
+            Log.e(TAG, "Received incorrect sort order: " + sortOrder);
+        }
+        return CloudMediaProviderContract.MediaColumns.DATE_TAKEN_MILLIS + " DESC,"
+                + CloudMediaProviderContract.MediaColumns.ID + " DESC";
+    }
+
+    private Bundle getCursorExtrasForMediaSet(String pageToken, int pageSize, int sortOrder,
+            String[] mimeTypes) {
+        final Bundle bundle = new Bundle();
+        final ArrayList<String> honoredArgs = new ArrayList<>();
+
+        if (pageSize > INT_DEFAULT) {
+            honoredArgs.add(EXTRA_PAGE_SIZE);
+        }
+
+        if (pageToken != null) {
+            honoredArgs.add(EXTRA_PAGE_TOKEN);
+            bundle.putString(EXTRA_PAGE_TOKEN, pageToken);
+        }
+
+        if (sortOrder == CloudMediaProviderContract.SORT_ORDER_DESC_DATE_TAKEN) {
+            honoredArgs.add(EXTRA_SORT_ORDER);
+        }
+
+        if (mimeTypes != null && mimeTypes.length != 0) {
+            honoredArgs.add(Intent.EXTRA_MIME_TYPES);
+        }
+
+        bundle.putStringArrayList(EXTRA_HONORED_ARGS, honoredArgs);
+
+        return bundle;
     }
 
     private static String getLocalizedDisplayName(
