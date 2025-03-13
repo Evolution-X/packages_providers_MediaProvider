@@ -704,6 +704,11 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
     jobject java_page_object = NULL;
 
     switch (page_object->GetType()) {
+        case PageObject::Type::Text: {
+            const TextObject* text_object = static_cast<const TextObject*>(page_object);
+            java_page_object = ToJavaPdfTextObject(env, text_object);
+            break;
+        }
         case PageObject::Type::Path: {
             const PathObject* path_object = static_cast<const PathObject*>(page_object);
             java_page_object = ToJavaPdfPathObject(env, path_object, converter);
@@ -977,6 +982,10 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
     std::unique_ptr<PageObject> page_object = nullptr;
 
     switch (static_cast<PageObject::Type>(page_object_type)) {
+        case PageObject::Type::Text: {
+            page_object = ToNativeTextObject(env, java_page_object);
+            break;
+        }
         case PageObject::Type::Path: {
             page_object = ToNativePathObject(env, java_page_object, converter);
             break;
