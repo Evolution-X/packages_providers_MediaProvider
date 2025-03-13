@@ -1796,6 +1796,9 @@ public class MediaProvider extends ContentProvider {
             }
         }
 
+        // Clear appops cache
+        LocalCallingIdentity.clearAppOpsResolvedCache();
+
         // Trim any stale log files before we emit new events below
         Logging.trimPersistent();
 
@@ -2289,6 +2292,9 @@ public class MediaProvider extends ContentProvider {
             if (SdkLevel.isAtLeastU()) {
                 removeAllMediaGrantsForUid(uid, userId, packageName);
             }
+
+            LocalCallingIdentity.clearAppOpsResolvedCacheForUid(uid);
+
             return null;
         });
     }
