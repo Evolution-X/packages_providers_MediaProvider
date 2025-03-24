@@ -1175,7 +1175,7 @@ std::unique_ptr<Annotation> ToNativeHighlightAnnotation(JNIEnv* env, jobject jav
     static jclass highlight_annotation_class = GetPermClassRef(env, kHighlightAnnotation);
 
     jmethodID get_bounds =
-            env->GetMethodID(highlight_annotation_class, "getBounds", funcsig(kList).c_str());
+            env->GetMethodID(highlight_annotation_class, "getBoundsList", funcsig(kList).c_str());
     jobject java_bounds = env->CallObjectMethod(java_annotation, get_bounds);
 
     vector<Rectangle_f> native_bounds;
