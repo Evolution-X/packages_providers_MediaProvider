@@ -91,9 +91,9 @@ package android.graphics.pdf.component {
 
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") public final class HighlightAnnotation extends android.graphics.pdf.component.PdfAnnotation {
     ctor public HighlightAnnotation(@NonNull java.util.List<android.graphics.RectF>);
-    method @NonNull public java.util.List<android.graphics.RectF> getBounds();
+    method @NonNull public java.util.List<android.graphics.RectF> getBoundsList();
     method @ColorInt public int getColor();
-    method public void setBounds(@NonNull java.util.List<android.graphics.RectF>);
+    method public void setBoundsList(@NonNull java.util.List<android.graphics.RectF>);
     method public void setColor(@ColorInt int);
   }
 
