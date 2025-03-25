@@ -27,6 +27,44 @@
 
 namespace pdfClient {
 
+int GetFillMode(PathObject::RenderMode render_mode) {
+    switch (render_mode) {
+        case PathObject::RenderMode::Fill:
+        case PathObject::RenderMode::FillStroke: {
+            return FPDF_FILLMODE_WINDING;
+        }
+        case PathObject::RenderMode::Stroke:
+        default: {
+            return FPDF_FILLMODE_NONE;
+        }
+    }
+}
+
+int GetStrokeMode(PathObject::RenderMode render_mode) {
+    switch (render_mode) {
+        case PathObject::RenderMode::Stroke:
+        case PathObject::RenderMode::FillStroke: {
+            return 1;
+        }
+        case PathObject::RenderMode::Fill:
+        default: {
+            return 0;
+        }
+    }
+}
+
+PathObject::RenderMode GetRenderMode(int fill_mode, int stroke) {
+    if (fill_mode && stroke) {
+        return PathObject::RenderMode::FillStroke;
+    } else if (fill_mode) {
+        return PathObject::RenderMode::Fill;
+    } else if (stroke) {
+        return PathObject::RenderMode::Stroke;
+    } else {
+        return PathObject::RenderMode::Unknown;
+    }
+}
+
 PathObject::PathObject() : PageObject(Type::Path) {}
 
 ScopedFPDFPageObject PathObject::CreateFPDFInstance(FPDF_DOCUMENT document, FPDF_PAGE page) {
@@ -84,9 +122,14 @@ bool PathObject::UpdateFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE page)
         return false;
     }
 
-    // Set the updated Draw Mode
-    int fill_mode = this->is_fill_ ? FPDF_FILLMODE_WINDING : FPDF_FILLMODE_NONE;
-    if (!FPDFPath_SetDrawMode(path_object, fill_mode, is_stroke_)) {
+    // Set the updated render mode.
+    if (render_mode_ == RenderMode::Unknown) {
+        LOGE("RenderMode Unknown");
+        return false;
+    }
+    int fill_mode = GetFillMode(render_mode_);
+    int stroke_mode = GetStrokeMode(render_mode_);
+    if (!FPDFPath_SetDrawMode(path_object, fill_mode, stroke_mode)) {
         return false;
     }
 
@@ -142,13 +185,12 @@ bool PathObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE
 
     // Get Draw Mode
     int fill_mode;
-    FPDF_BOOL stroke;
+    int stroke;
     if (!FPDFPath_GetDrawMode(path_object, &fill_mode, &stroke)) {
         LOGE("Path GetDrawMode Failed!");
         return false;
     }
-    is_fill_ = fill_mode;
-    is_stroke_ = stroke;
+    render_mode_ = GetRenderMode(fill_mode, stroke);
 
     // Get Matrix
     if (!GetPageToDeviceMatrix(path_object, page)) {
