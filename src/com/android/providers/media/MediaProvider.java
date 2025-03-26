@@ -7336,6 +7336,10 @@ public class MediaProvider extends ContentProvider {
                 callForBulkUpdateOemMetadataColumn();
                 return new Bundle();
             }
+            case MediaStore.QUERY_FILE_ATTRS_FROM_LEVELDB: {
+                getResultForQueryFileAccessAttrsFromLevelDb(arg);
+                return new Bundle();
+            }
             default:
                 throw new UnsupportedOperationException("Unsupported call: " + method);
         }
@@ -7383,6 +7387,26 @@ public class MediaProvider extends ContentProvider {
         }
     }
 
+    // TODO: b/411419451 - Delete method after query_leveldb_for_file_attributes flag rollout
+    private void getResultForQueryFileAccessAttrsFromLevelDb(String filepath) {
+        // WRITE_MEDIA_STORAGE is a privileged permission which only MediaProvider and some
+        // system apps.
+        getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
+                "Calling app does not have permission to call "
+                        + "QUERY_FILE_ACCESS_ATTRS_FROM_LEVELDB by uid : "
+                        + Binder.getCallingUid());
+        final LocalCallingIdentity token = clearLocalCallingIdentity();
+        final CallingIdentity providerToken = clearCallingIdentity();
+        try {
+            FuseDaemon daemon = getFuseDaemonForFile(new File(filepath), mVolumeCache);
+            daemon.queryFileAccessAttributes(filepath);
+        } catch (IOException e) {
+            Log.w(TAG, "Query for file access attributes failed. " + e);
+        } finally {
+            restoreLocalCallingIdentity(token);
+            restoreCallingIdentity(providerToken);
+        }
+    }
     private String appendMediaTypeClause(Set<Integer> mediaTypesToBeUpdated) {
         List<String> whereMediaTypesCondition = new ArrayList<String>();
         for (Integer mediaType : mediaTypesToBeUpdated) {
@@ -10738,6 +10762,27 @@ public class MediaProvider extends ContentProvider {
         return !matcher.matches();
     }
 
+    private FileAccessAttributes queryLevelDbForFileAttributes(final String path)
+            throws IOException {
+        // Query levelDb only for external_primary storage paths
+        // TODO: b/411419451 - Remove check on path when Stable Uris rolled out for all volume paths
+        if (Flags.queryLeveldbForFileAttributes() && path.contains("/storage/emulated/")) {
+            try {
+                Trace.beginSection("MP.queryFileAttrsFromLevelDb");
+                FuseDaemon daemon = getFuseDaemonForFile(new File(path), mVolumeCache);
+                return daemon.queryFileAccessAttributes(path);
+            } catch (Exception e) {
+                Log.w(TAG, "LevelDb query for file access attributes for path " + path + " failed. "
+                        + e);
+                return null;
+            } finally {
+                Trace.endSection();
+            }
+        }
+
+        return null;
+    }
+
     private FileAccessAttributes queryForFileAttributes(final String path)
             throws FileNotFoundException {
         Trace.beginSection("MP.queryFileAttr");
@@ -10886,7 +10931,23 @@ public class MediaProvider extends ContentProvider {
                         mediaCapabilitiesUid, new long[0]);
             }
 
-            checkIfFileOpenIsPermitted(path, queryForFileAttributes(path), redactedUriId, forWrite);
+            final long leveldbQueryStartTime = SystemClock.elapsedRealtimeNanos();
+            FileAccessAttributes attrsFromLevelDb = queryLevelDbForFileAttributes(path);
+            final long leveldbQueryTime =
+                    SystemClock.elapsedRealtimeNanos() - leveldbQueryStartTime;
+
+            final long sqlQueryStartTime = SystemClock.elapsedRealtimeNanos();
+            FileAccessAttributes attrs = queryForFileAttributes(path);
+            final long sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
+
+            if (attrs != null) {
+                MediaProviderStatsLog.write(
+                        MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
+                        (int) sqlQueryTime, (int) leveldbQueryTime, attrs.equals(attrsFromLevelDb));
+            }
+
+            checkIfFileOpenIsPermitted(path, attrs, redactedUriId, forWrite);
+
             isSuccess = true;
             return new FileOpenResult(0 /* status */, originalUid, mediaCapabilitiesUid,
                     redact ? getRedactionRangesForFuse(path, ioPath, originalUid, uid, tid,
