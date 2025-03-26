@@ -27,10 +27,12 @@ import androidx.core.os.bundleOf
 import androidx.paging.PagingSource.LoadResult
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
+import com.android.photopicker.data.MediaProviderClient.Companion.SEARCH_REQUEST_INIT_CALL_METHOD
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.GroupPageKey
 import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.KeyToCategoryType
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -107,6 +109,11 @@ open class MediaProviderClient {
     private enum class MediaSetContentsQuery(val key: String) {
         PARENT_MEDIA_SET_PICKER_ID("media_set_picker_id"),
         PARENT_MEDIA_SET_AUTHORITY("media_set_picker_authority"),
+    }
+
+    /** Contains all optional and mandatory keys required to make an Items per month query */
+    private enum class ItemsPerMonthQuery(val key: String) {
+        PROVIDERS("providers")
     }
 
     /**
@@ -190,6 +197,19 @@ open class MediaProviderClient {
         SUGGESTION_TYPE("suggestion_type"),
     }
 
+    /** Contains all keys for data in the Items per Month query response. */
+    enum class ItemsPerMonthResponse(val key: String) {
+        // The year is formatted as yyyy and is derived considering the device's local time.
+        YEAR_TAKEN("year_taken"),
+
+        // The month is formatted as MM and is derived considering the device's local time.
+        MONTH_TAKEN("month_taken"),
+
+        // ITEM_COUNT represents the column containing the count of items for a specific
+        // year and month combination.
+        ITEM_COUNT("item_count"),
+    }
+
     enum class GroupResponse(val key: String) {
         MEDIA_GROUP("media_group"),
         /** Identifier received from CMP. This cannot be null. */
@@ -220,7 +240,7 @@ open class MediaProviderClient {
                     AVAILABLE_PROVIDERS_URI,
                     /* projection */ null,
                     /* queryArgs */ null,
-                    /* cancellationSignal */ null, // TODO
+                    /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
                     return getListOfProviders(cursor!!)
@@ -275,7 +295,7 @@ open class MediaProviderClient {
                     MEDIA_URI,
                     /* projection */ null,
                     input,
-                    /* cancellationSignal */ null, // TODO
+                    /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
                     cursor?.let {
@@ -381,7 +401,7 @@ open class MediaProviderClient {
                     MEDIA_PREVIEW_URI,
                     /* projection */ null,
                     input,
-                    /* cancellationSignal */ null, // TODO
+                    /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
                     cursor?.let {
@@ -427,7 +447,7 @@ open class MediaProviderClient {
                     ALBUM_URI,
                     /* projection */ null,
                     input,
-                    /* cancellationSignal */ null, // TODO
+                    /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
                     cursor?.let {
@@ -477,7 +497,7 @@ open class MediaProviderClient {
                     getAlbumMediaUri(albumId),
                     /* projection */ null,
                     input,
-                    /* cancellationSignal */ null, // TODO
+                    /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
                     cursor?.let {
@@ -590,7 +610,7 @@ open class MediaProviderClient {
                     MEDIA_PRE_SELECTION_URI,
                     /* projection */ null,
                     input,
-                    /* cancellationSignal */ null, // TODO
+                    /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 ?.getListOfMedia() ?: ArrayList()
         } catch (e: RuntimeException) {
@@ -1046,6 +1066,46 @@ open class MediaProviderClient {
             Log.e(TAG, "Could not fetch providers with search enabled", e)
             return null
         }
+    }
+
+    /**
+     * Fetches the number of media items available in MediaProvider for each month
+     *
+     * @param contentResolver The ContentResolver used to interact with the MediaProvider.
+     * @param availableProviders Available providers to get the media items
+     * @param config Given photopicker configurations
+     * @return A list of [ItemsPerMonth] objects, where each object represents a year, month, and
+     *   the corresponding item count (all in local time)
+     * @throws RuntimeException if an error occurs during the query or fetching the items counts
+     */
+    fun fetchItemsPerMonth(
+        contentResolver: ContentResolver,
+        availableProviders: List<Provider>,
+        config: PhotopickerConfiguration,
+    ): List<ItemsPerMonth> {
+        val input: Bundle =
+            bundleOf(
+                ItemsPerMonthQuery.PROVIDERS.key to
+                    ArrayList<String>().apply {
+                        availableProviders.forEach { provider -> add(provider.authority) }
+                    },
+                EXTRA_MIME_TYPES to config.mimeTypes,
+                EXTRA_INTENT_ACTION to config.action,
+                Intent.EXTRA_UID to config.callingPackageUid,
+            )
+        return contentResolver
+            .query(
+                ITEMS_PER_MONTH_URI,
+                /* projection= */ null,
+                input,
+                /* cancellationSignal= */ null, // TODO(b/405340486)
+            )
+            .use { cursor ->
+                cursor?.getListOfItemCountPerMonth()
+                    ?: throw IllegalStateException(
+                        "Received a null response for Items Per Month from Content Provider."
+                    )
+            }
     }
 
     /** Creates a list of [Provider] from the given [Cursor]. */
@@ -1531,6 +1591,32 @@ open class MediaProviderClient {
             val icon = Icon(unwrappedUri, mediaSource)
             icon
         }
+    }
+
+    /**
+     * Creates a list of Items count per Month from the given [Cursor].
+     *
+     * @return A list of [ItemsPerMonth] objects, where each object represents a year, month, and
+     *   the corresponding item count (all in local time)
+     */
+    private fun Cursor.getListOfItemCountPerMonth(): List<ItemsPerMonth> {
+        val result: MutableList<ItemsPerMonth> = mutableListOf()
+        if (this.moveToFirst()) {
+            do {
+                val year =
+                    getString(getColumnIndexOrThrow(ItemsPerMonthResponse.YEAR_TAKEN.key)).toInt()
+                val month =
+                    getString(getColumnIndexOrThrow(ItemsPerMonthResponse.MONTH_TAKEN.key)).toInt()
+                val itemCount = getInt(getColumnIndexOrThrow(ItemsPerMonthResponse.ITEM_COUNT.key))
+                result.add(ItemsPerMonth(year, month, itemCount))
+            } while (moveToNext())
+        }
+        Log.d(
+            TAG,
+            "Items per month data : Found ${result.sumOf { it.itemCount }} " +
+                "items over ${result.size} months/years.",
+        )
+        return result
     }
 
     /** Convert the input search suggestion type string to enum */
