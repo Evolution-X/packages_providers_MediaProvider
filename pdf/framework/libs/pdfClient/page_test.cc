@@ -284,9 +284,8 @@ TEST(Test, AddPathPageObject) {
     pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 100.0f, 150.0f);
     pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 150.0f, 150.0f);
 
-    // Set Draw Mode
-    pathObject->is_fill_ = false;
-    pathObject->is_stroke_ = true;
+    // Set Render Mode
+    pathObject->render_mode_ = PathObject::RenderMode::Stroke;
 
     // Set PathObject Matrix.
     pathObject->device_matrix_ = {1.0f, 0, 0, 1.0f, 0, 0};
@@ -307,6 +306,14 @@ TEST(Test, AddPathPageObject) {
     ASSERT_EQ(PageObject::Type::Text, updatedPageObjects[2]->GetType());
     // Check for the fourth PageObject to be PathObject.
     ASSERT_EQ(PageObject::Type::Path, updatedPageObjects[3]->GetType());
+
+    // Verify data attributes of newly added PathObject.
+    PathObject* newPathObject = static_cast<PathObject*>(updatedPageObjects[3]);
+
+    // Check for added render mode.
+    ASSERT_EQ(newPathObject->render_mode_, PathObject::RenderMode::Stroke);
+    // Check for added matrix.
+    ASSERT_EQ(newPathObject->device_matrix_, Matrix(1.0f, 0, 0, 1.0f, 0, 0));
 }
 
 TEST(Test, AddTextPageObject) {
@@ -438,8 +445,7 @@ TEST(Test, UpdatePathPageObjectTest) {
     pathObject->fill_color_ = update_fill_color;
 
     // Update Draw Mode.
-    pathObject->is_fill_ = true;
-    pathObject->is_stroke_ = false;
+    pathObject->render_mode_ = PathObject::RenderMode::Fill;
 
     // Set Matrix.
     Matrix update_matrix = {2.0f, -3.0f, 2.0f, 2.0f, -1.0f, 2.0f};
@@ -455,8 +461,8 @@ TEST(Test, UpdatePathPageObjectTest) {
     ASSERT_EQ(updatedPageObjects[1]->fill_color_, update_fill_color);
 
     // Check for updated Draw Mode.
-    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->is_fill_, true);
-    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->is_stroke_, false);
+    ASSERT_EQ(static_cast<PathObject*>(updatedPageObjects[1])->render_mode_,
+              PathObject::RenderMode::Fill);
 
     // Check for updated matrix.
     ASSERT_EQ(updatedPageObjects[1]->device_matrix_, update_matrix);
@@ -587,9 +593,8 @@ TEST(Test, AddStampAnnotationTest) {
     pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 100.0f, 150.0f);
     pathObject->segments_.emplace_back(PathObject::Segment::Command::Line, 150.0f, 150.0f);
 
-    // Set Draw Mode
-    pathObject->is_fill_ = false;
-    pathObject->is_stroke_ = true;
+    // Set Render Mode
+    pathObject->render_mode_ = PathObject::RenderMode::Stroke;
 
     // Set PathObject Matrix.
     pathObject->device_matrix_ = {1.0f, 2.0f, 3.0f, 1.0f, 3.0f, 2.0f};

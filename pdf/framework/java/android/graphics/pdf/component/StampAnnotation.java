@@ -55,7 +55,6 @@ public final class StampAnnotation extends PdfAnnotation {
      * Sets the bounding rectangle of the stamp annotation.
      *
      * @param bounds The new bounding rectangle.
-     * @throws NullPointerException if given bounds is null
      */
     public void setBounds(@NonNull RectF bounds) {
         Preconditions.checkNotNull(bounds, "Bounds should not be null");

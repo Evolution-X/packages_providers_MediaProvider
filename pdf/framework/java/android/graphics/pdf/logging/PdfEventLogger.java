@@ -96,7 +96,7 @@ public class PdfEventLogger {
             @ApiTypes.ApiType int apiType,
             @ApiResponseTypes.ApiResponseType int apiResponse) {
         PdfStatsLog.write(PdfStatsLog.PDF_API_USAGE_REPORTED, mProcessId, mDocId, apiType,
-                apiResponse);
+                apiResponse, OperationTypes.UNKNOWN);
     }
 
     // Represent the linearization type of the PDF document.
@@ -152,6 +152,17 @@ public class PdfEventLogger {
         @IntDef({UNKNOWN, SUCCESS, FAILURE})
         @Retention(RetentionPolicy.RUNTIME)
         public @interface ApiResponseType {
+        }
+    }
+
+    // Represents the operation types of PdfViewer API being called.
+    public static final class OperationTypes {
+        public static final int UNKNOWN =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN;
+
+        @IntDef({UNKNOWN})
+        @Retention(RetentionPolicy.RUNTIME)
+        public @interface OperationType {
         }
     }
 

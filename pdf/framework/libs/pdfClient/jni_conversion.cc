@@ -709,23 +709,21 @@ jobject ToJavaPdfPathObject(JNIEnv* env, const PathObject* path_object,
     // Create Java PdfPathObject Instance.
     jobject java_path_object = env->NewObject(path_object_class, init_path, java_path);
 
-    // Set Java PdfPathObject FillColor.
-    if (path_object->is_fill_) {
-        static jmethodID set_fill_color =
-                env->GetMethodID(path_object_class, "setFillColor", funcsig("V", "I").c_str());
+    // Set Java PdfPathObject Render Mode.
+    int render_mode = static_cast<int>(path_object->render_mode_);
+    static jmethodID set_render_mode = env->GetMethodID(path_object_class, "setRenderMode", "(I)V");
+    env->CallVoidMethod(java_path_object, set_render_mode, render_mode);
 
-        env->CallVoidMethod(java_path_object, set_fill_color,
-                            ToJavaColorInt(path_object->fill_color_));
-    }
+    // Set Java PdfPathObject FillColor.
+    static jmethodID set_fill_color =
+            env->GetMethodID(path_object_class, "setFillColor", funcsig("V", "I").c_str());
+    env->CallVoidMethod(java_path_object, set_fill_color, ToJavaColorInt(path_object->fill_color_));
 
     // Set Java PdfPathObject StrokeColor.
-    if (path_object->is_stroke_) {
-        static jmethodID set_stroke_color =
-                env->GetMethodID(path_object_class, "setStrokeColor", funcsig("V", "I").c_str());
-
-        env->CallVoidMethod(java_path_object, set_stroke_color,
-                            ToJavaColorInt(path_object->stroke_color_));
-    }
+    static jmethodID set_stroke_color =
+            env->GetMethodID(path_object_class, "setStrokeColor", funcsig("V", "I").c_str());
+    env->CallVoidMethod(java_path_object, set_stroke_color,
+                        ToJavaColorInt(path_object->stroke_color_));
 
     // Set Java Stroke Width.
     static jmethodID set_stroke_width =
@@ -770,6 +768,11 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
     jobject java_page_object = NULL;
 
     switch (page_object->GetType()) {
+        case PageObject::Type::Text: {
+            const TextObject* text_object = static_cast<const TextObject*>(page_object);
+            java_page_object = ToJavaPdfTextObject(env, text_object);
+            break;
+        }
         case PageObject::Type::Path: {
             const PathObject* path_object = static_cast<const PathObject*>(page_object);
             java_page_object = ToJavaPdfPathObject(env, path_object, converter);
@@ -967,27 +970,46 @@ std::unique_ptr<PathObject> ToNativePathObject(JNIEnv* env, jobject java_path_ob
         }
     }
 
+    // Get Java PathObject Render Mode.
+    static jmethodID get_render_mode =
+            env->GetMethodID(path_object_class, "getRenderMode", funcsig("I").c_str());
+    jint java_render_mode = env->CallIntMethod(java_path_object, get_render_mode);
+
+    // Set PathObject Data Render Mode.
+    switch (static_cast<PathObject::RenderMode>(java_render_mode)) {
+        case PathObject::RenderMode::Fill: {
+            path_object->render_mode_ = PathObject::RenderMode::Fill;
+            break;
+        }
+        case PathObject::RenderMode::Stroke: {
+            path_object->render_mode_ = PathObject::RenderMode::Stroke;
+            break;
+        }
+        case PathObject::RenderMode::FillStroke: {
+            path_object->render_mode_ = PathObject::RenderMode::FillStroke;
+            break;
+        }
+        default: {
+            path_object->render_mode_ = PathObject::RenderMode::Unknown;
+            break;
+        }
+    }
+
     // Get Java PathObject Fill Color.
     static jmethodID get_fill_color =
             env->GetMethodID(path_object_class, "getFillColor", funcsig("I").c_str());
     jint java_fill_color = env->CallIntMethod(java_path_object, get_fill_color);
 
-    // Set PathObject Data Fill Mode and Fill Color
-    path_object->is_fill_ = (java_fill_color != 0);
-    if (path_object->is_fill_) {
-        path_object->fill_color_ = ToNativeColor(java_fill_color);
-    }
+    // Set PathObject Data Fill Color
+    path_object->fill_color_ = ToNativeColor(java_fill_color);
 
     // Get Java PathObject Stroke Color.
     static jmethodID get_stroke_color =
             env->GetMethodID(path_object_class, "getStrokeColor", funcsig("I").c_str());
     jint java_stroke_color = env->CallIntMethod(java_path_object, get_stroke_color);
 
-    // Set PathObject Data Stroke Mode and Stroke Color.
-    path_object->is_stroke_ = (java_stroke_color != 0);
-    if (path_object->is_stroke_) {
-        path_object->stroke_color_ = ToNativeColor(java_stroke_color);
-    }
+    // Set PathObject Data Stroke Color.
+    path_object->stroke_color_ = ToNativeColor(java_stroke_color);
 
     // Get Java PathObject Stroke Width.
     static jmethodID get_stroke_width =
@@ -1073,6 +1095,10 @@ std::unique_ptr<PageObject> ToNativePageObject(JNIEnv* env, jobject java_page_ob
     std::unique_ptr<PageObject> page_object = nullptr;
 
     switch (static_cast<PageObject::Type>(page_object_type)) {
+        case PageObject::Type::Text: {
+            page_object = ToNativeTextObject(env, java_page_object);
+            break;
+        }
         case PageObject::Type::Path: {
             page_object = ToNativePathObject(env, java_page_object, converter);
             break;
@@ -1271,7 +1297,7 @@ std::unique_ptr<Annotation> ToNativeHighlightAnnotation(JNIEnv* env, jobject jav
     static jclass highlight_annotation_class = GetPermClassRef(env, kHighlightAnnotation);
 
     jmethodID get_bounds =
-            env->GetMethodID(highlight_annotation_class, "getBounds", funcsig(kList).c_str());
+            env->GetMethodID(highlight_annotation_class, "getBoundsList", funcsig(kList).c_str());
     jobject java_bounds = env->CallObjectMethod(java_annotation, get_bounds);
 
     vector<Rectangle_f> native_bounds;
