@@ -41,6 +41,7 @@ import com.android.providers.media.photopicker.v2.model.VideoMediaQuery;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Utility class for querying the Picker DB to fetch media metadata.
@@ -511,6 +512,108 @@ public class PickerMediaDatabaseUtil {
                 database.endTransaction();
             }
         }
+    }
+
+
+    /**
+     * Query items count available in each month from the database and a cursor in response
+     *
+     * @param appContext The application context.
+     * @param syncController Instance of the PickerSyncController singleton.
+     * @param query The MediaQuery object instance that tells us about the media query args.
+     * @param localAuthority The effective local authority that we need to consider for this
+     *                       transaction. If the local items should not be queries but the local
+     *                       authority has some value, the effective local authority would be null.
+     * @param cloudAuthority The effective cloud authority that we need to consider for this
+     *                       transaction. If the local items should not be queries but the local
+     *                       authority has some value, the effective local authority would
+     *                       be null.
+     * @return The cursor with number of media items available in each  month.
+     */
+    @NonNull
+    public static Cursor queryItemsPerMonth(
+            @NonNull Context appContext,
+            @NonNull PickerSyncController syncController,
+            @NonNull MediaQuery query,
+            @Nullable String localAuthority,
+            @Nullable String cloudAuthority
+    ) {
+        try {
+            final SQLiteDatabase database = syncController.getDbFacade().getDatabase();
+
+            try {
+                database.beginTransactionNonExclusive();
+
+                String queryString = getItemsPerMonthQuery(
+                        appContext,
+                        query,
+                        database,
+                        PickerSQLConstants.Table.MEDIA,
+                        localAuthority,
+                        cloudAuthority
+                );
+                Log.d(TAG, "Items per month query: " + queryString);
+
+                Cursor itemsPerMonthData = database.rawQuery(
+                        Objects.requireNonNull(queryString), /* selectionArgs= */ null);
+
+                database.setTransactionSuccessful();
+                Log.i(TAG, "Items per month query: Returning " + itemsPerMonthData.getCount()
+                        + " dates");
+                return itemsPerMonthData;
+            } finally {
+                database.endTransaction();
+            }
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Photo grid error querying items per month.", e);
+        }
+    }
+
+    /**
+     * Builds and returns the SQL query to get media item count available in each month from media
+     * table in Picker DB.
+     */
+    @Nullable
+    private static String getItemsPerMonthQuery(
+            @Nullable Context appContext,
+            @NonNull MediaQuery query,
+            @NonNull SQLiteDatabase database,
+            @NonNull PickerSQLConstants.Table table,
+            @Nullable String localAuthority,
+            @Nullable String cloudAuthority) {
+        final MediaProjection projectionUtil = new MediaProjection(
+                localAuthority,
+                cloudAuthority,
+                query.getIntentAction(),
+                table
+        );
+
+        SelectSQLiteQueryBuilder queryBuilder = new SelectSQLiteQueryBuilder(database)
+                .setTables(
+                        query.getTableWithRequiredJoins(table.toString(), appContext,
+                                query.getCallingPackageUid(), query.getIntentAction()))
+                .setProjection(List.of(
+                        projectionUtil.getYearForItemsPerMonthData(),
+                        projectionUtil.getMonthForItemsPerMonthData(),
+                        projectionUtil.getItemsPerMonthCount()
+                ))
+                .setGroupBy(PickerSQLConstants.ItemsPerMonthResponse.YEAR_TAKEN.getProjectedName()
+                        + ", "
+                        + PickerSQLConstants.ItemsPerMonthResponse.MONTH_TAKEN.getProjectedName())
+                .setSortOrder(PickerSQLConstants.ItemsPerMonthResponse.YEAR_TAKEN.getProjectedName()
+                        + " DESC, "
+                        + PickerSQLConstants.ItemsPerMonthResponse.MONTH_TAKEN.getProjectedName()
+                        + " DESC");
+
+        query.addWhereClause(
+                queryBuilder,
+                table,
+                localAuthority,
+                cloudAuthority,
+                /* reverseOrder */ false
+        );
+
+        return queryBuilder.buildQuery();
     }
 
     /**

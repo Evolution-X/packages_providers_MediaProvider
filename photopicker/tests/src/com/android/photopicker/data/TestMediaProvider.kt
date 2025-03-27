@@ -27,11 +27,15 @@ import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 import java.util.stream.Collectors
 
@@ -64,11 +68,12 @@ val DEFAULT_COLLECTION_INFO: List<CollectionInfo> =
 
 val DEFAULT_MEDIA: List<Media> =
     listOf(
-        createMediaImage(10),
-        createMediaImage(11),
-        createMediaImage(12),
-        createMediaImage(13),
-        createMediaImage(14),
+        createMediaImage(11L, 1709385600000L), // 3rd March 2024
+        createMediaImage(12L, 1709472000000L), // 2nd March 2024
+        createMediaImage(10L, 1709299200000L), // 1st March 2024
+        createMediaImage(14L, 1706793600000L), // 1st February 2024
+        createMediaImage(15L, 1707542400000L), // 10th February 2024
+        createMediaImage(13L, 1706707200000L), // 31st January 2024
     )
 
 val DEFAULT_ALBUMS: List<Group.Album> =
@@ -119,7 +124,7 @@ val DEFAULT_CATEGORIES_AND_ALBUMS: List<Group> =
 val DEFAULT_MEDIA_SETS: List<Group.MediaSet> =
     listOf(createMediaSet("1"), createMediaSet("2"), createMediaSet("3"))
 
-fun createMediaImage(pickerId: Long): Media {
+fun createMediaImage(pickerId: Long, dateTakenMillisLong: Long = Long.MAX_VALUE): Media {
     return Media.Image(
         mediaId = UUID.randomUUID().toString(),
         pickerId = pickerId,
@@ -127,7 +132,7 @@ fun createMediaImage(pickerId: Long): Media {
         mediaSource = MediaSource.LOCAL,
         mediaUri = Uri.parse("content://media/picker/authority/media/$pickerId"),
         glideLoadableUri = Uri.parse("content://authority/media/$pickerId"),
-        dateTakenMillisLong = Long.MAX_VALUE,
+        dateTakenMillisLong = dateTakenMillisLong,
         sizeInBytes = 10,
         mimeType = "image/*",
         standardMimeTypeExtension = 0,
@@ -201,6 +206,7 @@ class TestMediaProvider(
             CATEGORIES_PATH_SEGMENT -> getCategoriesAndAlbums()
             MEDIA_SETS_PATH_SEGMENT -> getMediaSets()
             MEDIA_SET_CONTENTS_PATH_SEGMENT -> getMedia()
+            ITEMS_PER_MONTH_PATH_SEGMENT -> getItemsPerMonth()
             else -> {
                 val pathSegments: MutableList<String> = uri.getPathSegments()
                 if (pathSegments.size == 4 && pathSegments[2].equals(ALBUM_PATH_SEGMENT)) {
@@ -326,6 +332,48 @@ class TestMediaProvider(
             )
         }
         return cursor
+    }
+
+    private fun getItemsPerMonth(): Cursor {
+        val cursor =
+            MatrixCursor(
+                arrayOf(
+                    MediaProviderClient.ItemsPerMonthResponse.YEAR_TAKEN.key,
+                    MediaProviderClient.ItemsPerMonthResponse.MONTH_TAKEN.key,
+                    MediaProviderClient.ItemsPerMonthResponse.ITEM_COUNT.key,
+                )
+            )
+
+        val perMonthMediaCountList = getPerMonthMediaCountList()
+        perMonthMediaCountList.forEach { (year, month, count) ->
+            cursor.addRow(arrayOf<Any?>(year, month, count))
+        }
+        return cursor
+    }
+
+    /**
+     * Calculates the count of media items per month, considering the device's local time zone.
+     *
+     * @return A list of [ItemsPerMonth] objects, where each object represents a year, month, and
+     *   the corresponding item count (all in local time)
+     */
+    fun getPerMonthMediaCountList(): List<ItemsPerMonth> {
+        val mediaItems: List<Media> = media
+        val mediaByMonth = mutableMapOf<Pair<Int, Int>, Int>()
+        mediaItems.forEach { mediaItem ->
+            val dateTakenSeconds: Long = mediaItem.dateTakenMillisLong / 1000
+            // Get the device's local time zone offset at the given timestamp.
+            val localOffset =
+                ZoneOffset.systemDefault().rules.getOffset(Instant.ofEpochSecond(dateTakenSeconds))
+            val localDateTime = LocalDateTime.ofEpochSecond(dateTakenSeconds, 0, localOffset)
+            val year = localDateTime.year
+            val month = localDateTime.monthValue
+            val yearMonthPair = Pair(year, month)
+            mediaByMonth[yearMonthPair] = mediaByMonth.getOrDefault(yearMonthPair, 0) + 1
+        }
+        return mediaByMonth.map { (yearMonthPair, count) ->
+            ItemsPerMonth(yearMonthPair.first, yearMonthPair.second, count)
+        }
     }
 
     private fun fetchFilteredMedia(queryArgs: Bundle?, mediaItems: List<Media> = media): Cursor {
