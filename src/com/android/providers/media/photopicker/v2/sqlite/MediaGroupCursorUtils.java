@@ -68,7 +68,7 @@ public class MediaGroupCursorUtils {
             PickerSQLConstants.MediaGroupResponseColumns.IS_LEAF_CATEGORY.getColumnName(),
     };
 
-    private static final String[] MEDIA_SET_RESPONSE_PROJECTION = new String[] {
+    private static final String[] MEDIA_SET_RESPONSE_PROJECTION = new String[]{
             PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName(),
             PickerSQLConstants.MediaGroupResponseColumns.PICKER_ID.getColumnName(),
             PickerSQLConstants.MediaGroupResponseColumns.DISPLAY_NAME.getColumnName(),
@@ -78,7 +78,7 @@ public class MediaGroupCursorUtils {
 
     /**
      * @param cursor Input
-     * {@link CloudMediaProviderContract.MediaSetColumns} cursor.
+     *               {@link CloudMediaProviderContract.MediaSetColumns} cursor.
      * @return Cursor with the columns {@link PickerSQLConstants.MediaGroupResponseColumns}.
      */
     public static Cursor getMediaGroupCursorForMediaSets(@Nullable Cursor cursor) {
@@ -128,7 +128,7 @@ public class MediaGroupCursorUtils {
                 String coverUri = getUri(coverId, authority).toString();
                 String unwrappedCoverUri = maybeGetLocalUri(coverUri, cloudToLocalIdMap);
 
-                mediaSetsResponse.addRow(new Object[] {
+                mediaSetsResponse.addRow(new Object[]{
                         mediaSetId,
                         mediaSetPickerId,
                         displayName,
@@ -142,9 +142,9 @@ public class MediaGroupCursorUtils {
 
     /**
      * @param cursor Input
-     * {@link com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper}
-     * @param index The index for the first album in the given albums cursor.
-     *              The index value can be used to generate unique picker id for albums.
+     *               {@link com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper}
+     * @param index  The index for the first album in the given albums cursor.
+     *               The index value can be used to generate unique picker id for albums.
      * @return Cursor with the columns {@link PickerSQLConstants.MediaGroupResponseColumns}.
      */
     @Nullable
@@ -174,7 +174,7 @@ public class MediaGroupCursorUtils {
         if (cursor.moveToFirst()) {
             do {
                 final String albumId = cursor.getString(cursor.getColumnIndexOrThrow(
-                                PickerSQLConstants.AlbumResponse.ALBUM_ID.getColumnName()));
+                        PickerSQLConstants.AlbumResponse.ALBUM_ID.getColumnName()));
 
                 // Sets the picker id of the current album and increments the index for the
                 // next album.
@@ -211,18 +211,21 @@ public class MediaGroupCursorUtils {
     }
 
     /**
-     * @param cursor Input
-     * {@link CloudMediaProviderContract.MediaCategoryColumns} cursor.
+     * @param cursor    Input
+     *                  {@link CloudMediaProviderContract.MediaCategoryColumns} cursor.
      * @param authority The authority of the category's CMP.
-     * @param index The index for the first category in the given categories cursor.
-     *              The index value can be used to generate unique picker id for categories.
+     * @param index     The index for the first category in the given categories cursor.
+     *                  The index value can be used to generate unique picker id for categories.
+     * @param validCategoryType The category type to validate the input cursor.
+     *                          Category type received from the input cursor should be same as this.
      * @return Cursor with the columns {@link PickerSQLConstants.MediaGroupResponseColumns}.
      */
     @Nullable
     public static Cursor getMediaGroupCursorForCategories(
             @Nullable Cursor cursor,
             @NonNull String authority,
-            long index) {
+            long index,
+            @NonNull String validCategoryType) {
         if (cursor == null) {
             return null;
         }
@@ -252,22 +255,21 @@ public class MediaGroupCursorUtils {
         final Map<String, String> cloudToLocalIdMap = getLocalIds(uris);
         if (cursor.moveToFirst()) {
             if (cursor.getCount() > 1) {
-                Log.e(TAG, "Only one category of type PEOPLE AND PETS is expected but received "
+                Log.e(TAG, "Only one category is expected but received "
                         + cursor.getCount());
             }
 
             final String categoryType = cursor.getString(cursor.getColumnIndexOrThrow(
                     CloudMediaProviderContract.MediaCategoryColumns.MEDIA_CATEGORY_TYPE));
 
-            if (!CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS
-                    .equals(categoryType)) {
+            if (!validCategoryType.equals(categoryType)) {
                 Log.e(TAG, "Could not recognize category type. Skipping it: " + categoryType);
                 return response;
             }
 
             final String categoryId = requireNonNull(
                     cursor.getString(cursor.getColumnIndexOrThrow(
-                    CloudMediaProviderContract.MediaCategoryColumns.ID)));
+                            CloudMediaProviderContract.MediaCategoryColumns.ID)));
 
             final String displayName = cursor.getString(cursor.getColumnIndexOrThrow(
                     CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME));
@@ -275,30 +277,34 @@ public class MediaGroupCursorUtils {
             final String mediaCoverId1 = cursor.getString(
                     cursor.getColumnIndexOrThrow(
                             CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID1));
-            final String coverUri1 = maybeGetLocalUri(
-                    getUri(mediaCoverId1, authority).toString(),
-                    cloudToLocalIdMap);
+            String coverUri1 = mediaCoverId1;
 
             final String mediaCoverId2 = cursor.getString(
                     cursor.getColumnIndexOrThrow(
                             CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2));
-            final String coverUri2 = maybeGetLocalUri(
-                    getUri(mediaCoverId2, authority).toString(),
-                    cloudToLocalIdMap);
+            String coverUri2 = mediaCoverId2;
 
             final String mediaCoverId3 = cursor.getString(
                     cursor.getColumnIndexOrThrow(
                             CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID3));
-            final String coverUri3 = maybeGetLocalUri(
-                    getUri(mediaCoverId3, authority).toString(),
-                    cloudToLocalIdMap);
+            String coverUri3 = mediaCoverId3;
 
             final String mediaCoverId4 = cursor.getString(
                     cursor.getColumnIndexOrThrow(
                             CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID4));
-            final String coverUri4 = maybeGetLocalUri(
-                    getUri(mediaCoverId4, authority).toString(),
-                    cloudToLocalIdMap);
+            String coverUri4 = mediaCoverId4;
+
+            if (!CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS
+                    .equals(categoryType)) {
+                coverUri1 = maybeGetLocalUri(getUri(mediaCoverId1, authority).toString(),
+                        cloudToLocalIdMap);
+                coverUri2 = maybeGetLocalUri(getUri(mediaCoverId2, authority).toString(),
+                        cloudToLocalIdMap);
+                coverUri3 = maybeGetLocalUri(getUri(mediaCoverId3, authority).toString(),
+                        cloudToLocalIdMap);
+                coverUri4 = maybeGetLocalUri(getUri(mediaCoverId4, authority).toString(),
+                        cloudToLocalIdMap);
+            }
 
             response.addRow(new Object[]{
                     MediaGroup.CATEGORY.name(),
