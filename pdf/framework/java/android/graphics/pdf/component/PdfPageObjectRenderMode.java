@@ -28,7 +28,8 @@ import java.lang.annotation.RetentionPolicy;
  *
  * <p>
  * This final class provides constants for specifying how graphical elements
- * are rendered on a PDF page. It cannot be instantiated.
+ * are rendered on a PDF page. It dictates whether the glyph is filled, stroked, or both.
+ * It cannot be instantiated.
  *
  * <p>
  * Rendering modes:
@@ -50,17 +51,18 @@ public final class PdfPageObjectRenderMode {
     public static final int UNKNOWN = -1;
 
     /**
-     * Fill Mode
+     * Fill Mode : Only the interior of the glyphs is filled with the fill color.
      */
     public static final int FILL = 0;
 
     /**
-     * Stroke Mode
+     * Stroke Mode : Only the outline of the glyphs is stroked with the stroke color.
      */
     public static final int STROKE = 1;
 
     /**
-     * FillStroke Mode
+     * FillStroke Mode : Both the interior and outline of the glyphs are rendered
+     * using the fill abd stroke colors respectively.
      */
     public static final int FILL_STROKE = 2;
 

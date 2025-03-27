@@ -174,13 +174,10 @@ package android.graphics.pdf.component {
     method public void setBold(boolean);
     method public void setFontFamily(int);
     method public void setItalic(boolean);
-  }
-
-  @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_objects") public class PdfPageTextObjectFontFamily {
-    field public static final int COURIER = 0; // 0x0
-    field public static final int HELVETICA = 1; // 0x1
-    field public static final int SYMBOL = 2; // 0x2
-    field public static final int TIMES_NEW_ROMAN = 3; // 0x3
+    field public static final int FONT_FAMILY_COURIER = 0; // 0x0
+    field public static final int FONT_FAMILY_HELVETICA = 1; // 0x1
+    field public static final int FONT_FAMILY_SYMBOL = 2; // 0x2
+    field public static final int FONT_FAMILY_TIMES_NEW_ROMAN = 3; // 0x3
   }
 
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_stamp_annotations") public final class StampAnnotation extends android.graphics.pdf.component.PdfAnnotation {
