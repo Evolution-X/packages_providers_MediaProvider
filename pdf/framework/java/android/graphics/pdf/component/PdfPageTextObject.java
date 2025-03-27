@@ -19,6 +19,7 @@ package android.graphics.pdf.component;
 import android.annotation.ColorInt;
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
+import android.graphics.Color;
 import android.graphics.pdf.flags.Flags;
 
 /**
@@ -48,6 +49,8 @@ public final class PdfPageTextObject extends PdfPageObject {
         this.mText = text;
         this.mFont = font;
         this.mFontSize = fontSize;
+        this.mStrokeColor = Color.BLACK;
+        this.mFillColor = Color.BLACK;
         if (Flags.enableEditPdfPageObjects()) {
             this.mRenderMode = PdfPageObjectRenderMode.FILL;
         }
@@ -93,6 +96,7 @@ public final class PdfPageTextObject extends PdfPageObject {
 
     /**
      * Returns the fill color of the object.
+     * Returns {@link android.graphics.Color#BLACK} by default if not set.
      *
      * @return The fill color of the object.
      */
@@ -129,6 +133,7 @@ public final class PdfPageTextObject extends PdfPageObject {
 
     /**
      * Returns the stroke color of the object.
+     * Returns {@link android.graphics.Color#BLACK} by default if not set.
      *
      * @return The stroke color of the object.
      */
