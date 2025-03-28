@@ -124,7 +124,7 @@ public class OemMetadataServiceTest {
         assertNotNull(mOemMetadataServiceWrapper);
         final File dir = Environment
                 .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File file = new File(dir, "a.jpg");
+        File file = new File(dir, "a_" + System.currentTimeMillis() + ".jpg");
         file.createNewFile();
 
         try {
@@ -152,7 +152,7 @@ public class OemMetadataServiceTest {
                 new TestConfigStore());
         final File downloads = new File(Environment.getExternalStorageDirectory(),
                 Environment.DIRECTORY_DOWNLOADS);
-        final File audioFile = new File(downloads, "audio.mp3");
+        final File audioFile = new File(downloads, "audio_" + System.currentTimeMillis() + ".mp3");
         try {
             stage(R.raw.test_audio, audioFile);
 
@@ -180,7 +180,10 @@ public class OemMetadataServiceTest {
             }
         } finally {
             audioFile.delete();
-            isolatedContext.unbindService(modernMediaScanner.getOemMetadataServiceConnection());
+            ServiceConnection connection = modernMediaScanner.getOemMetadataServiceConnection();
+            if (connection != null) {
+                isolatedContext.unbindService(connection);
+            }
         }
     }
 
@@ -194,7 +197,7 @@ public class OemMetadataServiceTest {
                 new TestConfigStore());
         final File downloads = new File(Environment.getExternalStorageDirectory(),
                 Environment.DIRECTORY_DOWNLOADS);
-        final File audioFile = new File(downloads, "audio.mp3");
+        final File audioFile = new File(downloads, "audio_" + System.currentTimeMillis() + ".mp3");
         try {
             stage(R.raw.test_audio, audioFile);
             Uri uri = modernMediaScanner.scanFile(audioFile, MediaScanner.REASON_UNKNOWN);
@@ -247,7 +250,7 @@ public class OemMetadataServiceTest {
                 new TestConfigStore());
         final File downloads = new File(Environment.getExternalStorageDirectory(),
                 Environment.DIRECTORY_DOWNLOADS);
-        final File audioFile = new File(downloads, "audio.mp3");
+        final File audioFile = new File(downloads, "audio_" + System.currentTimeMillis() + ".mp3");
         try {
             stage(R.raw.test_audio, audioFile);
 
@@ -317,7 +320,7 @@ public class OemMetadataServiceTest {
                 new TestConfigStore());
         final File downloads = new File(Environment.getExternalStorageDirectory(),
                 Environment.DIRECTORY_DOWNLOADS);
-        final File audioFile = new File(downloads, "audio.mp3");
+        final File audioFile = new File(downloads, "audio_" + System.currentTimeMillis() + ".mp3");
         try {
             stage(R.raw.test_audio, audioFile);
 
