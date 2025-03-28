@@ -34,6 +34,7 @@ const val SEARCH_MEDIA_PATH_SEGMENT = "search_media"
 const val SEARCH_SUGGESTIONS_PATH_SEGMENT = "search_suggestions"
 const val CATEGORIES_PATH_SEGMENT = "categories"
 const val MEDIA_SETS_PATH_SEGMENT = "media_sets"
+const val PAGE_KEY_PATH_SEGMENT = "page_key"
 const val MEDIA_SET_CONTENTS_PATH_SEGMENT = "media_set_contents"
 const val ITEMS_PER_MONTH_PATH_SEGMENT = "monthly_aggregate"
 
@@ -109,6 +110,16 @@ val ITEMS_PER_MONTH_URI: Uri =
         .apply {
             appendPath(MEDIA_PATH_SEGMENT)
             appendPath(ITEMS_PER_MONTH_PATH_SEGMENT)
+        }
+        .build()
+
+/** URI for media page key metadata. */
+val MEDIA_PAGE_KEY_URI: Uri =
+    pickerUri
+        .buildUpon()
+        .apply {
+            appendPath(MEDIA_PATH_SEGMENT)
+            appendPath(PAGE_KEY_PATH_SEGMENT)
         }
         .build()
 

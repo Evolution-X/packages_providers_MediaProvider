@@ -36,6 +36,7 @@ import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.v2.model.AlbumMediaQuery;
 import com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper;
 import com.android.providers.media.photopicker.v2.model.FavoritesMediaQuery;
+import com.android.providers.media.photopicker.v2.model.MediaPageKeyQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQuery;
 import com.android.providers.media.photopicker.v2.model.VideoMediaQuery;
 
@@ -658,6 +659,100 @@ public class PickerMediaDatabaseUtil {
                 /* reverseOrder */ false
         );
 
+        return queryBuilder.buildQuery();
+    }
+
+
+    /**
+     * Query Media page key for the item on a specified position in picker DB and a cursor
+     * in response.
+     *
+     * @param appContext The application context.
+     * @param syncController Instance of the PickerSyncController singleton.
+     * @param query The MediaPageKeyQuery object instance that tells us about the media page key
+     *              query args.
+     * @param localAuthority The effective local authority that we need to consider for this
+     *                       transaction. If the local items should not be queries but the local
+     *                       authority has some value, the effective local authority would be null.
+     * @param cloudAuthority The effective cloud authority that we need to consider for this
+     *                       transaction. If the local items should not be queries but the local
+     *                       authority has some value, the effective local authority would
+     *                       be null.
+     * @return The cursor having picker id and date taken for the item on a specified position
+     * in picker DB. This cursor will be used to form a valid instance of MediaPageKey.
+     */
+    @NonNull
+    public static Cursor queryMediaPageKey(
+            @NonNull Context appContext,
+            @NonNull PickerSyncController syncController,
+            @NonNull MediaPageKeyQuery query,
+            @Nullable String localAuthority,
+            @Nullable String cloudAuthority
+    ) {
+        try {
+            final SQLiteDatabase database = syncController.getDbFacade().getDatabase();
+
+            try {
+                database.beginTransactionNonExclusive();
+                Cursor pageData = database.rawQuery(
+                        Objects.requireNonNull(getMediaPageKeyQuery(
+                                appContext,
+                                query,
+                                database,
+                                PickerSQLConstants.Table.MEDIA,
+                                localAuthority,
+                                cloudAuthority
+                        )),
+                        /* selectionArgs */ null
+                );
+                database.setTransactionSuccessful();
+                return pageData;
+            } finally {
+                database.endTransaction();
+            }
+        } catch (RuntimeException e) {
+            throw new RuntimeException("Error querying media page key.", e);
+        }
+    }
+
+    /**
+     * Builds and returns the SQL query to get picker id and date taken for the item at specified
+     * position in Media table in Picker DB.
+     */
+    @Nullable
+    private static String getMediaPageKeyQuery(
+            @Nullable Context appContext,
+            @NonNull MediaPageKeyQuery query,
+            @NonNull SQLiteDatabase database,
+            @NonNull PickerSQLConstants.Table table,
+            @Nullable String localAuthority,
+            @Nullable String cloudAuthority) {
+        final MediaProjection projectionUtil = new MediaProjection(
+                localAuthority,
+                cloudAuthority,
+                query.getIntentAction(),
+                table
+        );
+
+        SelectSQLiteQueryBuilder queryBuilder = new SelectSQLiteQueryBuilder(database)
+                .setTables(
+                        query.getTableWithRequiredJoins(table.toString(), appContext,
+                                query.getCallingPackageUid(), query.getIntentAction()))
+                .setProjection(List.of(
+                        projectionUtil.get(PickerSQLConstants.MediaResponse.PICKER_ID),
+                        projectionUtil.get(PickerSQLConstants.MediaResponse.DATE_TAKEN_MS)
+                ))
+                .setSortOrder(getSortOrder(table, /* reverseOrder */ false))
+                .setLimit(1)
+                .setOffset(query.getItemPosition());
+
+        query.addWhereClause(
+                queryBuilder,
+                table,
+                localAuthority,
+                cloudAuthority,
+                /* reverseOrder */ false
+        );
         return queryBuilder.buildQuery();
     }
 

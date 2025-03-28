@@ -80,6 +80,7 @@ import com.android.providers.media.photopicker.v2.model.AlbumMediaQuery;
 import com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper;
 import com.android.providers.media.photopicker.v2.model.MediaGroup;
 import com.android.providers.media.photopicker.v2.model.MediaInMediaSetSyncRequestParams;
+import com.android.providers.media.photopicker.v2.model.MediaPageKeyQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQueryForPreSelection;
 import com.android.providers.media.photopicker.v2.model.MediaSetsSyncRequestParams;
@@ -396,6 +397,38 @@ public class PickerDataLayerV2 {
                         : null;
 
         return PickerMediaDatabaseUtil.queryItemsPerMonth(
+                appContext,
+                syncController,
+                query,
+                effectiveLocalAuthority,
+                effectiveCloudAuthority
+        );
+    }
+
+    /**
+     * Returns a cursor having picker id and date taken for the item at the specified position.
+     * This cursor will be used to form a valid instance of MediaPageKey.
+     *
+     * @param appContext The application context.
+     * @param queryArgs The arguments help us filter on the media query to yield the desired
+     *                  results.
+     */
+    public static Cursor queryMediaPageKey(@NonNull Context appContext, @NonNull Bundle queryArgs) {
+        Log.d(TAG, "Received query for media page key for the item at the specified position");
+        final MediaPageKeyQuery query = new MediaPageKeyQuery(queryArgs);
+        final PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
+        final String effectiveLocalAuthority =
+                query.getProviders().contains(syncController.getLocalProvider())
+                        ? syncController.getLocalProvider()
+                        : null;
+        final String cloudAuthority = syncController
+                .getCloudProviderOrDefault(/* defaultValue */ null);
+        final String effectiveCloudAuthority =
+                syncController.shouldQueryCloudMedia(query.getProviders(), cloudAuthority)
+                        ? cloudAuthority
+                        : null;
+
+        return PickerMediaDatabaseUtil.queryMediaPageKey(
                 appContext,
                 syncController,
                 query,

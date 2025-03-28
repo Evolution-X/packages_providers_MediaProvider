@@ -637,4 +637,23 @@ class MediaProviderClientTest {
         val expectedItemsPerMonthList = testContentProvider.getPerMonthMediaCountList()
         assertThat(itemsPerMonthResults).containsExactlyElementsIn(expectedItemsPerMonthList)
     }
+
+    @Test
+    fun testFetchMediaPageKeyForItemPosition() = runTest {
+        val mediaProviderClient = MediaProviderClient()
+        val mediaPageKey: MediaPageKey =
+            mediaProviderClient.fetchMediaPageKeyForItemPosition(
+                contentResolver = testContentResolver,
+                itemPosition = 2,
+                availableProviders = listOf(Provider("provider", MediaSource.LOCAL, 0, "")),
+                config =
+                    PhotopickerConfiguration(
+                        action = MediaStore.ACTION_PICK_IMAGES,
+                        sessionId = sessionId,
+                    ),
+            )
+        val expectedMediaPageKey = testContentProvider.getMediaPageKeyForItemPosition()
+        assertThat(mediaPageKey.pickerId).isEqualTo(expectedMediaPageKey.pickerId)
+        assertThat(mediaPageKey.dateTakenMillis).isEqualTo(expectedMediaPageKey.dateTakenMillis)
+    }
 }
