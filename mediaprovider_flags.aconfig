@@ -309,3 +309,12 @@ flag {
     is_fixed_read_only: true
     is_exported: true
 }
+
+flag {
+    name: "enable_appop_permission_checks_cache"
+    namespace: "mediaprovider"
+    description: "This flag enables caching appop checks to optimize noteOp calls and use checkOp wherever possible."
+    is_fixed_read_only: true
+    is_exported: false
+    bug: "323574186"
+}
