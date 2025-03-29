@@ -209,9 +209,6 @@ public class ModernMediaScanner implements MediaScanner {
 
     private static final Pattern PATTERN_YEAR = Pattern.compile("([1-9][0-9][0-9][0-9])");
 
-    private static final Pattern PATTERN_ALBUM_ART = Pattern.compile(
-            "(?i)(?:(?:^folder|(?:^AlbumArt(?:(?:_\\{.*\\}_)?(?:small|large))?))(?:\\.jpg$)|(?:\\._.*))");
-
     // The path of the MyFiles/Downloads directory shared from Chrome OS in ARC.
     private static final Path ARC_MYFILES_DOWNLOADS_PATH = Paths.get(
             "/storage/0000000000000000000000000000CAFEF00D2019/Downloads");
@@ -2085,15 +2082,10 @@ public class ModernMediaScanner implements MediaScanner {
         if (isHidden || FileUtils.isFileHidden(file)) {
             mediaType = FileColumns.MEDIA_TYPE_NONE;
         }
-        if (mediaType == FileColumns.MEDIA_TYPE_IMAGE && isFileAlbumArt(file)) {
+        if (mediaType == FileColumns.MEDIA_TYPE_IMAGE && FileUtils.isFileAlbumArt(file)) {
             mediaType = FileColumns.MEDIA_TYPE_NONE;
         }
         return mediaType;
-    }
-
-    @VisibleForTesting
-    boolean isFileAlbumArt(@NonNull File file) {
-        return PATTERN_ALBUM_ART.matcher(file.getName()).matches();
     }
 
     boolean isZero(@NonNull String value) {

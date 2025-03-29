@@ -64,7 +64,6 @@ public final class FreeTextAnnotation extends PdfAnnotation {
      * Sets the bounding rectangle of the freetext annotation.
      *
      * @param bounds The new bounding rectangle.
-     * @throws NullPointerException if given bounds is null
      */
     public void setBounds(@NonNull RectF bounds) {
         Preconditions.checkNotNull(bounds, "Bounds should not be null");

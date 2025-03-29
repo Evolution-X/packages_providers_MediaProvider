@@ -374,6 +374,37 @@ public class PickerDataLayerV2 {
     }
 
     /**
+     * Returns a cursor with media items count available in each month
+     *
+     * @param appContext The application context.
+     * @param queryArgs The arguments help us filter on the media query to yield the desired
+     *                  results.
+     */
+    static Cursor queryItemsPerMonth(@NonNull Context appContext, @NonNull Bundle queryArgs) {
+        Log.d(TAG, "Received query for media items per month");
+        final MediaQuery query = new MediaQuery(queryArgs);
+        final PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
+        final String effectiveLocalAuthority =
+                query.getProviders().contains(syncController.getLocalProvider())
+                        ? syncController.getLocalProvider()
+                        : null;
+        final String cloudAuthority = syncController
+                .getCloudProviderOrDefault(/* defaultValue */ null);
+        final String effectiveCloudAuthority =
+                syncController.shouldQueryCloudMedia(query.getProviders(), cloudAuthority)
+                        ? cloudAuthority
+                        : null;
+
+        return PickerMediaDatabaseUtil.queryItemsPerMonth(
+                appContext,
+                syncController,
+                query,
+                effectiveLocalAuthority,
+                effectiveCloudAuthority
+        );
+    }
+
+    /**
      * Returns a cursor with the Photo Picker albums and categories in response.
      *
      * @param appContext The application context.

@@ -22,6 +22,7 @@ import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_RESPO
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_UNKNOWN;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_SELECT_CONTENT;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_UNKNOWN;
+import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN;
 import static android.graphics.pdf.PdfStatsLog.PDF_LOAD_REPORTED;
 import static android.graphics.pdf.PdfStatsLog.PDF_LOAD_REPORTED__LOAD_RESULT__RESULT_ERROR;
 import static android.graphics.pdf.PdfStatsLog.PDF_LOAD_REPORTED__LOAD_RESULT__RESULT_LOADED;
@@ -168,7 +169,8 @@ public class PdfEventLoggerTest {
         ExtendedMockito.verify(
                 () -> PdfStatsLog.write(eq(PDF_API_USAGE_REPORTED), eq(PROCESS_UID), eq(DOC_ID),
                         eq(PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_SELECT_CONTENT),
-                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_SUCCESS)),
+                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_SUCCESS),
+                        eq(PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN)),
                 times(1));
     }
 
@@ -180,7 +182,8 @@ public class PdfEventLoggerTest {
         ExtendedMockito.verify(
                 () -> PdfStatsLog.write(eq(PDF_API_USAGE_REPORTED), eq(PROCESS_UID), eq(DOC_ID),
                         eq(PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_SELECT_CONTENT),
-                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_FAILURE)),
+                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_FAILURE),
+                        eq(PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN)),
                 times(1));
     }
 
@@ -193,7 +196,8 @@ public class PdfEventLoggerTest {
         ExtendedMockito.verify(
                 () -> PdfStatsLog.write(eq(PDF_API_USAGE_REPORTED), eq(PROCESS_UID), eq(DOC_ID),
                         eq(PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_UNKNOWN),
-                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_UNKNOWN)),
+                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_UNKNOWN),
+                        eq(PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN)),
                 times(1));
     }
 }
