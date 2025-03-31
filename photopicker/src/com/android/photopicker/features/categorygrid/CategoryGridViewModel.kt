@@ -22,6 +22,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.android.photopicker.core.Background
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
@@ -41,6 +42,7 @@ import com.android.photopicker.extensions.toMediaGridItemFromPeopleMediaSet
 import com.android.photopicker.features.categorygrid.data.CategoryDataService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +61,7 @@ class CategoryGridViewModel
 @Inject
 constructor(
     private val scopeOverride: CoroutineScope?,
+    @Background val backgroundDispatcher: CoroutineDispatcher,
     private val selection: Selection<Media>,
     private val categoryDataService: CategoryDataService,
     private val dataService: DataService,
