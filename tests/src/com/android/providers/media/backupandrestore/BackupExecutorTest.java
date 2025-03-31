@@ -25,6 +25,7 @@ import static com.android.providers.media.scan.MediaScannerTest.stage;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import android.Manifest;
@@ -107,16 +108,13 @@ public final class BackupExecutorTest {
         mLevelDbPath =
                 mIsolatedContext.getFilesDir().getAbsolutePath() + "/backup/external_primary";
         FileUtils.deleteContents(mDownloadsDir);
+        LevelDBManager.delete(mLevelDbPath);
     }
 
     @After
     public void tearDown() {
         // Delete leveldb directory after test
-        File levelDbDir = new File(mLevelDbPath);
-        for (File f : levelDbDir.listFiles()) {
-            f.delete();
-        }
-        levelDbDir.delete();
+        LevelDBManager.delete(mLevelDbPath);
         InstrumentationRegistry.getInstrumentation()
                 .getUiAutomation().dropShellPermissionIdentity();
     }
@@ -124,6 +122,8 @@ public final class BackupExecutorTest {
     @Test
     public void testBackup() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
+        assumeFalse((new File(mLevelDbPath)).exists());
+
         try {
             // Add all files in Downloads directory
             File file = new File(mDownloadsDir, "a_" + SystemClock.elapsedRealtimeNanos() + ".jpg");

@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import android.Manifest;
@@ -55,6 +56,7 @@ import com.android.providers.media.leveldb.LevelDBResult;
 import com.android.providers.media.scan.ModernMediaScanner;
 import com.android.providers.media.util.FileUtils;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -106,11 +108,19 @@ public class MediaBackupAgentTest {
 
         mMediaBackupAgent = new MediaBackupAgent();
         mMediaBackupAgent.attach(mIsolatedContext);
+        LevelDBManager.delete(mLevelDbPath);
+    }
+
+    @After
+    public void tearDown() {
+        LevelDBManager.delete(mLevelDbPath);
     }
 
     @Test
     public void testCompleteFlow() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
+        assumeFalse((new File(mLevelDbPath)).exists());
+
         //create new test file & stage it
         File file = new File(mDownloadsDir, "testImage_"
                 + SystemClock.elapsedRealtimeNanos() + ".jpg");
