@@ -96,9 +96,7 @@ public final class BackupExecutor {
         }
         Log.v(TAG, "Backup is enabled");
 
-        if (mLevelDBInstance == null) {
-            mLevelDBInstance = LevelDBManager.getInstance(getBackupFilePath());
-        }
+        mLevelDBInstance = LevelDBManager.getInstance(getBackupFilePath());
         final long lastBackedUpGenerationNumberFromLevelDb = getLastBackedUpGenerationNumber();
         final long currentDbGenerationNumber = mExternalDatabaseHelper.runWithoutTransaction(
                 DatabaseHelper::getGeneration);
