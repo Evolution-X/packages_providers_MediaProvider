@@ -297,12 +297,14 @@ public class PickerDataLayerV2 {
 
         waitForOngoingMediaSetsSync(effectiveLocalAuthority, effectiveCloudAuthority);
 
-        Cursor mediaSetsCursor = MediaSetsDatabaseUtil.getMediaSetsForCategory(
+        final Cursor mediaSetsCursor = MediaSetsDatabaseUtil.getMediaSetsForCategory(
                 syncController.getDbFacade().getDatabase(),
-                requestParams
-               );
+                requestParams);
+        final Cursor result = MediaGroupCursorUtils
+                .getMediaGroupCursorForMediaSets(mediaSetsCursor);
 
-        return MediaGroupCursorUtils.getMediaGroupCursorForMediaSets(mediaSetsCursor);
+        Log.i(TAG, "Returning " + (result == null ? null : result.getCount()) + " media sets.");
+        return result;
     }
 
     /**
@@ -611,9 +613,12 @@ public class PickerDataLayerV2 {
 
         waitForOngoingMediaInMediaSetSync(effectiveLocalAuthority, effectiveCloudAuthority);
 
-        return MediaInMediaSetsDatabaseUtil.queryMediaInMediaSet(
+        final Cursor result = MediaInMediaSetsDatabaseUtil.queryMediaInMediaSet(
                 syncController, query, effectiveLocalAuthority, effectiveCloudAuthority);
 
+        Log.i(TAG, "Returning " + (result == null ? result : result.getCount())
+                + " media set contents.");
+        return result;
     }
 
     /**
@@ -908,12 +913,18 @@ public class PickerDataLayerV2 {
                     + "cloud provider for a parent category. Please check the input providers.");
         }
         if (localAuthority != null) {
-            SyncCompletionWaiter.waitForSyncWithTimeout(
+            Log.d(TAG, "Waiting for media set contents sync with local authority "
+                    + localAuthority);
+            final boolean success = SyncCompletionWaiter.waitForSyncWithTimeout(
                     SyncTrackerRegistry.getLocalMediaInMediaSetTracker(), /*timeoutInMillis*/ 500);
+            Log.d(TAG, "Done waiting for media set contents sync. Was it a success? " + success);
         }
         if (cloudAuthority != null) {
-            SyncCompletionWaiter.waitForSyncWithTimeout(
-                    SyncTrackerRegistry.getCloudMediaInMediaSetTracker(), /*timeoutInMillis*/ 5000);
+            Log.d(TAG, "Waiting for media set contents sync with cloud authority "
+                    + cloudAuthority);
+            final boolean success = SyncCompletionWaiter.waitForSyncWithTimeout(
+                    SyncTrackerRegistry.getCloudMediaInMediaSetTracker(), /*timeoutInMillis*/ 9000);
+            Log.d(TAG, "Done waiting for media set contents sync. Was it a success? " + success);
         }
     }
 
@@ -933,12 +944,16 @@ public class PickerDataLayerV2 {
                     + " a cloud provider for a parent category. Please check the input providers.");
         }
         if (localAuthority != null) {
-            SyncCompletionWaiter.waitForSyncWithTimeout(
+            Log.d(TAG, "Waiting for media sets sync for local authority " + localAuthority);
+            final boolean success = SyncCompletionWaiter.waitForSyncWithTimeout(
                     SyncTrackerRegistry.getLocalMediaSetsSyncTracker(), /*timeoutInMillis*/ 500);
+            Log.d(TAG, "Done waiting for media sets sync. Was it a success? " + success);
         }
         if (cloudAuthority != null) {
-            SyncCompletionWaiter.waitForSyncWithTimeout(
-                    SyncTrackerRegistry.getCloudMediaSetsSyncTracker(), /*timeoutInMillis*/ 2000);
+            Log.d(TAG, "Waiting for media sets sync for cloud authority " + cloudAuthority);
+            final boolean success = SyncCompletionWaiter.waitForSyncWithTimeout(
+                    SyncTrackerRegistry.getCloudMediaSetsSyncTracker(), /*timeoutInMillis*/ 5000);
+            Log.d(TAG, "Done waiting for media sets sync. Was it a success? " + success);
         }
     }
 
