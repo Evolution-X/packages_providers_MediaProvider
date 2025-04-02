@@ -121,13 +121,6 @@ package android.graphics.pdf.component {
     method public void transform(float, float, float, float, float, float);
   }
 
-  @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public final class PdfPageObjectRenderMode {
-    field public static final int FILL = 0; // 0x0
-    field public static final int FILL_STROKE = 2; // 0x2
-    field public static final int STROKE = 1; // 0x1
-    field public static final int UNKNOWN = -1; // 0xffffffff
-  }
-
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public final class PdfPageObjectType {
     method public static boolean isValidType(int);
     field public static final int IMAGE = 3; // 0x3
@@ -147,6 +140,10 @@ package android.graphics.pdf.component {
     method public void setStrokeColor(@ColorInt int);
     method public void setStrokeWidth(float);
     method @NonNull public android.graphics.Path toPath();
+    field public static final int RENDER_MODE_FILL = 0; // 0x0
+    field public static final int RENDER_MODE_FILL_STROKE = 2; // 0x2
+    field public static final int RENDER_MODE_STROKE = 1; // 0x1
+    field public static final int RENDER_MODE_UNKNOWN = -1; // 0xffffffff
   }
 
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_objects") public final class PdfPageTextObject extends android.graphics.pdf.component.PdfPageObject {
@@ -163,6 +160,10 @@ package android.graphics.pdf.component {
     method public void setStrokeColor(@ColorInt int);
     method public void setStrokeWidth(float);
     method public void setText(@NonNull String);
+    field public static final int RENDER_MODE_FILL = 0; // 0x0
+    field public static final int RENDER_MODE_FILL_STROKE = 2; // 0x2
+    field public static final int RENDER_MODE_STROKE = 1; // 0x1
+    field public static final int RENDER_MODE_UNKNOWN = -1; // 0xffffffff
   }
 
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_objects") public class PdfPageTextObjectFont {
