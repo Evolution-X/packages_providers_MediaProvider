@@ -605,14 +605,14 @@ public class PickerDataLayerV2Test {
         doReturn(mMockPackageManager)
                 .when(mMockContext).getPackageManager();
         String[] packageNames = new String[]{TEST_PACKAGE_NAME};
-        doReturn(packageNames).when(mMockPackageManager).getPackagesForUid(0);
+        doReturn(packageNames).when(mMockPackageManager).getPackagesForUid(Process.myUid());
         Map<String, Integer> idVsPreGranted = populateMediaAndMediaGrantsTable();
         int totalPreGranted = (int) idVsPreGranted.values().stream()
                 .filter(preGranted -> Integer.valueOf(1).equals(preGranted))
                 .count();
 
         Bundle queryArgs = new Bundle();
-        queryArgs.putInt(Intent.EXTRA_UID, 0);
+        queryArgs.putInt(Intent.EXTRA_UID, Process.myUid());
         try (Cursor cr = PickerDataLayerV2.fetchCountForPreGrantedItems(mMockContext, queryArgs)) {
             cr.moveToFirst();
             assertEquals(totalPreGranted, cr.getInt(cr.getColumnIndex(COLUMN_GRANTS_COUNT)));
@@ -629,7 +629,7 @@ public class PickerDataLayerV2Test {
         doReturn(mMockPackageManager)
                 .when(mMockContext).getPackageManager();
         String[] packageNames = new String[]{TEST_PACKAGE_NAME};
-        doReturn(packageNames).when(mMockPackageManager).getPackagesForUid(0);
+        doReturn(packageNames).when(mMockPackageManager).getPackagesForUid(Process.myUid());
 
         Map<String, Integer> idVsPreGranted = populateMediaAndMediaGrantsTable();
         int totalPreGranted = (int) idVsPreGranted.values().stream()
@@ -640,7 +640,7 @@ public class PickerDataLayerV2Test {
                 new ArrayList<>(List.of(LOCAL_PROVIDER)),
                 new ArrayList<>(List.of("image/*")),
                 MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP,
-                0);
+                Process.myUid());
         queryArgs.putBoolean("is_preview_session", true);
 
         try (Cursor cr = PickerDataLayerV2.queryPreviewMedia(mMockContext, queryArgs)) {
@@ -684,7 +684,7 @@ public class PickerDataLayerV2Test {
         assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursorWithCorrectMediaGrants,
                 /*writeCount*/ 1);
         assertInsertGrantsOperation(mFacade, getMediaGrantsCursor("103", TEST_PACKAGE_NAME,
-                0), /*writeCount*/ 1);
+                UserHandle.myUserId()), /*writeCount*/ 1);
         idVsExpectedPreGrantedValue.put("103", 1);
 
         // 4. ownerPackageName != TEST_PACKAGE_NAME
@@ -695,7 +695,7 @@ public class PickerDataLayerV2Test {
         assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursorWithDifferentMediaGrants,
                 /*writeCount*/ 1);
         assertInsertGrantsOperation(mFacade, getMediaGrantsCursor("104",
-                TEST_DIFFERENT_PACKAGE_NAME, 0), /*writeCount*/ 1);
+                TEST_DIFFERENT_PACKAGE_NAME, UserHandle.myUserId()), /*writeCount*/ 1);
         idVsExpectedPreGrantedValue.put("104", 0);
 
         return idVsExpectedPreGrantedValue;
@@ -733,7 +733,7 @@ public class PickerDataLayerV2Test {
                 String.valueOf(WIDTH),
                 String.valueOf(ORIENTATION),
                 ownerPackageName,
-                String.valueOf(0)
+                String.valueOf(UserHandle.myUserId())
         };
 
         MatrixCursor c = new MatrixCursor(projectionKey);
