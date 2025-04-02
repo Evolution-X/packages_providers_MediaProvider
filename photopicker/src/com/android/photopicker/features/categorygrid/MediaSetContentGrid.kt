@@ -16,6 +16,7 @@
 
 package com.android.photopicker.features.categorygrid
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,16 +24,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
@@ -59,9 +66,11 @@ import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.extensions.navigateToPreviewMedia
 import com.android.photopicker.features.preview.PreviewFeature
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Primary composable for drawing the Mediaset content grid on
@@ -118,6 +127,7 @@ private fun MediasetContentGrid(
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
     val configuration = LocalPhotopickerConfiguration.current
+
     // Container encapsulating the mediaset title followed by its content in the form of a
     // grid, the content also includes date and month separators.
     Column(modifier = Modifier.fillMaxSize()) {
@@ -125,8 +135,47 @@ private fun MediasetContentGrid(
             items.itemCount == 0 &&
                 items.loadState.source.append is LoadState.NotLoading &&
                 items.loadState.source.append.endOfPaginationReached
-        when {
-            isEmptyAndNoMorePages -> {
+
+        // State to track the loading and empty states
+        var resultsState by remember { mutableStateOf(ResultsState.LOADING_WITHOUT_INDICATOR) }
+        if (isEmptyAndNoMorePages) {
+            resultsState = ResultsState.EMPTY
+        }
+
+        LaunchedEffect(items.loadState.refresh) {
+            if (
+                items.itemCount == 0 &&
+                    items.loadState.refresh is LoadState.Loading &&
+                    resultsState == ResultsState.LOADING_WITHOUT_INDICATOR
+            ) {
+
+                // Switch to the background thread.
+                withContext(viewModel.backgroundDispatcher) {
+                    // Wait 1 second to display the loading indicator.
+                    delay(1000)
+                    if (
+                        items.itemCount == 0 &&
+                            resultsState == ResultsState.LOADING_WITHOUT_INDICATOR
+                    ) {
+                        resultsState = ResultsState.LOADING_WITH_INDICATOR
+
+                        // Wait 10 seconds before giving up and displaying the no results page.
+                        delay(10000)
+                        if (
+                            items.itemCount == 0 &&
+                                resultsState == ResultsState.LOADING_WITH_INDICATOR
+                        ) {
+                            resultsState = ResultsState.EMPTY
+                        }
+                    }
+                }
+            } else if (resultsState != ResultsState.EMPTY) {
+                resultsState = ResultsState.MEDIA_SETS_CONTENT_GRID
+            }
+        }
+
+        when (resultsState) {
+            ResultsState.EMPTY -> {
                 val localConfig = LocalConfiguration.current
                 val emptyStatePadding =
                     remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
@@ -156,7 +205,19 @@ private fun MediasetContentGrid(
                     )
                 }
             }
-            else -> {
+            ResultsState.LOADING_WITH_INDICATOR -> {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val progressIndicatorDescription =
+                        stringResource(R.string.photopicker_loading_media_items_description)
+                    CircularProgressIndicator(
+                        modifier =
+                            Modifier.align(Alignment.Center).semantics {
+                                contentDescription = progressIndicatorDescription
+                            }
+                    )
+                }
+            }
+            ResultsState.MEDIA_SETS_CONTENT_GRID -> {
                 mediaGrid(
                     items = items,
                     isExpandedScreen = isExpandedScreen,
@@ -211,6 +272,7 @@ private fun MediasetContentGrid(
                     )
                 }
             }
+            else -> {}
         }
     }
 }
@@ -227,4 +289,12 @@ private fun getEmptyStateContentForMediaset(): Triple<String, String, ImageVecto
         stringResource(R.string.photopicker_photos_empty_state_body),
         Icons.Outlined.Image,
     )
+}
+
+/** Represents the different UI states for the media sets results data. */
+enum class ResultsState {
+    LOADING_WITHOUT_INDICATOR,
+    LOADING_WITH_INDICATOR,
+    EMPTY,
+    MEDIA_SETS_CONTENT_GRID,
 }

@@ -18,9 +18,13 @@ package android.graphics.pdf.component;
 
 import android.annotation.ColorInt;
 import android.annotation.FlaggedApi;
+import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.graphics.Path;
 import android.graphics.pdf.flags.Flags;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * Represents a path object on a PDF page. This class extends
@@ -33,7 +37,29 @@ public final class PdfPagePathObject extends PdfPageObject {
     private @ColorInt int mStrokeColor;
     private float mStrokeWidth;
     private @ColorInt int mFillColor;
-    private @PdfPageObjectRenderMode.Type int mRenderMode;
+
+    /**
+     * Unknown Render Mode.
+     */
+    public static final int RENDER_MODE_UNKNOWN = -1;
+
+    /**
+     * Fill Mode : Only the interior of the glyphs is filled with the fill color.
+     */
+    public static final int RENDER_MODE_FILL = 0;
+
+    /**
+     * Stroke Mode : Only the outline of the glyphs is stroked with the stroke color.
+     */
+    public static final int RENDER_MODE_STROKE = 1;
+
+    /**
+     * FillStroke Mode : Both the interior and outline of the glyphs are rendered
+     * using the fill abd stroke colors respectively.
+     */
+    public static final int RENDER_MODE_FILL_STROKE = 2;
+
+    private @RenderMode int mRenderMode;
 
     /**
      * Constructor for the PdfPagePathObject. Sets the object type
@@ -42,7 +68,7 @@ public final class PdfPagePathObject extends PdfPageObject {
     public PdfPagePathObject(@NonNull Path path) {
         super(PdfPageObjectType.PATH);
         this.mPath = path;
-        this.mRenderMode = PdfPageObjectRenderMode.FILL;
+        this.mRenderMode = RENDER_MODE_FILL;
     }
 
     /**
@@ -71,6 +97,7 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Sets the stroke color of the object.
+     * Setting the strokeColor will have no effect if {@link RenderMode} is not set.
      *
      * @param strokeColor The stroke color of the object.
      */
@@ -107,6 +134,7 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Sets the fill color of the object.
+     * Setting the fillColor will have no effect if {@link RenderMode} is not set.
      *
      * @param fillColor The fill color of the object.
      */
@@ -115,22 +143,37 @@ public final class PdfPagePathObject extends PdfPageObject {
     }
 
     /**
-     * Returns the {@link PdfPageObjectRenderMode} of the object.
-     * Returns {@link PdfPageObjectRenderMode#FILL} by default
+     * Returns the {@link RenderMode} of the object.
+     * Returns {@link RenderMode#RENDER_MODE_FILL} by default
      * if {@link PdfPagePathObject#mRenderMode} is not set.
      *
-     * @return The {@link PdfPageObjectRenderMode} of the object.
+     * @return The {@link RenderMode} of the object.
      */
-    public @PdfPageObjectRenderMode.Type int getRenderMode() {
+    public @RenderMode int getRenderMode() {
         return mRenderMode;
     }
 
     /**
-     * Sets the {@link PdfPageObjectRenderMode} of the object.
+     * Sets the {@link RenderMode} of the object.
      *
-     * @param renderMode The {@link PdfPageObjectRenderMode} to be set.
+     * @param renderMode The {@link RenderMode} to be set.
      */
-    public void setRenderMode(@PdfPageObjectRenderMode.Type int renderMode) {
+    public void setRenderMode(@RenderMode int renderMode) {
         mRenderMode = renderMode;
     }
+
+    /**
+     * Defines rendering modes for {@link PdfPagePathObject} (fill, stroke, etc.).
+     *
+     * <p>It provides constants for specifying how graphical elements
+     * are rendered on a PDF page. It dictates whether the glyph is filled, stroked, or both.
+     *
+     * @hide
+     */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = {"RENDER_MODE_"}, value = {RENDER_MODE_UNKNOWN, RENDER_MODE_FILL,
+            RENDER_MODE_STROKE, RENDER_MODE_FILL_STROKE})
+    public @interface RenderMode {
+    }
+
 }
