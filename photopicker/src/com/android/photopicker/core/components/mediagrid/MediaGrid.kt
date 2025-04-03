@@ -396,8 +396,12 @@ private fun defaultBuildMediaItem(
             // Padding is animated based on the selected state of the item. When the item is
             // selected, it should shrink in the cell and provide a surface background.
 
+            val isEmbedded =
+                LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
+
             val shouldIndicateSelected =
-                isSelected && LocalPhotopickerConfiguration.current.selectionLimit > 1
+                if (isEmbedded) isSelected
+                else isSelected && LocalPhotopickerConfiguration.current.selectionLimit > 1
 
             val padding by
                 animateDpAsState(
@@ -564,7 +568,9 @@ private fun SelectedIconOverlay(isSelected: Boolean, selectedIndex: Int) {
             exit = scaleOut(animationSpec = emphasizedAccelerateFloat),
         ) {
             val configuration = LocalPhotopickerConfiguration.current
-            val shouldIndicateSelected = configuration.selectionLimit > 1
+            val isEmbedded =
+                LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
+            val shouldIndicateSelected = isEmbedded || configuration.selectionLimit > 1
             if (shouldIndicateSelected) {
                 when (configuration.pickImagesInOrder) {
                     true -> {
