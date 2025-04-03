@@ -49,6 +49,14 @@ sealed interface LocationParams {
         fun onClick()
     }
 
+    /**
+     * Parameter passed to Location.NAVIGATION_BAR_NAV_BUTTON to indicate if icon should to be shown
+     * in the navigation bar button.
+     */
+    fun interface WithNavButtonIcon : LocationParams {
+        fun showButtonIcon(): Boolean
+    }
+
     /** Requirements for attaching a [MediaPreparer] to the compose UI. */
     interface WithMediaPreparer : LocationParams {
 
