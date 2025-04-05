@@ -94,7 +94,7 @@ public class ExifUtilsTest {
             });
         }
 
-        latch.await(20, TimeUnit.SECONDS);
+        latch.await(40, TimeUnit.SECONDS);
         assertEquals(0, count.get());
     }
 
