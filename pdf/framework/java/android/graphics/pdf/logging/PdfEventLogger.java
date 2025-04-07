@@ -95,8 +95,24 @@ public class PdfEventLogger {
     public void logPdfApiUsageReportedEvent(
             @ApiTypes.ApiType int apiType,
             @ApiResponseTypes.ApiResponseType int apiResponse) {
+        logPdfApiUsageReportedEvent(apiType, apiResponse, OperationTypes.UNKNOWN);
+    }
+
+    /**
+     * Logs data related to Pdf API usage events to statsD.
+     *
+     * @param apiType     The type of API being called.
+     * @param apiResponse The response type of the API call.
+     * @param operationType The operation type of the API call.
+     * @see com.android.os.pdf.PdfApiUsageReported
+     */
+    public void logPdfApiUsageReportedEvent(
+            @ApiTypes.ApiType int apiType,
+            @ApiResponseTypes.ApiResponseType int apiResponse,
+            @OperationTypes.OperationType int operationType) {
         PdfStatsLog.write(PdfStatsLog.PDF_API_USAGE_REPORTED, mProcessId, mDocId, apiType,
-                apiResponse, OperationTypes.UNKNOWN);
+                apiResponse, operationType);
+
     }
 
     // Represent the linearization type of the PDF document.
@@ -133,8 +149,21 @@ public class PdfEventLogger {
                 PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_UNKNOWN;
         public static final int SELECT_CONTENT =
                 PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_SELECT_CONTENT;
+        public static final int TEXT_PAGE_OBJECT =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_TEXT_PAGE_OBJECT;
+        public static final int IMAGE_PAGE_OBJECT =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_IMAGE_PAGE_OBJECT;
+        public static final int PATH_PAGE_OBJECT =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_PATH_PAGE_OBJECT;
+        public static final int FREE_TEXT_ANNOTATION =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_FREE_TEXT_ANNOTATION;
+        public static final int HIGHLIGHT_ANNOTATION =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_HIGHLIGHT_ANNOTATION;
+        public static final int STAMP_ANNOTATION =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_STAMP_ANNOTATION;
 
-        @IntDef({UNKNOWN, SELECT_CONTENT})
+        @IntDef({UNKNOWN, SELECT_CONTENT, TEXT_PAGE_OBJECT, IMAGE_PAGE_OBJECT, PATH_PAGE_OBJECT,
+            FREE_TEXT_ANNOTATION, HIGHLIGHT_ANNOTATION, STAMP_ANNOTATION})
         @Retention(RetentionPolicy.RUNTIME)
         public @interface ApiType {
         }
@@ -159,8 +188,16 @@ public class PdfEventLogger {
     public static final class OperationTypes {
         public static final int UNKNOWN =
                 PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN;
+        public static final int GET =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_LIST;
+        public static final int ADD =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_ADD;
+        public static final int UPDATE =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UPDATE;
+        public static final int REMOVE =
+                PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_REMOVE;
 
-        @IntDef({UNKNOWN})
+        @IntDef({UNKNOWN, GET, ADD, UPDATE, REMOVE})
         @Retention(RetentionPolicy.RUNTIME)
         public @interface OperationType {
         }
