@@ -904,6 +904,18 @@ public final class CloudMediaProviderContract {
     public static final String EXTRA_MEDIASTORE_THUMB = "android.provider.extra.MEDIASTORE_THUMB";
 
     /**
+     * A boolean extra indicating the Cloud Media Provider if the PhotoPicker will display
+     * the local device folders or not.
+     * <p>If set to {@code true}, it indicates that the PhotoPicker shows local device folders,
+     * otherwise it indicates that it does not display them.
+     * <p>
+     * Type: BOOLEAN
+     * @hide
+     */
+    public static final String EXTRA_PICKER_SHOWS_DEVICE_FOLDERS =
+            "android.provider.extra.EXTRA_PICKER_SHOWS_DEVICE_FOLDERS";
+
+    /**
      * Constant used to execute {@link CloudMediaProvider#onGetMediaCollectionInfo} via
      * {@link ContentProvider#call}.
      *
