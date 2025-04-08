@@ -378,4 +378,36 @@ class NavigationBarFeatureTest : PhotopickerFeatureBaseTest() {
                 .assert(hasClickAction())
         }
     }
+
+    @Test
+    fun testNavigationBar_withVideoMimetype_displayVideosButton() {
+        val videosGridNavButtonLabel =
+            getTestableContext()
+                .getResources()
+                .getString(R.string.photopicker_videos_nav_button_label)
+
+        testScope.runTest {
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(Intent.EXTRA_MIME_TYPES, arrayListOf("video/*", "video/mpeg"))
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            composeTestRule.waitForIdle()
+
+            // Photos Grid Nav Button with Videos title
+            composeTestRule
+                .onNode(hasText(videosGridNavButtonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+        }
+    }
 }
