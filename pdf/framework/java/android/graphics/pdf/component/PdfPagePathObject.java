@@ -97,7 +97,8 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Sets the stroke color of the object.
-     * Setting the strokeColor will have no effect if {@link RenderMode} is not set.
+     * Setting the strokeColor will have no effect if {@link RenderMode} is not
+     * {@link #RENDER_MODE_STROKE} or {@link #RENDER_MODE_FILL_STROKE}.
      *
      * @param strokeColor The stroke color of the object.
      */
@@ -134,7 +135,8 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Sets the fill color of the object.
-     * Setting the fillColor will have no effect if {@link RenderMode} is not set.
+     * Setting the fillColor will have no effect if {@link RenderMode} is not
+     * {@link #RENDER_MODE_FILL} or {@link #RENDER_MODE_FILL_STROKE}.
      *
      * @param fillColor The fill color of the object.
      */
