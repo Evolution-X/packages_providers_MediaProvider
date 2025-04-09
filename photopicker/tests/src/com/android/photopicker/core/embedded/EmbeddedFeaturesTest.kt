@@ -283,6 +283,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val resources = getTestableContext().getResources()
             val photosGridNavButtonLabel =
                 resources.getString(R.string.photopicker_photos_nav_button_label)
+            val photosGridNavButtonDescription =
+                resources.getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
             val albumsGridNavButtonLabel =
                 resources.getString(R.string.photopicker_albums_nav_button_label)
             composeTestRule.setContent {
@@ -300,8 +305,8 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             composeTestRule
                 .onNode(
-                    hasAnyChild(hasText(photosGridNavButtonLabel)) and
-                        hasAnyChild(hasText(albumsGridNavButtonLabel))
+                    hasAnyChild(hasContentDescription(photosGridNavButtonDescription)) and
+                        hasAnyChild(hasContentDescription(albumsGridNavButtonLabel))
                 )
                 .assertIsNotDisplayed()
         }
@@ -313,6 +318,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val resources = getTestableContext().getResources()
             val photosGridNavButtonLabel =
                 resources.getString(R.string.photopicker_photos_nav_button_label)
+            val photosGridNavButtonDescription =
+                resources.getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
             val albumsGridNavButtonLabel =
                 resources.getString(R.string.photopicker_albums_nav_button_label)
             composeTestRule.setContent {
@@ -330,11 +340,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             // Photos Grid Nav Button and Albums Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
             composeTestRule
-                .onNode(hasText(albumsGridNavButtonLabel))
+                .onNode(hasContentDescription(albumsGridNavButtonLabel))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
@@ -346,6 +356,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val resources = getTestableContext().getResources()
             val photosGridNavButtonLabel =
                 resources.getString(R.string.photopicker_photos_nav_button_label)
+            val photosGridNavButtonDescription =
+                resources.getString(
+                    R.string.photopicker_selected_nav_button_description,
+                    photosGridNavButtonLabel,
+                )
             val categoryGridNavButtonLabel =
                 resources.getString(R.string.photopicker_categories_nav_button_label)
             composeTestRule.setContent {
@@ -363,11 +378,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             // Photos Grid Nav Button and Category Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNode(hasContentDescription(photosGridNavButtonDescription))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
             composeTestRule
-                .onNode(hasText(categoryGridNavButtonLabel))
+                .onNode(hasContentDescription(categoryGridNavButtonLabel))
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
