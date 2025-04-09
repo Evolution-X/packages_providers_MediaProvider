@@ -23,12 +23,31 @@
 #include "fpdfview.h"
 #include "page_object.h"
 #include "rect.h"
+#include "utils/pdf_strings.h"
 
 using pdfClient::Color;
 using pdfClient::PageObject;
 using pdfClient::Rectangle_f;
 
 namespace pdfClient {
+
+struct AppearanceStreams {
+    AppearanceStreams(FPDF_ANNOTATION fpdf_annot) : fpdf_annot_(fpdf_annot) {}
+    unsigned long normal_length = 0;
+    unsigned long rollover_length = 0;
+    unsigned long down_length = 0;
+    unsigned long count_length = 0;
+    ScopedFPDFWChar normal_buffer;
+    ScopedFPDFWChar rollover_buffer;
+    ScopedFPDFWChar down_buffer;
+    ScopedFPDFWChar count_buffer;
+
+    void GetAndClear();
+    void Set() const;
+
+  private:
+    FPDF_ANNOTATION fpdf_annot_;
+};
 // Base class for different type of annotations
 class Annotation {
   public:
