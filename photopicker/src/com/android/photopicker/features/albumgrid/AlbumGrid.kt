@@ -204,7 +204,6 @@ fun AlbumGridNavButton(modifier: Modifier) {
         },
         modifier = modifier,
         isCurrentRoute = { route -> route == PhotopickerDestinations.ALBUM_GRID.route },
-        currentTabLabel = stringResource(R.string.photopicker_albums_nav_button_label),
     ) {
         Text(stringResource(R.string.photopicker_albums_nav_button_label))
     }
