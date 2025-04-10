@@ -7460,8 +7460,11 @@ public class MediaProvider extends ContentProvider {
         } else if (uris != null) {
             mMediaGrants.removeMediaGrantsForPackage(packageNames, uris, userId);
             if (isOwnedPhotosEnabled(packageUid)) {
-                mFilesOwnershipUtils.removeOwnerPackageNameForUris(packageNames, uris,
-                        userId);
+                int revokedAccessCount = mFilesOwnershipUtils.removeOwnerPackageNameForUris(
+                        packageNames, uris, userId);
+                MediaProviderStatsLog.write(
+                        MediaProviderStatsLog.OWNED_PHOTOS_REVOKED_FROM_APP_REPORTED,
+                        revokedAccessCount, packageUid);
             }
         }
         return null;

@@ -41,9 +41,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.style.TextOverflow
@@ -160,8 +157,6 @@ fun NavigationBar(modifier: Modifier = Modifier, params: LocationParams) {
  * @param isCurrentRoute a function which receives the current
  *   [NavController.currentDestination.route] and returns true if that route matches the route this
  *   button represents.
- * @param currentTabLabel label of the current tab used to set the content description of the
- *   navigation button
  * @param buttonContent A composable to render as the button's content. Should most likely be a
  *   string label.
  */
@@ -170,7 +165,6 @@ fun NavigationBarButton(
     onClick: () -> Unit,
     modifier: Modifier,
     isCurrentRoute: (String) -> Boolean,
-    currentTabLabel: String = "",
     buttonContent: @Composable () -> Unit,
 ) {
     val navController = LocalNavController.current
@@ -179,29 +173,14 @@ fun NavigationBarButton(
     val featureManager = LocalFeatureManager.current
     val categoryGridFeatureEnabled =
         featureManager.isFeatureEnabled(CategoryGridFeature::class.java)
-    val navBarButtonContentDescription =
-        when (isCurrentRoute(currentRoute ?: "")) {
-            true ->
-                stringResource(
-                    R.string.photopicker_selected_nav_button_description,
-                    currentTabLabel,
-                )
-            false -> currentTabLabel
-        }
-    val navBarClickActionHint = stringResource(R.string.photopicker_select_action_description)
-    val modifierWithDescription =
-        modifier.clearAndSetSemantics {
-            contentDescription = navBarButtonContentDescription
-            onClick(label = navBarClickActionHint, action = null)
-        }
 
     FilledTonalButton(
         onClick = onClick,
         modifier =
             if (categoryGridFeatureEnabled) {
-                modifierWithDescription.widthIn(min = 120.dp, max = 120.dp)
+                modifier.widthIn(min = 120.dp, max = 120.dp)
             } else {
-                modifierWithDescription
+                modifier
             },
         shape = MaterialTheme.shapes.medium,
         contentPadding = ButtonDefaults.TextButtonContentPadding,
