@@ -16,6 +16,7 @@
 
 package com.android.photopicker.features.navigationbar
 
+import android.provider.MediaStore
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
@@ -49,6 +50,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.android.photopicker.R
 import com.android.photopicker.core.StateSelector
 import com.android.photopicker.core.animations.standardDecelerate
+import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.embedded.LocalEmbeddedState
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.features.Location
@@ -218,6 +220,11 @@ private fun NavigationBarButtons(modifier: Modifier) {
     val categoryGridFeatureEnabled =
         featureManager.isFeatureEnabled(CategoryGridFeature::class.java)
     val searchFeatureEnabled = featureManager.isFeatureEnabled(SearchFeature::class.java)
+    val configuration = LocalPhotopickerConfiguration.current
+    val showButtonIcon =
+        categoryGridFeatureEnabled &&
+            (searchFeatureEnabled ||
+                MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP.equals(configuration.action))
     Row(
         // Consume the incoming modifier to get the correct positioning.
         modifier =
@@ -242,11 +249,12 @@ private fun NavigationBarButtons(modifier: Modifier) {
                 Location.NAVIGATION_BAR_NAV_BUTTON,
                 maxSlots = 2,
                 modifier =
-                    if (searchFeatureEnabled && categoryGridFeatureEnabled) {
+                    if (showButtonIcon) {
                         Modifier.weight(1f)
                     } else {
                         Modifier // No modifier needed when search not enabled
                     },
+                params = LocationParams.WithNavButtonIcon { showButtonIcon },
             )
         }
     }
