@@ -817,8 +817,9 @@ public final class PdfRenderer implements AutoCloseable {
          * @param annotation the {@link PdfAnnotation} object to add
          * @return id of the added annotation, or -1 if the annotation cannot be added. The id is
          *         guaranteed to be non-negative if the annotation is added successfully.
-         * @throws IllegalArgumentException if the provided annotation is null or of unsupported
-         *                                  type i.e.- {@link PdfAnnotationType#UNKNOWN}
+         * @throws IllegalArgumentException if the provided annotation is of unsupported
+         *                                  type i.e.- {@link PdfAnnotationType#UNKNOWN} or if
+         *                                  the add operation failed.
          * @throws IllegalStateException    if {@link PdfRenderer} or {@link PdfRenderer.Page}
          *                                  is closed before invocation.
          */
@@ -842,7 +843,8 @@ public final class PdfRenderer implements AutoCloseable {
          * {@link PdfRenderer#write}.
          *
          * @param annotationId id of the annotation to remove from the page
-         * @throws IllegalArgumentException if annotationId ie negative
+         * @throws IllegalArgumentException if annotationId is negative or invalid or if the
+         *                                  remove operation failed.
          * @throws IllegalStateException    if {@link PdfRenderer} or {@link PdfRenderer.Page} is
          *                                  closed before invocation or if annotation is failed to
          *                                  get removed from the page.
@@ -859,6 +861,10 @@ public final class PdfRenderer implements AutoCloseable {
          * Update the given {@link PdfAnnotation} to the page.
          *
          * <p>
+         * Note: The {@link PdfAnnotationType} of the provided annotation must be the same as the
+         * original annotation being updated.
+         *
+         * <p>
          * {@link PdfRenderer#write} needs to be called to get the updated PDF stream after calling
          * this method. {@link PdfRenderer.Page} instance can be closed before calling
          * {@link PdfRenderer#write}.
@@ -866,9 +872,11 @@ public final class PdfRenderer implements AutoCloseable {
          * @param annotationId id corresponding to which the annotation is to be updated
          * @param annotation the annotation to update
          * @return true if annotation is updated, false otherwise
-         * @throws IllegalArgumentException if the provided annotation is null or of
+         * @throws IllegalArgumentException if the provided annotation is of
          *                                  unsupported type i.e. {@link PdfAnnotationType#UNKNOWN}
-         *                                  or if the provided annotationId is negative
+         *                                  or if the provided annotationId is negative or
+         *                                  if {@link PdfAnnotationType} of the provided annotation
+         *                                  is different from the original annotation's type
          * @throws IllegalStateException    if {@link PdfRenderer} or {@link PdfRenderer.Page}  is
          *                                  closed before invocation
          */
@@ -918,7 +926,9 @@ public final class PdfRenderer implements AutoCloseable {
          * @param pageObject the {@code PdfPageObject} object to add.
          * @return id of the added page object, or -1 if the page object cannot be added. The
          * id is guaranteed to be non-negative if the page object is added successfully.
-         * @throws IllegalArgumentException if the provided {@link PdfPageObject} is unknown or null
+         * @throws IllegalArgumentException if the provided {@link PdfPageObject} is of
+         *                                  unsupported type i.e. {@link PdfPageObjectType#UNKNOWN}
+         *                                  or if the add operation failed.
          * @throws IllegalStateException    if the {@link PdfRenderer.Page} is closed before
          *                                  invocation.
          */
@@ -937,7 +947,8 @@ public final class PdfRenderer implements AutoCloseable {
          * <p>
          * Note: This method only updates the parameters of the PageObject whose setters
          * are available. Attempting to update fields with no corresponding setters will
-         * have no effect.
+         * have no effect. Furthermore, the {@link PdfPageObjectType} of the provided pageObject
+         * must be the same as the original pageObject being updated.
          *
          * <p>
          * {@link PdfRenderer#write} needs to be called to get the updated PDF stream after calling
@@ -948,7 +959,9 @@ public final class PdfRenderer implements AutoCloseable {
          * @param pageObject The {@code PdfPageObject} object to update.
          * @return true if page object is updated, false otherwise.
          * @throws IllegalArgumentException if the provided {@link PdfPageObject} is unsupported or
-         *                                  null.
+         *                                  if the {@link PdfPageObjectType} of the
+         *                                  provided pageObject is different from the original
+         *                                  pageObject's type.
          * @throws IllegalStateException    if the {@link PdfRenderer.Page} is closed before
          *                                  invocation.
          */
@@ -973,7 +986,8 @@ public final class PdfRenderer implements AutoCloseable {
          * {@link PdfRenderer#write}.
          *
          * @param objectId the id of the page object to remove from the page.
-         * @throws IllegalArgumentException if the provided objectId doesn't exist.
+         * @throws IllegalArgumentException if the provided objectId is negative or invalid or
+         *                                  if the remove operation failed.
          * @throws IllegalStateException    if the page object cannot be removed.
          */
         @FlaggedApi(Flags.FLAG_ENABLE_EDIT_PDF_PAGE_OBJECTS)

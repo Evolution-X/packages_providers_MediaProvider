@@ -335,7 +335,7 @@ class CategoryGridFeature : PhotopickerUiFeature {
     @Composable
     override fun compose(location: Location, modifier: Modifier, params: LocationParams) {
         when (location) {
-            Location.NAVIGATION_BAR_NAV_BUTTON -> CategoryButton(modifier)
+            Location.NAVIGATION_BAR_NAV_BUTTON -> CategoryButton(modifier, params)
             else -> {}
         }
     }

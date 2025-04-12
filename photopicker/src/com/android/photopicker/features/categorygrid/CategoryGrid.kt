@@ -53,6 +53,7 @@ import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.events.Telemetry
 import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.features.LocalFeatureManager
+import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations
 import com.android.photopicker.core.obtainViewModel
@@ -63,7 +64,6 @@ import com.android.photopicker.extensions.navigateToMediaSetGrid
 import com.android.photopicker.extensions.navigateToPhotoGrid
 import com.android.photopicker.features.navigationbar.NavigationBarButton
 import com.android.photopicker.features.photogrid.PhotoGridFeature
-import com.android.photopicker.features.search.SearchFeature
 import kotlinx.coroutines.launch
 
 /** The number of grid cells per row for Phone / narrow layouts */
@@ -204,14 +204,13 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
  * [Location.NAVIGATION_BAR_NAV_BUTTON]
  */
 @Composable
-fun CategoryButton(modifier: Modifier) {
+fun CategoryButton(modifier: Modifier, params: LocationParams) {
     val navController = LocalNavController.current
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
     val sessionId = LocalPhotopickerConfiguration.current.sessionId
     val packageUid = LocalPhotopickerConfiguration.current.callingPackageUid ?: -1
-    val featureManager = LocalFeatureManager.current
-    val searchFeatureEnabled = featureManager.isFeatureEnabled(SearchFeature::class.java)
+    val showButtonIcon = params as? LocationParams.WithNavButtonIcon
 
     NavigationBarButton(
         onClick = {
@@ -231,13 +230,14 @@ fun CategoryButton(modifier: Modifier) {
         modifier = modifier,
         isCurrentRoute = { route -> route == PhotopickerDestinations.ALBUM_GRID.route },
     ) {
-        when {
-            searchFeatureEnabled -> {
+        when (showButtonIcon?.showButtonIcon()) {
+            true -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector =
                             ImageVector.vectorResource(R.drawable.photopicker_category_icon),
-                        contentDescription = null,
+                        contentDescription =
+                            stringResource(R.string.photopicker_categories_nav_button_label),
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(8.dp))

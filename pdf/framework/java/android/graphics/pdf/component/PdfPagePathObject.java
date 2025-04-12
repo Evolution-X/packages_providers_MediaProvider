@@ -20,6 +20,7 @@ import android.annotation.ColorInt;
 import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
+import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.pdf.flags.Flags;
 
@@ -69,6 +70,7 @@ public final class PdfPagePathObject extends PdfPageObject {
         super(PdfPageObjectType.PATH);
         this.mPath = path;
         this.mRenderMode = RENDER_MODE_FILL;
+        this.mFillColor = Color.BLACK;
     }
 
     /**
@@ -97,7 +99,10 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Sets the stroke color of the object.
-     * Setting the strokeColor will have no effect if {@link RenderMode} is not set.
+     * <p>
+     * Note: The strokeColor cannot be transparent and
+     * setting the strokeColor will have no effect if {@link RenderMode} is not
+     * {@link #RENDER_MODE_STROKE} or {@link #RENDER_MODE_FILL_STROKE}.
      *
      * @param strokeColor The stroke color of the object.
      */
@@ -125,6 +130,7 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Returns the fill color of the object.
+     * Returns {@link Color#BLACK} if {@link #mFillColor} is not set.
      *
      * @return The fill color of the object.
      */
@@ -134,7 +140,10 @@ public final class PdfPagePathObject extends PdfPageObject {
 
     /**
      * Sets the fill color of the object.
-     * Setting the fillColor will have no effect if {@link RenderMode} is not set.
+     * <p>
+     * Note: The fillColor cannot be transparent and
+     * setting the fillColor will have no effect if {@link RenderMode} is not
+     * {@link #RENDER_MODE_FILL} or {@link #RENDER_MODE_FILL_STROKE}.
      *
      * @param fillColor The fill color of the object.
      */
