@@ -20,6 +20,7 @@ import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.graphics.Bitmap;
 import android.graphics.pdf.flags.Flags;
+import android.graphics.pdf.utils.Preconditions;
 
 /**
  * Represents an image object on a PDF page. This class extends
@@ -33,9 +34,13 @@ public final class PdfPageImageObject extends PdfPageObject {
     /**
      * Constructor for the PdfPageImageObject. Sets the object type
      * to IMAGE.
+     *
+     * @throws IllegalArgumentException if Bitmap config is not ARGB_8888
      */
     public PdfPageImageObject(@NonNull Bitmap image) {
         super(PdfPageObjectType.IMAGE);
+        Preconditions.checkArgument(image.getConfig() == Bitmap.Config.ARGB_8888,
+                "Bitmap should be of type ARGB");
         this.mImage = image;
     }
 
@@ -53,8 +58,11 @@ public final class PdfPageImageObject extends PdfPageObject {
      * Sets the bitmap image of the object.
      *
      * @param image The bitmap image to set.
+     * @throws IllegalArgumentException if Bitmap config is not ARGB_8888
      */
     public void setBitmap(@NonNull Bitmap image) {
+        Preconditions.checkArgument(image.getConfig() == Bitmap.Config.ARGB_8888,
+                "Bitmap should be of type ARGB");
         this.mImage = image;
     }
 

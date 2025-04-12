@@ -488,8 +488,9 @@ TEST(Test, UpdateTextPageObjectTest) {
     ASSERT_EQ(initialTextObject->render_mode_, TextObject::RenderMode::Fill);
 
     // Check for initial matrix.
-    Matrix initial_matrix(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 759.424f);
-    ASSERT_LT(initialTextObject->device_matrix_ - initial_matrix, 0.01f);
+    // Initial values are obtained from source code which generated the PDF.
+    Matrix initial_matrix(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 770.0f);
+    ASSERT_EQ(initialTextObject->device_matrix_, initial_matrix);
 
     // Check for initial fill color.
     ASSERT_EQ(initialTextObject->fill_color_, Color(0, 255, 0, 255));
@@ -528,13 +529,8 @@ TEST(Test, UpdateTextPageObjectTest) {
     // Check for updated fill Color.
     ASSERT_EQ(updatedPageObjects[2]->fill_color_, update_fill_color);
 
-    /*
-     *  TextObject Transformation is dependent upon its bounds values.
-     *  Pdfium calculation for bounds shows a little fluctuation which results
-     *  in return matrix values to be not exactly the same. We should tolerate
-     *  the difference which does not make any visible difference.
-     */
-    ASSERT_LT(updatedPageObjects[2]->device_matrix_ - update_matrix, 0.01f);
+    // Check for updated matrix
+    ASSERT_EQ(updatedPageObjects[2]->device_matrix_, update_matrix);
 }
 
 TEST(Test, GetPageAnnotationsTest) {
