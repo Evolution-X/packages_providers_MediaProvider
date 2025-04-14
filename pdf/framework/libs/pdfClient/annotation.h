@@ -133,7 +133,7 @@ class FreeTextAnnotation : public Annotation {
     void SetBounds(Rectangle_f bounds) { bounds_ = bounds; }
 
     std::wstring GetTextContent() const { return text_content_; }
-    void SetTextContent(std::wstring textContent) { text_content_ = textContent; }
+    void SetTextContent(const std::wstring& textContent) { text_content_ = textContent; }
 
     Color GetTextColor() const { return text_color_; }
     void SetTextColor(Color color) { text_color_ = color; }
