@@ -245,7 +245,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     return getListOfProviders(cursor!!)
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             // If we can't fetch the available providers, basic functionality of photopicker does
             // not work. In order to catch this earlier in testing, throw an error instead of
             // silencing it.
@@ -262,7 +262,7 @@ open class MediaProviderClient {
                 /* arg */ null,
                 null,
             )
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             Log.e(TAG, "Ensure providers failed", e)
         }
     }
@@ -311,7 +311,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch media", e)
         }
     }
@@ -362,7 +362,7 @@ open class MediaProviderClient {
                             "Received a null response from Media Provider for search results"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch search results media", e)
         }
     }
@@ -415,7 +415,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch preview media", e)
         }
     }
@@ -461,7 +461,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch albums", e)
         }
     }
@@ -511,7 +511,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch album media", e)
         }
     }
@@ -535,7 +535,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     return getListOfCollectionInfo(cursor!!)
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch collection info", e)
         }
     }
@@ -613,7 +613,7 @@ open class MediaProviderClient {
                     /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 ?.getListOfMedia() ?: ArrayList()
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch media", e)
         }
     }
@@ -644,7 +644,7 @@ open class MediaProviderClient {
             return resolver
                 .query(SEARCH_SUGGESTIONS_URI, /* projection */ null, input, cancellationSignal)
                 ?.getListOfSearchSuggestions(availableProviders) ?: ArrayList()
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException("Could not fetch search suggestions", e)
         }
     }
@@ -695,7 +695,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException(
                 "Could not fetch categories and albums for parent category $parentCategoryId",
                 e,
@@ -741,7 +741,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException(
                 "Could not fetch media sets for parent category ${parentCategory.id}",
                 e,
@@ -788,7 +788,7 @@ open class MediaProviderClient {
                             "Received a null response from Content Provider"
                         )
                 }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             throw RuntimeException(
                 "Could not fetch media set contents for parent media set ${parentMediaSet.id}",
                 e,
@@ -870,7 +870,7 @@ open class MediaProviderClient {
                 /* arg */ null,
                 extras,
             )
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             Log.e(TAG, "Could not send refresh media sets call to Media Provider $extras", e)
         }
     }
@@ -904,7 +904,7 @@ open class MediaProviderClient {
                 /* arg */ null,
                 extras,
             )
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             Log.e(
                 TAG,
                 "Could not send refresh media set contents call to Media Provider $extras",
@@ -1059,7 +1059,7 @@ open class MediaProviderClient {
             return result?.getStringArrayList(SEARCH_PROVIDER_AUTHORITIES)?.filter {
                 availableProviderAuthorities?.contains(it) ?: true
             }
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             // If we can't fetch the available providers, basic functionality of photopicker does
             // not work. In order to catch this earlier in testing, throw an error instead of
             // silencing it.
@@ -1407,7 +1407,7 @@ open class MediaProviderClient {
                                 ),
                         )
                     )
-                } catch (e: RuntimeException) {
+                } catch (e: Exception) {
                     Log.e(TAG, "Received an invalid search suggestion. Skipping it.", e)
                 }
             } while (moveToNext())
@@ -1527,7 +1527,7 @@ open class MediaProviderClient {
                             Log.w(TAG, "Invalid group type: $groupType")
                         }
                     }
-                } catch (e: RuntimeException) {
+                } catch (e: Exception) {
                     Log.w(TAG, "Could not extract category or album from cursor, skipping it", e)
                 }
             } while (moveToNext())
@@ -1562,7 +1562,7 @@ open class MediaProviderClient {
                                 ) ?: Icon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
                         )
                     )
-                } catch (e: RuntimeException) {
+                } catch (e: Exception) {
                     Log.w(TAG, "Could not extract media set from cursor, skipping it", e)
                 }
             } while (moveToNext())
@@ -1580,7 +1580,7 @@ open class MediaProviderClient {
 
         try {
             unwrappedUriString = getString(getColumnIndexOrThrow(columnName))
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             Log.e(TAG, "Could not get unwrapped uri $unwrappedUriString from cursor", e)
         }
 
@@ -1641,7 +1641,7 @@ open class MediaProviderClient {
                 /* arg */ null,
                 extras,
             )
-        } catch (e: RuntimeException) {
+        } catch (e: Exception) {
             Log.e(TAG, "Could not send refresh media call to Media Provider $extras", e)
         }
     }
