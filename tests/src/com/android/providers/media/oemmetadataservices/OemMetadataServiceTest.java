@@ -44,6 +44,7 @@ import android.provider.MediaStore;
 import android.provider.MediaStore.Files.FileColumns;
 import android.provider.OemMetadataService;
 import android.provider.OemMetadataServiceWrapper;
+import android.provider.media.internal.flags.Flags;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
@@ -130,6 +131,36 @@ public class OemMetadataServiceTest {
         try {
             Map<String, String> actualValue = mOemMetadataServiceWrapper.getOemCustomData(
                     ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY));
+
+            assertThat(actualValue.keySet()).containsExactlyElementsIn(
+                    Arrays.asList("a", "b", "c", "d", "e"));
+            assertThat(actualValue.get("a")).isEqualTo("1");
+            assertThat(actualValue.get("b")).isEqualTo("2");
+            assertThat(actualValue.get("c")).isEqualTo("3");
+            assertThat(actualValue.get("d")).isEqualTo("4");
+            assertThat(actualValue.get("e")).isEqualTo("5");
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    @EnableFlags({com.android.providers.media.flags.Flags.FLAG_ENABLE_OEM_METADATA,
+            com.android.providers.media.flags.Flags.FLAG_ENABLE_OEM_METADATA_USING_MIMETYPE,
+            Flags.FLAG_ENABLE_OEM_METADATA_USING_MIMETYPE })
+    public void testGetOemCustomDataUsingMimeType() throws Exception {
+        bindService();
+        assertNotNull(mOemMetadataServiceWrapper);
+        final File dir = Environment
+                .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File file = new File(dir, "a_" + System.currentTimeMillis() + ".jpg");
+        file.createNewFile();
+
+        try {
+            Map<String, String> actualValue =
+                    mOemMetadataServiceWrapper.getOemCustomDataUsingMimeType(
+                            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY),
+                            "image/jpeg");
 
             assertThat(actualValue.keySet()).containsExactlyElementsIn(
                     Arrays.asList("a", "b", "c", "d", "e"));
