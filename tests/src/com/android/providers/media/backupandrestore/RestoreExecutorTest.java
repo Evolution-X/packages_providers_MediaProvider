@@ -136,6 +136,7 @@ public final class RestoreExecutorTest {
 
     @Test
     public void testMetadataRestoreForVideoFile() throws Exception {
+        assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
         String levelDbPath =
                 mIsolatedContext.getFilesDir().getAbsolutePath() + "/restore/external_primary/";
         if (!new File(levelDbPath).exists()) {
@@ -163,6 +164,7 @@ public final class RestoreExecutorTest {
 
     @Test
     public void testMetadataRestoreForAudioFile() throws Exception {
+        assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
         String levelDbPath =
                 mIsolatedContext.getFilesDir().getAbsolutePath() + "/restore/external_primary/";
         if (!new File(levelDbPath).exists()) {
