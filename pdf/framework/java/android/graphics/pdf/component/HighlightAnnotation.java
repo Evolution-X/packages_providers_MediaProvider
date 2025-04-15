@@ -46,6 +46,7 @@ public final class HighlightAnnotation extends PdfAnnotation {
      */
     public HighlightAnnotation(@NonNull List<RectF> boundsList) {
         super(PdfAnnotationType.HIGHLIGHT);
+        Preconditions.checkNotNull(boundsList, "Bounds list should not be null");
         this.mBoundsList = boundsList;
         this.mColor = Color.YELLOW;
     }
