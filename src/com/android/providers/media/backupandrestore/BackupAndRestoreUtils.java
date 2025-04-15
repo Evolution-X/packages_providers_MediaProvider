@@ -72,6 +72,11 @@ public final class BackupAndRestoreUtils {
     static final String TAG = BackupAndRestoreUtils.class.getSimpleName();
 
     /**
+     * static variable that keeps backup and restore feature enabled
+     */
+    private static final boolean IS_BACKUP_AND_RESTORE_ENABLED = true;
+
+    /**
      * Array of columns backed up for restore in the future.
      */
     static final String[] BACKUP_COLUMNS = new String[]{
@@ -186,7 +191,11 @@ public final class BackupAndRestoreUtils {
      *         {@code false} otherwise.
      */
     static boolean isBackupAndRestoreSupported(Context context) {
-        if (!enableBackupAndRestore() || !SdkLevel.isAtLeastS()) {
+        if (!SdkLevel.isAtLeastS()) {
+            return false;
+        }
+
+        if (!enableBackupAndRestore() && !IS_BACKUP_AND_RESTORE_ENABLED) {
             return false;
         }
 
