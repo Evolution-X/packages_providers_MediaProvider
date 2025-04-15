@@ -54,6 +54,8 @@ public final class FreeTextAnnotation extends PdfAnnotation {
      */
     public FreeTextAnnotation(@NonNull RectF bounds, @NonNull String textContent) {
         super(PdfAnnotationType.FREETEXT);
+        Preconditions.checkNotNull(bounds, "Bounds should not be null");
+        Preconditions.checkNotNull(textContent, "Text content should not be null");
         this.mBounds = bounds;
         this.mTextContent = textContent;
         this.mTextColor = Color.BLACK;
@@ -85,6 +87,7 @@ public final class FreeTextAnnotation extends PdfAnnotation {
      * @param text The new text content.
      */
     public void setTextContent(@NonNull String text) {
+        Preconditions.checkNotNull(text, "Text should not be null");
         mTextContent = text;
     }
 
