@@ -38,9 +38,11 @@
     <string name="allow" msgid="8885707816848569619">"Рұқсат ету"</string>
     <string name="deny" msgid="6040983710442068936">"Тыйым салу"</string>
     <string name="picker_browse" msgid="5554477454636075934">"Шолу…"</string>
-    <string name="picker_settings" msgid="6443463167344790260">"Бұлттық мультимедиа қолданбасы"</string>
-    <string name="picker_settings_system_settings_menu_title" msgid="3055084757610063581">"Бұлттық мультимедиа қолданбасы"</string>
-    <string name="picker_settings_title" msgid="5647700706470673258">"Бұлттық мультимедиа қолданбасы"</string>
+    <string name="picker_settings" msgid="7388913035769329672">"Параметрлер"</string>
+    <!-- no translation found for picker_settings_system_settings_menu_title (8376154377841981825) -->
+    <skip />
+    <!-- no translation found for picker_settings_title (1745398289847815694) -->
+    <skip />
     <string name="picker_settings_description" msgid="2916686824777214585">"Қолданба не веб-сайт сізден фотосуреттерді немесе бейнелерді таңдауды сұрағанда, бұлттағы медиафайлдарды пайдалана аласыз."</string>
     <string name="picker_settings_selection_message" msgid="245453573086488596">"Бұлттық мультимедиаға кіру жолы"</string>
     <string name="picker_settings_no_provider" msgid="2582311853680058223">"Жоқ"</string>
