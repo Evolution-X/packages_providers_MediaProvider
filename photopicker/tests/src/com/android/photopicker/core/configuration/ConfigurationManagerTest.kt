@@ -19,6 +19,7 @@ package com.android.photopicker.core.configuration
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.platform.test.annotations.RequiresFlagsEnabled
 import android.platform.test.flag.junit.CheckFlagsRule
 import android.platform.test.flag.junit.DeviceFlagsValueProvider
@@ -30,6 +31,9 @@ import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.navigation.PhotopickerDestinations
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
+import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -39,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert
 import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Rule
@@ -702,6 +707,328 @@ class ConfigurationManagerTest {
     }
 
     /**
+     * Ensures that [ConfigurationManager#setAction] will emit an updated configuration with the
+     * expected highlight query params info when HighlightType is HighlightMediaSection.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForHighlightMediaSectionHighlightType() {
+        val highlightQuery = "dog"
+        val highlightBundle =
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to highlightQuery,
+            )
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, highlightBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(searchQuery = highlightQuery))
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager#setAction] will emit an updated configuration with the
+     * expected highlight search info when HighlightType is the HighlightMediaResults.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForHighlightMediaResultsHighlightType() {
+        val highlightQuery = "dog"
+        val highlightBundle =
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to highlightQuery,
+            )
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, highlightBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(highlightQuery))
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager#setAction] will emit an updated configuration with the
+     * expected highlight search info when input query is an album.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForAlbumHighlight() {
+        val highlightQuery = MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA
+        val highlightBundle =
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to highlightQuery,
+            )
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, highlightBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Album(album = HighlightAlbumName.HIGHLIGHT_ALBUM_CAMERA))
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager#setAction] will emit an updated configuration with the
+     * expected highlight search info when HighlightType is invalid.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForInvalidHighlightType() {
+        val highlightQuery = "dog"
+        val highlightBundle =
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to -1,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to highlightQuery,
+            )
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, highlightBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.UNSET_HIGHLIGHT_TYPE)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(searchQuery = highlightQuery))
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager#setAction] will emit an updated configuration with the
+     * expected highlight search info when the HighlightSearchQuery is an empty string.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForEmptyHighlightQuery() {
+        val hsrInfoBundle =
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to "",
+            )
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, hsrInfoBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(searchQuery = ""))
+        }
+    }
+
+    /** Ensures that [ConfigurationManager#setAction] will throw an exception if query is null */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForNullHighlightQuery() {
+        val highlightBundle =
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to null,
+            )
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, highlightBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+
+            try {
+                configurationManager.setIntent(intent)
+                Assert.fail("Null input query, exception should be thrown")
+            } catch (e: IllegalArgumentException) {
+                // Expected behaviour
+            }
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager#setAction] will emit an updated configuration with the
+     * expected highlight search info when the EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_INFO bundle is
+     * null.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetIntentForNullHighlightSearchInfoBundle() {
+        val highlightBundle: Bundle? = null
+        val intent =
+            Intent()
+                .setAction(MediaStore.ACTION_PICK_IMAGES)
+                .putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA, highlightBundle)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.UNSET_HIGHLIGHT_TYPE)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(searchQuery = ""))
+        }
+    }
+
+    /**
      * Ensures that [ConfigurationManager#setIntent] will reject illegal configurations for
      * pickImagesInOrder
      */
@@ -1032,6 +1359,102 @@ class ConfigurationManagerTest {
             assertThat(emissions.size).isEqualTo(2)
             assertThat(emissions.first()).isEqualTo(expectedConfiguration)
             assertThat(emissions.last().preSelectedUris).isEqualTo(arrayListOf(Uri.EMPTY))
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager.configuration] will emit an updated
+     * [PhotopickerConfiguration] with the expected
+     * [PhotopickerConfiguration.highlightQueryResultsParams] for valid highlightMediaQuery.
+     */
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetEmbeddedPhotopickerFeatureInfoForValidHighlightMediaQuery() {
+        val highlightMediaQuery = "dog"
+        val featureInfo =
+            EmbeddedPhotoPickerFeatureInfo.Builder()
+                .setHighlightMediaTextQuery(highlightMediaQuery)
+                .build()
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.EMBEDDED,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration =
+                PhotopickerConfiguration(
+                    runtimeEnv = PhotopickerRuntimeEnv.EMBEDDED,
+                    action = "",
+                    sessionId = sessionId,
+                )
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setEmbeddedPhotopickerFeatureInfo(featureInfo)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(highlightMediaQuery))
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION)
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager.configuration] will emit an updated
+     * [PhotopickerConfiguration] with the expected
+     * [PhotopickerConfiguration.highlightQueryResultsParams] for invalid highlightMediaQuery.
+     */
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testSetEmbeddedPhotopickerFeatureInfoForInvalidHighlightMediaQuery() {
+        val highlightMediaQuery = ""
+        val featureInfo =
+            EmbeddedPhotoPickerFeatureInfo.Builder()
+                .setHighlightMediaTextQuery(highlightMediaQuery)
+                .build()
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.EMBEDDED,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration =
+                PhotopickerConfiguration(
+                    runtimeEnv = PhotopickerRuntimeEnv.EMBEDDED,
+                    action = "",
+                    sessionId = sessionId,
+                )
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setEmbeddedPhotopickerFeatureInfo(featureInfo)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
+                .isEqualTo(HighlightQuery.Search(highlightMediaQuery))
+            assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
+                .isEqualTo(QueryResultsHighlightType.UNSET_HIGHLIGHT_TYPE)
         }
     }
 }
