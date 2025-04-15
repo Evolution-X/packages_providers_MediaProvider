@@ -76,4 +76,13 @@ public class PickerUriResolverV2Test {
                         Uri.parse("content://media/picker_internal/v2/media/monthly_aggregate"))
         );
     }
+
+    @Test
+    public void testMediaPageKeyQuery() {
+        assertEquals(
+                PickerUriResolverV2.PICKER_INTERNAL_MEDIA_PAGE_KEY,
+                PickerUriResolverV2.sUriMatcher.match(
+                        Uri.parse("content://media/picker_internal/v2/media/page_key"))
+        );
+    }
 }
