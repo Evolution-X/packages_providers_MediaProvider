@@ -38,9 +38,9 @@
     <string name="allow" msgid="8885707816848569619">"అనుమతించండి"</string>
     <string name="deny" msgid="6040983710442068936">"నిరాకరించండి"</string>
     <string name="picker_browse" msgid="5554477454636075934">"బ్రౌజ్ చేయండి…"</string>
-    <string name="picker_settings" msgid="6443463167344790260">"క్లౌడ్ మీడియా యాప్"</string>
-    <string name="picker_settings_system_settings_menu_title" msgid="3055084757610063581">"క్లౌడ్ మీడియా యాప్"</string>
-    <string name="picker_settings_title" msgid="5647700706470673258">"క్లౌడ్ మీడియా యాప్"</string>
+    <string name="picker_settings" msgid="7388913035769329672">"సెట్టింగ్‌లు"</string>
+    <string name="picker_settings_system_settings_menu_title" msgid="8376154377841981825">"క్లౌడ్ మీడియా సెట్టింగ్‌లు"</string>
+    <string name="picker_settings_title" msgid="1745398289847815694">"క్లౌడ్ మీడియా సెట్టింగ్‌లు"</string>
     <string name="picker_settings_description" msgid="2916686824777214585">"ఫోటోలను లేదా వీడియోలను సెలెక్ట్ చేయాలని యాప్ గానీ వెబ్‌సైట్ గానీ మిమ్మల్ని అడిగినప్పుడు మీ క్లౌడ్ మీడియాను యాక్సెస్ చేయండి"</string>
     <string name="picker_settings_selection_message" msgid="245453573086488596">"కింది వాటి నుండి క్లౌడ్ మీడియాను యాక్సెస్ చేయండి"</string>
     <string name="picker_settings_no_provider" msgid="2582311853680058223">"ఏవీ లేవు"</string>
