@@ -66,7 +66,6 @@ public final class PdfPagePathObject extends PdfPageObject {
     /**
      * Constructor for the PdfPagePathObject. Sets the object type
      * to {@link PdfPageObjectType#PATH}.
-     *
      */
     public PdfPagePathObject(@NonNull Path path) {
         super(PdfPageObjectType.PATH);
