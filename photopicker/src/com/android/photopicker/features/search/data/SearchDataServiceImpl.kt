@@ -217,10 +217,12 @@ class SearchDataServiceImpl(
      * given search suggestions query.
      */
     override fun getSearchResults(
+        regularPageSize: Int,
         suggestion: SearchSuggestion,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
         return getSearchResults(
+            regularPageSize,
             SearchRequest.SearchSuggestionRequest(suggestion),
             cancellationSignal,
         )
@@ -231,10 +233,15 @@ class SearchDataServiceImpl(
      * given search text query.
      */
     override fun getSearchResults(
+        regularPageSize: Int,
         searchText: String,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
-        return getSearchResults(SearchRequest.SearchTextRequest(searchText), cancellationSignal)
+        return getSearchResults(
+            regularPageSize,
+            SearchRequest.SearchTextRequest(searchText),
+            cancellationSignal,
+        )
     }
 
     /**
@@ -245,6 +252,7 @@ class SearchDataServiceImpl(
      * @param inputCancellationSignal [CancellationSignal] received from the UI layer.
      */
     private fun getSearchResults(
+        regularPageSize: Int,
         searchRequest: SearchRequest,
         inputCancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> = runBlocking {
@@ -281,6 +289,7 @@ class SearchDataServiceImpl(
                             configuration = config,
                             cancellationSignal = cancellationSignal,
                             events = events,
+                            nextPageSize = regularPageSize,
                         )
 
                     // Ensure that sync is cancelled when the paging source gets invalidated.
@@ -313,6 +322,7 @@ class SearchDataServiceImpl(
                 configuration = config,
                 cancellationSignal = null,
                 events = events,
+                nextPageSize = regularPageSize,
             )
         }
     }

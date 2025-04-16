@@ -1599,7 +1599,8 @@ public class PickerDataLayerV2Test {
                 1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -1672,7 +1673,8 @@ public class PickerDataLayerV2Test {
         doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP);
@@ -1714,7 +1716,8 @@ public class PickerDataLayerV2Test {
         doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP);
@@ -1766,7 +1769,8 @@ public class PickerDataLayerV2Test {
                 totalCount);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP);
@@ -4156,7 +4160,8 @@ public class PickerDataLayerV2Test {
         Bundle extras = new Bundle();
         extras.putLong("picker_id", pickerId);
         extras.putLong("date_taken_millis", dateTakenMillis);
-        extras.putInt("page_size", pageSize);
+        extras.putInt("current_page_size", pageSize);
+        extras.putInt("next_page_size", pageSize);
         extras.putStringArrayList("providers", new ArrayList<>(providers));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
         return extras;

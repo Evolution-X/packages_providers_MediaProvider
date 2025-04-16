@@ -62,7 +62,6 @@ open class MediaProviderClient {
         private const val EXTRA_ALBUM_AUTHORITY = "album_authority"
         private const val COLUMN_GRANTS_COUNT = "grants_count"
         private const val PRE_SELECTION_URIS = "pre_selection_uris"
-        private const val PROVIDERS = "providers"
         const val MEDIA_INIT_CALL_METHOD: String = "picker_media_init"
         const val SEARCH_REQUEST_INIT_CALL_METHOD = "picker_internal_search_media_init"
         const val GET_SEARCH_PROVIDERS_CALL_METHOD = "picker_internal_get_search_providers"
@@ -74,7 +73,8 @@ open class MediaProviderClient {
     private enum class MediaQuery(val key: String) {
         PICKER_ID("picker_id"),
         DATE_TAKEN("date_taken_millis"),
-        PAGE_SIZE("page_size"),
+        CURRENT_PAGE_SIZE("current_page_size"),
+        NEXT_PAGE_SIZE("next_page_size"),
     }
 
     /** Contains all optional and mandatory keys required to make a Media page key query */
@@ -271,7 +271,8 @@ open class MediaProviderClient {
     /** Fetch a list of [Media] from MediaProvider for the given page key. */
     open suspend fun fetchMedia(
         pageKey: MediaPageKey,
-        pageSize: Int,
+        currentPageSize: Int,
+        nextPageSize: Int,
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
@@ -280,8 +281,9 @@ open class MediaProviderClient {
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
+                MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -321,7 +323,8 @@ open class MediaProviderClient {
     suspend fun fetchSearchResults(
         searchRequestId: Int,
         pageKey: MediaPageKey,
-        pageSize: Int,
+        currentPageSize: Int,
+        nextPageSize: Int,
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
@@ -331,8 +334,9 @@ open class MediaProviderClient {
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
+                MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -371,7 +375,8 @@ open class MediaProviderClient {
     /** Fetch a list of [Media] from MediaProvider for the given page key. */
     suspend fun fetchPreviewMedia(
         pageKey: MediaPageKey,
-        pageSize: Int,
+        currentPageSize: Int,
+        nextPageSize: Int,
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
@@ -383,8 +388,9 @@ open class MediaProviderClient {
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
+                MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -433,8 +439,8 @@ open class MediaProviderClient {
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -472,7 +478,8 @@ open class MediaProviderClient {
         albumId: String,
         albumAuthority: String,
         pageKey: MediaPageKey,
-        pageSize: Int,
+        currentPageSize: Int,
+        nextPageSize: Int,
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
@@ -482,8 +489,9 @@ open class MediaProviderClient {
                 AlbumMediaQuery.ALBUM_AUTHORITY.key to albumAuthority,
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
+                MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -593,8 +601,8 @@ open class MediaProviderClient {
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -636,7 +644,7 @@ open class MediaProviderClient {
                     SearchSuggestionsQuery.PREFIX.key to prefix,
                     SearchSuggestionsQuery.LIMIT.key to limit,
                     SearchSuggestionsQuery.HISTORY_LIMIT.key to historyLimit,
-                    PROVIDERS to
+                    EXTRA_PROVIDERS to
                         ArrayList<String>().apply {
                             availableProviders.forEach { provider -> add(provider.authority) }
                         },
@@ -666,8 +674,8 @@ open class MediaProviderClient {
         val input: Bundle =
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to
+                MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -720,8 +728,8 @@ open class MediaProviderClient {
         val input: Bundle =
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to arrayListOf(parentCategory.authority),
+                MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
+                EXTRA_PROVIDERS to arrayListOf(parentCategory.authority),
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 EXTRA_INTENT_ACTION to config.action,
                 MediaSetsQuery.PARENT_CATEGORY_ID.key to parentCategory.id,
@@ -756,7 +764,8 @@ open class MediaProviderClient {
      */
     suspend fun fetchMediaSetContents(
         pageKey: MediaPageKey,
-        pageSize: Int,
+        currentPageSize: Int,
+        nextPageSize: Int,
         contentResolver: ContentResolver,
         parentMediaSet: Group.MediaSet,
         config: PhotopickerConfiguration,
@@ -766,8 +775,9 @@ open class MediaProviderClient {
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
-                MediaQuery.PAGE_SIZE.key to pageSize,
-                PROVIDERS to arrayListOf(parentMediaSet.authority),
+                MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
+                MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                EXTRA_PROVIDERS to arrayListOf(parentMediaSet.authority),
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 EXTRA_INTENT_ACTION to config.action,
                 Intent.EXTRA_UID to config.callingPackageUid,
@@ -858,7 +868,7 @@ open class MediaProviderClient {
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 MediaSetsQuery.PARENT_CATEGORY_ID.key to category.id,
                 MediaSetsQuery.PARENT_CATEGORY_AUTHORITY.key to category.authority,
-                PROVIDERS to
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         providers.forEach { provider -> add(provider.authority) }
                     },
@@ -892,7 +902,7 @@ open class MediaProviderClient {
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 MediaSetContentsQuery.PARENT_MEDIA_SET_PICKER_ID.key to mediaSet.pickerId,
                 MediaSetContentsQuery.PARENT_MEDIA_SET_AUTHORITY.key to mediaSet.authority,
-                PROVIDERS to
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         providers.forEach { provider -> add(provider.authority) }
                     },
@@ -1087,7 +1097,7 @@ open class MediaProviderClient {
     ): List<ItemsPerMonth> {
         val input: Bundle =
             bundleOf(
-                PROVIDERS to
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },
@@ -1111,9 +1121,11 @@ open class MediaProviderClient {
     }
 
     /**
-     * Fetches the [MediaPageKey] for the item at the specified position in MediaProvider. This
-     * request is cancellable in case the user moves away from the PhotoPicker page before the
-     * request completes.
+     * Fetches the [MediaPageKey] for the item at the specified position in MediaProvider. The
+     * cursor returned by the query only contains one row having picker Id and date taken of the
+     * target item. But we intend to make this request cancellable in case the user navigates away
+     * from the PhotoPicker page before the request completes. To support cancellation requests in
+     * the future, we are using `contentResolver.query` instead of `contentResolver.call`.
      *
      * @param contentResolver The ContentResolver used to interact with the MediaProvider.
      * @param itemPosition The 0-based index of the desired media item.
@@ -1136,7 +1148,7 @@ open class MediaProviderClient {
         val input: Bundle =
             bundleOf(
                 MediaPageKeyQuery.ITEM_POSITION.key to itemPosition,
-                PROVIDERS to
+                EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
                     },

@@ -73,7 +73,8 @@ class MediaProviderClientTest {
         val mediaLoadResult: LoadResult<MediaPageKey, Media> =
             mediaProviderClient.fetchMedia(
                 pageKey = MediaPageKey(),
-                pageSize = 5,
+                currentPageSize = 5,
+                nextPageSize = 5,
                 contentResolver = testContentResolver,
                 availableProviders = listOf(Provider("provider", MediaSource.LOCAL, 0, "")),
                 config =
@@ -392,7 +393,8 @@ class MediaProviderClientTest {
                 albumId = albumId,
                 albumAuthority = albumAuthority,
                 pageKey = MediaPageKey(),
-                pageSize = 5,
+                currentPageSize = 5,
+                nextPageSize = 5,
                 contentResolver = testContentResolver,
                 availableProviders = listOf(Provider(albumAuthority, MediaSource.LOCAL, 0, "")),
                 config =
@@ -421,7 +423,8 @@ class MediaProviderClientTest {
             mediaProviderClient.fetchSearchResults(
                 searchRequestId = 1,
                 pageKey = MediaPageKey(),
-                pageSize = 5,
+                currentPageSize = 5,
+                nextPageSize = 5,
                 contentResolver = testContentResolver,
                 availableProviders = listOf(Provider("provider", MediaSource.LOCAL, 0, "")),
                 config =
@@ -599,7 +602,8 @@ class MediaProviderClientTest {
         val mediaSetContentsLoadResult: LoadResult<MediaPageKey, Media> =
             mediaProviderClient.fetchMediaSetContents(
                 pageKey = MediaPageKey(),
-                pageSize = 5,
+                currentPageSize = 5,
+                nextPageSize = 5,
                 contentResolver = testContentResolver,
                 parentMediaSet = testContentProvider.mediaSets[0],
                 config =

@@ -59,6 +59,7 @@ class TestCategoryDataServiceImpl : CategoryDataService {
 
     override fun getMediaSetContents(
         mediaSet: Group.MediaSet,
+        regularPageSize: Int,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
         return mediaSetContentList?.let { FakeInMemoryMediaPagingSource(it, mediaSetContentDelay) }

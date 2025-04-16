@@ -66,6 +66,7 @@ import org.mockito.Mockito.mock
 class SearchDataServiceImplTest {
 
     companion object {
+        const val DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE = 50
         private val searchMediaUpdateUri =
             Uri.parse("content://media/picker_internal/v2/search_media/update")
 
@@ -164,7 +165,11 @@ class SearchDataServiceImplTest {
         assertThat(emissions.count()).isEqualTo(1)
 
         val firstSearchResultsPagingSource: PagingSource<MediaPageKey, Media> =
-            searchDataService.getSearchResults(searchText = searchText, cancellationSignal)
+            searchDataService.getSearchResults(
+                regularPageSize = DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE,
+                searchText = searchText,
+                cancellationSignal = cancellationSignal,
+            )
         assertThat(firstSearchResultsPagingSource.invalid).isFalse()
         assertThat(cancellationSignal.isCanceled()).isFalse()
 
@@ -203,7 +208,10 @@ class SearchDataServiceImplTest {
 
         // Check that the new PagingSource instance is valid.
         val secondSearchResultsPagingSource: PagingSource<MediaPageKey, Media> =
-            searchDataService.getSearchResults(searchText)
+            searchDataService.getSearchResults(
+                regularPageSize = DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE,
+                searchText = searchText,
+            )
         assertThat(secondSearchResultsPagingSource.invalid).isFalse()
     }
 
@@ -248,7 +256,11 @@ class SearchDataServiceImplTest {
         val searchText: String = "search_query"
         val cancellationSignal = CancellationSignal()
         val firstSearchResultsPagingSource: PagingSource<MediaPageKey, Media> =
-            searchDataService.getSearchResults(searchText = searchText, cancellationSignal)
+            searchDataService.getSearchResults(
+                regularPageSize = DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE,
+                searchText = searchText,
+                cancellationSignal = cancellationSignal,
+            )
         assertThat(firstSearchResultsPagingSource.invalid).isFalse()
 
         val searchResultsUpdateUri: Uri =
@@ -265,7 +277,11 @@ class SearchDataServiceImplTest {
 
         // Check that the a new PagingSource instance was created which is still valid
         val secondSearchResultsPagingSource: PagingSource<MediaPageKey, Media> =
-            searchDataService.getSearchResults(searchText = searchText, cancellationSignal)
+            searchDataService.getSearchResults(
+                regularPageSize = DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE,
+                searchText = searchText,
+                cancellationSignal = cancellationSignal,
+            )
         assertThat(secondSearchResultsPagingSource).isNotEqualTo(firstSearchResultsPagingSource)
         assertThat(secondSearchResultsPagingSource.invalid).isFalse()
     }

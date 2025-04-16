@@ -79,7 +79,10 @@ class TestDataServiceImpl() : DataService {
         _preGrantsCount.update { count }
     }
 
-    override fun albumMediaPagingSource(album: BaseAlbum): PagingSource<MediaPageKey, Media> {
+    override fun albumMediaPagingSource(
+        album: BaseAlbum,
+        regularPageSize: Int,
+    ): PagingSource<MediaPageKey, Media> {
         return albumMediaList?.let { FakeInMemoryMediaPagingSource(it) }
             ?: FakeInMemoryMediaPagingSource(albumMediaSetSize)
     }
@@ -94,12 +97,13 @@ class TestDataServiceImpl() : DataService {
     ): StateFlow<CloudMediaProviderDetails?> =
         throw NotImplementedError("This method is not implemented yet.")
 
-    override fun mediaPagingSource(): PagingSource<MediaPageKey, Media> {
+    override fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media> {
         return mediaList?.let { FakeInMemoryMediaPagingSource(it) }
             ?: FakeInMemoryMediaPagingSource(mediaSetSize)
     }
 
     override fun previewMediaPagingSource(
+        regularPageSize: Int,
         currentSelection: Set<Media>,
         currentDeselection: Set<Media>,
     ): PagingSource<MediaPageKey, Media> {

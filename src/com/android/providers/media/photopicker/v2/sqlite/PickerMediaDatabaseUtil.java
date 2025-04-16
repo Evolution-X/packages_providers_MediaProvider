@@ -680,7 +680,7 @@ public class PickerMediaDatabaseUtil {
                         query.getCallingPackageUid(), query.getIntentAction()))
                 .setProjection(projectionUtil.getAll())
                 .setSortOrder(getSortOrder(table, /* reverseOrder */ false))
-                .setLimit(query.getPageSize());
+                .setLimit(query.getCurrentPageSize());
 
         query.addWhereClause(
                 queryBuilder,
@@ -798,7 +798,7 @@ public class PickerMediaDatabaseUtil {
             @NonNull PickerSQLConstants.Table table,
             @Nullable String localAuthority,
             @Nullable String cloudAuthority) {
-        if (query.getPageSize() == Integer.MAX_VALUE) {
+        if (query.getCurrentPageSize() == Integer.MAX_VALUE) {
             return null;
         }
 
@@ -819,7 +819,7 @@ public class PickerMediaDatabaseUtil {
                 ))
                 .setSortOrder(getSortOrder(table, /* reverseOrder */ false))
                 .setLimit(1)
-                .setOffset(query.getPageSize());
+                .setOffset(query.getCurrentPageSize());
 
         query.addWhereClause(
                 queryBuilder,
@@ -862,7 +862,7 @@ public class PickerMediaDatabaseUtil {
                         projectionUtil.get(PickerSQLConstants.MediaResponse.PICKER_ID),
                         projectionUtil.get(PickerSQLConstants.MediaResponse.DATE_TAKEN_MS)
                 )).setSortOrder(getSortOrder(table, /* reverseOrder */ true)
-                ).setLimit(query.getPageSize());
+                ).setLimit(query.getNextPageSize());
 
 
         query.addWhereClause(

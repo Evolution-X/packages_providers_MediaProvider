@@ -404,40 +404,43 @@ class DataServiceImpl(
         }
 
     @GuardedBy("albumMediaPagingSourceMutex")
-    override fun albumMediaPagingSource(album: Group.BaseAlbum): PagingSource<MediaPageKey, Media> =
-        runBlocking {
-            refreshAlbumMedia(album)
+    override fun albumMediaPagingSource(
+        album: Group.BaseAlbum,
+        regularPageSize: Int,
+    ): PagingSource<MediaPageKey, Media> = runBlocking {
+        refreshAlbumMedia(album)
 
-            albumMediaPagingSourceMutex.withLock {
-                val albumMap = albumMediaPagingSources.getOrDefault(album.authority, mutableMapOf())
+        albumMediaPagingSourceMutex.withLock {
+            val albumMap = albumMediaPagingSources.getOrDefault(album.authority, mutableMapOf())
 
-                if (!albumMap.containsKey(album.id) || albumMap[album.id]!!.invalid) {
-                    val availableProviders: List<Provider> = availableProviders.value
-                    val contentResolver: ContentResolver = activeContentResolver.value
-                    val albumMediaPagingSource =
-                        AlbumMediaPagingSource(
-                            album.id,
-                            album.authority,
-                            contentResolver,
-                            availableProviders,
-                            mediaProviderClient,
-                            dispatcher,
-                            config.value,
-                            events,
-                        )
-
-                    Log.v(
-                        DataService.TAG,
-                        "Created an album media paging source that queries $availableProviders",
+            if (!albumMap.containsKey(album.id) || albumMap[album.id]!!.invalid) {
+                val availableProviders: List<Provider> = availableProviders.value
+                val contentResolver: ContentResolver = activeContentResolver.value
+                val albumMediaPagingSource =
+                    AlbumMediaPagingSource(
+                        album.id,
+                        album.authority,
+                        contentResolver,
+                        availableProviders,
+                        mediaProviderClient,
+                        dispatcher,
+                        config.value,
+                        events,
+                        regularPageSize,
                     )
 
-                    albumMap[album.id] = albumMediaPagingSource
-                    albumMediaPagingSources[album.authority] = albumMap
-                }
+                Log.v(
+                    DataService.TAG,
+                    "Created an album media paging source that queries $availableProviders",
+                )
 
-                albumMap[album.id]!!
+                albumMap[album.id] = albumMediaPagingSource
+                albumMediaPagingSources[album.authority] = albumMap
             }
+
+            albumMap[album.id]!!
         }
+    }
 
     @GuardedBy("mediaPagingSourceMutex")
     override fun albumPagingSource(): PagingSource<MediaPageKey, Album> = runBlocking {
@@ -470,29 +473,35 @@ class DataServiceImpl(
         throw NotImplementedError("This method is not implemented yet.")
 
     @GuardedBy("mediaPagingSourceMutex")
-    override fun mediaPagingSource(): PagingSource<MediaPageKey, Media> = runBlocking {
-        mediaPagingSourceMutex.withLock {
-            val availableProviders: List<Provider> = availableProviders.value
-            val contentResolver: ContentResolver = activeContentResolver.value
-            val mediaPagingSource =
-                MediaPagingSource(
-                    contentResolver,
-                    availableProviders,
-                    mediaProviderClient,
-                    dispatcher,
-                    config.value,
-                    events,
+    override fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media> =
+        runBlocking {
+            mediaPagingSourceMutex.withLock {
+                val availableProviders: List<Provider> = availableProviders.value
+                val contentResolver: ContentResolver = activeContentResolver.value
+                val mediaPagingSource =
+                    MediaPagingSource(
+                        contentResolver,
+                        availableProviders,
+                        mediaProviderClient,
+                        dispatcher,
+                        config.value,
+                        events,
+                        regularPageSize,
+                    )
+
+                Log.v(
+                    DataService.TAG,
+                    "Created a media paging source that queries $availableProviders",
                 )
 
-            Log.v(DataService.TAG, "Created a media paging source that queries $availableProviders")
-
-            mediaPagingSources.add(mediaPagingSource)
-            mediaPagingSource
+                mediaPagingSources.add(mediaPagingSource)
+                mediaPagingSource
+            }
         }
-    }
 
     @GuardedBy("mediaPagingSourceMutex")
     override fun previewMediaPagingSource(
+        regularPageSize: Int,
         currentSelection: Set<Media>,
         currentDeselection: Set<Media>,
     ): PagingSource<MediaPageKey, Media> = runBlocking {
@@ -507,6 +516,7 @@ class DataServiceImpl(
                     dispatcher,
                     config.value,
                     events,
+                    regularPageSize,
                     /* is_preview_request */ true,
                     currentSelection.mapNotNull { it.mediaId }.toCollection(ArrayList()),
                     currentDeselection.mapNotNull { it.mediaId }.toCollection(ArrayList()),

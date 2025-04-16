@@ -44,6 +44,8 @@ class MediaPagingSource(
     private val dispatcher: CoroutineDispatcher,
     private val configuration: PhotopickerConfiguration,
     private val events: Events,
+    private val nextPageSize:
+        Int, // The number of items per page after the first page or after first initial load
     private val isPreviewSession: Boolean = false,
     private val currentSelection: List<String> = emptyList(),
     private val currentDeSelection: List<String> = emptyList(),
@@ -54,7 +56,7 @@ class MediaPagingSource(
 
     override suspend fun load(params: LoadParams<MediaPageKey>): LoadResult<MediaPageKey, Media> {
         val pageKey = params.key ?: MediaPageKey()
-        val pageSize = params.loadSize
+        val currentPageSize = params.loadSize
         // Switch to the background thread from the main thread using [withContext].
         val mediaFetchResult =
             withContext(dispatcher) {
@@ -65,7 +67,8 @@ class MediaPagingSource(
                     if (isPreviewSession) {
                         mediaProviderClient.fetchPreviewMedia(
                             pageKey,
-                            pageSize,
+                            currentPageSize,
+                            nextPageSize,
                             contentResolver,
                             availableProviders,
                             configuration,
@@ -77,7 +80,8 @@ class MediaPagingSource(
                     } else {
                         mediaProviderClient.fetchMedia(
                             pageKey,
-                            pageSize,
+                            currentPageSize,
+                            nextPageSize,
                             contentResolver,
                             availableProviders,
                             configuration,
@@ -97,7 +101,7 @@ class MediaPagingSource(
                     FeatureToken.CORE.token,
                     configuration.sessionId,
                     /* pageNumber */ 0,
-                    pageSize,
+                    currentPageSize,
                 )
             )
 

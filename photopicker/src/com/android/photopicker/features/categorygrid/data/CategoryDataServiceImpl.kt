@@ -377,6 +377,7 @@ class CategoryDataServiceImpl(
 
     override fun getMediaSetContents(
         mediaSet: Group.MediaSet,
+        regularPageSize: Int,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> = runBlocking {
         return@runBlocking cachedPagingSourceMutex.withLock {
@@ -405,6 +406,7 @@ class CategoryDataServiceImpl(
                         dispatcher = dispatcher,
                         configuration = config.value,
                         events = events,
+                        nextPageSize = regularPageSize,
                         cancellationSignal = cancellationSignal,
                     )
                 // Ensure that cancellation get propagated to the data source when the paging source

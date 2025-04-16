@@ -94,6 +94,7 @@ class MediaPagingSourceTest {
                 featureManager,
             )
 
+        val pageSize: Int = 10
         val mediaPagingSource =
             MediaPagingSource(
                 contentResolver = contentResolver,
@@ -102,10 +103,10 @@ class MediaPagingSourceTest {
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
                 events,
+                pageSize,
             )
 
         val pageKey: MediaPageKey = MediaPageKey()
-        val pageSize: Int = 10
         val params =
             LoadParams.Append<MediaPageKey>(
                 key = pageKey,
@@ -119,6 +120,7 @@ class MediaPagingSourceTest {
         verify(mockMediaProviderClient, times(1))
             .fetchMedia(
                 pageKey,
+                pageSize,
                 pageSize,
                 contentResolver,
                 availableProviders,
