@@ -20,6 +20,7 @@ import static android.provider.MediaStore.MY_USER_ID;
 
 import static java.util.Objects.requireNonNull;
 
+import android.content.ContentResolver;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
@@ -75,6 +76,13 @@ public class MediaGroupCursorUtils {
             PickerSQLConstants.MediaGroupResponseColumns.AUTHORITY.getColumnName(),
             PickerSQLConstants.MediaGroupResponseColumns.UNWRAPPED_COVER_URI.getColumnName()
     };
+
+    private static final List<String> MEDIA_COVER_ID_COLUMNS = List.of(
+            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID1,
+            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2,
+            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID3,
+            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID4
+    );
 
     /**
      * @param cursor Input
@@ -233,15 +241,9 @@ public class MediaGroupCursorUtils {
         final MatrixCursor response = new MatrixCursor(ALL_MEDIA_GROUP_RESPONSE_PROJECTION);
 
         final List<String> uris = new ArrayList<>();
-        final List<String> mediaCoverIdColumns = List.of(
-                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID1,
-                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2,
-                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID3,
-                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID4
-        );
         if (cursor.moveToFirst()) {
             do {
-                for (String columnName : mediaCoverIdColumns) {
+                for (String columnName : MEDIA_COVER_ID_COLUMNS) {
                     final String mediaCoverId = cursor.getString(
                             cursor.getColumnIndexOrThrow(columnName));
                     if (mediaCoverId != null) {
@@ -274,36 +276,24 @@ public class MediaGroupCursorUtils {
             final String displayName = cursor.getString(cursor.getColumnIndexOrThrow(
                     CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME));
 
-            final String mediaCoverId1 = cursor.getString(
-                    cursor.getColumnIndexOrThrow(
-                            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID1));
-            String coverUri1 = mediaCoverId1;
-
-            final String mediaCoverId2 = cursor.getString(
-                    cursor.getColumnIndexOrThrow(
-                            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2));
-            String coverUri2 = mediaCoverId2;
-
-            final String mediaCoverId3 = cursor.getString(
-                    cursor.getColumnIndexOrThrow(
-                            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID3));
-            String coverUri3 = mediaCoverId3;
-
-            final String mediaCoverId4 = cursor.getString(
-                    cursor.getColumnIndexOrThrow(
-                            CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID4));
-            String coverUri4 = mediaCoverId4;
-
-            if (!CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS
-                    .equals(categoryType)) {
-                coverUri1 = maybeGetLocalUri(getUri(mediaCoverId1, authority).toString(),
-                        cloudToLocalIdMap);
-                coverUri2 = maybeGetLocalUri(getUri(mediaCoverId2, authority).toString(),
-                        cloudToLocalIdMap);
-                coverUri3 = maybeGetLocalUri(getUri(mediaCoverId3, authority).toString(),
-                        cloudToLocalIdMap);
-                coverUri4 = maybeGetLocalUri(getUri(mediaCoverId4, authority).toString(),
-                        cloudToLocalIdMap);
+            List<String> coverUris = new ArrayList<>(MEDIA_COVER_ID_COLUMNS.size());
+            for (String columnName: MEDIA_COVER_ID_COLUMNS) {
+                final String mediaCoverId = cursor.getString(
+                        cursor.getColumnIndexOrThrow(columnName));
+                if (mediaCoverId == null) {
+                    coverUris.add(null);
+                    continue;
+                }
+                final String coverUri;
+                if (CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS.equals(
+                        categoryType)) {
+                    coverUri = getCustomAndroidResourceUri(mediaCoverId).toString();
+                } else {
+                    coverUri = maybeGetLocalUri(
+                            getUri(mediaCoverId, authority).toString(),
+                            cloudToLocalIdMap);
+                }
+                coverUris.add(coverUri);
             }
 
             response.addRow(new Object[]{
@@ -312,10 +302,10 @@ public class MediaGroupCursorUtils {
                     index,
                     displayName,
                     authority,
-                    coverUri1,
-                    coverUri2,
-                    coverUri3,
-                    coverUri4,
+                    coverUris.get(0),
+                    coverUris.get(1),
+                    coverUris.get(2),
+                    coverUris.get(3),
                     categoryType,
                     // Default is 1, we don't have recursive categories yet.
                     /* MediaGroupResponseColumns.IS_LEAF_CATEGORY */ 1
@@ -424,7 +414,7 @@ public class MediaGroupCursorUtils {
     public static String maybeGetLocalUri(
             @Nullable String rawCoverUri,
             @NonNull Map<String, String> cloudToLocalIdMap) {
-        if (rawCoverUri == null) {
+        if (rawCoverUri == null || rawCoverUri.isEmpty()) {
             return null;
         }
 
@@ -446,17 +436,51 @@ public class MediaGroupCursorUtils {
 
     private static Uri getUri(String mediaId, String authority) {
         return PickerUriResolver
-                .getMediaUri(getEncodedUserAuthority(authority))
+                .getMediaUri(getEncodedUserAuthority(authority, MY_USER_ID))
                 .buildUpon()
                 .appendPath(mediaId)
                 .build();
     }
 
-    private static String getEncodedUserAuthority(String authority) {
+    /**
+     * Parses a custom string-based media identifier and builds a standard {@code android.resource}
+     * URI from it. The input {@code mediaId} must be in the format
+     * "{@code <package_name>/<resource_id>/<user_id>}". If the {@code mediaId} is null or
+     * malformed, this method logs an error and returns {@link Uri#EMPTY}.
+     */
+    @VisibleForTesting
+    @NonNull
+    public static Uri getCustomAndroidResourceUri(@Nullable String mediaId) {
+        if (mediaId == null) {
+            return Uri.EMPTY;
+        }
+        // mediaId is of the form "<package_name>/<res_id>/<user_id>"
+        try {
+            final String[] segments = mediaId.split("/");
+            final String packageName = segments[0];
+            final String resId = segments[1];
+            final int userId = Integer.parseInt(segments[2]);
+
+            Uri.Builder builder =  new Uri.Builder()
+                    .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                    .encodedAuthority(getEncodedUserAuthority(packageName, userId))
+                    .path(resId);
+            return builder.build();
+        } catch (NumberFormatException e) {
+            Log.e(TAG, "Error parsing userId from mediaId: " + mediaId, e);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            Log.e(TAG, "Error splitting mediaId, incorrect format: " + mediaId, e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error occurred while getting Uri for android resource: " + mediaId, e);
+        }
+        return Uri.EMPTY;
+    }
+
+    private static String getEncodedUserAuthority(String authority, int userId) {
         if (authority.contains("@")) {
             return authority;
         } else {
-            return MY_USER_ID + "@" + authority;
+            return userId + "@" + authority;
         }
     }
 }
