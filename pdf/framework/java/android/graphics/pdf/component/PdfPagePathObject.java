@@ -23,6 +23,7 @@ import android.annotation.NonNull;
 import android.graphics.Color;
 import android.graphics.Path;
 import android.graphics.pdf.flags.Flags;
+import android.graphics.pdf.utils.Preconditions;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -68,6 +69,7 @@ public final class PdfPagePathObject extends PdfPageObject {
      */
     public PdfPagePathObject(@NonNull Path path) {
         super(PdfPageObjectType.PATH);
+        Preconditions.checkNotNull(path, "Path should not be null");
         this.mPath = path;
         this.mRenderMode = RENDER_MODE_FILL;
         this.mFillColor = Color.BLACK;

@@ -904,6 +904,18 @@ public final class CloudMediaProviderContract {
     public static final String EXTRA_MEDIASTORE_THUMB = "android.provider.extra.MEDIASTORE_THUMB";
 
     /**
+     * A boolean extra indicating the Cloud Media Provider if the PhotoPicker will display
+     * the local device folders or not.
+     * <p>If set to {@code true}, it indicates that the PhotoPicker shows local device folders,
+     * otherwise it indicates that it does not display them.
+     * <p>
+     * Type: BOOLEAN
+     * @hide
+     */
+    public static final String EXTRA_PICKER_SHOWS_DEVICE_FOLDERS =
+            "android.provider.extra.EXTRA_PICKER_SHOWS_DEVICE_FOLDERS";
+
+    /**
      * Constant used to execute {@link CloudMediaProvider#onGetMediaCollectionInfo} via
      * {@link ContentProvider#call}.
      *
@@ -1354,6 +1366,26 @@ public final class CloudMediaProviderContract {
             "com.android.providers.media.MEDIA_CATEGORY_TYPE_USER_ALBUMS";
 
     /**
+     * Represents media category related to device folders on device.
+     * @see MediaCategoryColumns#MEDIA_CATEGORY_TYPE
+     * Type: STRING
+     *
+     * @hide
+     */
+    public static final String MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS =
+            "com.android.providers.media.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS";
+
+    /**
+     * Represents media category related to app folders on device.
+     * @see MediaCategoryColumns#MEDIA_CATEGORY_TYPE
+     * Type: STRING
+     *
+     * @hide
+     */
+    public static final String MEDIA_CATEGORY_TYPE_APP_FOLDERS =
+            "com.android.providers.media.MEDIA_CATEGORY_TYPE_APP_FOLDERS";
+
+    /**
      * Defines the types of media categories available and supported in photo picker.
      * All MediaCategories returned must be of any type from the fields available in this class.
      *
@@ -1362,7 +1394,9 @@ public final class CloudMediaProviderContract {
      */
     @StringDef(value = {
             MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS,
-            MEDIA_CATEGORY_TYPE_USER_ALBUMS
+            MEDIA_CATEGORY_TYPE_USER_ALBUMS,
+            MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+            MEDIA_CATEGORY_TYPE_APP_FOLDERS
     })
     @Retention(SOURCE)
     public @interface MediaCategoryType {}

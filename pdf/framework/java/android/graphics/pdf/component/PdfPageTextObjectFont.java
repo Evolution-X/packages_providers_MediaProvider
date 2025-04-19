@@ -20,6 +20,7 @@ import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.graphics.pdf.flags.Flags;
+import android.graphics.pdf.utils.Preconditions;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -64,6 +65,7 @@ public class PdfPageTextObjectFont {
      */
     public PdfPageTextObjectFont(@FontFamily int fontFamily,
             boolean isBold, boolean isItalic) {
+        Preconditions.checkArgument(isValidFontFamily(fontFamily), "FontFamily is invalid");
         mFontFamily = fontFamily;
         mIsBold = isBold;
         mIsItalic = isItalic;
@@ -76,6 +78,7 @@ public class PdfPageTextObjectFont {
      * @param font The {@link PdfPageTextObjectFont} instance to copy attributes from.
      */
     public PdfPageTextObjectFont(@NonNull PdfPageTextObjectFont font) {
+        Preconditions.checkNotNull(font, "Font should not be null");
         this.mFontFamily = font.getFontFamily();
         this.mIsBold = font.isBold();
         this.mIsItalic = font.isItalic();
@@ -97,6 +100,7 @@ public class PdfPageTextObjectFont {
      * @param fontFamily The font family to be set.
      */
     public void setFontFamily(@FontFamily int fontFamily) {
+        Preconditions.checkArgument(isValidFontFamily(fontFamily), "FontFamily is invalid");
         mFontFamily = fontFamily;
     }
 
@@ -147,5 +151,12 @@ public class PdfPageTextObjectFont {
     @IntDef({FONT_FAMILY_COURIER, FONT_FAMILY_HELVETICA, FONT_FAMILY_SYMBOL,
             FONT_FAMILY_TIMES_NEW_ROMAN})
     public @interface FontFamily {
+    }
+
+    private boolean isValidFontFamily(int fontFamily) {
+        return fontFamily == FONT_FAMILY_COURIER
+               || fontFamily == FONT_FAMILY_HELVETICA
+               || fontFamily == FONT_FAMILY_SYMBOL
+               || fontFamily == FONT_FAMILY_TIMES_NEW_ROMAN;
     }
 }

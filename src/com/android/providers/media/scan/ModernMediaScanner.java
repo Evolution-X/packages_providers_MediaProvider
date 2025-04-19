@@ -52,6 +52,7 @@ import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 
 import static com.android.providers.media.flags.Flags.enableOemMetadata;
+import static com.android.providers.media.flags.Flags.enableOemMetadataUsingMimetype;
 import static com.android.providers.media.flags.Flags.indexMediaLatitudeLongitude;
 import static com.android.providers.media.util.FileUtils.canonicalize;
 import static com.android.providers.media.util.IsoInterface.MAX_XMP_SIZE_BYTES;
@@ -1041,7 +1042,7 @@ public class ModernMediaScanner implements MediaScanner {
                     }
                     if (mOemSupportedMimeTypes.contains(actualMimeType)) {
                         // If mime type is supported by OEM
-                        fetchOemMetadata(op, realFile);
+                        fetchOemMetadata(op, realFile, actualMimeType);
                     }
                 }
 
@@ -1051,7 +1052,8 @@ public class ModernMediaScanner implements MediaScanner {
             return FileVisitResult.CONTINUE;
         }
 
-        private void fetchOemMetadata(ContentProviderOperation.Builder op, File file) {
+        private void fetchOemMetadata(ContentProviderOperation.Builder op, File file,
+                String mimeType) {
             if (!enableOemMetadata()) {
                 return;
             }
@@ -1072,8 +1074,13 @@ public class ModernMediaScanner implements MediaScanner {
 
                 try (ParcelFileDescriptor pfd = FileUtils.openSafely(file,
                         ParcelFileDescriptor.MODE_READ_ONLY)) {
-                    Map<String, String> oemMetadata = mOemMetadataServiceWrapper.getOemCustomData(
-                            pfd);
+                    Map<String, String> oemMetadata;
+                    if (enableOemMetadataUsingMimetype()) {
+                        oemMetadata = mOemMetadataServiceWrapper.getOemCustomDataUsingMimeType(pfd,
+                                mimeType);
+                    } else {
+                        oemMetadata = mOemMetadataServiceWrapper.getOemCustomData(pfd);
+                    }
                     op.withValue(FileColumns.OEM_METADATA, oemMetadata.toString().getBytes());
                     Log.v(TAG, "Fetched OEM metadata successfully");
                 } catch (Exception e) {

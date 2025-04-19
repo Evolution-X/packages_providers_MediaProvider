@@ -29,19 +29,20 @@ import android.graphics.pdf.utils.Preconditions;
  */
 @FlaggedApi(Flags.FLAG_ENABLE_EDIT_PDF_PAGE_OBJECTS)
 public final class PdfPageImageObject extends PdfPageObject {
-    private Bitmap mImage;
+    private Bitmap mBitmap;
 
     /**
      * Constructor for the PdfPageImageObject. Sets the object type
      * to IMAGE.
      *
-     * @throws IllegalArgumentException if Bitmap config is not ARGB_8888
+     * @throws IllegalArgumentException if bitmap config is not ARGB_8888.
      */
-    public PdfPageImageObject(@NonNull Bitmap image) {
+    public PdfPageImageObject(@NonNull Bitmap bitmap) {
         super(PdfPageObjectType.IMAGE);
-        Preconditions.checkArgument(image.getConfig() == Bitmap.Config.ARGB_8888,
-                "Bitmap should be of type ARGB");
-        this.mImage = image;
+        Preconditions.checkNotNull(bitmap, "Bitmap should not be null");
+        Preconditions.checkArgument(bitmap.getConfig() == Bitmap.Config.ARGB_8888,
+                "Bitmap should be of type ARGB_8888");
+        this.mBitmap = bitmap;
     }
 
     /**
@@ -51,19 +52,20 @@ public final class PdfPageImageObject extends PdfPageObject {
      */
     @NonNull
     public Bitmap getBitmap() {
-        return mImage;
+        return mBitmap;
     }
 
     /**
      * Sets the bitmap image of the object.
      *
-     * @param image The bitmap image to set.
-     * @throws IllegalArgumentException if Bitmap config is not ARGB_8888
+     * @param bitmap The bitmap image to set.
+     * @throws IllegalArgumentException if bitmap config is not ARGB_8888.
      */
-    public void setBitmap(@NonNull Bitmap image) {
-        Preconditions.checkArgument(image.getConfig() == Bitmap.Config.ARGB_8888,
-                "Bitmap should be of type ARGB");
-        this.mImage = image;
+    public void setBitmap(@NonNull Bitmap bitmap) {
+        Preconditions.checkNotNull(bitmap, "Bitmap should not be null");
+        Preconditions.checkArgument(bitmap.getConfig() == Bitmap.Config.ARGB_8888,
+                "Bitmap should be of type ARGB_8888");
+        this.mBitmap = bitmap;
     }
 
 }

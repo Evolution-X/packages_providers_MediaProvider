@@ -29,6 +29,7 @@ import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.Media
+import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.search.model.SearchSuggestion
@@ -80,6 +81,8 @@ val DEFAULT_ALBUMS: List<Group.Album> =
     listOf(createAlbum("Favorites"), createAlbum("Downloads"), createAlbum("CloudAlbum"))
 
 val DEFAULT_ALBUM_NAME = "album_id"
+
+val DEFAULT_ITEM_POSITION_FOR_MEDIA_PAGE_KEY = 2
 
 val DEFAULT_ALBUM_MEDIA: Map<String, List<Media>> = mapOf(DEFAULT_ALBUM_NAME to DEFAULT_MEDIA)
 
@@ -207,6 +210,7 @@ class TestMediaProvider(
             MEDIA_SETS_PATH_SEGMENT -> getMediaSets()
             MEDIA_SET_CONTENTS_PATH_SEGMENT -> getMedia()
             ITEMS_PER_MONTH_PATH_SEGMENT -> getItemsPerMonth()
+            PAGE_KEY_PATH_SEGMENT -> getMediaPageKey()
             else -> {
                 val pathSegments: MutableList<String> = uri.getPathSegments()
                 if (pathSegments.size == 4 && pathSegments[2].equals(ALBUM_PATH_SEGMENT)) {
@@ -374,6 +378,28 @@ class TestMediaProvider(
         return mediaByMonth.map { (yearMonthPair, count) ->
             ItemsPerMonth(yearMonthPair.first, yearMonthPair.second, count)
         }
+    }
+
+    private fun getMediaPageKey(): Cursor {
+        val cursor =
+            MatrixCursor(
+                arrayOf(
+                    MediaProviderClient.MediaResponse.PICKER_ID.key,
+                    MediaProviderClient.MediaResponse.DATE_TAKEN.key,
+                )
+            )
+
+        val mediaPageKey = getMediaPageKeyForItemPosition()
+        cursor.addRow(arrayOf(mediaPageKey.pickerId, mediaPageKey.dateTakenMillis))
+        return cursor
+    }
+
+    fun getMediaPageKeyForItemPosition(): MediaPageKey {
+        val targetItem = media.get(DEFAULT_ITEM_POSITION_FOR_MEDIA_PAGE_KEY)
+        return MediaPageKey(
+            pickerId = targetItem.pickerId,
+            dateTakenMillis = targetItem.dateTakenMillisLong,
+        )
     }
 
     private fun fetchFilteredMedia(queryArgs: Bundle?, mediaItems: List<Media> = media): Cursor {

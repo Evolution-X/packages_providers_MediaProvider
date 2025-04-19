@@ -22,6 +22,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.graphics.Color;
 import android.graphics.pdf.flags.Flags;
+import android.graphics.pdf.utils.Preconditions;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -72,6 +73,8 @@ public final class PdfPageTextObject extends PdfPageObject {
     public PdfPageTextObject(@NonNull String text, @NonNull PdfPageTextObjectFont font,
             float fontSize) {
         super(PdfPageObjectType.TEXT);
+        Preconditions.checkNotNull(text, "Text should not be null");
+        Preconditions.checkNotNull(font, "Font should not be null");
         this.mText = text;
         this.mFont = font;
         this.mFontSize = fontSize;
@@ -98,6 +101,7 @@ public final class PdfPageTextObject extends PdfPageObject {
      * @param text The text content to set.
      */
     public void setText(@NonNull String text) {
+        Preconditions.checkNotNull(text, "Text should not be null");
         this.mText = text;
     }
 
