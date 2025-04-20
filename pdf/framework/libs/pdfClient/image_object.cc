@@ -50,10 +50,12 @@ ScopedFPDFPageObject ImageObject::CreateFPDFInstance(FPDF_DOCUMENT document, FPD
     // Create a scoped PDFium image object.
     ScopedFPDFPageObject scoped_image_object(FPDFPageObj_NewImageObj(document));
     if (!scoped_image_object) {
+        LOGE("Object creation failed");
         return nullptr;
     }
     // Update attributes of PDFium image object.
     if (!UpdateFPDFInstance(scoped_image_object.get(), page)) {
+        LOGE("Create update failed");
         return nullptr;
     }
     return scoped_image_object;
@@ -61,21 +63,25 @@ ScopedFPDFPageObject ImageObject::CreateFPDFInstance(FPDF_DOCUMENT document, FPD
 
 bool ImageObject::UpdateFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PAGE page) {
     if (!image_object) {
+        LOGE("Object NULL");
         return false;
     }
 
     // Check for Type Correctness.
     if (FPDFPageObj_GetType(image_object) != FPDF_PAGEOBJ_IMAGE) {
+        LOGE("TypeCast failed");
         return false;
     }
 
     // Set the updated bitmap.
     if (!FPDFImageObj_SetBitmap(nullptr, 0, image_object, bitmap_.get())) {
+        LOGE("SetBitmap failed");
         return false;
     }
 
     // Set the updated matrix.
     if (!SetDeviceToPageMatrix(image_object, page)) {
+        LOGE("SetDeviceToPageMatrix failed");
         return false;
     }
 
@@ -93,11 +99,13 @@ bool ImageObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT image_object, FPDF_PA
     // Get bitmap.
     bitmap_ = ScopedFPDFBitmap(FPDFImageObj_GetBitmap(image_object));
     if (bitmap_.get() == nullptr) {
+        LOGE("Bitmap not present");
         return false;
     }
 
     // Get matrix.
     if (!GetPageToDeviceMatrix(image_object, page)) {
+        LOGE("GetPageToDeviceMatrix failed");
         return false;
     }
 

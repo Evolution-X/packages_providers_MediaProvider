@@ -95,6 +95,7 @@ std::optional<std::wstring> GetText(FPDF_PAGEOBJECT text_object, FPDF_PAGE page)
     // Get text page.
     ScopedFPDFTextPage text_page(FPDFText_LoadPage(page));
     if (!text_page) {
+        LOGE("TextPage load failed");
         return std::nullopt;
     }
 
@@ -182,7 +183,7 @@ bool TextObject::UpdateFPDFInstance(FPDF_PAGEOBJECT text_object, FPDF_PAGE page)
 
     // Set the updated device matrix.
     if (!SetDeviceToPageMatrix(text_object, page)) {
-        LOGE("SetMatrix failed");
+        LOGE("SetDeviceToPageMatrix failed");
         return false;
     }
 
@@ -241,7 +242,7 @@ bool TextObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT text_object, FPDF_PAGE
 
     // Get device matrix.
     if (!GetPageToDeviceMatrix(text_object, page)) {
-        LOGE("GetMatrix failed");
+        LOGE("GetPageToDeviceMatrix failed");
         return false;
     }
 
