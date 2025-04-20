@@ -194,7 +194,7 @@ public final class PdfPageTextObject extends PdfPageObject {
     }
 
     /**
-     * Sets the {@link RenderMode} of the object.
+     * Sets the {@link PdfPageTextObject.RenderMode} of the object.
      *
      * @param renderMode The {@link PdfPageTextObject.RenderMode} to be set.
      * @throws IllegalArgumentException if the provided renderMode is invalid.
