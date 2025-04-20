@@ -191,6 +191,10 @@ bool PathObject::PopulateFromFPDFInstance(FPDF_PAGEOBJECT path_object, FPDF_PAGE
         return false;
     }
     render_mode_ = GetRenderMode(fill_mode, stroke);
+    if (render_mode_ == RenderMode::Unknown) {
+        LOGE("GetRenderMode unknown");
+        return false;
+    }
 
     // Get Matrix
     if (!GetPageToDeviceMatrix(path_object, page)) {

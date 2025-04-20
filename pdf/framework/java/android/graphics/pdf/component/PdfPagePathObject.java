@@ -165,11 +165,13 @@ public final class PdfPagePathObject extends PdfPageObject {
     }
 
     /**
-     * Sets the {@link RenderMode} of the object.
+     * Sets the {@link PdfPageTextObject.RenderMode} of the object.
      *
-     * @param renderMode The {@link RenderMode} to be set.
+     * @param renderMode The {@link PdfPagePathObject.RenderMode} to be set.
+     * @throws IllegalArgumentException if the provided renderMode is invalid.
      */
     public void setRenderMode(@RenderMode int renderMode) {
+        Preconditions.checkArgument(isValidRenderMode(renderMode), "RenderMode is invalid");
         mRenderMode = renderMode;
     }
 
@@ -187,4 +189,9 @@ public final class PdfPagePathObject extends PdfPageObject {
     public @interface RenderMode {
     }
 
+    private boolean isValidRenderMode(int renderMode) {
+        return renderMode == RENDER_MODE_FILL
+                || renderMode == RENDER_MODE_STROKE
+                || renderMode == RENDER_MODE_FILL_STROKE;
+    }
 }
