@@ -39,10 +39,8 @@
     <string name="deny" msgid="6040983710442068936">"Từ chối"</string>
     <string name="picker_browse" msgid="5554477454636075934">"Duyệt qua…"</string>
     <string name="picker_settings" msgid="7388913035769329672">"Cài đặt"</string>
-    <!-- no translation found for picker_settings_system_settings_menu_title (8376154377841981825) -->
-    <skip />
-    <!-- no translation found for picker_settings_title (1745398289847815694) -->
-    <skip />
+    <string name="picker_settings_system_settings_menu_title" msgid="8376154377841981825">"Cài đặt nội dung nghe nhìn trên đám mây"</string>
+    <string name="picker_settings_title" msgid="1745398289847815694">"Cài đặt nội dung nghe nhìn trên đám mây"</string>
     <string name="picker_settings_description" msgid="2916686824777214585">"Truy cập vào nội dung nghe nhìn của bạn trên đám mây khi có ứng dụng hay trang web yêu cầu bạn chọn ảnh hoặc video"</string>
     <string name="picker_settings_selection_message" msgid="245453573086488596">"Truy cập nội dung nghe nhìn trên đám mây qua"</string>
     <string name="picker_settings_no_provider" msgid="2582311853680058223">"Không có"</string>
@@ -169,4 +167,14 @@
     <string name="dialog_button_text" msgid="351366485240852280">"Tôi hiểu"</string>
     <string name="permlab_accessMediaOwnerPackageName" msgid="3849443148060165651">"Truy cập tên gói chủ sở hữu của tất cả tệp đa phương tiện"</string>
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"Cho phép ứng dụng truy cập tên gói chủ sở hữu của tất cả tệp đa phương tiện có thể truy cập."</string>
+    <!-- no translation found for device_folders_collection_display_name (3792747330533159857) -->
+    <skip />
+    <!-- no translation found for app_folders_collection_display_name (2606436050952788816) -->
+    <skip />
+    <!-- no translation found for camera_album_display_name (1093891161978593789) -->
+    <skip />
+    <!-- no translation found for screenshots_album_display_name (3614860974116695364) -->
+    <skip />
+    <!-- no translation found for downloads_album_display_name (3297383597164642280) -->
+    <skip />
 </resources>
