@@ -47,7 +47,7 @@ public class PdfPageTextObjectFont {
 
     /**
      * Constant representing the Symbol font family.
-     * Note: This font family only renders symbols.
+     * Note: This font family only renders symbols and does not support bold or italic.
      */
     public static final int FONT_FAMILY_SYMBOL = 2;
 
@@ -66,9 +66,9 @@ public class PdfPageTextObjectFont {
     public PdfPageTextObjectFont(@FontFamily int fontFamily,
             boolean isBold, boolean isItalic) {
         Preconditions.checkArgument(isValidFontFamily(fontFamily), "FontFamily is invalid");
-        mFontFamily = fontFamily;
-        mIsBold = isBold;
-        mIsItalic = isItalic;
+        this.mFontFamily = fontFamily;
+        this.mIsBold = isBold;
+        this.mIsItalic = isItalic;
     }
 
     /**
@@ -101,7 +101,7 @@ public class PdfPageTextObjectFont {
      */
     public void setFontFamily(@FontFamily int fontFamily) {
         Preconditions.checkArgument(isValidFontFamily(fontFamily), "FontFamily is invalid");
-        mFontFamily = fontFamily;
+        this.mFontFamily = fontFamily;
     }
 
     /**
@@ -119,7 +119,7 @@ public class PdfPageTextObjectFont {
      * @param bold true if the text should be bold, false otherwise.
      */
     public void setBold(boolean bold) {
-        mIsBold = bold;
+        this.mIsBold = bold;
     }
 
     /**
@@ -137,7 +137,7 @@ public class PdfPageTextObjectFont {
      * @param italic true if the text should be italic, false otherwise.
      */
     public void setItalic(boolean italic) {
-        mIsItalic = italic;
+        this.mIsItalic = italic;
     }
 
     /**
