@@ -172,7 +172,7 @@ public final class PdfPagePathObject extends PdfPageObject {
      */
     public void setRenderMode(@RenderMode int renderMode) {
         Preconditions.checkArgument(isValidRenderMode(renderMode), "RenderMode is invalid");
-        mRenderMode = renderMode;
+        this.mRenderMode = renderMode;
     }
 
     /**
