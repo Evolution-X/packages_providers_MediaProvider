@@ -160,7 +160,7 @@ public final class PdfPageTextObject extends PdfPageObject {
      * @param strokeWidth The stroke width of the object.
      */
     public void setStrokeWidth(float strokeWidth) {
-        mStrokeWidth = strokeWidth;
+        this.mStrokeWidth = strokeWidth;
     }
 
     /**
@@ -201,7 +201,7 @@ public final class PdfPageTextObject extends PdfPageObject {
      */
     public void setRenderMode(@RenderMode int renderMode) {
         Preconditions.checkArgument(isValidRenderMode(renderMode), "RenderMode is invalid");
-        mRenderMode = renderMode;
+        this.mRenderMode = renderMode;
     }
 
     /**
