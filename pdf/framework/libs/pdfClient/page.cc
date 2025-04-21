@@ -362,6 +362,33 @@ void Page::TerminateFormFilling() {
     form_filler_->NotifyBeforePageClose(page_.get());
 }
 
+int Page::FindWidgetAnnotationIndex(int widget_index) {
+    std::vector<FormWidgetInfo> widget_infos;
+    // Passing empty type_ids list to get all form widgets
+    form_filler_->GetFormWidgetInfos(page_.get(), {}, &widget_infos);
+
+    if (widget_index >= widget_infos.size()) {
+        return -1;
+    }
+
+    int annotation_index = widget_infos[widget_index].annot_index();
+    return annotation_index;
+}
+
+int Page::FindWidgetIndex(int annot_index) {
+    std::vector<FormWidgetInfo> widget_infos;
+    // Passing empty type_ids list to get all form widgets
+    form_filler_->GetFormWidgetInfos(page_.get(), {}, &widget_infos);
+
+    for (int widget_index = 0; widget_index < widget_infos.size(); widget_index++) {
+        if (widget_infos[widget_index].annot_index() == annot_index) {
+            return widget_index;
+        }
+    }
+
+    return -1;
+}
+
 FormWidgetInfo Page::GetFormWidgetInfo(Point_i point) {
     Point_d page_point = UnapplyPageTransform(point);
     FormWidgetInfo result = form_filler_->GetFormWidgetInfo(page_.get(), page_point);
@@ -370,6 +397,10 @@ FormWidgetInfo Page::GetFormWidgetInfo(Point_i point) {
         // returning to user.
         Rectangle_i transformed_widget_rect = ApplyPageTransform(result.widget_rect());
         result.set_widget_rect(transformed_widget_rect);
+
+        // set widget_index
+        int widget_index = FindWidgetIndex(result.annot_index());
+        result.set_widget_index(widget_index);
     }
 
     // Consume any rectangle that was invalidated by this action. Some
@@ -379,13 +410,23 @@ FormWidgetInfo Page::GetFormWidgetInfo(Point_i point) {
     return result;
 }
 
-FormWidgetInfo Page::GetFormWidgetInfo(int annotation_index) {
+FormWidgetInfo Page::GetFormWidgetInfo(int widget_index) {
+    int annotation_index = FindWidgetAnnotationIndex(widget_index);
+
+    if (annotation_index == -1) {
+        LOGE("There is no widget annotation at given widget_index");
+        return FormWidgetInfo();
+    }
+
     FormWidgetInfo result = form_filler_->GetFormWidgetInfo(page_.get(), annotation_index);
     if (result.FoundWidget()) {
         // widget_rect is in page coords; transform to device coords before
         // returning to user.
         Rectangle_i transformed_widget_rect = ApplyPageTransform(result.widget_rect());
         result.set_widget_rect(transformed_widget_rect);
+
+        // set widget_index
+        result.set_widget_index(widget_index);
     }
 
     // Consume any rectangle that was invalidated by this action. Some
@@ -415,11 +456,21 @@ bool Page::ClickOnPoint(Point_i point) {
     Point_d page_point = UnapplyPageTransform(point);
     return form_filler_->ClickOnPoint(page_.get(), page_point);
 }
-bool Page::SetFormFieldText(int annotation_index, std::string_view text) {
+bool Page::SetFormFieldText(int widget_index, std::string_view text) {
+    int annotation_index = FindWidgetAnnotationIndex(widget_index);
+    if (annotation_index == -1) {
+        LOGE("There is no form widget at the given widget_index");
+        return false;
+    }
     return form_filler_->SetText(page_.get(), annotation_index, text);
 }
 
-bool Page::SetChoiceSelection(int annotation_index, std::span<const int> selected_indices) {
+bool Page::SetChoiceSelection(int widget_index, std::span<const int> selected_indices) {
+    int annotation_index = FindWidgetAnnotationIndex(widget_index);
+    if (annotation_index == -1) {
+        LOGE("There is no form widget at the given widget_index");
+        return false;
+    }
     return form_filler_->SetChoiceSelection(page_.get(), annotation_index, selected_indices);
 }
 void Page::NotifyInvalidRect(Rectangle_i rect) {

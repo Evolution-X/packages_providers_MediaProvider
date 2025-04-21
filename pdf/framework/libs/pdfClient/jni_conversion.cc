@@ -415,7 +415,8 @@ jobject ToJavaFormWidgetInfo(JNIEnv* env, const FormWidgetInfo& form_action_resu
     jobject java_text_value = ToJavaString(env, form_action_result.text_value());
     jobject java_accessibility_label = ToJavaString(env, form_action_result.accessibility_label());
     jobject java_choice_options = ToJavaList(env, form_action_result.options(), &ToJavaChoiceOption);
-
+    // Java FormWidgetInfo will store widget_index (index of the widget in page's widget
+    // annotations array) as its mIndex
     return env->NewObject(click_result_class, init, form_action_result.widget_type(),
                           form_action_result.widget_index(), java_widget_rect,
                           form_action_result.read_only(), java_text_value, java_accessibility_label,

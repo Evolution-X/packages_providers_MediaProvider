@@ -389,6 +389,14 @@ class Page : public ICoordinateConverter {
     std::vector<std::unique_ptr<Annotation>> annotations_;
 
     void PopulateAnnotations();
+
+    // Returns annot_index of a form widget annot corresponding to given widget_index if exists,
+    // else returns -1
+    int FindWidgetAnnotationIndex(int widget_index);
+
+    // Returns widget_index of a form widget annot corresponding to given annot_index if exists,
+    // else returns -1
+    int FindWidgetIndex(int annot_index);
 };
 
 }  // namespace pdfClient
