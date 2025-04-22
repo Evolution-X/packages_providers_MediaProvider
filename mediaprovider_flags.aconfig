@@ -336,3 +336,12 @@ flag {
     is_exported: false
     bug: "388432933"
 }
+
+flag {
+    name: "highlight_search_results_feature"
+    namespace: "mediaprovider"
+    description: "This flag will enable highlighting search results feature in the photopicker."
+    is_fixed_read_only: true
+    is_exported: false
+    bug: "412586210"
+}
