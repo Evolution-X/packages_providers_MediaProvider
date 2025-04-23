@@ -46,6 +46,7 @@ import android.content.ClipDescription;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.icu.text.UnicodeSet;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
@@ -107,6 +108,13 @@ public class FileUtils {
     private static final Pattern PATTERN_ALBUM_ART = Pattern.compile(
             "(?i)(?:(?:^folder|(?:^AlbumArt(?:(?:_\\{.*\\}_)?(?:small|large))?))(?:\\.jpg$)|(?:\\"
                     + "._.*))");
+    /**
+     * Immutable set of Unicode Default Ignorable Code Points (invisible characters).
+     * Includes zero-width spaces, formatting marks, and non-printing characters.
+     */
+    private static final UnicodeSet DEFAULT_IGNORABLE_CHARACTERS =
+            new UnicodeSet("[[:Default_Ignorable_Code_Point:]]",
+                    /* ignoreWhitespace= */ false).freeze();
 
     /**
      * Drop-in replacement for {@link ParcelFileDescriptor#open(File, int)}
@@ -1876,5 +1884,26 @@ public class FileUtils {
      */
     public static boolean isFileAlbumArt(@NonNull File file) {
         return PATTERN_ALBUM_ART.matcher(file.getName()).matches();
+    }
+
+    /**
+     * Throws an IllegalArgumentException if the given path contains default ignorable characters
+     * (e.g., zero-width spaces)
+     *
+     * @param path The input path string, possibly containing invisible characters.
+     */
+    public static void assertNoDefaultIgnorableCharactersInPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return;
+        }
+
+        int i = 0;
+        while (i < path.length()) {
+            int cp = path.codePointAt(i);
+            if (DEFAULT_IGNORABLE_CHARACTERS.contains(cp)) {
+                throw new IllegalArgumentException("path contains default ignorable characters");
+            }
+            i += Character.charCount(cp);
+        }
     }
 }
