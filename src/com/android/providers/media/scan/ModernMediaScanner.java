@@ -429,11 +429,7 @@ public class ModernMediaScanner implements MediaScanner {
     @Override
     public void onDetachVolume(@NonNull MediaVolume volume) {
         synchronized (mActiveScans) {
-            for (Scan scan : mActiveScans) {
-                if (volume.equals(scan.mVolume)) {
-                    scan.mSignal.cancel();
-                }
-            }
+            stopScanForVolume(volume);
         }
     }
 
@@ -444,6 +440,27 @@ public class ModernMediaScanner implements MediaScanner {
                 if (scan.mReason == REASON_IDLE) {
                     scan.mSignal.cancel();
                 }
+            }
+        }
+    }
+
+    /**
+     * Stops scan for given volume.
+     *
+     * @param volume {@link MediaVolume} for which scan needs to be stopped
+     */
+    @Override
+    public void onScanVolumeStopped(@NonNull MediaVolume volume) {
+        synchronized (mActiveScans) {
+            stopScanForVolume(volume);
+        }
+    }
+
+    @GuardedBy("mActiveScans")
+    private void stopScanForVolume(@NonNull MediaVolume volume) {
+        for (Scan scan : mActiveScans) {
+            if (volume.equals(scan.mVolume)) {
+                scan.mSignal.cancel();
             }
         }
     }

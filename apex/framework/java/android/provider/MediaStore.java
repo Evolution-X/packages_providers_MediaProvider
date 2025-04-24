@@ -417,6 +417,13 @@ public final class MediaStore {
      * {@hide}
      */
     @VisibleForTesting
+    public static final String QUEUE_SCAN_VOLUME = "queue_scan_volume";
+
+    /**
+     * Only used for testing.
+     * {@hide}
+     */
+    @VisibleForTesting
     public static final String DELETE_BACKED_UP_FILE_PATHS = "delete_backed_up_file_paths";
 
     /** {@hide} */

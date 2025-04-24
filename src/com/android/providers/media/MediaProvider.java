@@ -145,6 +145,7 @@ import static com.android.providers.media.flags.Flags.versionLockdown;
 import static com.android.providers.media.photopicker.data.ItemsProvider.EXTRA_MIME_TYPE_SELECTION;
 import static com.android.providers.media.scan.MediaScanner.REASON_DEMAND;
 import static com.android.providers.media.scan.MediaScanner.REASON_IDLE;
+import static com.android.providers.media.scan.MediaScanner.REASON_UNKNOWN;
 import static com.android.providers.media.util.DatabaseUtils.bindList;
 import static com.android.providers.media.util.FileUtils.DEFAULT_FOLDER_NAMES;
 import static com.android.providers.media.util.FileUtils.PATTERN_PENDING_FILEPATH_FOR_SQL;
@@ -296,6 +297,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
 
 import com.android.modules.utils.BackgroundThread;
 import com.android.modules.utils.build.SdkLevel;
@@ -488,6 +491,11 @@ public class MediaProvider extends ContentProvider {
      * Time between two polling attempts for availability of FuseDaemon thread.
      */
     private static final long POLLING_TIME_IN_MILLIS = 100;
+
+    private static final String WORK_INFO_STATE = "work_info_state";
+    private static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
+    private static final String VOLUME_NAME = "volume_name";
+    private static final String WAIT_TIME_MILLIS = "wait_time_millis";
 
     /**
      * Enable option to defer the scan triggered as part of MediaProvider#update()
@@ -2278,6 +2286,16 @@ public class MediaProvider extends ContentProvider {
 
     public void onIdleMaintenanceStopped() {
         mMediaScanner.onIdleScanStopped();
+    }
+
+    /**
+     * Called when WorkManager stops the scan volume work. We cancel the ongoing scan for given
+     * volume.
+     *
+     * @param mediaVolume Volume for which we want to cancel the scan
+     */
+    public void onScanVolumeWorkStopped(MediaVolume mediaVolume) {
+        mMediaScanner.onScanVolumeStopped(mediaVolume);
     }
 
     /**
@@ -7339,6 +7357,9 @@ public class MediaProvider extends ContentProvider {
                 removeRecoveryData();
                 return new Bundle();
             }
+            case MediaStore.QUEUE_SCAN_VOLUME: {
+                return getResultForQueueScanVolume(extras);
+            }
             case MediaStore.BULK_UPDATE_OEM_METADATA_CALL: {
                 callForBulkUpdateOemMetadataColumn();
                 return new Bundle();
@@ -8206,6 +8227,53 @@ public class MediaProvider extends ContentProvider {
                         Collectors.toList());
         Log.i(TAG, "Active user ids are:" + validUsers);
         mDatabaseBackupAndRecovery.removeRecoveryDataExceptValidUsers(validUsers);
+    }
+
+    /**
+     * Utility function to trigger scan volume using WorkManagerAPIs. Only to be used to testing.
+     */
+    private Bundle getResultForQueueScanVolume(Bundle extras) {
+        getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
+                "Permission missing to call QUEUE_SCAN_VOLUME by uid:"
+                        + Binder.getCallingUid());
+
+        try {
+            Bundle result = new Bundle();
+
+            MediaVolume volume = getVolume(extras.getString(VOLUME_NAME));
+            Optional<UUID> uuidOptional =
+                    MediaServiceV2.queueVolumeScan(getContext(), volume, REASON_UNKNOWN);
+
+            if (uuidOptional.isEmpty()) {
+                result.putString(WORK_INFO_STATE, null);
+                return result;
+            }
+
+            UUID uuid = uuidOptional.get();
+
+            WorkManager workManager =  WorkManager.getInstance(getContext());
+
+            boolean waitForScanCompletion = extras.getBoolean(WAIT_FOR_SCAN_COMPLETION, false);
+            if (waitForScanCompletion) {
+                long waitTimeMillis = extras.getLong(WAIT_TIME_MILLIS, 10000);
+                WorkInfo.State currentState = workManager.getWorkInfoById(uuid).get().getState();
+                while (!currentState.isFinished() && waitTimeMillis >= 0) {
+                    SystemClock.sleep(POLLING_TIME_IN_MILLIS);
+                    waitTimeMillis -= POLLING_TIME_IN_MILLIS;
+                    currentState = workManager.getWorkInfoById(uuid).get().getState();
+                }
+            }
+
+            WorkInfo workInfo = workManager.getWorkInfoById(uuid).get();
+            if (workInfo == null) {
+                result.putString(WORK_INFO_STATE, null);
+            } else {
+                result.putString(WORK_INFO_STATE, workInfo.getState().toString());
+            }
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private String getSecurityExceptionMessage(String method) {
