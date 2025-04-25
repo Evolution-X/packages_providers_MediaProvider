@@ -96,7 +96,11 @@ interface DataService {
      */
     suspend fun ensureProviders()
 
-    /** Returns all allowed providers for the given user. */
+    /**
+     * Returns all allowed providers for the given user.
+     *
+     * In case of an error, it returns an empty list.
+     */
     fun getAllAllowedProviders(): List<Provider>
 
     /**
