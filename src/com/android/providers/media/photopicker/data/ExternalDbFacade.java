@@ -42,6 +42,7 @@ import static com.android.providers.media.util.DatabaseUtils.replaceMatchAnyChar
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -50,6 +51,7 @@ import android.database.MatrixCursor;
 import android.database.MergeCursor;
 import android.database.sqlite.SQLiteConstraintException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.os.Bundle;
 import android.os.Environment;
@@ -783,12 +785,13 @@ public class ExternalDbFacade {
         // and need to be included independently to bypass standard folder filters.
         final Cursor downloadCursor = getDownloadsMediaSet(mimeTypes);
         final Cursor deviceFoldersCursor =
-                getLocalMediaSets(mimeTypes, /*pageSize*/ 4,
+                getLocalMediaSets(mimeTypes, /*pageSize*/ 4, /*pageToken*/ null,
                         MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
         Cursor deviceFolders = new MergeCursor(new Cursor[]{downloadCursor, deviceFoldersCursor});
 
         final Cursor appFolders =
-                getLocalMediaSets(mimeTypes, /*pageSize*/ 4, MEDIA_CATEGORY_TYPE_APP_FOLDERS);
+                getLocalMediaSets(mimeTypes, /*pageSize*/ 4, /*pageToken*/null,
+                        MEDIA_CATEGORY_TYPE_APP_FOLDERS);
 
         Cursor deviceFolderCategory =
                 getCategoryFromFolderCursor(deviceFolders, MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
@@ -796,6 +799,83 @@ public class ExternalDbFacade {
                 getCategoryFromFolderCursor(appFolders, MEDIA_CATEGORY_TYPE_APP_FOLDERS);
 
         return new MergeCursor(new Cursor[]{deviceFolderCategory, appFolderCategory});
+    }
+
+    /**
+     * Queries and returns a cursor of media sets based on the specified category type,
+     * applying appropriate filtering and pagination.
+     *
+     * <p>The behavior depends on the {@code mediaCategoryId}:</p>
+     * <ul>
+     * <li> "From this device" category: Returns a media sets representing local device folders.
+     * If querying the first page (pageToken is null), this includes the Downloads folder first,
+     * followed by other local device folders.
+     * Camera folders and screenshots are always excluded from the local folders list.</li>
+     *
+     * <li> "From your apps" category: Returns media sets representing media owned by installed
+     * applications. Folders related to Downloads, Camera and non-launchable applications
+     * are excluded.</li>
+     *
+     * <li>Unrecognized Category ID: Logs an error and returns an empty cursor.</li>
+     * </ul>
+     *
+     * @param mediaCategoryId The identifier for the desired category.
+     *                        See {@code CloudMediaProviderContract} for specific constants.
+     * @param mimeTypes       Optional array of MIME types to filter the media within sets
+     * (e.g., "image/png", "video/mp4"). If null or empty, defaults to
+     * including all image and video media types.
+     * @param pageSize        The maximum number of media sets to return in this page.
+     * @param pageToken       A token representing the starting point for the next page of results.
+     * @return A {@link Cursor} containing the requested media sets, ordered appropriately.
+     * Returns an empty cursor if the category ID is unrecognized or no matching sets are found.
+     * The cursor should be closed after use.
+     */
+    public @NonNull Cursor queryMediaSets(
+            @Nullable String mediaCategoryId,
+            @Nullable String[] mimeTypes,
+            int pageSize,
+            @Nullable String pageToken) {
+        try {
+            Cursor cursor;
+            if (MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.equals(mediaCategoryId)) {
+                Cursor downloadCursor = null;
+                if (pageToken == null) {
+                    downloadCursor = getDownloadsMediaSet(mimeTypes);
+                    if (downloadCursor.getCount() > 0) {
+                        pageSize = pageSize - 1;
+                    }
+                }
+                final Cursor deviceFoldersCursor =
+                        getLocalMediaSets(mimeTypes, pageSize, pageToken,
+                                MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
+                if (downloadCursor == null) {
+                    cursor = deviceFoldersCursor;
+                } else {
+                    cursor = new MergeCursor(new Cursor[]{downloadCursor, deviceFoldersCursor});
+                    cursor.setExtras(deviceFoldersCursor.getExtras());
+                }
+            } else if (MEDIA_CATEGORY_TYPE_APP_FOLDERS.equals(mediaCategoryId)) {
+                cursor = getLocalMediaSets(mimeTypes, pageSize, pageToken,
+                        MEDIA_CATEGORY_TYPE_APP_FOLDERS);
+            } else {
+                Log.e(TAG, "Found unrecognized mediaCategoryId: " + mediaCategoryId);
+                cursor = new MatrixCursor(MediaSetColumns.ALL_PROJECTION);
+            }
+            Log.d("PhotopickerDebug", "cursor extras = " + cursor.getExtras());
+            return cursor;
+        } catch (Exception exception) {
+            Log.e(TAG, String.format(Locale.ROOT,
+                            "Query to get media sets could not complete for following parameters: "
+                                    + "mediaCategoryId = %s, mimeTypes = %s, pageSize = %s, "
+                                    + "pageToken = %s",
+                            mediaCategoryId,
+                            Arrays.toString(mimeTypes),
+                            pageSize,
+                            pageToken),
+                    exception);
+            Log.d(TAG, "Returning empty cursor");
+            return new MatrixCursor(MediaSetColumns.ALL_PROJECTION);
+        }
     }
 
     private Cursor getDownloadsMediaSet(@Nullable String[] mimeTypes) {
@@ -862,6 +942,7 @@ public class ExternalDbFacade {
     private Cursor getLocalMediaSets(
             @Nullable String[] mimeTypes,
             int pageSize,
+            @Nullable String pageToken,
             @CloudMediaProviderContract.MediaCategoryType String categoryType) {
         final List<String> selectionArgs = new ArrayList<>();
         final String orderBy = getMediaSetOrderByClause();
@@ -879,19 +960,48 @@ public class ExternalDbFacade {
         }
 
         final Cursor cursor = mDatabaseHelper.runWithoutTransaction(db -> {
-            SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
-            queryBuilder.appendWhereStandalone(WHERE_ROW_NUMBER_IS_ONE);
-            String subQuery = getMediaSetSubQuery(categoryType, selectionArgs, mimeTypes);
+            final SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
+            final String subQuery = getMediaSetSubQuery(categoryType, selectionArgs, mimeTypes);
 
             // return an empty cursor if the sub query is null
             if (subQuery == null) {
                 return new MatrixCursor(projection);
             }
             queryBuilder.setTables(subQuery);
-            return queryBuilder.query(db, projection, /* selection */ null,
-                    selectionArgs.toArray(new String[selectionArgs.size()]), /* groupBy */ null,
-                    /* having */ null, orderBy, /* limit */ String.valueOf(pageSize));
+            queryBuilder.appendWhereStandalone(WHERE_ROW_NUMBER_IS_ONE);
+            if (pageToken != null) {
+                String[] lastMediaSet = parsePageToken(pageToken);
+                if (lastMediaSet != null) {
+                    queryBuilder.appendWhereStandalone(getDateTakenWhereClause());
+                    addSelectionArgsForWhereClause(lastMediaSet, selectionArgs);
+                }
+            }
+            try {
+                return queryBuilder.query(db, projection, /* selection */ null,
+                        selectionArgs.toArray(new String[selectionArgs.size()]), /* groupBy */ null,
+                        /* having */ null, orderBy, /* limit */ String.valueOf(pageSize));
+            } catch (SQLiteException exception) {
+                Log.e(TAG, "The SQLite query could not complete.", exception);
+                return new MatrixCursor(projection);
+            }
         });
+
+        String nextPageToken = null;
+        if (cursor.getCount() > 0 && pageSize != INT_DEFAULT) {
+            nextPageToken = setPageToken(cursor);
+        }
+
+        Bundle cursorExtrasBundle = getCursorExtras(LONG_DEFAULT, null, pageSize, nextPageToken);
+        ArrayList<String> honoredArgsList = cursorExtrasBundle.getStringArrayList(
+                EXTRA_HONORED_ARGS);
+        if (honoredArgsList == null) {
+            honoredArgsList = new ArrayList<>();
+        }
+        if (mimeTypes != null && mimeTypes.length != 0) {
+            honoredArgsList.add(Intent.EXTRA_MIME_TYPES);
+        }
+        cursorExtrasBundle.putStringArrayList(EXTRA_HONORED_ARGS, honoredArgsList);
+        cursor.setExtras(cursorExtrasBundle);
 
         if (MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.equals(categoryType)) {
             return cursor;
@@ -1099,9 +1209,10 @@ public class ExternalDbFacade {
                 ApplicationInfo applicationInfo = packageManager
                         .getApplicationInfo(ownerPackageName, /* flags = */0);
                 int appIconResId = applicationInfo.icon;
+                // android resource uri is of the form "android.resource://[package_name]/[res_id]"
                 coverId = String.format(
                         Locale.ROOT,
-                        "%s//:%s/%s",
+                        "%s://%s/%s",
                         ContentResolver.SCHEME_ANDROID_RESOURCE,
                         ownerPackageName,
                         appIconResId);

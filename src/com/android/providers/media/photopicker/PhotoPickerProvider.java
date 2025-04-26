@@ -180,6 +180,22 @@ public class PhotoPickerProvider extends CloudMediaProvider {
         return mDbFacade.queryMediaCategories(queryExtras.getMimeTypes());
     }
 
+    @Override
+    @NonNull
+    public Cursor onQueryMediaSets(
+            @Nullable String mediaCategoryId,
+            @NonNull Bundle extras,
+            @Nullable CancellationSignal cancellationSignal) {
+        if (!Flags.enableLocalMediaProviderCapabilities()
+                || (cancellationSignal != null && cancellationSignal.isCanceled())) {
+            return new MatrixCursor(CloudMediaProviderContract.MediaSetColumns.ALL_PROJECTION);
+        }
+        final CloudProviderQueryExtras queryExtras =
+                CloudProviderQueryExtras.fromCloudMediaBundle(extras);
+        return mDbFacade.queryMediaSets(mediaCategoryId, queryExtras.getMimeTypes(),
+                queryExtras.getPageSize(), queryExtras.getPageToken());
+    }
+
     private MediaProvider getMediaProvider() {
         ContentResolver cr = getContext().getContentResolver();
         try (ContentProviderClient cpc = cr.acquireContentProviderClient(MediaStore.AUTHORITY)) {
