@@ -327,3 +327,21 @@ flag {
     is_exported: true
     bug: "410763330"
 }
+
+flag {
+    name: "query_leveldb_for_file_attributes"
+    namespace: "mediaprovider"
+    description: "This flag enables MP to query file attributes from backup levelDb database for file open calls."
+    is_fixed_read_only: true
+    is_exported: false
+    bug: "388432933"
+}
+
+flag {
+    name: "highlight_search_results_feature"
+    namespace: "mediaprovider"
+    description: "This flag will enable highlighting search results feature in the photopicker."
+    is_fixed_read_only: true
+    is_exported: false
+    bug: "412586210"
+}

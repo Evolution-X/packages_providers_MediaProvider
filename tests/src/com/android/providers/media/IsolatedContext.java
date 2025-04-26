@@ -16,10 +16,17 @@
 
 package com.android.providers.media;
 
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
+
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.ContextWrapper;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.os.Bundle;
 import android.os.UserHandle;
@@ -41,6 +48,8 @@ import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.util.FileUtils;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -52,6 +61,9 @@ public class IsolatedContext extends ContextWrapper {
     private final MediaProvider mMediaProvider;
     private final UserHandle mUserHandle;
     private final FlakyCloudProvider mFlakyCloudProvider;
+
+    private PackageManager mSpyPackageManager;
+    private Map<String, ApplicationInfo> mPackageNameToAppInfoMap = new HashMap<>();
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread) {
         this(base, tag, asFuseThread, base.getUser());
@@ -97,7 +109,7 @@ public class IsolatedContext extends ContextWrapper {
         });
 
         PhotoPickerProvider photoPickerProvider = new PhotoPickerProvider();
-        attachInfoAndAddProvider(base, photoPickerProvider,
+        attachInfoAndAddProvider(getBaseContext(), photoPickerProvider,
                 PickerSyncController.LOCAL_PICKER_PROVIDER_AUTHORITY);
 
         final CloudMediaProvider cmp = new CloudProviderPrimary();
@@ -107,6 +119,8 @@ public class IsolatedContext extends ContextWrapper {
         attachInfoAndAddProvider(base, mFlakyCloudProvider, FlakyCloudProvider.AUTHORITY);
 
         MediaStore.waitForIdle(mResolver);
+
+        mSpyPackageManager = spy(base.getPackageManager());
     }
 
     private MediaProvider getMockedMediaProvider(boolean asFuseThread,
@@ -175,6 +189,14 @@ public class IsolatedContext extends ContextWrapper {
         return mUserHandle;
     }
 
+    @Override
+    public PackageManager getPackageManager() {
+        if (!mPackageNameToAppInfoMap.isEmpty()) {
+            return mSpyPackageManager;
+        }
+        return getBaseContext().getPackageManager();
+    }
+
     public void setPickerUriResolver(PickerUriResolver resolver) {
         mMediaProvider.setUriResolver(resolver);
     }
@@ -210,5 +232,34 @@ public class IsolatedContext extends ContextWrapper {
     @VisibleForTesting
     public void resetFlakyCloudProviderToNotFlakeInTheNextRequest() {
         mFlakyCloudProvider.resetToNotFlakeInTheNextRequest();
+    }
+
+    /**
+     * Stubs {@link PackageManager#getApplicationInfo} and
+     * {@link PackageManager#getApplicationLabel} on the internal PackageManager spy using the
+     * provided package name to application info mapping.
+     *
+     * @param packageNameToAppInfoMap Map of package names to their desired {@link ApplicationInfo}
+     */
+    @VisibleForTesting
+    public void stubApplicationInfoCalls(Map<String, ApplicationInfo> packageNameToAppInfoMap) {
+        mSpyPackageManager = spy(getBaseContext().getPackageManager());
+        mPackageNameToAppInfoMap = packageNameToAppInfoMap;
+        for (String packageName: packageNameToAppInfoMap.keySet()) {
+            try {
+                doReturn(packageNameToAppInfoMap.get(packageName))
+                        .when(mSpyPackageManager)
+                        .getApplicationInfo(eq(packageName), anyInt());
+
+                doReturn(packageNameToAppInfoMap.get(packageName).nonLocalizedLabel)
+                        .when(mSpyPackageManager)
+                        .getApplicationLabel(eq(packageNameToAppInfoMap.get(packageName)));
+
+
+            } catch (PackageManager.NameNotFoundException e) {
+                // This exception is declared but shouldn't happen during stubbing
+                throw new RuntimeException("Failed to setup PackageManager spy", e);
+            }
+        }
     }
 }

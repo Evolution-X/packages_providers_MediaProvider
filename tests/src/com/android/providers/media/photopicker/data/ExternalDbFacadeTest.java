@@ -29,6 +29,7 @@ import static android.provider.CloudMediaProviderContract.MediaCollectionInfo;
 import static android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_GIF;
 import static android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_NONE;
 import static android.provider.MediaStore.MediaColumns.DATE_TAKEN;
+import static android.provider.MediaStore.MediaColumns.IS_DOWNLOAD;
 
 import static com.android.providers.media.photopicker.data.ExternalDbFacade.COLUMN_OLD_ID;
 import static com.android.providers.media.photopicker.data.ExternalDbFacade.TABLE_DELETED_MEDIA;
@@ -42,6 +43,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -65,16 +67,17 @@ import com.android.providers.media.TestDatabaseBackupAndRecovery;
 import com.android.providers.media.VolumeCache;
 import com.android.providers.media.util.UserCache;
 
-import org.jspecify.annotations.Nullable;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @RunWith(AndroidJUnit4.class)
 public class ExternalDbFacadeTest {
@@ -107,16 +110,39 @@ public class ExternalDbFacadeTest {
     private static final String[] VIDEO_MIME_TYPES_QUERY = new String[]{"video/mp4"};
     private static final long DURATION_MS = 5;
     private static final int IS_FAVORITE = 0;
+    private static final String SYSTEM_PACKAGE = "com.android.app";
     private static final String PACKAGE_NAME1 = "com.example.app1";
     private static final String PACKAGE_NAME2 = "com.example.app2";
+    private static final String PACKAGE_NAME3 = "com.example.app3";
+    private static final String PACKAGE_NAME4 = "com.example.app4";
+    private static final String PACKAGE_NAME5 = "com.example.app5";
+    private static final String APP_LABEL = "mock_app";
+    private static final int RES_ID = 123456;
     private static final String FOLDER_NAME1 = "Folder1";
 
-    private static Context sIsolatedContext;
+    private static IsolatedContext sIsolatedContext;
 
     @Before
     public void setUp() {
         final Context context = InstrumentationRegistry.getTargetContext();
         sIsolatedContext = new IsolatedContext(context, TAG, /*asFuseThread*/ false);
+        Map<String, ApplicationInfo> packageNameToAppInfoMap = new HashMap<>();
+        packageNameToAppInfoMap.put(
+                PACKAGE_NAME1,
+                createFakeAppInfo(PACKAGE_NAME1, APP_LABEL, RES_ID));
+        packageNameToAppInfoMap.put(
+                PACKAGE_NAME2,
+                createFakeAppInfo(PACKAGE_NAME2, APP_LABEL, RES_ID));
+        packageNameToAppInfoMap.put(
+                PACKAGE_NAME3,
+                createFakeAppInfo(PACKAGE_NAME3, APP_LABEL, RES_ID));
+        packageNameToAppInfoMap.put(
+                PACKAGE_NAME4,
+                createFakeAppInfo(PACKAGE_NAME4, APP_LABEL, RES_ID));
+        packageNameToAppInfoMap.put(
+                PACKAGE_NAME5,
+                createFakeAppInfo(PACKAGE_NAME5, APP_LABEL, RES_ID));
+        sIsolatedContext.stubApplicationInfoCalls(packageNameToAppInfoMap);
     }
 
     @Test
@@ -615,7 +641,8 @@ public class ExternalDbFacadeTest {
             helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, cv));
 
             try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage("Number of rows on querying TABLE_FILES for all media is")
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
                         .that(cursor.getCount())
                         .isEqualTo(2);
                 assertCursorExtras(cursor);
@@ -631,9 +658,8 @@ public class ExternalDbFacadeTest {
                     /* albumId */ null, /* mimeType */ null, /* pageSize*/ 10,
                     /*pageToken */ null)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLE_FILES for (generation: "
-                                + "GENERATION_MODIFIED1, albumId: null, mimeType: null, pageSize:"
-                                + " 10) is")
+                        "Unexpected number of rows on querying TABLE_FILES "
+                                + " with generation as GENERATION_MODIFIED1, and pageSize as 10")
                         .that(cursor.getCount())
                         .isEqualTo(1);
                 //PAGE_TOKEN will also be set since pageSize is not -1.
@@ -663,8 +689,8 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = queryAllMedia(facade)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES with cvPending and cvTrashed "
-                                + "inserted is")
+                        "Expected 0 rows on querying TABLES_FILES when the media present is "
+                                + "trashed or pending.")
                         .that(cursor.getCount()).isEqualTo(0);
             }
         }
@@ -692,8 +718,7 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = queryAllMedia(facade)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES with modified date for all media"
-                                + " is")
+                        "Unexpected number of rows on querying TABLES_FILES for all media.")
                         .that(cursor.getCount())
                         .isEqualTo(2);
 
@@ -772,7 +797,8 @@ public class ExternalDbFacadeTest {
             initMediaInAllAlbums(helper);
 
             try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage("Number of rows on querying TABLES_FILES for all media is")
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for all media.")
                         .that(cursor.getCount())
                         .isEqualTo(3);
             }
@@ -781,7 +807,8 @@ public class ExternalDbFacadeTest {
                     ALBUM_ID_CAMERA, /* mimeType */ null, /* pageSize*/ 20,
                     /* pageToken*/ null)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES for media with ALBUM_ID_CAMERA is")
+                        "Unexpected number of rows on querying TABLES_FILES for media "
+                                + "from Camera album")
                         .that(cursor.getCount())
                         .isEqualTo(1);
                 //PAGE_TOKEN will also be set since pageSize is not -1.
@@ -795,8 +822,8 @@ public class ExternalDbFacadeTest {
                     ALBUM_ID_SCREENSHOTS, /* mimeType */ null, /* pageSize*/ -1,
                     /* pageToken*/ null)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES for media with "
-                                + "ALBUM_ID_SCREENSHOTS is")
+                        "Unexpected number of rows on querying TABLES_FILES for media from "
+                                + "Screenshots album")
                         .that(cursor.getCount())
                         .isEqualTo(1);
                 assertCursorExtras(cursor, EXTRA_ALBUM_ID);
@@ -809,8 +836,8 @@ public class ExternalDbFacadeTest {
                     ALBUM_ID_DOWNLOADS, /* mimeType */ null, /* pageSize*/ 10,
                     /* pageToken*/ null)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES for media with "
-                                + "ALBUM_ID_DOWNLOADS is")
+                        "Unexpected number of rows on querying TABLES_FILES for media from "
+                                + "Downloads album with pageSize 10")
                         .that(cursor.getCount())
                         .isEqualTo(1);
                 //PAGE_TOKEN will also be set since pageSize is not -1.
@@ -834,7 +861,8 @@ public class ExternalDbFacadeTest {
             helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, cv));
 
             try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage("Number of rows on querying TABLES_FILES for all media is")
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for all media")
                         .that(cursor.getCount())
                         .isEqualTo(1);
 
@@ -846,8 +874,8 @@ public class ExternalDbFacadeTest {
                     ALBUM_ID_SCREENSHOTS, IMAGE_MIME_TYPES_QUERY, /* pageSize*/ -1,
                     /* pageToken*/ null)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES for media with "
-                                + "ALBUM_ID_SCREENSHOTS and IMAGE_MIME_TYPES_QUERY is")
+                        "Unexpected number of rows on querying TABLES_FILES for media from "
+                                + "Screenshots album with IMAGE mime type")
                         .that(cursor.getCount())
                         .isEqualTo(0);
             }
@@ -856,8 +884,8 @@ public class ExternalDbFacadeTest {
                     ALBUM_ID_CAMERA, VIDEO_MIME_TYPES_QUERY, /* pageSize*/ -1,
                     /* pageToken*/ null)) {
                 assertWithMessage(
-                        "Number of rows on querying TABLES_FILES for media with ALBUM_ID_CAMERA "
-                                + "and VIDEO_MIME_TYPES_QUERY is")
+                        "Unexpected number of rows on querying TABLES_FILES for media from "
+                                + "Camera album with VIDEO mime type")
                         .that(cursor.getCount())
                         .isEqualTo(0);
 
@@ -1284,7 +1312,7 @@ public class ExternalDbFacadeTest {
             ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
             contentValues.put(MediaColumns._ID, ID1);
             // use self package name, as it is guaranteed to be present
-            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, sIsolatedContext.getPackageName());
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
             contentValues.put(MediaColumns.RELATIVE_PATH, "");
             helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
 
@@ -1305,8 +1333,7 @@ public class ExternalDbFacadeTest {
                 assertWithMessage("Incorrect category display name found")
                         .that(getCursorString(cursor,
                                 CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME))
-                        .isEqualTo(
-                                getAppLabel(sIsolatedContext, sIsolatedContext.getPackageName()));
+                        .isEqualTo(APP_LABEL);
             }
         }
     }
@@ -1372,6 +1399,781 @@ public class ExternalDbFacadeTest {
         }
     }
 
+    @Test
+    public void testAppsCategoryCoverIdsOrder() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // First 2 media items belong to the same media set,
+            // with the second having the later date_taken value
+            // The last media item belong to different media set and
+            // has the same date_taken as the second media item, but has a higher _id
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns._ID, ID3);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES with for all media")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for categories")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                // Media cover ids for App Folder Collection is the app icon res id uri
+                String expectedCoverIdForPackage1 = String.format(
+                        Locale.ROOT,
+                        "%s://%s/%s",
+                        ContentResolver.SCHEME_ANDROID_RESOURCE, PACKAGE_NAME1, RES_ID);
+                String expectedCoverIdForPackage2 = String.format(
+                        Locale.ROOT,
+                        "%s://%s/%s",
+                        ContentResolver.SCHEME_ANDROID_RESOURCE, PACKAGE_NAME2, RES_ID);
+                cursor.moveToFirst();
+                assertWithMessage("Incorrect MEDIA_COVER_ID1 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID1))
+                        .isEqualTo(expectedCoverIdForPackage2);
+
+                assertWithMessage("Incorrect MEDIA_COVER_ID2 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2))
+                        .isEqualTo(expectedCoverIdForPackage1);
+
+                assertWithMessage("Incorrect MEDIA_COVER_ID3 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID3))
+                        .isNull();
+
+                assertWithMessage("Incorrect MEDIA_COVER_ID4 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID4))
+                        .isNull();
+            }
+        }
+    }
+
+
+    @Test
+    public void testQueryMediaSets_noCategoryTypePresent_returnsEmpty() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Adding media to Camera and Screenshots directory,
+            // these are excluded when querying for media set that belong to categories
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, ExternalDbFacade.RELATIVE_PATH_CAMERA);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, SYSTEM_PACKAGE);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_SCREENSHOTS);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
+                    null)) {
+                assertWithMessage(
+                        "Unexpected number of media sets on querying TABLE_FILES for "
+                                + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null)) {
+                assertWithMessage(
+                        "Unexpected number of media sets on querying TABLE_FILES for "
+                                + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_mediaSetForCategoryTypeDeviceFolders() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Downloads media set should be first in list irrespective of the date taken
+            ContentValues cv_download = getContentValues(DATE_TAKEN_MS4, GENERATION_MODIFIED3);
+            cv_download.put(MediaColumns.IS_DOWNLOAD, 1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, cv_download));
+
+            // Intentionally insert DATE_TAKEN_MS1 before DATE_TAKEN_MS2,
+            // this allows us to verify that the sort order is based on date_taken.
+            // Also keep bucket_display_name same and the bucket_id different for the two entries,
+            // this allows us to verify that media_set is grouped on bucket_id.
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED2);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            contentValues.put(MediaColumns.BUCKET_DISPLAY_NAME, FOLDER_NAME1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns.BUCKET_ID, ID2);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            contentValues.put(MediaColumns.BUCKET_DISPLAY_NAME, FOLDER_NAME1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
+                    null)) {
+                assertWithMessage(
+                        "Unexpected number of media sets on querying TABLE_FILES for "
+                                + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+
+                // Downloads will always be the first media set given that it is present
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        ALBUM_ID_DOWNLOADS, DATE_TAKEN_MS4, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID2), DATE_TAKEN_MS2, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID1), DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_mediaSetForCategoryTypeAppFolders() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media with same package name should be clubbed into one media set
+            // Media set ordering should depend on the date taken
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, ExternalDbFacade.RELATIVE_PATH_CAMERA);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS3);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null)) {
+                assertWithMessage(
+                        "Unexpected number of media sets on querying TABLE_FILES for "
+                                + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME2, DATE_TAKEN_MS3, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME1, DATE_TAKEN_MS2, 2);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_mimeTypesNotMatch() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
+                    null)) {
+                assertWithMessage(
+                        "Unexpected number of media sets on querying TABLE_FILES for "
+                                + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null)) {
+                assertWithMessage(
+                        "Unexpected number of media sets on querying TABLE_FILES for "
+                                + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    VIDEO_MIME_TYPES_QUERY, -1,
+                    null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with video mime type")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    VIDEO_MIME_TYPES_QUERY, -1,
+                    null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with video mime type")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_dateTakenPresentForDeviceFolders_returnsCorrectSortOrder() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Insert 5 images with non-null date_taken and non_null bucket_id (device folders)
+            // One of the image has is_download = 1
+            initMediaSetsWithDateTaken(helper);
+
+            // Verify that media returned in descending order of date_taken, _id
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    /* mimeType */ null, /* pageSize*/ 3, /* pageToken*/ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2")
+                        .that(cursor.getCount()).isEqualTo(3);
+
+                // Downloads media set always comes on top
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        ALBUM_ID_DOWNLOADS, DATE_TAKEN_MS4, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID5), DATE_TAKEN_MS5, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID4), DATE_TAKEN_MS4, 1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    /* mimeType */ null, /* pageSize*/ 3,
+                    /* pageToken*/ DATE_TAKEN_MS4 + "|" + ID4)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
+                        + "pageToken 'DATE_TAKEN_MS4|ID4'")
+                        .that(cursor.getCount()).isEqualTo(3);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID3), DATE_TAKEN_MS3, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID2), DATE_TAKEN_MS2, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID1), DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_dateTakenPresentForAppFolders_returnsCorrectSortOrder() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Insert 5 images with non-null date_taken and non_null owner_package_name(app folders)
+            // One of the image has is_download = 1
+            initMediaSetsWithDateTaken(helper);
+
+            // Verify that media returned in descending order of date_taken, _id
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize*/ 2, /* pageToken*/ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME5, DATE_TAKEN_MS5, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME3, DATE_TAKEN_MS3, 1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize*/ 3,
+                    /* pageToken*/ DATE_TAKEN_MS3 + "|" + ID3)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
+                        + "pageToken 'DATE_TAKEN_MS4|ID4'")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME2, DATE_TAKEN_MS2, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME1, DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_dateTakenMissingForDeviceFolders_returnsCorrectSortOrder() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Insert 5 images, 2 with non-null date_taken and 3 with null date_taken
+            // First 2 images belong to same media set with bucket_id = 1
+            initMediaSetsWithMissingDateTaken(helper);
+
+            // Verify that media sets returned in descending order of date_taken, _id
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, /* mimeType */
+                    null,
+                    /* pageSize*/ 2, /* pageToken*/ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
+                        + "pageToken NULL")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID5), DATE_MODIFIED_MS3 * 1000, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID4), DATE_MODIFIED_MS2 * 1000, 1);
+            }
+
+            String pageToken = DATE_MODIFIED_MS2 * 1000 + "|" + ID4;
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, /* mimeType */
+                    null,
+                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
+                        + "pageToken " + pageToken)
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID3), DATE_MODIFIED_MS1 * 1000, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID1), DATE_TAKEN_MS2, 2);
+            }
+
+            pageToken = DATE_TAKEN_MS2 + "|" + ID2;
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, /* mimeType */
+                    null,
+                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
+                        + "pageToken " + pageToken)
+                        .that(cursor.getCount()).isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_dateTakenMissingForAppFolders_returnsCorrectSortOrder() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Insert 5 images, 2 with non-null date_taken and 3 with null date_taken
+            // First 2 images belong to same media set with owner_package_name = PACKAGE_NAME1
+            initMediaSetsWithMissingDateTaken(helper);
+
+            // Verify that media sets returned in descending order of date_taken, _id
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, /* mimeType */ null,
+                    /* pageSize*/ 2, /* pageToken*/ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
+                        + "pageToken NULL")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME5, DATE_MODIFIED_MS3 * 1000, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME4, DATE_MODIFIED_MS2 * 1000, 1);
+            }
+
+            String pageToken = DATE_MODIFIED_MS2 * 1000 + "|" + ID4;
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, /* mimeType */ null,
+                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
+                        + "pageToken " + pageToken)
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME3, DATE_MODIFIED_MS1 * 1000, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME1, DATE_TAKEN_MS2, 2);
+            }
+
+            pageToken = DATE_TAKEN_MS2 + "|" + ID2;
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, /* mimeType */ null,
+                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
+                        + "pageToken " + pageToken)
+                        .that(cursor.getCount()).isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_downloadsIncludesMediaInDownloadDirectory() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Downloaded media, irrespective of the relative_path
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.IS_DOWNLOAD, 1);
+            contentValues.put(MediaColumns._ID, ID1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media present in "Download/" but is not downloaded
+            contentValues.put(MediaColumns.IS_DOWNLOAD, 0);
+            contentValues.put(MediaColumns.RELATIVE_PATH, ExternalDbFacade.RELATIVE_PATH_DOWNLOAD);
+            contentValues.put(MediaColumns._ID, ID2);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media present in a sub-folder of "Download/"
+            contentValues.put(MediaColumns.IS_DOWNLOAD, 0);
+            contentValues.put(MediaColumns._ID, ID3);
+            contentValues.put(MediaColumns.RELATIVE_PATH, String.format(
+                    Locale.ROOT,
+                    "%s%s/",
+                    ExternalDbFacade.RELATIVE_PATH_DOWNLOAD,
+                    FOLDER_NAME1));
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        ALBUM_ID_DOWNLOADS, DATE_TAKEN_MS1, 2);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID1), DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_downloadMediaSet_coverIdIsIdOfLatestMedia() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media with date_taken as DATE_TAKEN_MS1 and _id as ID1
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.IS_DOWNLOAD, 1);
+            contentValues.put(MediaColumns._ID, ID1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_modified as DATE_TAKEN_MS2 and _id as ID2
+            contentValues.put(MediaColumns.IS_DOWNLOAD, 0);
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.RELATIVE_PATH, ExternalDbFacade.RELATIVE_PATH_DOWNLOAD);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_taken as DATE_TAKEN_MS2 and _id as ID3
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns._ID, ID3);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        ALBUM_ID_DOWNLOADS, DATE_TAKEN_MS1, 3);
+                assertWithMessage("Unexpected cover id for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.MEDIA_COVER_ID))
+                        .isEqualTo(String.valueOf(ID3));
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_nonDownloadMediaSet_coverIdIsIdOfLatestMedia() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media with date_taken as DATE_TAKEN_MS1 and _id as ID1
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.BUCKET_ID, ID4);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_modified as DATE_TAKEN_MS2 and _id as ID2
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns._ID, ID2);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_taken as DATE_TAKEN_MS2 and _id as ID3
+            contentValues.put(MediaColumns._ID, ID3);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID4), DATE_TAKEN_MS2, 3);
+                assertWithMessage("Unexpected cover id for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.MEDIA_COVER_ID))
+                        .isEqualTo(String.valueOf(ID3));
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_appMediaSet_coverIdIsIdOfLatestMedia() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media with date_taken as DATE_TAKEN_MS1 and _id as ID1
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_modified as DATE_TAKEN_MS2 and _id as ID2
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns._ID, ID2);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_taken as DATE_TAKEN_MS2 and _id as ID3
+            contentValues.put(MediaColumns._ID, ID3);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME1, DATE_TAKEN_MS2, 3);
+                assertWithMessage("Unexpected cover id for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.MEDIA_COVER_ID))
+                        .isEqualTo(String.valueOf(ID3));
+            }
+        }
+    }
+
+    private void assertMediaSetColumns(
+            Cursor cursor,
+            String categoryType,
+            String id,
+            long dateTakenMs,
+            long mediaCount) {
+        int idIndex = cursor.getColumnIndex(CloudMediaProviderContract.MediaSetColumns.ID);
+        int mediaCountIndex = cursor.getColumnIndex(
+                CloudMediaProviderContract.MediaSetColumns.MEDIA_COUNT);
+        int dateTakenIndex = cursor.getColumnIndex(
+                CloudMediaProviderContract.MediaColumns.DATE_TAKEN_MILLIS);
+        String mediaSetId = id;
+        if (!categoryType.isEmpty()) {
+            mediaSetId = initMediaSetId(categoryType, id);
+        }
+        assertWithMessage("Incorrect id found for the media set.")
+                .that(cursor.getString(idIndex))
+                .isEqualTo(mediaSetId);
+        assertWithMessage("Incorrect media count found for the media set.")
+                .that(cursor.getLong(mediaCountIndex))
+                .isEqualTo(mediaCount);
+        // Downloads does not have the date_taken_millis field, hence return early
+        if (ALBUM_ID_DOWNLOADS.equals(id)) {
+            return;
+        }
+        assertWithMessage("Incorrect date taken found, implying incorrect order of media sets.")
+                .that(cursor.getLong(dateTakenIndex))
+                .isEqualTo(dateTakenMs);
+    }
+
     private static void initMediaInAllAlbums(DatabaseHelper helper) {
         // Insert in camera album
         ContentValues cv1 = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
@@ -1410,7 +2212,7 @@ public class ExternalDbFacadeTest {
         ContentValues contentValues3 = getContentValues(DATE_TAKEN_MS3, GENERATION_MODIFIED3);
         contentValues3.put(MediaColumns._ID, ID3);
         // use self package name, as it is guaranteed to be present
-        contentValues3.put(MediaColumns.OWNER_PACKAGE_NAME, sIsolatedContext.getPackageName());
+        contentValues3.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
         contentValues3.put(MediaColumns.RELATIVE_PATH, "");
         helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues3));
     }
@@ -1419,15 +2221,82 @@ public class ExternalDbFacadeTest {
         return Locale.getDefault().getLanguage().equals(Locale.ENGLISH.getLanguage());
     }
 
-    private @Nullable String getAppLabel(Context isolatedContext, String packageName)
-            throws PackageManager.NameNotFoundException {
-        try {
-            PackageManager packageManager = isolatedContext.getPackageManager();
-            ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
-            return packageManager.getApplicationLabel(applicationInfo).toString();
-        } catch (PackageManager.NameNotFoundException exception) {
-            throw new PackageManager.NameNotFoundException(packageName);
-        }
+    private static void initMediaSetsWithDateTaken(DatabaseHelper helper) {
+        // Insert 5 images with non-null date_taken, non-null bucket_id (device folders) and
+        // non-null owner_package_name(app folders)
+        ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+        contentValues.put(MediaColumns.RELATIVE_PATH, "");
+        contentValues.put(MediaColumns.BUCKET_ID, ID1);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+        contentValues.put(MediaColumns.BUCKET_ID, ID2);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME2);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS3);
+        contentValues.put(MediaColumns.BUCKET_ID, ID3);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME3);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS4);
+        contentValues.put(MediaColumns.BUCKET_ID, ID4);
+        contentValues.put(MediaColumns.IS_DOWNLOAD, 1);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME4);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.remove(IS_DOWNLOAD);
+
+        contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS5);
+        contentValues.put(MediaColumns.BUCKET_ID, ID5);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME5);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+    }
+
+    private static void initMediaSetsWithMissingDateTaken(DatabaseHelper helper) {
+        // Insert 5 images, 2 with non-null date_taken and 3 with null date_taken
+        // First 2 images belong to same media set
+        // in both device folders category type and app folders category type
+        ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+        contentValues.put(MediaColumns.RELATIVE_PATH, "");
+        contentValues.put(MediaColumns.BUCKET_ID, ID1);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+        contentValues.put(MediaColumns.BUCKET_ID, ID1);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.remove(DATE_TAKEN);
+
+        contentValues.put(MediaColumns.DATE_MODIFIED, DATE_MODIFIED_MS1);
+        contentValues.put(MediaColumns.BUCKET_ID, ID3);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME3);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.put(MediaColumns.DATE_MODIFIED, DATE_MODIFIED_MS2);
+        contentValues.put(MediaColumns.BUCKET_ID, ID4);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME4);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+        contentValues.put(MediaColumns.DATE_MODIFIED, DATE_MODIFIED_MS3);
+        contentValues.put(MediaColumns.BUCKET_ID, ID5);
+        contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME5);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+    }
+
+    private String initMediaSetId(String mediaCategoryType, String id2) {
+        return mediaCategoryType + ":" + id2;
+    }
+
+    private ApplicationInfo createFakeAppInfo(String packageName, String appLabel, int resId) {
+        ApplicationInfo applicationInfo = new ApplicationInfo();
+        applicationInfo.packageName = packageName;
+        applicationInfo.nonLocalizedLabel = appLabel;
+        applicationInfo.icon = resId;
+        return applicationInfo;
     }
 
     private static void assertDeletedMediaEmpty(ExternalDbFacade facade) {
@@ -1481,31 +2350,31 @@ public class ExternalDbFacadeTest {
         int orientationIndex = cursor.getColumnIndex(
                 CloudMediaProviderContract.MediaColumns.ORIENTATION);
 
-        assertWithMessage("MediaColumns.ID is")
+        assertWithMessage("Incorrect MediaColumns.ID in cursor.")
                 .that(cursor.getLong(idIndex))
                 .isEqualTo(id);
-        assertWithMessage("MediaColumns.DATE_TAKEN_MILLIS is")
+        assertWithMessage("Incorrect MediaColumns.DATE_TAKEN_MILLIS in cursor.")
                 .that(cursor.getLong(dateTakenIndex))
                 .isEqualTo(dateTakenMs);
-        assertWithMessage("MediaColumns.SIZE_BYTES is")
+        assertWithMessage("Incorrect MediaColumns.SIZE_BYTES in cursor")
                 .that(cursor.getLong(sizeIndex))
                 .isEqualTo(SIZE);
-        assertWithMessage("MediaColumns.MIME_TYPE is")
+        assertWithMessage("Incorrect MediaColumns.MIME_TYPE in cursor.")
                 .that(cursor.getString(mimeTypeIndex))
                 .isEqualTo(mimeType);
-        assertWithMessage("MediaColumns.DURATION_MILLIS is")
+        assertWithMessage("Incorrect MediaColumns.DURATION_MILLIS in cursor.")
                 .that(cursor.getLong(durationIndex))
                 .isEqualTo(DURATION_MS);
-        assertWithMessage("MediaColumns.IS_FAVORITE is")
+        assertWithMessage("Incorrect MediaColumns.IS_FAVORITE in cursor.")
                 .that(cursor.getInt(isFavoriteIndex))
                 .isEqualTo(isFavorite);
-        assertWithMessage("MediaColumns.HEIGHT is")
+        assertWithMessage("Incorrect MediaColumns.HEIGHT in cursor.")
                 .that(cursor.getInt(heightIndex))
                 .isEqualTo(HEIGHT);
-        assertWithMessage("MediaColumns.WIDTH is")
+        assertWithMessage("Incorrect MediaColumns.WIDTH in cursor.")
                 .that(cursor.getInt(widthIndex))
                 .isEqualTo(WIDTH);
-        assertWithMessage("MediaColumns.ORIENTATION is")
+        assertWithMessage("Incorrect MediaColumns.ORIENTATION in cursor.")
                 .that(cursor.getInt(orientationIndex))
                 .isEqualTo(ORIENTATION);
     }

@@ -420,6 +420,9 @@ public final class MediaStore {
     public static final String DELETE_BACKED_UP_FILE_PATHS = "delete_backed_up_file_paths";
 
     /** {@hide} */
+    public static final String QUERY_FILE_ATTRS_FROM_LEVELDB = "query_file_attrs_from_leveldb";
+
+    /** {@hide} */
     public static final String QUERY_ARG_MIME_TYPE = "android:query-arg-mime_type";
     /** {@hide} */
     public static final String QUERY_ARG_SIZE_BYTES = "android:query-arg-size_bytes";
