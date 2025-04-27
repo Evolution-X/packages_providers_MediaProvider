@@ -167,14 +167,9 @@
     <string name="dialog_button_text" msgid="351366485240852280">"နားလည်ပြီ"</string>
     <string name="permlab_accessMediaOwnerPackageName" msgid="3849443148060165651">"မီဒီယာပိုင်ရှင် ပက်ကေ့ဂျ်အမည်ကို သုံးခွင့်ပြုခြင်း"</string>
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"သုံးနိုင်သော မီဒီယာဖိုင်အားလုံး၏ ပိုင်ရှင်ပက်ကေ့ဂျ်အမည်များကို အက်ပ်အား သုံးခွင့်ပြုသည်။"</string>
-    <!-- no translation found for device_folders_collection_display_name (3792747330533159857) -->
-    <skip />
-    <!-- no translation found for app_folders_collection_display_name (2606436050952788816) -->
-    <skip />
-    <!-- no translation found for camera_album_display_name (1093891161978593789) -->
-    <skip />
-    <!-- no translation found for screenshots_album_display_name (3614860974116695364) -->
-    <skip />
-    <!-- no translation found for downloads_album_display_name (3297383597164642280) -->
-    <skip />
+    <string name="device_folders_collection_display_name" msgid="3792747330533159857">"ဤစက်မှ"</string>
+    <string name="app_folders_collection_display_name" msgid="2606436050952788816">"သင့်အက်ပ်များမှ"</string>
+    <string name="camera_album_display_name" msgid="1093891161978593789">"ကင်မရာ"</string>
+    <string name="screenshots_album_display_name" msgid="3614860974116695364">"ဖန်သားပြင်ဓာတ်ပုံများ"</string>
+    <string name="downloads_album_display_name" msgid="3297383597164642280">"ဒေါင်းလုဒ်များ"</string>
 </resources>
