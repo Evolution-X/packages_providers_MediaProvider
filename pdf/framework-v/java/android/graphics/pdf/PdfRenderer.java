@@ -722,8 +722,8 @@ public final class PdfRenderer implements AutoCloseable {
         /**
          * Returns information about the widget with {@code widgetIndex}.
          *
-         * @param widgetIndex the index of the widget within the page's "Annot" array in the PDF
-         *                    document, available on results of previous calls to {@link
+         * @param widgetIndex the index of the widget within the page's widget annotations array in
+         *                    the PDF document, available on results of previous calls to {@link
          *                    #getFormWidgetInfos(int[])} or
          *                    {@link #getFormWidgetInfoAtPosition(int, int)} via
          *                    {@link FormWidgetInfo#getWidgetIndex()}.
