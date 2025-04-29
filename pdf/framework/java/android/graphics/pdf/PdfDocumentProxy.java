@@ -340,8 +340,6 @@ public class PdfDocumentProxy {
             @NonNull PointF point, @NonNull int[] types);
 
     /**
-
-    /**
      * Adds the given page object to the page.
      *
      * @param pageNum    - page number of the page to which pageObject is to be added
