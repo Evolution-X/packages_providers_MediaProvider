@@ -43,14 +43,23 @@ import java.io.IOException;
 public class MediaService extends JobIntentService {
     private static final int JOB_ID = -300;
 
-    private static final String ACTION_SCAN_VOLUME
+    public static final String ACTION_SCAN_VOLUME
             = "com.android.providers.media.action.SCAN_VOLUME";
 
-    private static final String EXTRA_MEDIAVOLUME = "MediaVolume";
+    public static final String EXTRA_MEDIAVOLUME = "MediaVolume";
 
-    private static final String EXTRA_SCAN_REASON = "scan_reason";
+    public static final String EXTRA_SCAN_REASON = "scan_reason";
 
-
+    /**
+     * @deprecated Use {@link MediaServiceV2#queueVolumeScan(Context, MediaVolume, int)} instead.
+     * Queues a volume scan operation. This method is now deprecated. To be used for version R or
+     * lower.
+     *
+     * @param context The application context.
+     * @param volume The {@link MediaVolume} to scan.
+     * @param reason The reason for the scan.
+     */
+    @Deprecated
     public static void queueVolumeScan(Context context, MediaVolume volume, int reason) {
         Intent intent = new Intent(ACTION_SCAN_VOLUME);
         intent.putExtra(EXTRA_MEDIAVOLUME, volume) ;
@@ -92,7 +101,7 @@ public class MediaService extends JobIntentService {
                 case ACTION_SCAN_VOLUME: {
                     final MediaVolume volume = intent.getParcelableExtra(EXTRA_MEDIAVOLUME);
                     if (volume.isPublicVolume()) {
-                        recoverPublicVolumeIfNeeded(volume);
+                        recoverPublicVolumeIfNeeded(volume, getContentResolver());
                     }
                     int reason = intent.getIntExtra(EXTRA_SCAN_REASON, REASON_DEMAND);
                     onScanVolume(this, volume, reason);
@@ -150,8 +159,12 @@ public class MediaService extends JobIntentService {
         }
     }
 
-    private void recoverPublicVolumeIfNeeded(MediaVolume volume) {
-        try (ContentProviderClient cpc = getContentResolver()
+    /**
+     * Attempts to recover a public media volume.
+     */
+    public static void recoverPublicVolumeIfNeeded(MediaVolume volume,
+            ContentResolver contentResolver) {
+        try (ContentProviderClient cpc = contentResolver
                 .acquireContentProviderClient(MediaStore.AUTHORITY)) {
             ((MediaProvider) cpc.getLocalContentProvider()).recoverPublicVolume(volume);
         } catch (Exception e) {
