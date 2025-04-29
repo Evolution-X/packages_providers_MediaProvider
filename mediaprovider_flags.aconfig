@@ -345,3 +345,12 @@ flag {
     is_exported: false
     bug: "412586210"
 }
+
+flag {
+    name: "enable_media_service_v2"
+    namespace: "mediaprovider"
+    description: "MediaService now upgraded to MediaServiceV2 with WorkManager, replacing deprecated JobIntentService."
+    is_fixed_read_only: true
+    is_exported: false
+    bug: "366095772"
+}

@@ -40,6 +40,7 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.sync.WorkManagerInitializer;
 import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
 
@@ -86,6 +87,11 @@ public class MediaServiceV2 extends Worker {
      * ACTION_SCAN_VOLUME, more actions present in {@link MediaService} will be added in future.
      */
     public static Optional<UUID> enqueueWork(Context context, Intent intent) {
+        if (Flags.enableMediaServiceV2()) {
+            Log.i(TAG, "enqueueWork was called but enable_media_service_v2 flag is disabled.");
+            return Optional.empty();
+        }
+
         Log.i(TAG, "Creating work for intent " + intent.toString());
         String action = intent.getAction();
 

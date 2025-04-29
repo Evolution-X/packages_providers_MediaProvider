@@ -30,6 +30,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemClock;
+import android.platform.test.annotations.EnableFlags;
+import android.platform.test.flag.junit.SetFlagsRule;
 import android.provider.MediaStore;
 
 import androidx.test.filters.SdkSuppress;
@@ -37,6 +39,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.work.WorkInfo;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
@@ -45,7 +48,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+@EnableFlags(com.android.providers.media.flags.Flags.FLAG_ENABLE_MEDIA_SERVICE_V2)
 public class MediaServiceV2Test {
+    @Rule
+    public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
     private static final String WORK_INFO_STATE = "work_info_state";
     private static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
     private static final String VOLUME_NAME = "volume_name";
