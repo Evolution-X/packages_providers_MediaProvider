@@ -519,6 +519,41 @@ std::vector<PageObject*> Page::GetPageObjects(bool refetch) {
     return page_objects;
 }
 
+std::pair<int, PageObject*> Page::GetTopPageObjectAtPosition(
+        Point_f point, const std::unordered_set<int>& type_ids) {
+    int object_count = FPDFPage_CountObjects(page_.get());
+    // Iterate in reverse order to get the top most page object
+    for (int index = object_count - 1; index >= 0; --index) {
+        FPDF_PAGEOBJECT page_object = FPDFPage_GetObject(page_.get(), index);
+        int type = FPDFPageObj_GetType(page_object);
+
+        // If specific object type(s) are provided for filtering, and the current object's
+        // type isn't in that set, skip it.
+        if (!type_ids.empty() && !type_ids.contains(type)) {
+            continue;
+        }
+
+        Rectangle_f bounds{};
+        FPDFPageObj_GetBounds(page_object, &bounds.left, &bounds.bottom,
+                              &bounds.right, &bounds.top);
+
+        // Check if the page point is within the object's bounding box
+        // Note: PDF coordinates typically have Y increasing upwards.
+        // The bounds are (left, bottom, right, top).
+        if (point.x >= bounds.left && point.x <= bounds.right && point.y >= bounds.bottom &&
+            point.y <= bounds.top) {
+          // Found the topmost object containing the point
+            if (!page_objects_[index]) {
+                PopulatePageObject(index);
+            }
+
+            return {index, page_objects_[index].get()};
+        }
+    }
+
+    return {-1, nullptr};
+}
+
 int Page::AddPageObject(std::unique_ptr<PageObject> pageObject) {
     // Create a scoped PDFium page object.
     ScopedFPDFPageObject scoped_page_object(pageObject->CreateFPDFInstance(document_, page_.get()));
@@ -897,7 +932,8 @@ void Page::PopulatePageObject(int index) {
     }
 
     // Populate PageObject From Page
-    if (page_object_ && page_object_->PopulateFromFPDFInstance(page_object, page_.get())) {
+    if (page_object_ &&
+        page_object_->PopulateFromFPDFInstance(page_object, page_.get())) {
         page_objects_[index] = std::move(page_object_);
     }
 }
@@ -980,7 +1016,8 @@ void Page::PopulateAnnotations() {
         }
 
         if (!annotation ||
-            !annotation->PopulateFromPdfiumInstance(scoped_annot.get(), page_.get())) {
+            !annotation->PopulateFromPdfiumInstance(scoped_annot.get(),
+                                                    page_.get())) {
             LOGE("Failed to create a pdfClient's instance of annotation using pdfium "
                  "instance");
         }
@@ -1046,7 +1083,8 @@ bool Page::UpdatePageAnnotation(int index, std::unique_ptr<Annotation> annotatio
         return false;
     }
 
-    if (!annotation->UpdatePdfiumInstance(scoped_annot.get(), document_, page_.get())) {
+    if (!annotation->UpdatePdfiumInstance(scoped_annot.get(), document_,
+                                          page_.get())) {
         LOGE("Failed to update pdfium annotation's instance");
         return false;
     }

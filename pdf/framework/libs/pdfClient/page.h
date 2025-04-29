@@ -249,6 +249,10 @@ class Page : public ICoordinateConverter {
     // Get all PageObjects on this Page. Ownership of PageObjects is with Page.
     std::vector<PageObject*> GetPageObjects(bool refetch = false);
 
+    // Get top PageObject at specified point by the given type(s).
+    std::pair<int, PageObject*> GetTopPageObjectAtPosition(Point_f point,
+                                                           const std::unordered_set<int>& type_ids);
+
     // Add PageObject to Page.
     int AddPageObject(std::unique_ptr<PageObject> page_object);
 

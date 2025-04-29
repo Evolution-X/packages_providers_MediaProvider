@@ -49,6 +49,7 @@ using ::pdfClient::Matrix;
 using ::pdfClient::Page;
 using ::pdfClient::PageObject;
 using ::pdfClient::PathObject;
+using ::pdfClient::Point_f;
 using ::pdfClient::Rectangle_i;
 using ::pdfClient::StampAnnotation;
 using ::pdfClient::Symbol;
@@ -59,6 +60,7 @@ static const std::string kTestdata = "testdata";
 static const std::string kSekretNoPassword = "sekret_no_password.pdf";
 static const std::string kPageObject = "page_object.pdf";
 static const std::string kAnnotation = "annotation.pdf";
+static const std::string kOverlappingPageObject = "overlapping_page_object.pdf";
 
 std::string GetTestDataDir() {
     return android::base::GetExecutableDirectory();
@@ -234,6 +236,64 @@ TEST(Test, GetPageObjectsTest) {
     ASSERT_EQ(PageObject::Type::Path, pageObjects[1]->GetType());
     // Check for the third PageObject to be TextObject.
     ASSERT_EQ(PageObject::Type::Text, pageObjects[2]->GetType());
+}
+
+TEST(Test, GetTopPageObjectAtPosition_AtOrigin) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+
+    auto testPoint = Point_f(0, 0);
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+    types.insert(3);  // image type
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+
+    // Assert no page object found at origin
+    assert(null == result.second);
+}
+
+TEST(Test, GetTopPageObjectAtPosition_AtImagePoint) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+
+    auto testPoint = Point_f(310, 400);  // position of image object
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+    types.insert(1);  // text type
+    types.insert(3);  // image type
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+
+    // Check for the first PageObject to be ImageObject.
+    ASSERT_EQ(PageObject::Type::Image, result.second->GetType());
+}
+
+TEST(Test, GetTopPageObjectAtPosition_WithTextType) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+    // provide test point where image is top object
+    auto testPoint = Point_f(310, 400);
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+    types.insert(1);  // text type
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+    // since image is present at test point and we queried only for text type, assert null returned.
+    assert(null == result.second);
+}
+
+TEST(Test, GetTopPageObjectAtPosition_WithAllType) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+
+    auto testPoint = Point_f(80, 100);  // Position of path object
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+
+    ASSERT_EQ(PageObject::Type::Path, result.second->GetType());
 }
 
 TEST(Test, AddImagePageObjectTest) {
