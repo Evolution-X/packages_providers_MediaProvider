@@ -389,3 +389,12 @@ flag {
     bug: "411073246"
     is_fixed_read_only: true
 }
+
+flag {
+    name: "enable_media_grid_touch_features"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag controls the advanced touch features in com.android.photopicker such as drag-to-select and pinch-to-zoom."
+    is_fixed_read_only: true
+    bug: "b/382684468"
+}
