@@ -354,3 +354,12 @@ flag {
     is_exported: false
     bug: "366095772"
 }
+
+flag {
+    name: "enable_picker_highlight_search_results_apis"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "This flag will enable highlighting search results APIs in the photopicker."
+    is_fixed_read_only: true
+    bug: "409508015"
+}

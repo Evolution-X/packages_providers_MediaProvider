@@ -30,10 +30,13 @@ import android.os.Parcelable;
 import androidx.annotation.ColorLong;
 import androidx.annotation.IntRange;
 
+import com.android.providers.media.flags.Flags;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * An immutable parcel to carry information regarding desired features of caller for
@@ -48,6 +51,8 @@ import java.util.Locale;
  * <li> Max selection media count restriction
  * <li> Pre-selected uris
  * <li> Theme night mode
+ * <li> Highlighting media results based on a given input query including highlighting media
+ *      results from certain albums
  * </ul>
  *
  * <p> Callers should use {@link Builder} to set the desired features.
@@ -62,6 +67,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
     private final int mMaxSelectionLimit;
     private final List<Uri> mPreSelectedUris;
     private final int mThemeNightMode;
+    @NonNull private final String mHighlightMediaTextQuery;
 
     private EmbeddedPhotoPickerFeatureInfo(
             List<String> mimeTypes,
@@ -69,13 +75,15 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             boolean orderedSelection,
             int maxSelectionLimit,
             List<Uri> preSelectedUris,
-            int themeNightMode) {
+            int themeNightMode,
+            String highlightMediaQuery) {
         this.mMimeTypes = mimeTypes;
         this.mAccentColor = accentColor;
         this.mOrderedSelection = orderedSelection;
         this.mMaxSelectionLimit = maxSelectionLimit;
         this.mPreSelectedUris = preSelectedUris;
         this.mThemeNightMode = themeNightMode;
+        this.mHighlightMediaTextQuery = highlightMediaQuery;
     }
     @NonNull
     public List<Uri> getPreSelectedUris() {
@@ -98,6 +106,11 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
     public int getThemeNightMode() {
         return this.mThemeNightMode;
     }
+    @NonNull
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public String getHighlightMediaTextQuery() {
+        return this.mHighlightMediaTextQuery;
+    }
 
     public static final class Builder {
         //All mime-types are returned by default.
@@ -114,6 +127,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         @NonNull
         private static final List<Uri> DEFAULT_PRE_SELECTED_URIS = Arrays.asList();
         private static final int DEFAULT_NIGHT_MODE = Configuration.UI_MODE_NIGHT_UNDEFINED;
+        private static final String DEFAULT_HIGHLIGHT_MEDIA_TEXT_QUERY = "";
 
         private List<String> mMimeTypes = DEFAULT_MIME_TYPES;
         private long mAccentColor = DEFAULT_ACCENT_COLOR;
@@ -121,6 +135,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private int mMaxSelectionLimit = DEFAULT_MAX_SELECTION_LIMIT;
         private List<Uri> mPreSelectedUris = DEFAULT_PRE_SELECTED_URIS;
         private int mThemeNightMode = DEFAULT_NIGHT_MODE;
+        private String mHighlightMediaTextQuery = DEFAULT_HIGHLIGHT_MEDIA_TEXT_QUERY;
 
         public Builder() {}
 
@@ -175,6 +190,38 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         @NonNull
         public Builder setAccentColor(@ColorLong long accentColor) {
             mAccentColor = accentColor;
+            return this;
+        }
+
+        /**
+         * The app can choose to highlight media items in the embedded photopicker in its
+         * expanded state. The media items in this highlighted section are based on the string
+         * input query set in this method. The photopicker will trigger a search based on this input
+         * value to show media results in this section.This can be any string literal for which the
+         * app wants to highlight media results. The app can also choose to highlight media results
+         * of a particular photopicker album: one of Favorites, Camera, Screenshots, Videos or
+         * Downloads. In order to do so, the value of this input string query should then be
+         * one of the album values instead of any free text string:
+         * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES} for the Favorites album,
+         * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA} for the Camera album,
+         * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS} for the Screenshots album,
+         * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS} for the Videos album and
+         * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS} for the Downloads album.
+         *
+         * <p> The value of this string param must not be empty or null in case the app wants to
+         * show a highlighted media section. An empty value will result in simply ignoring
+         * the request for a highlighted media section. A null value will result in
+         * {@code IllegalArgumentException} being thrown.
+         *
+         * @param highlightMediaTextQuery A String param based on which the highlighted results
+         *                            shown.
+         * @throws IllegalArgumentException in case input string query is null
+         */
+        @NonNull
+        @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+        public Builder setHighlightMediaTextQuery(@NonNull String highlightMediaTextQuery) {
+            Objects.requireNonNull(highlightMediaTextQuery);
+            mHighlightMediaTextQuery = highlightMediaTextQuery;
             return this;
         }
 
@@ -266,7 +313,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                     mOrderedSelection,
                     mMaxSelectionLimit,
                     mPreSelectedUris,
-                    mThemeNightMode);
+                    mThemeNightMode,
+                    mHighlightMediaTextQuery);
         }
     }
     private EmbeddedPhotoPickerFeatureInfo(Parcel in) {
@@ -280,6 +328,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         in.readTypedList(preSelectedUris, Uri.CREATOR);
         this.mPreSelectedUris = preSelectedUris;
         this.mThemeNightMode = in.readInt();
+        this.mHighlightMediaTextQuery = in.readString();
     }
 
     @Override
@@ -290,6 +339,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         dest.writeInt(mMaxSelectionLimit);
         dest.writeTypedList(mPreSelectedUris, flags);
         dest.writeInt(mThemeNightMode);
+        dest.writeString(mHighlightMediaTextQuery);
     }
 
     @Override
@@ -320,6 +370,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                 + ", mMaxSelectionLimit=" + mMaxSelectionLimit
                 + ", mPreSelectedUris=" + mPreSelectedUris
                 + ", mThemeNightMode=" + mThemeNightMode
+                + ", mHighlightMediaQuery=" + mHighlightMediaTextQuery
                 + '}';
     }
 }
