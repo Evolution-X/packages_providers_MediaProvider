@@ -382,8 +382,11 @@ class Page : public ICoordinateConverter {
     // Page Objects
     std::vector<std::unique_ptr<PageObject>> page_objects_;
 
-    // Populates page_objects_ with PageObjects on Page.
-    void PopulatePageObjects(bool refetch);
+    // Populates page_objects_ with all supported pageObjects on page.
+    void PopulateAllPageObjects(bool refetch);
+
+    // Populates page_objects_ at given index on page.
+    void PopulatePageObject(int index);
 
     // Annotations
     std::vector<std::unique_ptr<Annotation>> annotations_;
