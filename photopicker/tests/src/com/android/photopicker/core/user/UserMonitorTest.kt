@@ -161,6 +161,7 @@ class UserMonitorTest {
 
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
         whenever(mockContext.packageManager) { mockPackageManager }
+        whenever(mockContext.packageName) { "" }
         whenever(mockContext.contentResolver) { mockContentResolver }
         whenever(mockContext.createPackageContextAsUser(any(), anyInt(), any())) { mockContext }
         whenever(mockContext.createContextAsUser(any(UserHandle::class.java), anyInt())) {

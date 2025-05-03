@@ -81,6 +81,8 @@ static const char* kMatrix = "android/graphics/Matrix";
 static const char* kPath = "android/graphics/Path";
 static const char* kRect = "android/graphics/Rect";
 static const char* kRectF = "android/graphics/RectF";
+static const char* kPointF = "android/graphics/PointF";
+static const char* kPair = "android/util/Pair";
 static const char* kInteger = "java/lang/Integer";
 static const char* kString = "java/lang/String";
 static const char* kObject = "java/lang/Object";
@@ -256,6 +258,14 @@ SelectionBoundary ToNativeBoundary(JNIEnv* env, jobject jBoundary) {
             env->GetIntField(jBoundary, y_field), env->GetBooleanField(jBoundary, rtl_field));
 }
 
+Point_f ToNativePointF(JNIEnv* env, jobject jPoint) {
+    static jclass point_class = GetPermClassRef(env, kPointF);
+    static jfieldID x_field = env->GetFieldID(point_class, "x", "F");
+    static jfieldID y_field = env->GetFieldID(point_class, "y", "F");
+
+    return Point_f(env->GetFloatField(jPoint, x_field), env->GetFloatField(jPoint, y_field));
+}
+
 int ToNativeInteger(JNIEnv* env, jobject jInteger) {
     static jclass integer_class = GetPermClassRef(env, kInteger);
     static jmethodID get_int_value = env->GetMethodID(integer_class, "intValue", "()I");
@@ -415,7 +425,8 @@ jobject ToJavaFormWidgetInfo(JNIEnv* env, const FormWidgetInfo& form_action_resu
     jobject java_text_value = ToJavaString(env, form_action_result.text_value());
     jobject java_accessibility_label = ToJavaString(env, form_action_result.accessibility_label());
     jobject java_choice_options = ToJavaList(env, form_action_result.options(), &ToJavaChoiceOption);
-
+    // Java FormWidgetInfo will store widget_index (index of the widget in page's widget
+    // annotations array) as its mIndex
     return env->NewObject(click_result_class, init, form_action_result.widget_type(),
                           form_action_result.widget_index(), java_widget_rect,
                           form_action_result.read_only(), java_text_value, java_accessibility_label,
@@ -807,6 +818,18 @@ jobject ToJavaPdfPageObject(JNIEnv* env, const PageObject* page_object,
 jobject ToJavaPdfPageObjects(JNIEnv* env, const vector<PageObject*>& page_objects,
                              ICoordinateConverter* converter) {
     return ToJavaList(env, page_objects, converter, &ToJavaPdfPageObject);
+}
+
+jobject ToJavaIndexPageObjectPair(JNIEnv* env, int index, PageObject* page_object,
+                                  ICoordinateConverter* converter) {
+    jobject jIndex = ToJavaInteger(env, index);
+    jobject java_page_object = ToJavaPdfPageObject(env, page_object, converter);
+    jclass pair_class = env->FindClass(kPair);
+    jmethodID init_pair =
+            env->GetMethodID(pair_class, "<init>", funcsig("V", kObject, kObject).c_str());
+    jobject java_pair = env->NewObject(pair_class, init_pair, jIndex, java_page_object);
+    env->DeleteLocalRef(pair_class);
+    return java_pair;
 }
 
 Color ToNativeColor(jint java_color_int) {

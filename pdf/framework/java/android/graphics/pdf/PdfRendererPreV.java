@@ -26,6 +26,7 @@ import android.annotation.Nullable;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.pdf.component.PdfAnnotation;
 import android.graphics.pdf.component.PdfAnnotationType;
@@ -548,8 +549,8 @@ public final class PdfRendererPreV implements AutoCloseable {
         /**
          * Returns information about the widget with {@code annotationIndex}.
          *
-         * @param annotationIndex the index of the widget within the page's "Annot" array in the
-         *                        PDF document, available on results of previous calls to
+         * @param annotationIndex the index of the widget within the page's widget annotations array
+         *                        in the PDF document, available on results of previous calls to
          *                        {@link #getFormWidgetInfos(int[])} or
          *                        {@link #getFormWidgetInfoAtPosition(int, int)} via
          *                        {@link FormWidgetInfo#getWidgetIndex()}.
@@ -747,6 +748,37 @@ public final class PdfRendererPreV implements AutoCloseable {
         public List<Pair<Integer, PdfPageObject>> getPageObjects() {
             throwIfDocumentOrPageClosed();
             return mPdfProcessor.getPageObjects(mIndex);
+        }
+
+        /**
+         * Retrieves the top-most page object at a specified position.
+         *
+         * @param point The coordinates (as a {@link PointF}) on the page to check for page
+         *              objects.
+         * @param types An array of {@link PdfPageObjectType.Type} values. Only page objects whose
+         *              types are included in this array will be considered. If multiple matching
+         *              objects overlap at the specified point, only the one with the highest
+         *              z-index will be returned. The order of types within this array does not
+         *              influence the outcome.
+         *              If this array is empty, known supported {@link PdfPageObjectType}s will be
+         *              considered.
+         * @return A {@link Pair} containing:
+         * <ul>
+         * <li>An {@link Integer} representing the unique ID of the page object.
+         * <li>A {@link PdfPageObject} representing the found page object.</li>
+         * </ul>
+         * Returns null if no page object is found at the given position.
+         * @throws IllegalStateException if the {@link PdfRenderer.Page} is
+         *                               closed before invocation
+         */
+        @Nullable
+        @FlaggedApi(Flags.FLAG_ENABLE_GET_TOP_PDF_PAGE_OBJECT_AT_POSITION)
+        public Pair<Integer, PdfPageObject> getTopPageObjectAtPosition(@NonNull PointF point,
+                @NonNull @PdfPageObjectType.Type int[] types) {
+            throwIfDocumentOrPageClosed();
+            Preconditions.checkNotNull(point, "Argument point cannot be null");
+            Preconditions.checkNotNull(types, "Argument types cannot be null");
+            return mPdfProcessor.getTopPageObjectAtPosition(mIndex, point, types);
         }
 
         /**

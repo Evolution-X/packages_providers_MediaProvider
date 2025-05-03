@@ -49,6 +49,7 @@ using ::pdfClient::Matrix;
 using ::pdfClient::Page;
 using ::pdfClient::PageObject;
 using ::pdfClient::PathObject;
+using ::pdfClient::Point_f;
 using ::pdfClient::Rectangle_i;
 using ::pdfClient::StampAnnotation;
 using ::pdfClient::Symbol;
@@ -59,6 +60,7 @@ static const std::string kTestdata = "testdata";
 static const std::string kSekretNoPassword = "sekret_no_password.pdf";
 static const std::string kPageObject = "page_object.pdf";
 static const std::string kAnnotation = "annotation.pdf";
+static const std::string kOverlappingPageObject = "overlapping_page_object.pdf";
 
 std::string GetTestDataDir() {
     return android::base::GetExecutableDirectory();
@@ -236,6 +238,64 @@ TEST(Test, GetPageObjectsTest) {
     ASSERT_EQ(PageObject::Type::Text, pageObjects[2]->GetType());
 }
 
+TEST(Test, GetTopPageObjectAtPosition_AtOrigin) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+
+    auto testPoint = Point_f(0, 0);
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+    types.insert(3);  // image type
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+
+    // Assert no page object found at origin
+    assert(null == result.second);
+}
+
+TEST(Test, GetTopPageObjectAtPosition_AtImagePoint) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+
+    auto testPoint = Point_f(310, 400);  // position of image object
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+    types.insert(1);  // text type
+    types.insert(3);  // image type
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+
+    // Check for the first PageObject to be ImageObject.
+    ASSERT_EQ(PageObject::Type::Image, result.second->GetType());
+}
+
+TEST(Test, GetTopPageObjectAtPosition_WithTextType) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+    // provide test point where image is top object
+    auto testPoint = Point_f(310, 400);
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+    types.insert(1);  // text type
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+    // since image is present at test point and we queried only for text type, assert null returned.
+    assert(null == result.second);
+}
+
+TEST(Test, GetTopPageObjectAtPosition_WithAllType) {
+    Document doc(LoadTestDocument(kOverlappingPageObject), false);
+    std::shared_ptr<Page> page = doc.GetPage(0);
+
+    auto testPoint = Point_f(80, 100);  // Position of path object
+    auto mappedTestPoint = page->DeviceToPage(testPoint);
+    std::unordered_set<int> types;
+
+    auto result = page->GetTopPageObjectAtPosition(mappedTestPoint, types);
+
+    ASSERT_EQ(PageObject::Type::Path, result.second->GetType());
+}
+
 TEST(Test, AddImagePageObjectTest) {
     Document doc(LoadTestDocument(kPageObject), false);
     std::shared_ptr<Page> page = doc.GetPage(0);
@@ -254,6 +314,20 @@ TEST(Test, AddImagePageObjectTest) {
 
     // Add the page object.
     ASSERT_EQ(page->AddPageObject(std::move(imageObject)), initialPageObjects.size());
+
+    // Get Cache Updated PageObjects
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    // Assert that the size has increased by one.
+    ASSERT_EQ(initialPageObjects.size() + 1, cacheUpdatedPageObjects.size());
+    // Check for the first PageObject to be ImageObject.
+    ASSERT_EQ(PageObject::Type::Image, cacheUpdatedPageObjects[0]->GetType());
+    // Check for the second PageObject to be PathObject.
+    ASSERT_EQ(PageObject::Type::Path, cacheUpdatedPageObjects[1]->GetType());
+    // Check for the third PageObject to be TextObject.
+    ASSERT_EQ(PageObject::Type::Text, cacheUpdatedPageObjects[2]->GetType());
+    // Check for the fourth PageObject to be ImageObject.
+    ASSERT_EQ(PageObject::Type::Image, cacheUpdatedPageObjects[3]->GetType());
 
     // Get Updated PageObjects
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
@@ -293,6 +367,28 @@ TEST(Test, AddPathPageObject) {
     // Add the page object.
     ASSERT_EQ(page->AddPageObject(std::move(pathObject)), initialPageObjects.size());
 
+    // Get Cache Updated PageObjects
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    // Assert that the size has increased by one.
+    ASSERT_EQ(initialPageObjects.size() + 1, cacheUpdatedPageObjects.size());
+    // Check for the first PageObject to be ImageObject.
+    ASSERT_EQ(PageObject::Type::Image, cacheUpdatedPageObjects[0]->GetType());
+    // Check for the second PageObject to be PathObject.
+    ASSERT_EQ(PageObject::Type::Path, cacheUpdatedPageObjects[1]->GetType());
+    // Check for the third PageObject to be TextObject.
+    ASSERT_EQ(PageObject::Type::Text, cacheUpdatedPageObjects[2]->GetType());
+    // Check for the fourth PageObject to be PathObject.
+    ASSERT_EQ(PageObject::Type::Path, cacheUpdatedPageObjects[3]->GetType());
+
+    // Verify data attributes of newly added PathObject.
+    PathObject* newPathObject = static_cast<PathObject*>(cacheUpdatedPageObjects[3]);
+
+    // Check for added render mode.
+    ASSERT_EQ(newPathObject->render_mode_, PathObject::RenderMode::Stroke);
+    // Check for added matrix.
+    ASSERT_EQ(newPathObject->device_matrix_, Matrix(1.0f, 0, 0, 1.0f, 0, 0));
+
     // Get Updated PageObjects
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
 
@@ -308,7 +404,7 @@ TEST(Test, AddPathPageObject) {
     ASSERT_EQ(PageObject::Type::Path, updatedPageObjects[3]->GetType());
 
     // Verify data attributes of newly added PathObject.
-    PathObject* newPathObject = static_cast<PathObject*>(updatedPageObjects[3]);
+    newPathObject = static_cast<PathObject*>(updatedPageObjects[3]);
 
     // Check for added render mode.
     ASSERT_EQ(newPathObject->render_mode_, PathObject::RenderMode::Stroke);
@@ -361,6 +457,22 @@ TEST(Test, AddTextPageObject) {
         }
     }
 
+    // Get Cache Updated PageObjects
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    // Assert that the size has increased by three.
+    ASSERT_EQ(initialPageObjects.size() + 3, cacheUpdatedPageObjects.size());
+    // Check for the first PageObject to be ImageObject.
+    ASSERT_EQ(PageObject::Type::Image, cacheUpdatedPageObjects[0]->GetType());
+    // Check for the second PageObject to be PathObject.
+    ASSERT_EQ(PageObject::Type::Path, cacheUpdatedPageObjects[1]->GetType());
+    // Check for the third PageObject to be TextObject.
+    ASSERT_EQ(PageObject::Type::Text, cacheUpdatedPageObjects[2]->GetType());
+    // Check for the added PageObjects to be TextObjects.
+    for (int index = 3; index < page_objects_size; index++) {
+        ASSERT_EQ(PageObject::Type::Text, cacheUpdatedPageObjects[index]->GetType());
+    }
+
     // Get Updated PageObjects
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
 
@@ -387,7 +499,13 @@ TEST(Test, RemovePageObjectTest) {
 
     // Remove a pageObject
     EXPECT_TRUE(page->RemovePageObject(0));
-    // Get Updated PageObjects after removal
+
+    // Get Cache Updated PageObjects after removal.
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    ASSERT_EQ(initialPageObjects.size() - 1, cacheUpdatedPageObjects.size());
+
+    // Get Updated PageObjects after removal.
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
 
     ASSERT_EQ(initialPageObjects.size() - 1, updatedPageObjects.size());
@@ -413,6 +531,23 @@ TEST(Test, UpdateImagePageObjectTest) {
 
     // Update the page object.
     EXPECT_TRUE(page->UpdatePageObject(0, std::move(imageObject)));
+
+    // Get the cache updated page objects.
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    // Check for size equality.
+    ASSERT_EQ(initialPageObjects.size(), cacheUpdatedPageObjects.size());
+
+    // Check for updated bitmap.
+    ASSERT_EQ(FPDFBitmap_GetWidth(
+                      static_cast<ImageObject*>(cacheUpdatedPageObjects[0])->bitmap_.get()),
+              100);
+    ASSERT_EQ(FPDFBitmap_GetHeight(
+                      static_cast<ImageObject*>(cacheUpdatedPageObjects[0])->bitmap_.get()),
+              110);
+
+    // Check for updated matrix.
+    ASSERT_EQ(cacheUpdatedPageObjects[0]->device_matrix_, update_matrix);
 
     // Get the updated page objects.
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
@@ -453,6 +588,19 @@ TEST(Test, UpdatePathPageObjectTest) {
 
     // Update the page object.
     EXPECT_TRUE(page->UpdatePageObject(1, std::move(pathObject)));
+
+    // Get cache updated page objects
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    // Check for updated fill Color.
+    ASSERT_EQ(cacheUpdatedPageObjects[1]->fill_color_, update_fill_color);
+
+    // Check for updated Draw Mode.
+    ASSERT_EQ(static_cast<PathObject*>(cacheUpdatedPageObjects[1])->render_mode_,
+              PathObject::RenderMode::Fill);
+
+    // Check for updated matrix.
+    ASSERT_EQ(cacheUpdatedPageObjects[1]->device_matrix_, update_matrix);
 
     // Get the updated page objects.
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);
@@ -515,6 +663,22 @@ TEST(Test, UpdateTextPageObjectTest) {
 
     // Update the page object.
     EXPECT_TRUE(page->UpdatePageObject(2, std::move(textObject)));
+
+    // Get cache updated page objects
+    std::vector<PageObject*> cacheUpdatedPageObjects = page->GetPageObjects();
+
+    // Check for updated text.
+    ASSERT_EQ(static_cast<TextObject*>(cacheUpdatedPageObjects[2])->text_, update_text);
+
+    // Check for updated text render mode.
+    ASSERT_EQ(static_cast<TextObject*>(cacheUpdatedPageObjects[2])->render_mode_,
+              TextObject::RenderMode::FillStroke);
+
+    // Check for updated fill Color.
+    ASSERT_EQ(cacheUpdatedPageObjects[2]->fill_color_, update_fill_color);
+
+    // Check for updated matrix
+    ASSERT_EQ(cacheUpdatedPageObjects[2]->device_matrix_, update_matrix);
 
     // Get the updated page objects.
     std::vector<PageObject*> updatedPageObjects = page->GetPageObjects(true);

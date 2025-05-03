@@ -26,6 +26,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
+import android.annotation.StringDef;
 import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.WorkerThread;
@@ -411,6 +412,13 @@ public final class MediaStore {
      */
     @VisibleForTesting
     public static final String REMOVE_RECOVERY_DATA = "remove_recovery_data";
+
+    /**
+     * Only used for testing.
+     * {@hide}
+     */
+    @VisibleForTesting
+    public static final String QUEUE_SCAN_VOLUME = "queue_scan_volume";
 
     /**
      * Only used for testing.
@@ -1087,6 +1095,169 @@ public final class MediaStore {
      */
     @FlaggedApi("com.android.providers.media.flags.picker_default_tab")
     public static final int PICK_IMAGES_TAB_IMAGES = 1;
+
+    /**
+     * The name of an optional intent-extra used to allow apps to highlight media results in the
+     * photopicker UI whenever feasible based on the given input text query in
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY}
+     * The extra can only be specified in {@link MediaStore#ACTION_PICK_IMAGES}.
+     * <p>
+     * This intent extra will accept a {@link Bundle} object. The bundle object should have two
+     * keys specified.
+     * The first key {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_TYPE} will
+     * specify the type of media highlight the app wants to opt for and should be one of
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED} for a highlighted media section to
+     * be shown when the photopicker launches or
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED} to open the photopicker to show
+     * a highlighted media results grid based on the given input query.
+     * Any other value for this key will simply default to not showing any media highlight at all.
+     * The second bundle key {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY}
+     * will accept a string value specifying the query for highlighting media results.
+     * If this input value is empty, the request to highlight media will be ignored and
+     * no highlight will be shown at all. In case of null input query,
+     * {@code IllegalArgumentException} is thrown.
+     * The app can also choose to highlight media results of a particular photopicker album: one of
+     * Favorites, Camera, Screenshots, Videos and Downloads. In order to do so, the value of
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY} should then be one of the
+     * album values instead of any free text string:
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES} for the Favorites album,
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA} for the Camera album,
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS} for the Screenshots album,
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS} for the Videos album and
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS} for the Downloads album.
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA =
+            "android.provider.extra.PICK_IMAGES_HIGHLIGHT_MEDIA";
+
+    /**
+     * One of the {@link Bundle} keys for
+     * {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA} specifying the input query for
+     * which the app can request to show highlighted media results in the photopicker.
+     * The photopicker will trigger a search based on this input value to show
+     * highlighted media results.
+     * The value of this key can be any string value for which the app wants to show highlighted
+     * results. In case an app wants to highlight an album, the string value should be one of
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES},
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA},
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS},
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS} or
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS}.
+     * In case the input text query is null, {@code IllegalArgumentException} is thrown.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY =
+            "android.provider.media.key.PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY";
+
+    /**
+     * One of the {@link Bundle} keys for
+     * {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA} to specify the highlight type
+     * i.e. the way the highlighted media results will be shown in the photopicker.
+     * The value can be one of {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED} to show a
+     * highlight media section in the photopicker or
+     * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED} to show a highlighted media
+     * results grid.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String KEY_PICK_IMAGES_HIGHLIGHT_TYPE =
+            "android.provider.media.key.PICK_IMAGES_HIGHLIGHT_TYPE";
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(prefix = { "PICK_IMAGES_HIGHLIGHT_TYPE_" }, value = {
+            PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+            PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED
+    })
+    public @interface PickImagesHighlightType { }
+
+
+    /**
+     * One of the permitted values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_TYPE}
+     * to highlight media results as a highlighted media section in the photopicker.based on the
+     * given input query in {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY}
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final int PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED = 0;
+
+    /**
+     * One of the permitted values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_TYPE}
+     * to show a highlighted media results grid based on the given input query in
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY}.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final int PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED = 1;
+
+    /** @hide */
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef(prefix = { "PICK_IMAGES_HIGHLIGHT_ALBUM_" }, value = {
+            PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES,
+            PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA,
+            PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS,
+            PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS,
+            PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS
+    })
+    public @interface PickImagesHighlightAlbum { }
+
+    /**
+     * One of the possible album highlight values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY}
+     * in case an app chooses to highlight media results from an album, in this case, the
+     * Favorites album.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES =
+            "android.provider.media.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES";
+
+    /**
+     * One of the possible album highlight values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY} in case
+     * an app chooses to highlight media results from an album, in this case, the
+     * Camera album.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA =
+            "android.provider.media.PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA";
+
+    /**
+     * One of the possible album highlight values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY}
+     * in case an app chooses to highlight media results from from an album, in this case, the
+     * Screenshots album.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS =
+            "android.provider.media.PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS";
+
+    /**
+     * One of the possible album highlight values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY} in case
+     * an app chooses to highlight media results from an album, in this case, the
+     * Videos album.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS =
+            "android.provider.media.PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS";
+
+    /**
+     * One of the possible album highlight values for
+     * {@link MediaStore#KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY} in case
+     * an app chooses to highlight media results from an album, in this case, the
+     * Downloads album.
+     * Read more: {@link MediaStore#EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA}
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    public static final String PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS =
+            "android.provider.media.PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS";
 
     /**
      * Specify that the caller wants to receive the original media format without transcoding.

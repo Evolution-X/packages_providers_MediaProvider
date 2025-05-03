@@ -225,10 +225,9 @@ class PreviewViewModelTest {
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
 
         if (SdkLevel.isAtLeastV()) {
-            whenever(mockUserManager.getUserProperties(any(UserHandle::class.java)))
-            @JvmSerializableLambda {
-                UserProperties.Builder().build()
-            }
+            whenever(
+                mockUserManager.getUserProperties(any(UserHandle::class.java))
+            ) @JvmSerializableLambda { UserProperties.Builder().build() }
             whenever(mockUserManager.getUserBadge()) {
                 InstrumentationRegistry.getInstrumentation()
                     .getContext()
@@ -248,6 +247,7 @@ class PreviewViewModelTest {
 
         // Stubs for UserMonitor
         whenever(mockContext.packageManager) { mockPackageManager }
+        whenever(mockContext.packageName) { "" }
         whenever(mockContext.contentResolver) { mockContentResolver }
         whenever(mockContext.createPackageContextAsUser(any(), anyInt(), any())) { mockContext }
         whenever(mockContext.createContextAsUser(any(UserHandle::class.java), anyInt())) {
