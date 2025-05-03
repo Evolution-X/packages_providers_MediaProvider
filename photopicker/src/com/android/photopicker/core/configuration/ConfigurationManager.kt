@@ -27,11 +27,16 @@ import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.navigation.PhotopickerDestinations
 import com.android.photopicker.core.theme.AccentColorHelper
 import com.android.photopicker.extensions.getApplicationMediaCapabilities
+import com.android.photopicker.extensions.getHighlightQueryResultsParams
 import com.android.photopicker.extensions.getPhotopickerMimeTypes
 import com.android.photopicker.extensions.getPhotopickerSelectionLimitOrDefault
 import com.android.photopicker.extensions.getPickImagesInOrderEnabled
 import com.android.photopicker.extensions.getPickImagesPreSelectedUris
 import com.android.photopicker.extensions.getStartDestination
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
+import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 import com.android.providers.media.flags.Flags
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -166,6 +171,13 @@ class ConfigurationManager(
                 }
             }
 
+        /**
+         * Check if a valid highlight media query was set and get a [HighLightQueryResultsParam]
+         * object
+         */
+        val highlightQueryResultsParams =
+            getEmbeddedHighlightQueryResultsParams(featureInfo.highlightMediaTextQuery)
+
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.
         _configuration.updateAndGet {
@@ -175,8 +187,33 @@ class ConfigurationManager(
                 mimeTypes = mimeTypes.toCollection(ArrayList()),
                 preSelectedUris = preSelectedUris.toCollection(ArrayList()),
                 pickImagesInOrder = pickImagesInOrder,
+                highlightQueryResultsParams = highlightQueryResultsParams,
             )
         }
+    }
+
+    /**
+     * The embedded picker only supports showing a highlighted media section. Thus, we only set the
+     * highlight query
+     */
+    private fun getEmbeddedHighlightQueryResultsParams(
+        highlightMediaQuery: String
+    ): HighlightQueryResultsParams {
+        if (highlightMediaQuery.isEmpty()) {
+            return DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
+        }
+        val albumFromTextQuery: HighlightAlbumName =
+            HighlightAlbumName.toHighlightAlbumName(highlightMediaQuery)
+        val highlightQuery: HighlightQuery =
+            when (albumFromTextQuery) {
+                HighlightAlbumName.UNSET_HIGHLIGHT_ALBUM ->
+                    HighlightQuery.Search(searchQuery = highlightMediaQuery)
+                else -> HighlightQuery.Album(album = albumFromTextQuery)
+            }
+        return HighlightQueryResultsParams(
+            queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+            queryResultsHighlightQuery = highlightQuery,
+        )
     }
 
     /**
@@ -237,6 +274,10 @@ class ConfigurationManager(
                 null
             }
 
+        // get highlight media info from the intent
+        val highlightQueryResultsParams: HighlightQueryResultsParams =
+            intent.getHighlightQueryResultsParams()
+
         // Use updateAndGet to ensure the value is set before this method returns so the new
         // intent is immediately available to new subscribers.
         _configuration.updateAndGet {
@@ -250,6 +291,7 @@ class ConfigurationManager(
                 startDestination = startDestination,
                 preSelectedUris = pickerPreSelectionUris,
                 callingPackageMediaCapabilities = applicationMediaCapabilities,
+                highlightQueryResultsParams = highlightQueryResultsParams,
             )
         }
     }

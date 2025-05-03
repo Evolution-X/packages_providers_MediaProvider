@@ -20,11 +20,17 @@ import android.content.Intent
 import android.media.ApplicationMediaCapabilities
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import com.android.modules.utils.build.SdkLevel
+import com.android.photopicker.core.configuration.DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
 import com.android.photopicker.core.configuration.IllegalIntentExtraException
 import com.android.photopicker.core.navigation.PhotopickerDestinations
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
+import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 
 /**
  * Check the various possible actions the intent could be running under and extract a valid value
@@ -140,6 +146,66 @@ fun Intent.getStartDestination(default: PhotopickerDestinations): PhotopickerDes
         }
     } else {
         return default
+    }
+}
+
+/**
+ * Validate the [MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA_RESULTS] extra from the intent to
+ * extract out the media highlight request params. [EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA_RESULTS] only
+ * works in ACTION_PICK_IMAGES and will be ignored in all other configurations.
+ *
+ * @return The [HighlightQueryResultsParams] object that contains the media highlight request
+ *   params. The object holds default values in case of no valid params are extracted.
+ */
+fun Intent.getHighlightQueryResultsParams(): HighlightQueryResultsParams {
+
+    if (getExtras()?.containsKey(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA) == true) {
+        return when (getAction()) {
+            // This extra is only supported for ACTION_PICK_IMAGES
+            MediaStore.ACTION_PICK_IMAGES -> {
+                // Return the default query params in case the retrieved bundle is null or empty
+                val highlightQueryResultsParamsBundle: Bundle =
+                    getBundleExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA)
+                        ?: return DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
+
+                val retrievedHighlightQueryResultsHighlightType =
+                    highlightQueryResultsParamsBundle.getInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
+                        /* default*/ MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                    )
+                val queryResultsHighlightType =
+                    QueryResultsHighlightType.toQueryResultsHighlightType(
+                        retrievedHighlightQueryResultsHighlightType
+                    )
+                val highlightTextQuery =
+                    highlightQueryResultsParamsBundle.getString(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY
+                    )
+                if (highlightTextQuery == null) {
+                    throw IllegalArgumentException("Received input highlight query is null")
+                } else {
+                    val albumFromTextQuery: HighlightAlbumName =
+                        HighlightAlbumName.toHighlightAlbumName(highlightTextQuery)
+                    val highlightQuery: HighlightQuery =
+                        when (albumFromTextQuery) {
+                            HighlightAlbumName.UNSET_HIGHLIGHT_ALBUM ->
+                                HighlightQuery.Search(searchQuery = highlightTextQuery)
+                            else -> HighlightQuery.Album(album = albumFromTextQuery)
+                        }
+                    return HighlightQueryResultsParams(
+                        queryResultsHighlightType = queryResultsHighlightType,
+                        queryResultsHighlightQuery = highlightQuery,
+                    )
+                }
+            }
+            else ->
+                throw IllegalIntentExtraException(
+                    "EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA_RESULTS is not supported for ${getAction()}, " +
+                        "use ACTION_PICK_IMAGES instead."
+                )
+        }
+    } else {
+        return DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
     }
 }
 
