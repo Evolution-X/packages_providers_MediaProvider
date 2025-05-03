@@ -64,7 +64,7 @@
     <skip />
     <string name="picker_albums" msgid="4822511902115299142">"एल्बमहरू"</string>
     <string name="picker_preview" msgid="6257414886055861039">"प्रिभ्यू"</string>
-    <string name="picker_work_profile" msgid="2083221066869141576">"कार्य प्रोफाइल प्रयोग गर्नुहोस्"</string>
+    <string name="picker_work_profile" msgid="2083221066869141576">"वर्क प्रोफाइल प्रयोग गर्नुहोस्"</string>
     <string name="picker_personal_profile" msgid="639484258397758406">"व्यक्तिगत प्रोफाइल प्रयोग गर्नुहोस्"</string>
     <string name="picker_personal_profile_label" msgid="6189198163209597344">"व्यक्तिगत"</string>
     <string name="picker_profile_admin_title" msgid="4172022376418293777">"तपाईंका एड्मिनले ब्लक गरेका छन्"</string>

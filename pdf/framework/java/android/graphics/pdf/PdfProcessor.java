@@ -26,6 +26,7 @@ import android.annotation.Nullable;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.graphics.Point;
+import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.pdf.component.PdfAnnotation;
 import android.graphics.pdf.component.PdfAnnotationType;
@@ -749,6 +750,46 @@ public class PdfProcessor {
                     PdfEventLogger.ApiResponseTypes.SUCCESS,
                     PdfEventLogger.OperationTypes.GET);
             return pageObjectIdPairs;
+        }
+    }
+
+    /**
+     * Retrieves the top-most page object at a specified position.
+     *
+     * @param pageNum current page number.
+     * @param point The coordinates (as a {@link PointF}) on the page to check for page objects.
+     * @param types An array of {@link PdfPageObjectType.Type} values. Only page objects whose types
+     * are included in this array will be considered. If multiple matching objects overlap at the
+     * specified point, only the one with the highest z-index will be returned.
+     * The order of types within this array does not influence the outcome.
+     * If this array is empty, known supported {@link PdfPageObjectType}s will be considered.
+     *
+     * @return A {@link Pair} containing:
+     * <ul>
+     * <li>An {@link Integer} representing the unique ID of the page object.
+     * <li>A {@link PdfPageObject} representing the found page object.</li>
+     * </ul>
+     * Returns null if no page object is found at the given position.
+     * @throws IllegalStateException if the {@link PdfRenderer.Page} is
+     * closed before invocation
+     */
+    @Nullable
+    public Pair<Integer, PdfPageObject> getTopPageObjectAtPosition(int pageNum,
+            @NonNull PointF point,
+            @NonNull @PdfPageObjectType.Type int[] types) {
+        synchronized (sPdfiumLock) {
+            assertPdfDocumentNotNull();
+            PdfPageComponentsIdManager pageObjectIdManager = mPageObjectIdManagerMap.get(pageNum);
+            Pair<Integer, PdfPageObject> pageObjectPair = mPdfDocument.getTopPageObjectAtPosition(
+                    pageNum, point, types);
+
+            if (pageObjectPair.first == -1) {
+                // No object found of requested type(s) at point
+                return null;
+            } else {
+                return new Pair<>(pageObjectIdManager.getIdForIndex(pageObjectPair.first),
+                        pageObjectPair.second);
+            }
         }
     }
 
