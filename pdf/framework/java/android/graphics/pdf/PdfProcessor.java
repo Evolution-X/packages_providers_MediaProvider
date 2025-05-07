@@ -783,8 +783,9 @@ public class PdfProcessor {
             Pair<Integer, PdfPageObject> pageObjectPair = mPdfDocument.getTopPageObjectAtPosition(
                     pageNum, point, types);
 
-            if (pageObjectPair.first == -1) {
-                // No object found of requested type(s) at point
+            if (pageObjectPair.first == -1 || pageObjectPair.second == null) {
+                // No object found of requested type(s) at point or the page
+                // object cannot be populated.
                 return null;
             } else {
                 return new Pair<>(pageObjectIdManager.getIdForIndex(pageObjectPair.first),
