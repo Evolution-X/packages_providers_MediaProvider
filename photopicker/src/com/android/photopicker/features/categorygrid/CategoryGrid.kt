@@ -172,6 +172,7 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
                     navController.navigateToMediaSetGrid(category = item.category)
                 }
             },
+            onItemLongPress = {},
             isExpandedScreen = isExpandedScreen,
             columns =
                 when (isExpandedScreen) {

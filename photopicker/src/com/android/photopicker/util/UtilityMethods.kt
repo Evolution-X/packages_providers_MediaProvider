@@ -24,16 +24,20 @@ import android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_GIF
 import android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_MOTION_PHOTO
 import android.text.format.DateUtils
 import android.util.Log
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toComposeRect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.window.layout.WindowMetricsCalculator
 import com.android.photopicker.R
 import com.android.photopicker.data.model.Media
 import java.text.DateFormat
@@ -174,4 +178,28 @@ inline fun <R : Any> R.applyChoice(
     } else {
         falseBlock()
     }
+}
+
+/**
+ * Calculates the [Rect] of the current window.
+ *
+ * This composable function observes the [LocalContext] and [LocalDensity] to recompute the window
+ * metrics when the configuration changes (e.g., screen rotation, multi-window mode). It uses
+ * [WindowMetricsCalculator] to get the current window bounds.
+ *
+ * WARNING: This method cannot be called from the Embedded runtime, as it requires an Activity
+ * reference. The WindowRect that is returned during an Embedded session will be inaccurate.
+ *
+ * @return The [Rect] representing the bounds of the current window in pixels.
+ */
+@OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
+@Composable
+fun calculateWindowRect(): Rect {
+    // Observe context so that this recomposes if the UI context changes (e.g., Activity
+    // recreation).
+    val context = LocalContext.current
+    // WindowMetricsCalculator needs the current Activity to compute window metrics.
+    val metrics = WindowMetricsCalculator.getOrCreate().computeCurrentWindowMetrics(context)
+    // Convert Android's Rect to Compose's Rect.
+    return metrics.bounds.toComposeRect()
 }
