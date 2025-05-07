@@ -10837,11 +10837,18 @@ public class MediaProvider extends ContentProvider {
         return !matcher.matches();
     }
 
+    private boolean shouldQueryLevelDbForFileAttributes() {
+        // Don't query leveldb for wear targets and devices with android version R or lower.
+        return Flags.queryLeveldbForFileAttributes()
+                && !getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH)
+                && SdkLevel.isAtLeastS();
+    }
+
     private FileAccessAttributes queryLevelDbForFileAttributes(final String path)
             throws IOException {
         // Query levelDb only for external_primary storage paths
         // TODO: b/411419451 - Remove check on path when Stable Uris rolled out for all volume paths
-        if (Flags.queryLeveldbForFileAttributes() && path.contains("/storage/emulated/")) {
+        if (shouldQueryLevelDbForFileAttributes() && path.contains("/storage/emulated/")) {
             try {
                 Trace.beginSection("MP.queryFileAttrsFromLevelDb");
                 FuseDaemon daemon = getFuseDaemonForFile(new File(path), mVolumeCache);
