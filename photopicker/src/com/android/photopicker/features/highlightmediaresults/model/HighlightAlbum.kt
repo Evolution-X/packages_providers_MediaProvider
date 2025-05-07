@@ -20,24 +20,24 @@ import android.provider.MediaStore
 
 /**
  * An enum class representing the possible media albums that can be highlighted by an app in
- * [MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_QUERY_RESULTS]
+ * [MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_QUERY_RESULTS] along with their static album ids.
  */
-enum class HighlightAlbumName {
+enum class HighlightAlbum(val albumId: String) {
     // Highlight the Favorites album
-    HIGHLIGHT_ALBUM_FAVORITES,
+    HIGHLIGHT_ALBUM_FAVORITES("Favorites"),
     // Highlight the Camera album
-    HIGHLIGHT_ALBUM_CAMERA,
+    HIGHLIGHT_ALBUM_CAMERA("Camera"),
     // Highlight the Screenshots album
-    HIGHLIGHT_ALBUM_SCREENSHOTS,
+    HIGHLIGHT_ALBUM_SCREENSHOTS("Screenshots"),
     // Highlight the Videos album
-    HIGHLIGHT_ALBUM_VIDEOS,
+    HIGHLIGHT_ALBUM_VIDEOS("Videos"),
     // Highlight the Downloads album
-    HIGHLIGHT_ALBUM_DOWNLOADS,
-    UNSET_HIGHLIGHT_ALBUM;
+    HIGHLIGHT_ALBUM_DOWNLOADS("Downloads"),
+    UNSET_HIGHLIGHT_ALBUM("UnsetAlbum");
 
     companion object {
-        fun toHighlightAlbumName(name: String): HighlightAlbumName {
-            return when (name) {
+        fun toHighlightAlbum(id: String): HighlightAlbum {
+            return when (id) {
                 MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES -> HIGHLIGHT_ALBUM_FAVORITES
                 MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA -> HIGHLIGHT_ALBUM_CAMERA
                 MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_SCREENSHOTS -> HIGHLIGHT_ALBUM_SCREENSHOTS

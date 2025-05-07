@@ -100,6 +100,9 @@ fun Flow<PagingData<Group>>.toMediaGridItemFromCategory(
                 }
                 is Group.Category -> MediaGridItem.CategoryItem(group)
                 is Group.Album -> MediaGridItem.AlbumItem(group)
+                // [Group.BaseAlbum] is not a displayable group.
+                is Group.BaseAlbum ->
+                    throw IllegalArgumentException("Unsupported Group type BaseAlbum received.")
             }
         }
     }

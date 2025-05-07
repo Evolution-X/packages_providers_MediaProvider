@@ -34,6 +34,7 @@ import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.user.UserStatus
 import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
+import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Group.Album
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -403,7 +404,7 @@ class DataServiceImpl(
         }
 
     @GuardedBy("albumMediaPagingSourceMutex")
-    override fun albumMediaPagingSource(album: Album): PagingSource<MediaPageKey, Media> =
+    override fun albumMediaPagingSource(album: Group.BaseAlbum): PagingSource<MediaPageKey, Media> =
         runBlocking {
             refreshAlbumMedia(album)
 
@@ -526,7 +527,7 @@ class DataServiceImpl(
     }
 
     @GuardedBy("albumMediaPagingSourceMutex")
-    override suspend fun refreshAlbumMedia(album: Album) {
+    override suspend fun refreshAlbumMedia(album: Group.BaseAlbum) {
         albumMediaPagingSourceMutex.withLock {
             // Send album media refresh request only when the album media paging source is not
             // already cached.

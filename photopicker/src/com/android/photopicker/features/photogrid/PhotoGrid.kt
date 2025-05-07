@@ -246,6 +246,15 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                             shrinkVertically(animationSpec = standardDecelerate(150))
                     }
 
+                val highlightContentSelector =
+                    object : StateSelector.AnimatedVisibilityInEmbedded {
+                        override val visible = LocalEmbeddedState.current?.isExpanded ?: false
+                        override val enter =
+                            expandVertically(animationSpec = standardDecelerate(300))
+                        override val exit =
+                            shrinkVertically(animationSpec = standardDecelerate(150))
+                    }
+
                 // Click handler for the Grid. Extract this out because the below grid
                 // implementations differ based on flags, but both use the same click handler.
                 val onItemClick = { item: MediaGridItem ->
@@ -268,6 +277,35 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     }
                 }
 
+                val onItemLongClick = { item: MediaGridItem ->
+                    if (isPreviewEnabled) {
+                        scope.launch {
+                            events.dispatch(
+                                Event.LogPhotopickerUIEvent(
+                                    FeatureToken.PREVIEW.token,
+                                    configuration.sessionId,
+                                    configuration.callingPackageUid ?: -1,
+                                    Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
+                                )
+                            )
+                        }
+                        if (item is MediaGridItem.MediaItem) {
+                            // Log entry into the photopicker preview mode
+                            scope.launch {
+                                events.dispatch(
+                                    Event.LogPhotopickerUIEvent(
+                                        FeatureToken.PREVIEW.token,
+                                        configuration.sessionId,
+                                        configuration.callingPackageUid ?: -1,
+                                        Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
+                                    )
+                                )
+                            }
+                            navController.navigateToPreviewMedia(item.media)
+                        }
+                    }
+                }
+
                 when (
                     // Drag-to-select is enabled only when the flag and multi-selection is enabled.
                     configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED &&
@@ -280,10 +318,21 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                             isExpandedScreen = isExpandedScreen,
                             selection = selection,
                             dragSelectionEnabled = true,
-                            dragSelectIndexOffset = 1,
+                            /* index offset for banner and highlight content */
+                            dragSelectIndexOffset = 2,
                             bannerContent = {
                                 hideWhenState(selector = bannerContentSelector) {
                                     AnimatedBannerWrapper(currentBanner)
+                                }
+                            },
+                            highlightMediaContent = {
+                                hideWhenState(selector = highlightContentSelector) {
+                                    // onLongItemClick behavior for Highlight content should be
+                                    // same as decided for mediaGrid()
+                                    featureManager.composeLocation(
+                                        Location.HIGHLIGHT_MEDIA_CAROUSEL,
+                                        maxSlots = 1,
+                                    )
                                 }
                             },
                             onItemClick = onItemClick,
@@ -309,37 +358,22 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                                     AnimatedBannerWrapper(currentBanner)
                                 }
                             },
-                            onItemClick = onItemClick,
-                            onItemLongPress = { item ->
-                                // If the [PreviewFeature] is enabled, launch the preview route.
-                                if (isPreviewEnabled) {
-                                    // Log long pressing a media item in the photo grid
-                                    scope.launch {
-                                        events.dispatch(
-                                            Event.LogPhotopickerUIEvent(
-                                                FeatureToken.PREVIEW.token,
-                                                configuration.sessionId,
-                                                configuration.callingPackageUid ?: -1,
-                                                Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
-                                            )
-                                        )
-                                    }
-                                    if (item is MediaGridItem.MediaItem) {
-                                        // Log entry into the photopicker preview mode
-                                        scope.launch {
-                                            events.dispatch(
-                                                Event.LogPhotopickerUIEvent(
-                                                    FeatureToken.PREVIEW.token,
-                                                    configuration.sessionId,
-                                                    configuration.callingPackageUid ?: -1,
-                                                    Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
-                                                )
-                                            )
-                                        }
-                                        navController.navigateToPreviewMedia(item.media)
-                                    }
+                            highlightMediaContent = {
+                                hideWhenState(selector = highlightContentSelector) {
+                                    // onLongItemClick behavior for Highlight content should be
+                                    // same as decided for mediaGrid()
+                                    featureManager.composeLocation(
+                                        Location.HIGHLIGHT_MEDIA_CAROUSEL,
+                                        maxSlots = 1,
+                                        params =
+                                            LocationParams.WithLongClickAction { item ->
+                                                onItemLongClick(item)
+                                            },
+                                    )
                                 }
                             },
+                            onItemClick = onItemClick,
+                            onItemLongPress = onItemLongClick,
                             columns = GridCells.Fixed(cellsPerRow),
                         )
                     }

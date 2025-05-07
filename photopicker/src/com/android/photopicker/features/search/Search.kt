@@ -172,8 +172,7 @@ private val MEASUREMENT_OTHER_ICON = 40.dp
 fun Search(
     modifier: Modifier = Modifier,
     params: LocationParams,
-    // TODO Obtain a singleton instance when highlight composable is added
-    viewModel: SearchViewModel = obtainViewModel(),
+    viewModel: SearchViewModel = obtainViewModel(isActivityScoped = true),
 ) {
     val userSearchStateInfo by viewModel.userSearchStateInfo.collectAsStateWithLifecycle()
     when {

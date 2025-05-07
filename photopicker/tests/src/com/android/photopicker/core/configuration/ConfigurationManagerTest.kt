@@ -31,7 +31,7 @@ import androidx.test.filters.SdkSuppress
 import androidx.test.filters.SmallTest
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.navigation.PhotopickerDestinations
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 import com.android.providers.media.flags.Flags
@@ -845,7 +845,7 @@ class ConfigurationManagerTest {
             assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
                 .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS)
             assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
-                .isEqualTo(HighlightQuery.Album(album = HighlightAlbumName.HIGHLIGHT_ALBUM_CAMERA))
+                .isEqualTo(HighlightQuery.Album(album = HighlightAlbum.HIGHLIGHT_ALBUM_CAMERA))
         }
     }
 
@@ -1599,7 +1599,7 @@ class ConfigurationManagerTest {
             assertThat(emissions.size).isEqualTo(2)
             assertThat(emissions.first()).isEqualTo(expectedConfiguration)
             assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
-                .isEqualTo(HighlightQuery.Album(HighlightAlbumName.HIGHLIGHT_ALBUM_CAMERA))
+                .isEqualTo(HighlightQuery.Album(HighlightAlbum.HIGHLIGHT_ALBUM_CAMERA))
             assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
                 .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION)
         }

@@ -27,7 +27,7 @@ import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
 import com.android.photopicker.core.configuration.IllegalIntentExtraException
 import com.android.photopicker.core.navigation.PhotopickerDestinations
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -213,9 +213,8 @@ fun Intent.getHighlightQueryResultsParams(): HighlightQueryResultsParams {
                 if (retrievedHighlightAlbum == null) {
                     throw IllegalArgumentException("Highlight album value cannot be null")
                 }
-                val highlightAlbum =
-                    HighlightAlbumName.toHighlightAlbumName(retrievedHighlightAlbum)
-                if (highlightAlbum == HighlightAlbumName.UNSET_HIGHLIGHT_ALBUM) {
+                val highlightAlbum = HighlightAlbum.toHighlightAlbum(retrievedHighlightAlbum)
+                if (highlightAlbum == HighlightAlbum.UNSET_HIGHLIGHT_ALBUM) {
                     throw IllegalArgumentException("Unexpected album id received")
                 }
                 return HighlightQueryResultsParams(
