@@ -528,9 +528,8 @@ public class MediaProvider extends ContentProvider {
      * {@link MediaStore#getExternalVolumeNames(Context)}.
      */
     @ChangeId
-    @EnabledSince(targetSdkVersion = Build.VERSION_CODES.CUR_DEVELOPMENT)
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.BAKLAVA)
     @VisibleForTesting
-    // TODO: b/402623169 Set CUR_DEVELOPMENT as the latest version once available
     static final long EXCLUDE_UNRELIABLE_STORAGE_VOLUMES = 391360514L;
 
     /**
@@ -10837,11 +10836,18 @@ public class MediaProvider extends ContentProvider {
         return !matcher.matches();
     }
 
+    private boolean shouldQueryLevelDbForFileAttributes() {
+        // Don't query leveldb for wear targets and devices with android version R or lower.
+        return Flags.queryLeveldbForFileAttributes()
+                && !getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH)
+                && SdkLevel.isAtLeastS();
+    }
+
     private FileAccessAttributes queryLevelDbForFileAttributes(final String path)
             throws IOException {
         // Query levelDb only for external_primary storage paths
         // TODO: b/411419451 - Remove check on path when Stable Uris rolled out for all volume paths
-        if (Flags.queryLeveldbForFileAttributes() && path.contains("/storage/emulated/")) {
+        if (shouldQueryLevelDbForFileAttributes() && path.contains("/storage/emulated/")) {
             try {
                 Trace.beginSection("MP.queryFileAttrsFromLevelDb");
                 FuseDaemon daemon = getFuseDaemonForFile(new File(path), mVolumeCache);
