@@ -418,7 +418,7 @@ public final class MediaStore {
      * {@hide}
      */
     @VisibleForTesting
-    public static final String QUEUE_SCAN_VOLUME = "queue_scan_volume";
+    public static final String MEDIA_SERVICE_V2_CALL = "media_service_v2_call";
 
     /**
      * Only used for testing.
