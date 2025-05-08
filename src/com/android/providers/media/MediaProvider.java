@@ -528,9 +528,8 @@ public class MediaProvider extends ContentProvider {
      * {@link MediaStore#getExternalVolumeNames(Context)}.
      */
     @ChangeId
-    @EnabledSince(targetSdkVersion = Build.VERSION_CODES.CUR_DEVELOPMENT)
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.BAKLAVA)
     @VisibleForTesting
-    // TODO: b/402623169 Set CUR_DEVELOPMENT as the latest version once available
     static final long EXCLUDE_UNRELIABLE_STORAGE_VOLUMES = 391360514L;
 
     /**
