@@ -207,6 +207,8 @@ class SwitchProfileBannerTest : PhotopickerFeatureBaseTest() {
                     events = events,
                 )
             }
+            // Wait for the PhotoGrid to load.
+            advanceTimeBy(100)
             composeTestRule.waitForIdle()
 
             val expectedMessage =
