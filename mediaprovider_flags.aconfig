@@ -363,3 +363,21 @@ flag {
     is_fixed_read_only: true
     bug: "409508015"
 }
+
+flag {
+    name: "cloud_provider_albums_as_category_api"
+    namespace: "mediaprovider"
+    description: "This flags will unhide the user albums category type and make it public."
+    is_fixed_read_only: true
+    is_exported: true
+    bug: "414528325"
+}
+
+flag {
+    name: "fetch_cloud_albums_as_categories"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag will enable querying cloud albums as a category in the photopicker."
+    is_fixed_read_only: true
+    bug: "416012542"
+}

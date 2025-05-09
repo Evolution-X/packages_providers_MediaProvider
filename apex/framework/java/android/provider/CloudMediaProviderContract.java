@@ -143,9 +143,8 @@ public final class CloudMediaProviderContract {
         * This capability is disabled by default.
         *
         * @return true if albums will be returned as a MediaCategory.
-        *
-        * @hide
         */
+        @FlaggedApi(Flags.FLAG_CLOUD_PROVIDER_ALBUMS_AS_CATEGORY_API)
         public boolean isAlbumsAsCategoryEnabled() {
             return mAlbumsAsCategory;
         }
@@ -261,7 +260,7 @@ public final class CloudMediaProviderContract {
             }
 
             /**
-             * If the CloudMediaProvider will return user albums as a grouped category.
+             * Set true if the CloudMediaProvider will return user albums as a grouped category.
              *
              * When this capability is enabled, {@link CloudMediaProvider#onQueryAlbums} will
              * no longer be called to sync the users albums, and it is expected that a
@@ -279,10 +278,9 @@ public final class CloudMediaProviderContract {
              * @see #MEDIA_CATEGORY_TYPE_USER_ALBUMS
              *
              * @param enabled true if this capability is supported, the default value is false.
-             *
-             * @hide
              */
             @NonNull
+           @FlaggedApi(Flags.FLAG_CLOUD_PROVIDER_ALBUMS_AS_CATEGORY_API)
             public Builder setAlbumsAsCategoryEnabled(boolean enabled) {
                 mAlbumsAsCategoryEnabled = enabled;
                 return this;
@@ -1359,9 +1357,9 @@ public final class CloudMediaProviderContract {
      * Represents media category related to a user's custom albums.
      * @see MediaCategoryColumns#MEDIA_CATEGORY_TYPE
      * Type: STRING
-     *
-     * @hide
      */
+    /* TODO: b/415912822 add mention of the category type in the calling apis */
+    @FlaggedApi(Flags.FLAG_CLOUD_PROVIDER_ALBUMS_AS_CATEGORY_API)
     public static final String MEDIA_CATEGORY_TYPE_USER_ALBUMS =
             "com.android.providers.media.MEDIA_CATEGORY_TYPE_USER_ALBUMS";
 
