@@ -109,7 +109,7 @@ public class PrefetchDataServiceImplTest {
 
     @Before
     fun setup() {
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
         val resources = InstrumentationRegistry.getInstrumentation().getContext().getResources()
 
         testPrimaryUserContentProvider = TestMediaProvider()

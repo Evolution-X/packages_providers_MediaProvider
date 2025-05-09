@@ -156,7 +156,7 @@ class UserMonitorTest {
 
     @Before
     fun setup() {
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
         val resources = InstrumentationRegistry.getInstrumentation().getContext().getResources()
 
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
