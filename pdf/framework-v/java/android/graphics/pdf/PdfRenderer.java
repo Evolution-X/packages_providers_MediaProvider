@@ -571,14 +571,25 @@ public final class PdfRenderer implements AutoCloseable {
          * @param destClip    If null, default zoom is applied. In case the value is non-null, the
          *                    value specifies the top top-left corner of the tile.
          * @param transform   Applied to scale the bitmap up/down from default 1/72 points.
-         * @param params      Render params for the changing display mode and/or annotations.
+         * @param params      Render params for the changing display mode, and / or to control the
+         *                    appearance of annotations and PDF form content
          * @throws IllegalStateException If the document/page is closed before invocation.
          */
         @FlaggedApi(Flags.FLAG_ENABLE_PDF_VIEWER)
         public void render(@NonNull Bitmap destination, @Nullable Rect destClip,
                 @Nullable Matrix transform, @NonNull RenderParams params) {
             throwIfDocumentOrPageClosed();
-            boolean renderFormFields = CompatChanges.isChangeEnabled(RENDER_PDF_FORM_FIELDS);
+            // Form fields are rendered when either is true:
+            // 1) The developer has explicitly opted IN via RenderParams
+            // 2) The application is targeting SDK version >= V and the developer has not
+            // explicitly opted OUT via RenderParams
+            int renderFormFieldsMode = params.getRenderFormContentMode();
+            boolean renderFormFields = false;
+            if (renderFormFieldsMode == RenderParams.RENDER_FORM_CONTENT_DEFAULT) {
+                renderFormFields = CompatChanges.isChangeEnabled(RENDER_PDF_FORM_FIELDS);
+            } else if (renderFormFieldsMode == RenderParams.RENDER_FORM_CONTENT_ENABLED) {
+                renderFormFields = true;
+            }
             mPdfProcessor.renderPage(mIndex, destination, destClip, transform, params,
                     renderFormFields);
         }
@@ -795,9 +806,9 @@ public final class PdfRenderer implements AutoCloseable {
          * the supported annotation types.
          *
          * @return A list of pairs representing the supported annotations and their ids on the page.
-         * @throws IllegalStateException    if {@link PdfRenderer} or
-         *                                  {@link PdfRenderer.Page} is closed before
-         *                                  invocation.
+         * @throws IllegalStateException if {@link PdfRenderer} or
+         *                               {@link PdfRenderer.Page} is closed before
+         *                               invocation.
          */
         @FlaggedApi(Flags.FLAG_ENABLE_EDIT_PDF_ANNOTATIONS)
         @NonNull
@@ -817,7 +828,7 @@ public final class PdfRenderer implements AutoCloseable {
          *
          * @param annotation the {@link PdfAnnotation} object to add
          * @return id of the added annotation, or -1 if the annotation cannot be added. The id is
-         *         guaranteed to be non-negative if the annotation is added successfully.
+         * guaranteed to be non-negative if the annotation is added successfully.
          * @throws IllegalArgumentException if the provided annotation is of unsupported
          *                                  type i.e.- {@link PdfAnnotationType#UNKNOWN} or if
          *                                  the add operation failed.
@@ -871,7 +882,7 @@ public final class PdfRenderer implements AutoCloseable {
          * {@link PdfRenderer#write}.
          *
          * @param annotationId id corresponding to which the annotation is to be updated
-         * @param annotation the annotation to update
+         * @param annotation   the annotation to update
          * @return true if annotation is updated, false otherwise
          * @throws IllegalArgumentException if the provided annotation is of
          *                                  unsupported type i.e. {@link PdfAnnotationType#UNKNOWN}

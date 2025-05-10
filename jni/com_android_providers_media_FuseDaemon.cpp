@@ -295,7 +295,7 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
 
     auto deserialize_long = [&](size_t& prev, size_t& pos) -> int {
         pos = value.find(delimiter, prev);
-        int result = std::atol(value.substr(prev, pos - prev).c_str());
+        long result = std::atol(value.substr(prev, pos - prev).c_str());
         prev = pos + delimiter.length();
         return result;
     };
@@ -345,6 +345,10 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     }
     std::string owner_pkg_name =
             owner_pkg_identifier.substr(0, owner_pkg_identifier.find(delimiter));
+    if (owner_pkg_name.empty()) {
+        LOG(DEBUG) << "No owner package name found for owner id " << owner_pkg_id;
+        return nullptr;
+    }
 
     return env->NewObject(gFileAccessAttributesClass, gFileAccessAttributesCtor, row_id, media_type,
                           is_pending, is_trashed, owner_pkg_id,

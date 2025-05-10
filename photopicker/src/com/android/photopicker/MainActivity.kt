@@ -258,18 +258,10 @@ class MainActivity : Hilt_MainActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "MainActivity OnResume")
 
         // Initialize / Refresh the banner state, it's possible that external state has changed if
         // the activity is returning from the background.
-        lifecycleScope.launch {
-            withContext(background) {
-                // Always ensure providers before requesting a banner refresh, banners depend on
-                // having accurate provider information to generate the correct banners.
-                dataService.get().ensureProviders()
-                bannerManager.get().refreshBanners()
-            }
-        }
+        lifecycleScope.launch { withContext(background) { bannerManager.get().refreshBanners() } }
     }
 
     /** Dispatches an event to log all details with which the photopicker launched */

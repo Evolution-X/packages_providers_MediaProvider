@@ -58,11 +58,15 @@ package android.graphics.pdf {
 
   @FlaggedApi("android.graphics.pdf.flags.enable_pdf_viewer") public final class RenderParams {
     method public int getRenderFlags();
+    method @FlaggedApi("android.graphics.pdf.flags.enable_render_params_form_options") public int getRenderFormContentMode();
     method public int getRenderMode();
     field @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_annotations") public static final int FLAG_RENDER_FREETEXT_ANNOTATIONS = 16; // 0x10
     field public static final int FLAG_RENDER_HIGHLIGHT_ANNOTATIONS = 4; // 0x4
     field @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_stamp_annotations") public static final int FLAG_RENDER_STAMP_ANNOTATIONS = 8; // 0x8
     field public static final int FLAG_RENDER_TEXT_ANNOTATIONS = 2; // 0x2
+    field @FlaggedApi("android.graphics.pdf.flags.enable_render_params_form_options") public static final int RENDER_FORM_CONTENT_DEFAULT = 3; // 0x3
+    field @FlaggedApi("android.graphics.pdf.flags.enable_render_params_form_options") public static final int RENDER_FORM_CONTENT_DISABLED = 2; // 0x2
+    field @FlaggedApi("android.graphics.pdf.flags.enable_render_params_form_options") public static final int RENDER_FORM_CONTENT_ENABLED = 1; // 0x1
     field public static final int RENDER_MODE_FOR_DISPLAY = 1; // 0x1
     field public static final int RENDER_MODE_FOR_PRINT = 2; // 0x2
   }
@@ -72,6 +76,7 @@ package android.graphics.pdf {
     method @NonNull public android.graphics.pdf.RenderParams build();
     method @NonNull public android.graphics.pdf.RenderParams.Builder setRenderFlags(int);
     method @NonNull public android.graphics.pdf.RenderParams.Builder setRenderFlags(int, int);
+    method @FlaggedApi("android.graphics.pdf.flags.enable_render_params_form_options") @NonNull public android.graphics.pdf.RenderParams.Builder setRenderFormContentMode(int);
   }
 
 }
