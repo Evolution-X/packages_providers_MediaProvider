@@ -64,7 +64,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RunWith(AndroidJUnit4.class)
-@EnableFlags(com.android.providers.media.flags.Flags.FLAG_ENABLE_BACKUP_AND_RESTORE)
+@EnableFlags({com.android.providers.media.flags.Flags.FLAG_ENABLE_BACKUP_AND_RESTORE,
+        com.android.providers.media.flags.Flags.FLAG_ENABLE_VERSIONING_FOR_BACKUP_AND_RESTORE})
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
 public final class RestoreExecutorTest {
 
