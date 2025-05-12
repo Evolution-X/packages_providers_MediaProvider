@@ -141,7 +141,7 @@ class ProfileSelectorViewModelTest {
     @Before
     fun setup() {
         deviceConfigProxy.reset()
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
 
         // Stubs for UserMonitor

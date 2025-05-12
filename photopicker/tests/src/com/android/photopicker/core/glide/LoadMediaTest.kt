@@ -150,7 +150,7 @@ class LoadMediaTest {
 
     @Before
     fun setup() {
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
 
         provider = MockContentProviderWrapper(mockContentProvider)
         contentResolver = ContentResolver.wrap(provider)
