@@ -206,6 +206,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
             items.itemCount == 0 &&
                 items.loadState.source.append is LoadState.NotLoading &&
                 items.loadState.source.append.endOfPaginationReached
+        val isNotEmpty = items.itemCount > 0
 
         when {
             isEmptyAndNoMorePages -> {
@@ -227,7 +228,8 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     body = stringResource(R.string.photopicker_photos_empty_state_body),
                 )
             }
-            else -> {
+            // Only show the grid when there is at least one item in the page set.
+            isNotEmpty -> {
 
                 // When the PhotoGrid is ready to show, also collect the latest banner
                 // data from [BannerManager] so it can be placed inside of the mediaGrid's
