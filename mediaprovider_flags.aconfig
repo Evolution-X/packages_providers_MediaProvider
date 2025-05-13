@@ -396,5 +396,5 @@ flag {
     namespace: "mediaprovider"
     description: "This flag controls the advanced touch features in com.android.photopicker such as drag-to-select and pinch-to-zoom."
     is_fixed_read_only: true
-    bug: "b/382684468"
+    bug: "382684468"
 }
