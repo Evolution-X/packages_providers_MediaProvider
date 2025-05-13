@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -81,6 +80,7 @@ import com.android.photopicker.core.navigation.PhotopickerDestinations.PHOTO_GRI
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
+import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.navigateToAlbumGrid
 import com.android.photopicker.extensions.navigateToCategoryGrid
 import com.android.photopicker.extensions.navigateToPhotoGrid
@@ -110,8 +110,6 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
     val navController = LocalNavController.current
     val featureManager = LocalFeatureManager.current
     val isPreviewEnabled = remember { featureManager.isFeatureEnabled(PreviewFeature::class.java) }
-
-    val state = rememberLazyGridState()
 
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
 
@@ -236,77 +234,116 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                 // scroll container.
                 val currentBanner by viewModel.banners.collectAsStateWithLifecycle()
 
-                mediaGrid(
-                    items = items,
-                    isExpandedScreen = isExpandedScreen,
-                    selection = selection,
-                    bannerContent = {
-                        hideWhenState(
-                            selector =
-                                object : StateSelector.AnimatedVisibilityInEmbedded {
-                                    override val visible =
-                                        LocalEmbeddedState.current?.isExpanded ?: false
-                                    override val enter =
-                                        expandVertically(animationSpec = standardDecelerate(300))
-                                    override val exit =
-                                        shrinkVertically(animationSpec = standardDecelerate(150))
-                                }
-                        ) {
-                            AnimatedBannerWrapper(currentBanner)
-                        }
-                    },
-                    onItemClick = { item ->
-                        if (item is MediaGridItem.MediaItem) {
-                            viewModel.handleGridItemSelection(
-                                item = item.media,
-                                selectionLimitExceededMessage = selectionLimitExceededMessage,
+                // Embedded selector for the Grid banner section..
+                // Extract this out because the below grid implementations differ based on flags,
+                // but both use the same selector.
+                val bannerContentSelector =
+                    object : StateSelector.AnimatedVisibilityInEmbedded {
+                        override val visible = LocalEmbeddedState.current?.isExpanded ?: false
+                        override val enter =
+                            expandVertically(animationSpec = standardDecelerate(300))
+                        override val exit =
+                            shrinkVertically(animationSpec = standardDecelerate(150))
+                    }
+
+                // Click handler for the Grid. Extract this out because the below grid
+                // implementations differ based on flags, but both use the same click handler.
+                val onItemClick = { item: MediaGridItem ->
+                    if (item is MediaGridItem.MediaItem) {
+                        viewModel.handleGridItemSelection(
+                            item = item.media,
+                            selectionLimitExceededMessage = selectionLimitExceededMessage,
+                        )
+                        // Log user's interaction with picker's main grid(photo grid)
+                        scope.launch {
+                            events.dispatch(
+                                Event.LogPhotopickerUIEvent(
+                                    FeatureToken.PHOTO_GRID.token,
+                                    configuration.sessionId,
+                                    configuration.callingPackageUid ?: -1,
+                                    Telemetry.UiEvent.PICKER_MAIN_GRID_INTERACTION,
+                                )
                             )
-                            // Log user's interaction with picker's main grid(photo grid)
-                            scope.launch {
-                                events.dispatch(
-                                    Event.LogPhotopickerUIEvent(
-                                        FeatureToken.PHOTO_GRID.token,
-                                        configuration.sessionId,
-                                        configuration.callingPackageUid ?: -1,
-                                        Telemetry.UiEvent.PICKER_MAIN_GRID_INTERACTION,
-                                    )
-                                )
-                            }
                         }
-                    },
-                    onItemLongPress = { item ->
-                        // If the [PreviewFeature] is enabled, launch the preview route.
-                        if (isPreviewEnabled) {
-                            // Log long pressing a media item in the photo grid
-                            scope.launch {
-                                events.dispatch(
-                                    Event.LogPhotopickerUIEvent(
-                                        FeatureToken.PREVIEW.token,
-                                        configuration.sessionId,
-                                        configuration.callingPackageUid ?: -1,
-                                        Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
-                                    )
-                                )
-                            }
-                            if (item is MediaGridItem.MediaItem) {
-                                // Log entry into the photopicker preview mode
-                                scope.launch {
-                                    events.dispatch(
-                                        Event.LogPhotopickerUIEvent(
-                                            FeatureToken.PREVIEW.token,
-                                            configuration.sessionId,
-                                            configuration.callingPackageUid ?: -1,
-                                            Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
-                                        )
-                                    )
+                    }
+                }
+
+                when (
+                    // Drag-to-select is enabled only when the flag and multi-selection is enabled.
+                    configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED &&
+                        configuration.selectionLimit > 1
+                ) {
+                    // LongPress + drag will start a drag-to-select action
+                    true -> {
+                        mediaGrid(
+                            items = items,
+                            isExpandedScreen = isExpandedScreen,
+                            selection = selection,
+                            dragSelectionEnabled = true,
+                            dragSelectIndexOffset = 1,
+                            bannerContent = {
+                                hideWhenState(selector = bannerContentSelector) {
+                                    AnimatedBannerWrapper(currentBanner)
                                 }
-                                navController.navigateToPreviewMedia(item.media)
-                            }
-                        }
-                    },
-                    columns = GridCells.Fixed(cellsPerRow),
-                    state = state,
-                )
+                            },
+                            onItemClick = onItemClick,
+                            columns = GridCells.Fixed(cellsPerRow),
+                            selectionTransform = {
+                                Media.withSelectable(
+                                    item = it,
+                                    selectionSource = Telemetry.MediaLocation.MAIN_GRID,
+                                    album = null,
+                                )
+                            },
+                        )
+                    }
+
+                    // Regular mediaGrid where users can LongPress to preview items.
+                    false -> {
+                        mediaGrid(
+                            items = items,
+                            isExpandedScreen = isExpandedScreen,
+                            selection = selection,
+                            bannerContent = {
+                                hideWhenState(selector = bannerContentSelector) {
+                                    AnimatedBannerWrapper(currentBanner)
+                                }
+                            },
+                            onItemClick = onItemClick,
+                            onItemLongPress = { item ->
+                                // If the [PreviewFeature] is enabled, launch the preview route.
+                                if (isPreviewEnabled) {
+                                    // Log long pressing a media item in the photo grid
+                                    scope.launch {
+                                        events.dispatch(
+                                            Event.LogPhotopickerUIEvent(
+                                                FeatureToken.PREVIEW.token,
+                                                configuration.sessionId,
+                                                configuration.callingPackageUid ?: -1,
+                                                Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
+                                            )
+                                        )
+                                    }
+                                    if (item is MediaGridItem.MediaItem) {
+                                        // Log entry into the photopicker preview mode
+                                        scope.launch {
+                                            events.dispatch(
+                                                Event.LogPhotopickerUIEvent(
+                                                    FeatureToken.PREVIEW.token,
+                                                    configuration.sessionId,
+                                                    configuration.callingPackageUid ?: -1,
+                                                    Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
+                                                )
+                                            )
+                                        }
+                                        navController.navigateToPreviewMedia(item.media)
+                                    }
+                                }
+                            },
+                            columns = GridCells.Fixed(cellsPerRow),
+                        )
+                    }
+                }
                 LaunchedEffect(Unit) {
                     // Log loading of photos in the photo grid
                     events.dispatch(
