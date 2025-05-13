@@ -2585,8 +2585,6 @@ public class MediaProvider extends ContentProvider {
      */
     @Keep
     public FileLookupResult onFileLookupForFuse(String path, int uid, int tid) {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-
         uid = getBinderUidForFuse(uid, tid);
         // Use MediaProviders UserId as the caller might be calling cross profile.
         final int userId = UserHandle.myUserId();
@@ -3155,8 +3153,6 @@ public class MediaProvider extends ContentProvider {
      */
     @Keep
     public String[] getFilesInDirectoryForFuse(String path, int uid) {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
         PulledMetrics.logFileAccessViaFuse(getCallingUidOrSelf(), path);
@@ -3778,9 +3774,6 @@ public class MediaProvider extends ContentProvider {
      */
     @Keep
     public int renameForFuse(String oldPath, String newPath, int uid) {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(oldPath);
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(newPath);
-
         final String errorMessage = "Rename " + oldPath + " to " + newPath + " failed. ";
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
@@ -10823,9 +10816,6 @@ public class MediaProvider extends ContentProvider {
     @Keep
     public FileOpenResult onFileOpenForFuse(String path, String ioPath, int uid, int tid,
             int transformsReason, boolean forWrite, boolean redact, boolean logTransformsMetrics) {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(ioPath);
-
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
 
@@ -11126,8 +11116,6 @@ public class MediaProvider extends ContentProvider {
      */
     @Keep
     public int insertFileIfNecessaryForFuse(@NonNull String path, int uid) {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
         PulledMetrics.logFileAccessViaFuse(getCallingUidOrSelf(), path);
@@ -11256,8 +11244,6 @@ public class MediaProvider extends ContentProvider {
      */
     @Keep
     public int deleteFileForFuse(@NonNull String path, int uid) throws IOException {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-
         final LocalCallingIdentity localCallingIdentity = getCachedCallingIdentityForFuse(uid);
         final LocalCallingIdentity token = clearLocalCallingIdentity(localCallingIdentity);
         PulledMetrics.logFileAccessViaFuse(getCallingUidOrSelf(), path);
@@ -11347,8 +11333,6 @@ public class MediaProvider extends ContentProvider {
         Preconditions.checkArgumentInRange(accessType, 1, DIRECTORY_ACCESS_FOR_DELETE,
                 "accessType");
 
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-
         final boolean forRead = accessType == DIRECTORY_ACCESS_FOR_READ;
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
@@ -11422,8 +11406,6 @@ public class MediaProvider extends ContentProvider {
 
     @Keep
     public boolean isUidAllowedAccessToDataOrObbPathForFuse(int uid, String path) {
-        FileUtils.assertNoDefaultIgnorableCharactersInPath(path);
-
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
         try {

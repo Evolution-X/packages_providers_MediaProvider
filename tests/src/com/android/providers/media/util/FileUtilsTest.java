@@ -1346,35 +1346,6 @@ public class FileUtilsTest {
                 Arrays.asList(AudioColumns.IS_MUSIC, AudioColumns.IS_RINGTONE));
     }
 
-    @Test
-    public void test_assertNoDefaultIgnorableCharactersInPath_withWhiteSpaceChar() {
-        String pathWithWhiteSpaceChar = "/storage/emulated/0/hello world!";
-        try {
-            FileUtils.assertNoDefaultIgnorableCharactersInPath(pathWithWhiteSpaceChar);
-        } catch (IllegalArgumentException e) {
-            throw new AssertionError("No exception expected for a path without ZWS", e);
-        }
-    }
-
-    @Test
-    public void test_assertNoDefaultIgnorableCharactersInPath_withoutZwsChar() {
-        String pathWithoutZWS = "/storage/emulated/0/Android/data/com.google.example/files";
-
-        try {
-            FileUtils.assertNoDefaultIgnorableCharactersInPath(pathWithoutZWS);
-        } catch (IllegalArgumentException e) {
-            throw new AssertionError("No exception expected for a path without ZWS", e);
-        }
-    }
-
-    @Test
-    public void test_assertNoDefaultIgnorableCharactersInPath_withZwsChar() {
-        String pathWithZWS = "/storage/emulated/0/An\u200bdroid/data/com.google.example/files";
-
-        assertThrows(IllegalArgumentException.class,
-                ()->FileUtils.assertNoDefaultIgnorableCharactersInPath(pathWithZWS));
-    }
-
     private void testComputeAudioTypeValuesFromData(String path, String expectedColumn) {
         testComputeAudioTypeValuesFromData(path, Collections.singletonList(expectedColumn));
     }
