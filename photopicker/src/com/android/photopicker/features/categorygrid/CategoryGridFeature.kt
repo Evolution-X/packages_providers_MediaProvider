@@ -89,7 +89,7 @@ class CategoryGridFeature : PhotopickerUiFeature {
             // The main grid of the user's category.
             object : Route {
                 override val route = ALBUM_GRID.route
-                override val initialRoutePriority = Priority.HIGH.priority
+                override val initialRoutePriority = Priority.MEDIUM.priority
                 override val arguments = emptyList<NamedNavArgument>()
                 override val deepLinks = emptyList<NavDeepLink>()
                 override val isDialog = false
