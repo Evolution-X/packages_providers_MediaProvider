@@ -101,6 +101,22 @@ constructor(
     val searchState: StateFlow<SearchState> = _searchState
 
     /**
+     * Represents the focused/expanded state of the search bar.
+     *
+     * It can be either true or false. The initial value is false.
+     */
+    private val _searchBarFocusedState = MutableStateFlow(false)
+    val searchBarFocusedState: StateFlow<Boolean> = _searchBarFocusedState
+
+    /**
+     * Represents the search bar text.
+     *
+     * The value could be any text string. The initial value is an empty string.
+     */
+    private val _searchBarTextState = MutableStateFlow("")
+    val searchBarTextState: StateFlow<String> = _searchBarTextState
+
+    /**
      * Holds the current state of search suggestions list.
      *
      * This `StateFlow` emits updates whenever the list of search suggestions changes. It provides
@@ -127,6 +143,24 @@ constructor(
                 fetchSuggestions(ZERO_STATE_SEARCH_QUERY)
             }
         }
+    }
+
+    /**
+     * Sets the value of the search bar focused state to the given input value
+     *
+     * @param focused The new value of the focused/expanded state of the search bar
+     */
+    fun setSearchBarFocusedState(focused: Boolean) {
+        _searchBarFocusedState.value = focused
+    }
+
+    /**
+     * Sets the value of the search bar text state to the given input value
+     *
+     * @param text The value to update in the search bar text field
+     */
+    fun setSearchBarText(text: String) {
+        _searchBarTextState.value = text
     }
 
     /**
