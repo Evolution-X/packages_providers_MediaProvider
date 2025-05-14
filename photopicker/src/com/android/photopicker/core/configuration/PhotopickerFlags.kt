@@ -49,6 +49,7 @@ data class PhotopickerFlags(
     val PICKER_TRANSCODING_ENABLED: Boolean = Flags.enablePhotopickerTranscoding(),
     val OWNED_PHOTOS_ENABLED: Boolean = Flags.revokeAccessOwnedPhotos(),
     val EXPRESSIVE_THEME_ENABLED: Boolean = Flags.enablePhotopickerExpressiveTheme(),
+    val MEDIA_GRID_TOUCH_FEATURES_ENABLED: Boolean = Flags.enableMediaGridTouchFeatures(),
 ) {
     /**
      * Implement a custom equals method to correctly check the equality of the Array member
@@ -65,6 +66,8 @@ data class PhotopickerFlags(
         if (PICKER_SEARCH_ENABLED != other.PICKER_SEARCH_ENABLED) return false
         if (PICKER_DATESCRUBBER_ENABLED != other.PICKER_DATESCRUBBER_ENABLED) return false
         if (PICKER_TRANSCODING_ENABLED != other.PICKER_TRANSCODING_ENABLED) return false
+        if (MEDIA_GRID_TOUCH_FEATURES_ENABLED != other.MEDIA_GRID_TOUCH_FEATURES_ENABLED)
+            return false
 
         return true
     }
@@ -83,5 +86,6 @@ data class PhotopickerFlags(
             PICKER_SEARCH_ENABLED,
             PICKER_DATESCRUBBER_ENABLED,
             PICKER_TRANSCODING_ENABLED,
+            MEDIA_GRID_TOUCH_FEATURES_ENABLED,
         )
 }
