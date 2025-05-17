@@ -33,6 +33,9 @@ val FEATURE_PRIVATE_SPACE_ENABLED = Pair("private_space_feature_enabled", true)
 // Permissions feature flags, and their default values.
 val FEATURE_PICKER_CHOICE_MANAGED_SELECTION = Pair("picker_choice_managed_selection_enabled", true)
 
+// HighlightSearchResults feature flag and its default value
+val FEATURE_HIGHLIGHT_SEARCH_RESULTS = Pair("highlight_search_results_enabled", false)
+
 /** Data object that represents flag values in [DeviceConfig]. */
 data class PhotopickerFlags(
     /**
@@ -47,6 +50,9 @@ data class PhotopickerFlags(
     val PICKER_SEARCH_ENABLED: Boolean = Flags.enablePhotopickerSearch(),
     val PICKER_DATESCRUBBER_ENABLED: Boolean = Flags.enablePhotopickerDatescrubber(),
     val PICKER_TRANSCODING_ENABLED: Boolean = Flags.enablePhotopickerTranscoding(),
+    val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean = Flags.highlightSearchResultsFeature(),
+    val PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED: Boolean =
+        Flags.enablePickerHighlightSearchResultsApis(),
     val OWNED_PHOTOS_ENABLED: Boolean = Flags.revokeAccessOwnedPhotos(),
     val EXPRESSIVE_THEME_ENABLED: Boolean = Flags.enablePhotopickerExpressiveTheme(),
     val MEDIA_GRID_TOUCH_FEATURES_ENABLED: Boolean = Flags.enableMediaGridTouchFeatures(),
@@ -68,6 +74,10 @@ data class PhotopickerFlags(
         if (PICKER_TRANSCODING_ENABLED != other.PICKER_TRANSCODING_ENABLED) return false
         if (MEDIA_GRID_TOUCH_FEATURES_ENABLED != other.MEDIA_GRID_TOUCH_FEATURES_ENABLED)
             return false
+        if (PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED != other.PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED)
+            return false
+        if (PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED != other.PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED)
+            return false
 
         return true
     }
@@ -87,5 +97,7 @@ data class PhotopickerFlags(
             PICKER_DATESCRUBBER_ENABLED,
             PICKER_TRANSCODING_ENABLED,
             MEDIA_GRID_TOUCH_FEATURES_ENABLED,
+            PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED,
+            PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED,
         )
 }

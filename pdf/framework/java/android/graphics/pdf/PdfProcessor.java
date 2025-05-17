@@ -786,8 +786,16 @@ public class PdfProcessor {
             if (pageObjectPair.first == -1 || pageObjectPair.second == null) {
                 // No object found of requested type(s) at point or the page
                 // object cannot be populated.
+                mPdfEventLogger.logPdfApiUsageReportedEvent(
+                        PdfEventLogger.ApiTypes.UNKNOWN,
+                        PdfEventLogger.ApiResponseTypes.SUCCESS,
+                        PdfEventLogger.OperationTypes.GET_TOP_PAGE_OBJECT_AT_POSITION);
                 return null;
             } else {
+                mPdfEventLogger.logPdfApiUsageReportedEvent(
+                        getPageObjectApiType(pageObjectPair.second.getPdfObjectType()),
+                        PdfEventLogger.ApiResponseTypes.SUCCESS,
+                        PdfEventLogger.OperationTypes.GET_TOP_PAGE_OBJECT_AT_POSITION);
                 return new Pair<>(pageObjectIdManager.getIdForIndex(pageObjectPair.first),
                         pageObjectPair.second);
             }
