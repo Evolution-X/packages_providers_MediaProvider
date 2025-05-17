@@ -130,7 +130,7 @@ class PhotoGridViewModelTest {
 
     @Before
     fun setup() {
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
         deviceConfigProxy.reset()
         val resources = InstrumentationRegistry.getInstrumentation().getContext().getResources()
 

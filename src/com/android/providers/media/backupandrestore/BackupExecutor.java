@@ -20,9 +20,13 @@ import static android.provider.MediaStore.VOLUME_EXTERNAL_PRIMARY;
 
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.BACKUP_COLUMNS;
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.BACKUP_DIRECTORY_NAME;
+import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.CURRENT_LEVEL_DB_VERSION_KEY;
+import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.DEFAULT_LEVEL_DB_VERSION;
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.FIELD_SEPARATOR;
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.KEY_VALUE_SEPARATOR;
+import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.LATEST_LEVEL_DB_VERSION;
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.isBackupAndRestoreSupported;
+import static com.android.providers.media.flags.Flags.enableVersioningForBackupAndRestore;
 import static com.android.providers.media.util.Logging.TAG;
 
 import android.annotation.SuppressLint;
@@ -51,7 +55,6 @@ import java.util.Optional;
  * Class containing implementation details for backing up files table data to leveldb.
  */
 public final class BackupExecutor {
-
     private static final String EXTERNAL_PRIMARY_VOLUME_CLAUSE =
             FileColumns.VOLUME_NAME + " = '" + VOLUME_EXTERNAL_PRIMARY + "'";
 
@@ -98,20 +101,25 @@ public final class BackupExecutor {
 
         mLevelDBInstance = LevelDBManager.getInstance(getBackupFilePath());
         final long lastBackedUpGenerationNumberFromLevelDb = getLastBackedUpGenerationNumber();
+        final long currentLevelDbVersion = getCurrentLevelDbVersion();
         final long currentDbGenerationNumber = mExternalDatabaseHelper.runWithoutTransaction(
                 DatabaseHelper::getGeneration);
         final long lastBackedUpGenerationNumber = clearBackupIfNeededAndReturnLastBackedUpNumber(
-                currentDbGenerationNumber, lastBackedUpGenerationNumberFromLevelDb);
+                currentDbGenerationNumber, lastBackedUpGenerationNumberFromLevelDb,
+                currentLevelDbVersion);
         Log.v(TAG, "Last backed up generation number: " + lastBackedUpGenerationNumber);
         long lastGenerationNumber = backupData(lastBackedUpGenerationNumber, signal);
         updateLastBackedUpGenerationNumber(lastGenerationNumber);
+        setLatestLevelDbVersion();
     }
 
     private long clearBackupIfNeededAndReturnLastBackedUpNumber(long currentDbGenerationNumber,
-            long lastBackedUpGenerationNumber) {
-        if (currentDbGenerationNumber < lastBackedUpGenerationNumber) {
-            // If DB generation number is lesser than last backed, we would have to re-sync
-            // everything
+            long lastBackedUpGenerationNumber, long currentLevelDbVersion) {
+        if (currentDbGenerationNumber < lastBackedUpGenerationNumber
+                || (enableVersioningForBackupAndRestore()
+                && currentLevelDbVersion < LATEST_LEVEL_DB_VERSION)) {
+             // If the DB generation number is less than the last backed-up value or the current
+             // levelDB version is lower than the latest version, a full re-sync is required.
             mLevelDBInstance = LevelDBManager.recreate(getBackupFilePath());
             return 0;
         }
@@ -121,7 +129,7 @@ public final class BackupExecutor {
 
     @SuppressLint("Range")
     private long backupData(long lastBackedUpGenerationNumber, CancellationSignal signal) {
-        List<String> queryColumns = new ArrayList<>(Arrays.asList(BACKUP_COLUMNS));
+        List<String> queryColumns = new ArrayList<>(BACKUP_COLUMNS);
         queryColumns.addAll(Arrays.asList(FileColumns.DATA, FileColumns.GENERATION_MODIFIED));
         final String selectionClause = prepareSelectionClause(lastBackedUpGenerationNumber);
         return mExternalDatabaseHelper.runWithTransaction((db) -> {
@@ -242,12 +250,42 @@ public final class BackupExecutor {
         return Long.parseLong(value);
     }
 
+    private long getCurrentLevelDbVersion() {
+        if (!enableVersioningForBackupAndRestore()) {
+            return DEFAULT_LEVEL_DB_VERSION;
+        }
+
+        LevelDBResult levelDBResult = mLevelDBInstance.query(CURRENT_LEVEL_DB_VERSION_KEY);
+        if (!levelDBResult.isSuccess() && !levelDBResult.isNotFound()) {
+            throw new IllegalStateException("Error in fetching current level db version : "
+                    + levelDBResult.getErrorMessage());
+        }
+
+        String value = levelDBResult.getValue();
+
+        if (levelDBResult.isNotFound() || value == null || value.isEmpty()) {
+            return DEFAULT_LEVEL_DB_VERSION;
+        }
+
+        return Long.parseLong(value);
+    }
+
     private void updateLastBackedUpGenerationNumber(long lastGenerationNumber) {
         LevelDBResult levelDBResult = mLevelDBInstance.insert(
                 new LevelDBEntry(LAST_BACKED_GENERATION_NUMBER_KEY,
                         String.valueOf(lastGenerationNumber)));
         if (!levelDBResult.isSuccess()) {
             throw new IllegalStateException("Error in inserting last backed up generation number : "
+                    + levelDBResult.getErrorMessage());
+        }
+    }
+
+    private void setLatestLevelDbVersion() {
+        LevelDBResult levelDBResult = mLevelDBInstance.insert(
+                new LevelDBEntry(CURRENT_LEVEL_DB_VERSION_KEY,
+                        String.valueOf(LATEST_LEVEL_DB_VERSION)));
+        if (!levelDBResult.isSuccess()) {
+            throw new IllegalStateException("Error in inserting level db version : "
                     + levelDBResult.getErrorMessage());
         }
     }

@@ -51,6 +51,7 @@ import static android.provider.MediaStore.VOLUME_EXTERNAL;
 import static android.text.format.DateUtils.HOUR_IN_MILLIS;
 import static android.text.format.DateUtils.MINUTE_IN_MILLIS;
 
+import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.BACKUP_COLUMNS;
 import static com.android.providers.media.flags.Flags.enableOemMetadata;
 import static com.android.providers.media.flags.Flags.enableOemMetadataUsingMimetype;
 import static com.android.providers.media.flags.Flags.indexMediaLatitudeLongitude;
@@ -1352,8 +1353,26 @@ public class ModernMediaScanner implements MediaScanner {
             long existingId) {
         final ContentProviderOperation.Builder op = newUpsert(VOLUME_EXTERNAL, existingId);
         withGenericValues(op, file, attrs, mimeType, /* mediaType */ null);
+        excludeUnRestorableFields(restoredValues);
         op.withValues(restoredValues);
         return op;
+    }
+
+    /**
+     * This is required when the source device has a higher level db version than the target device.
+     * There can be a possibility that the restored values contain few new fields that do not even
+     * exist in target device's db. Therefore we filter out those values that the device is not
+     * expecting to be restored.
+     *
+     * @param restoredValues All key-value pairs obtained for given path from leveldb
+     */
+    private static void excludeUnRestorableFields(ContentValues restoredValues) {
+        List<String> fieldsToRestore = new ArrayList<>(restoredValues.keySet());
+        for (String field : fieldsToRestore) {
+            if (!BACKUP_COLUMNS.contains(field)) {
+                restoredValues.remove(field);
+            }
+        }
     }
 
     /**

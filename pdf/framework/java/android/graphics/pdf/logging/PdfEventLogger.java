@@ -16,6 +16,8 @@
 
 package android.graphics.pdf.logging;
 
+import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_GET_TOP_PAGE_OBJECT_AT_POS;
+
 import android.annotation.IntDef;
 import android.graphics.pdf.PdfStatsLog;
 
@@ -196,8 +198,11 @@ public class PdfEventLogger {
                 PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UPDATE;
         public static final int REMOVE =
                 PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_REMOVE;
+        public static final int GET_TOP_PAGE_OBJECT_AT_POSITION =
+                PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_GET_TOP_PAGE_OBJECT_AT_POS;
 
-        @IntDef({UNKNOWN, GET, ADD, UPDATE, REMOVE})
+
+        @IntDef({UNKNOWN, GET, ADD, UPDATE, REMOVE, GET_TOP_PAGE_OBJECT_AT_POSITION})
         @Retention(RetentionPolicy.RUNTIME)
         public @interface OperationType {
         }

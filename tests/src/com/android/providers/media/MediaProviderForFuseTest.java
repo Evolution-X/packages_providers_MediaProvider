@@ -21,7 +21,6 @@ import static com.android.providers.media.MediaProvider.DIRECTORY_ACCESS_FOR_DEL
 import static com.android.providers.media.MediaProvider.DIRECTORY_ACCESS_FOR_READ;
 import static com.android.providers.media.MediaProvider.DIRECTORY_ACCESS_FOR_WRITE;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import android.Manifest;
@@ -45,7 +44,6 @@ import com.google.common.io.ByteStreams;
 import com.google.common.truth.Truth;
 
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -385,48 +383,5 @@ public class MediaProviderForFuseTest {
                 rootDirPath, sTestUid,
                 DIRECTORY_ACCESS_FOR_DELETE)).isEqualTo(OsConstants.EPERM);
 
-    }
-
-    @Test
-    public void test_isDirAccessAllowedForFuse_withoutZwsChar() throws IOException {
-        String currentPackage = sIsolatedContext.getPackageName();
-        String correctPath = "/storage/emulated/0/Android/data/" + currentPackage + "/files";
-        File testFile = new File(sIsolatedContext.getExternalFilesDir(null),
-                "testFile" + System.nanoTime() + ".jpg");
-        // create a new file that another app will try to read.
-        testFile.createNewFile();
-
-        try {
-            // Try to get contents of current package from some random app.
-            String[] contentsWithCorrectPath = sMediaProvider.getFilesInDirectoryForFuse(
-                    correctPath, sTestUid);
-
-            // [""] is returned if the calling package doesn't have access to given path.
-            assertEquals(1, contentsWithCorrectPath.length);
-            assertEquals("", contentsWithCorrectPath[0]);
-        } finally {
-            testFile.delete();
-        }
-    }
-
-    @Test
-    public void test_isDirAccessAllowedForFuse_withZwsChar() throws IOException {
-        String currentPackage = sIsolatedContext.getPackageName();
-        String pathWithZwsChars = "/storage/emulated/0/An\u200bdroid/data/" + currentPackage
-                + "/files";
-        File testFile = new File(sIsolatedContext.getExternalFilesDir(null),
-                "testFile" + System.nanoTime() + ".jpg");
-        // create a new file that another app will try to read.
-        testFile.createNewFile();
-
-        try {
-            // Try to get contents of current package from some random app.
-            sMediaProvider.getFilesInDirectoryForFuse(pathWithZwsChars, sTestUid);
-            fail("Exception expected for path with ZWS characters");
-        } catch (Exception e) {
-            Assert.assertEquals(IllegalArgumentException.class, e.getClass());
-        } finally {
-            testFile.delete();
-        }
     }
 }

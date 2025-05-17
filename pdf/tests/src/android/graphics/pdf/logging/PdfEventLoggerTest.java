@@ -29,6 +29,7 @@ import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE_
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_TEXT_PAGE_OBJECT;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_UNKNOWN;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_ADD;
+import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_GET_TOP_PAGE_OBJECT_AT_POS;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_LIST;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_REMOVE;
 import static android.graphics.pdf.PdfStatsLog.PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_UNKNOWN;
@@ -310,4 +311,16 @@ public class PdfEventLoggerTest {
 
     }
 
+    @Test
+    public void logPdfApiUsageReportedEvent_getPageTopObject_witImagePageObjectType() {
+        mPdfEventLogger.logPdfApiUsageReportedEvent(PdfEventLogger.ApiTypes.IMAGE_PAGE_OBJECT,
+                SUCCESS, PdfEventLogger.OperationTypes.GET_TOP_PAGE_OBJECT_AT_POSITION);
+
+        ExtendedMockito.verify(
+                () -> PdfStatsLog.write(eq(PDF_API_USAGE_REPORTED), eq(PROCESS_UID), eq(DOC_ID),
+                        eq(PDF_API_USAGE_REPORTED__API_TYPE__API_TYPE_IMAGE_PAGE_OBJECT),
+                        eq(PDF_API_USAGE_REPORTED__API_RESPONSE_STATUS__RESPONSE_SUCCESS),
+                        eq(PDF_API_USAGE_REPORTED__OPERATION_TYPE__OPERATION_TYPE_GET_TOP_PAGE_OBJECT_AT_POS
+                        )));
+    }
 }

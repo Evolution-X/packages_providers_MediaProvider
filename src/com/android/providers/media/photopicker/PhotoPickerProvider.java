@@ -74,7 +74,8 @@ public class PhotoPickerProvider extends CloudMediaProvider {
                 CloudProviderQueryExtras.fromCloudMediaBundle(extras);
 
         return mDbFacade.queryMedia(queryExtras.getGeneration(), queryExtras.getAlbumId(),
-                queryExtras.getMimeTypes(), queryExtras.getPageSize(), queryExtras.getPageToken());
+                queryExtras.getMimeTypes(), queryExtras.getPageSize(), queryExtras.getPageToken(),
+                CloudMediaProviderContract.SORT_ORDER_DESC_DATE_TAKEN);
     }
 
     @Override
@@ -194,6 +195,22 @@ public class PhotoPickerProvider extends CloudMediaProvider {
                 CloudProviderQueryExtras.fromCloudMediaBundle(extras);
         return mDbFacade.queryMediaSets(mediaCategoryId, queryExtras.getMimeTypes(),
                 queryExtras.getPageSize(), queryExtras.getPageToken());
+    }
+
+    @Override
+    @NonNull
+    public Cursor onQueryMediaInMediaSet(
+            @Nullable String mediaSetId,
+            @Nullable Bundle extras,
+            @Nullable CancellationSignal cancellationSignal) {
+        if (!Flags.enableLocalMediaProviderCapabilities()
+                || (cancellationSignal != null && cancellationSignal.isCanceled())) {
+            return new MatrixCursor(CloudMediaProviderContract.MediaColumns.ALL_PROJECTION);
+        }
+        final CloudProviderQueryExtras queryExtras =
+                CloudProviderQueryExtras.fromCloudMediaBundle(extras);
+        return mDbFacade.queryMediaInMediaSet(mediaSetId, queryExtras.getMimeTypes(),
+                queryExtras.getPageSize(), queryExtras.getPageToken(), queryExtras.getSortOrder());
     }
 
     private MediaProvider getMediaProvider() {

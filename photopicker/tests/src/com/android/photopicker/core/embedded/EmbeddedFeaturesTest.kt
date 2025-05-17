@@ -32,10 +32,12 @@ import android.test.mock.MockContentResolver
 import android.view.SurfaceControlViewHost
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -45,6 +47,7 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
@@ -100,6 +103,7 @@ import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.inject.TestOptions
 import com.android.photopicker.tests.HiltTestActivity
 import com.android.photopicker.util.test.MockContentProviderWrapper
+import com.android.photopicker.util.test.dragInIncrements
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
 import com.android.providers.media.flags.Flags
@@ -259,7 +263,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
     @Before
     fun setup() {
-        MockitoAnnotations.initMocks(this)
+        MockitoAnnotations.openMocks(this)
         hiltRule.inject()
         // Stub for MockContentResolver constructor
         whenever(mockContext.getApplicationInfo()) { getTestableContext().getApplicationInfo() }
@@ -847,6 +851,218 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 .onNode(hasText(resources.getString(R.string.photopicker_photos_empty_state_title)))
                 .assertIsDisplayed()
                 .performTouchInput { swipeRight() }
+            // Verify whether the method to transfer touch events is invoked during testing
+            @Suppress("DEPRECATION")
+            verify(mockSurfaceControlViewHost, never()).transferTouchGestureToHost()
+        }
+    }
+
+    @Test
+    fun testLongPressAndDragInCollapsedModeIsNotTransferred() {
+        // This test is only allowed to run on sdk level U+
+        assumeTrue(SdkLevel.isAtLeastU())
+
+        // Initialize [EmbeddedState] instances
+        @Suppress("DEPRECATION")
+        (whenever(mockSurfaceControlViewHost.transferTouchGestureToHost()) { true })
+        testEmbeddedStateWithHostInExpandedState =
+            EmbeddedState(isExpanded = false, host = mockSurfaceControlViewHost)
+
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
+                ) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            with(
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            ) {
+                assertIsDisplayed()
+                performTouchInput {
+                    down(center)
+                    advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                    dragInIncrements(totalOffset = getBoundsInRoot().bottom.toPx(), vertical = true)
+                    // Wait for the scroll to finish.
+                    advanceEventTime(1000)
+                    up()
+                }
+            }
+            // Verify whether the method to transfer touch events is invoked during testing
+            @Suppress("DEPRECATION")
+            verify(mockSurfaceControlViewHost, never()).transferTouchGestureToHost()
+        }
+    }
+
+    @Test
+    fun testLongPressAndDragInExpandedModeIsNotTransferred() {
+        // This test is only allowed to run on sdk level U+
+        assumeTrue(SdkLevel.isAtLeastU())
+
+        // Initialize [EmbeddedState] instances
+        @Suppress("DEPRECATION")
+        (whenever(mockSurfaceControlViewHost.transferTouchGestureToHost()) { true })
+        testEmbeddedStateWithHostInExpandedState =
+            EmbeddedState(isExpanded = true, host = mockSurfaceControlViewHost)
+
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
+                ) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            with(
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            ) {
+                assertIsDisplayed()
+                performTouchInput {
+                    down(center)
+                    advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                    dragInIncrements(totalOffset = getBoundsInRoot().bottom.toPx(), vertical = true)
+                    // Wait for the scroll to finish.
+                    advanceEventTime(1000)
+                    up()
+                }
+            }
+            // Verify whether the method to transfer touch events is invoked during testing
+            @Suppress("DEPRECATION")
+            verify(mockSurfaceControlViewHost, never()).transferTouchGestureToHost()
+        }
+    }
+
+    @Test
+    fun testPinchInExpandedModeIsNotTransferred() {
+        // This test is only allowed to run on sdk level U+
+        assumeTrue(SdkLevel.isAtLeastU())
+
+        // Initialize [EmbeddedState] instances
+        @Suppress("DEPRECATION")
+        (whenever(mockSurfaceControlViewHost.transferTouchGestureToHost()) { true })
+        testEmbeddedStateWithHostInExpandedState =
+            EmbeddedState(isExpanded = true, host = mockSurfaceControlViewHost)
+
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
+                ) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onAllNodes(
+                    hasContentDescription(
+                        value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .onFirst()
+                .assertIsDisplayed()
+                .performTouchInput {
+                    pinch(
+                        start0 = Offset(10f, 10f),
+                        end0 = Offset(10f, 10f),
+                        start1 = Offset(20f, 10f),
+                        end1 = Offset(50f, 10f),
+                        durationMillis = 1000L,
+                    )
+                }
+            // Verify whether the method to transfer touch events is invoked during testing
+            @Suppress("DEPRECATION")
+            verify(mockSurfaceControlViewHost, never()).transferTouchGestureToHost()
+        }
+    }
+
+    @Test
+    fun testPinchInCollapsedModeIsNotTransferred() {
+        // This test is only allowed to run on sdk level U+
+        assumeTrue(SdkLevel.isAtLeastU())
+
+        // Initialize [EmbeddedState] instances
+        @Suppress("DEPRECATION")
+        (whenever(mockSurfaceControlViewHost.transferTouchGestureToHost()) { true })
+        testEmbeddedStateWithHostInExpandedState =
+            EmbeddedState(isExpanded = false, host = mockSurfaceControlViewHost)
+
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
+                ) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onAllNodes(
+                    hasContentDescription(
+                        value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .onFirst()
+                .assertIsDisplayed()
+                .performTouchInput {
+                    pinch(
+                        start0 = Offset(10f, 10f),
+                        end0 = Offset(10f, 10f),
+                        start1 = Offset(20f, 10f),
+                        end1 = Offset(50f, 10f),
+                        durationMillis = 1000L,
+                    )
+                }
             // Verify whether the method to transfer touch events is invoked during testing
             @Suppress("DEPRECATION")
             verify(mockSurfaceControlViewHost, never()).transferTouchGestureToHost()
