@@ -19,4 +19,6 @@
     <string name="photopicker_hsr_see_all_button_label" translation_description="Button label of the button which opens the search page of the photopicker with the search results(if any) based on given input text query">See All</string>
     <!-- Suggestions text -->
     <string name="photopicker_hsr_suggestions_text" translation_description="Text for describing the suggestion chips that are shown when the photopicker search times out">Suggestions</string>
+    <!-- Recents label -->
+    <string name="photopicker_hsr_recents_label" translation_description="Text label to be shown above the Recent photos in case the highlight photogrid is shown">Recents</string>
 </resources>
