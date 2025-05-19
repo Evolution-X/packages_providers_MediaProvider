@@ -87,7 +87,7 @@ public class MediaServiceV2 extends Worker {
      * ACTION_SCAN_VOLUME, more actions present in {@link MediaService} will be added in future.
      */
     public static Optional<UUID> enqueueWork(Context context, Intent intent) {
-        if (Flags.enableMediaServiceV2()) {
+        if (!Flags.enableMediaServiceV2()) {
             Log.i(TAG, "enqueueWork was called but enable_media_service_v2 flag is disabled.");
             return Optional.empty();
         }
