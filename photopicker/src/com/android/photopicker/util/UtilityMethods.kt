@@ -132,3 +132,46 @@ fun getMediaContentDescription(media: Media, dateFormat: DateFormat): String {
         }
     return stringResource(R.string.photopicker_item_content_desc, itemType, dateTaken)
 }
+
+/**
+ * Applies the given [block] to this object [R] only if the [condition] is true. Otherwise, returns
+ * the original object unchanged.
+ *
+ * This is a convenience function that leverages [applyChoice].
+ *
+ * @param R The type of the receiver object.
+ * @param condition The boolean condition to evaluate.
+ * @param block The block of code to apply to this object if [condition] is true. The block receives
+ *   this object [R] as its receiver and should return an [R] (though `this` is implicitly returned
+ *   by `apply`).
+ * @return This object [R], possibly modified by [block] if [condition] was true, or unchanged if
+ *   [condition] was false.
+ */
+inline fun <R : Any> R.applyWhen(condition: Boolean, block: R.() -> R): R =
+    applyChoice(condition = condition, trueBlock = block, falseBlock = { this })
+
+/**
+ * Conditionally applies one of two blocks of code to this object [R] based on a [condition].
+ *
+ * If the [condition] is true, [trueBlock] is applied. If the [condition] is false, [falseBlock] is
+ * applied.
+ *
+ * Both blocks receive this object [R] as their receiver and should return an [R].
+ *
+ * @param R The type of the receiver object.
+ * @param condition The boolean condition to evaluate.
+ * @param trueBlock The block of code to apply to this object if [condition] is true.
+ * @param falseBlock The block of code to apply to this object if [condition] is false.
+ * @return The result of applying either [trueBlock] or [falseBlock] to this object [R].
+ */
+inline fun <R : Any> R.applyChoice(
+    condition: Boolean,
+    trueBlock: R.() -> R,
+    falseBlock: R.() -> R,
+): R {
+    return if (condition) {
+        trueBlock()
+    } else {
+        falseBlock()
+    }
+}
