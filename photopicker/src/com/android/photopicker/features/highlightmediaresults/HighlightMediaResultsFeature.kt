@@ -44,13 +44,12 @@ class HighlightMediaResultsFeature : PhotopickerUiFeature {
             config: PhotopickerConfiguration,
             deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>>,
         ): Boolean {
-            // Picker search should be enabled for highlight feature to be enabled
-            // Then check for highlight feature flags. Both the feature flag and the API flag
-            // should be enabled.
-            // If search is not enabled, highlight feature should still be enabled for album
-            // highlight.
-            return isAlbumHighlightFeasible(config) ||
-                isSearchHighlightFeasible(config, deferredPrefetchResultsMap)
+            // Highlight feature flags should be enabled for highlight search or album to take
+            // effect. Highlight search will require photopicker search to be enabled while
+            // album highlight is agnostic of search.
+            return config.flags.PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED &&
+                (isAlbumHighlightFeasible(config) ||
+                    isSearchHighlightFeasible(config, deferredPrefetchResultsMap))
         }
 
         override fun build(featureManager: FeatureManager) = HighlightMediaResultsFeature()
@@ -68,11 +67,7 @@ class HighlightMediaResultsFeature : PhotopickerUiFeature {
             config: PhotopickerConfiguration,
             deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>>,
         ): Boolean {
-            if (SearchFeature.isEnabled(config, deferredPrefetchResultsMap)) {
-                return config.flags.PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED &&
-                    config.flags.PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED
-            }
-            return false
+            return SearchFeature.isEnabled(config, deferredPrefetchResultsMap)
         }
     }
 
