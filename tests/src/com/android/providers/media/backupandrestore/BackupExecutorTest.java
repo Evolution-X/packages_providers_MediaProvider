@@ -76,7 +76,6 @@ import java.util.Set;
 @RunWith(AndroidJUnit4.class)
 @EnableFlags({com.android.providers.media.flags.Flags.FLAG_ENABLE_BACKUP_AND_RESTORE,
         com.android.providers.media.flags.Flags.FLAG_ENABLE_VERSIONING_FOR_BACKUP_AND_RESTORE})
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
 public final class BackupExecutorTest {
 
     @Rule
@@ -124,6 +123,7 @@ public final class BackupExecutorTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.BAKLAVA)
     public void testBackup() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
         assumeFalse((new File(mLevelDbPath)).exists());
@@ -215,6 +215,7 @@ public final class BackupExecutorTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.BAKLAVA)
     public void testLevelDbRecreatedOnVersionChange() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
         assumeTrue(Flags.enableVersioningForBackupAndRestore());
@@ -248,6 +249,22 @@ public final class BackupExecutorTest {
             FileUtils.deleteContents(mDownloadsDir);
             mStagedFiles.clear();
         }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S,
+            maxSdkVersion = Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    public void testBackupDeletedForSdkLevelsLessThanB() {
+        assumeFalse(isBackupAndRestoreSupported(mIsolatedContext));
+        assumeFalse((new File(mLevelDbPath)).exists());
+
+        // create a new leveldb for backup
+        LevelDBManager.getInstance(mLevelDbPath);
+        assertThat(LevelDBManager.isLevelDbPresentForPath(mLevelDbPath)).isTrue();
+
+        // idle maintenance would delete level db since Sdk version < B
+        MediaStore.runIdleMaintenance(mIsolatedResolver);
+        assertThat(LevelDBManager.isLevelDbPresentForPath(mLevelDbPath)).isFalse();
     }
 
     private void stageNewFile(int resId, File file) throws IOException {

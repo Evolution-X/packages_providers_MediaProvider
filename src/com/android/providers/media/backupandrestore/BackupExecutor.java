@@ -37,6 +37,7 @@ import android.provider.MediaStore.Files.FileColumns;
 import android.provider.MediaStore.MediaColumns;
 import android.util.Log;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.leveldb.LevelDBEntry;
 import com.android.providers.media.leveldb.LevelDBInstance;
@@ -95,6 +96,7 @@ public final class BackupExecutor {
      */
     public void doBackup(CancellationSignal signal) {
         if (!isBackupAndRestoreSupported(mContext)) {
+            removeBackupFolderForUnsupportedSdkLevels();
             return;
         }
         Log.v(TAG, "Backup is enabled");
@@ -111,6 +113,14 @@ public final class BackupExecutor {
         long lastGenerationNumber = backupData(lastBackedUpGenerationNumber, signal);
         updateLastBackedUpGenerationNumber(lastGenerationNumber);
         setLatestLevelDbVersion();
+    }
+
+    private void removeBackupFolderForUnsupportedSdkLevels() {
+        if (!SdkLevel.isAtLeastB() && LevelDBManager.isLevelDbPresentForPath(getBackupFilePath())) {
+            Log.i(TAG, "Backup is enabled only for B+ devices. "
+                    + "Deleting leveldb backup since the SdkLevel < B.");
+            LevelDBManager.delete(getBackupFilePath());
+        }
     }
 
     private long clearBackupIfNeededAndReturnLastBackedUpNumber(long currentDbGenerationNumber,
