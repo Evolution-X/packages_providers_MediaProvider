@@ -1154,7 +1154,10 @@ public final class CloudMediaProviderContract {
      *  for existing user albums and use MediaSet only for supported MediaCategories .
      *
      * The currently supported MediaCategory in photo picker are
-     * {@link #MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS}.
+     * <ul>
+     *   <li>{@link #MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS}
+     *   <li>{@link #MEDIA_CATEGORY_TYPE_USER_ALBUMS}
+     * </ul>
      *
      * These are the fields of a MediaSet.
      *
@@ -1240,8 +1243,10 @@ public final class CloudMediaProviderContract {
      * </ul>
      *
      * The currently supported MediaCategory in photo picker are
-     * {@link #MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS}.
-     *
+     * <ul>
+     *   <li>{@link #MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS}
+     *   <li>{@link #MEDIA_CATEGORY_TYPE_USER_ALBUMS}
+     * </ul>
      * These are the fields of MediaCategory.
      * @see CloudMediaProvider#onQueryMediaCategories
      */
