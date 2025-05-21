@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 /**
  * An immutable parcel to carry information regarding desired features of caller for
@@ -220,7 +219,9 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         @NonNull
         @FlaggedApi(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
         public Builder setHighlightMediaTextQuery(@NonNull String highlightMediaTextQuery) {
-            Objects.requireNonNull(highlightMediaTextQuery);
+            if (highlightMediaTextQuery == null) {
+                throw new IllegalArgumentException("Input highlight text query cannot be null");
+            }
             mHighlightMediaTextQuery = highlightMediaTextQuery;
             return this;
         }

@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,6 +63,7 @@ import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.navigateToPreviewMedia
 import com.android.photopicker.features.preview.PreviewFeature
 import kotlinx.coroutines.delay
@@ -120,7 +120,6 @@ private fun MediasetContentGrid(
             WindowWidthSizeClass.Expanded -> true
             else -> false
         }
-    val state = rememberLazyGridState()
     val isEmbedded =
         LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
     val host = LocalEmbeddedState.current?.host
@@ -218,50 +217,81 @@ private fun MediasetContentGrid(
                 }
             }
             ResultsState.MEDIA_SETS_CONTENT_GRID -> {
-                mediaGrid(
-                    items = items,
-                    isExpandedScreen = isExpandedScreen,
-                    selection = selection,
-                    onItemClick = { item ->
-                        if (item is MediaGridItem.MediaItem) {
-                            viewModel.handleMediaSetItemSelection(
-                                item.media,
-                                selectionLimitExceededMessage,
-                            )
-                        }
-                    },
-                    onItemLongPress = { item ->
-                        // If the [PreviewFeature] is enabled, launch the preview route.
-                        if (isPreviewEnabled && item is MediaGridItem.MediaItem) {
-                            // Dispatch UI event to log long pressing the media item
-                            scope.launch {
-                                events.dispatch(
-                                    Event.LogPhotopickerUIEvent(
-                                        FeatureToken.PREVIEW.token,
-                                        configuration.sessionId,
-                                        configuration.callingPackageUid ?: -1,
-                                        Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
+
+                when (
+                    configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED &&
+                        configuration.selectionLimit > 1
+                ) {
+                    true -> { // Drag-to-select enabled
+                        mediaGrid(
+                            items = items,
+                            isExpandedScreen = isExpandedScreen,
+                            selection = selection,
+                            dragSelectionEnabled = true,
+                            dragSelectIndexOffset = 0, // by default, which is suitable here.
+                            onItemClick = { item ->
+                                if (item is MediaGridItem.MediaItem) {
+                                    viewModel.handleMediaSetItemSelection(
+                                        item.media,
+                                        selectionLimitExceededMessage,
                                     )
+                                }
+                            },
+                            selectionTransform = { mediaItem: Media ->
+                                Media.withSelectable(
+                                    item = mediaItem,
+                                    selectionSource = Telemetry.MediaLocation.CATEGORY,
+                                    album = null, // MediaSet is not an album
                                 )
-                            }
-                            // Dispatch UI event to log entry into preview mode
-                            scope.launch {
-                                events.dispatch(
-                                    Event.LogPhotopickerUIEvent(
-                                        FeatureToken.PREVIEW.token,
-                                        configuration.sessionId,
-                                        configuration.callingPackageUid ?: -1,
-                                        Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
+                            },
+                        )
+                    }
+                    false -> { // Drag-to-select disabled
+                        mediaGrid(
+                            items = items,
+                            isExpandedScreen = isExpandedScreen,
+                            selection = selection,
+                            onItemClick = { item ->
+                                if (item is MediaGridItem.MediaItem) {
+                                    viewModel.handleMediaSetItemSelection(
+                                        item.media,
+                                        selectionLimitExceededMessage,
                                     )
-                                )
-                            }
-                            navController.navigateToPreviewMedia(item.media)
-                        }
-                    },
-                    state = state,
-                )
+                                }
+                            },
+                            onItemLongPress = { item ->
+                                // If the [PreviewFeature] is enabled, launch the preview route.
+                                if (isPreviewEnabled && item is MediaGridItem.MediaItem) {
+                                    // Dispatch UI event to log long pressing the media item
+                                    scope.launch {
+                                        events.dispatch(
+                                            Event.LogPhotopickerUIEvent(
+                                                FeatureToken.PREVIEW.token,
+                                                configuration.sessionId,
+                                                configuration.callingPackageUid ?: -1,
+                                                Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
+                                            )
+                                        )
+                                    }
+                                    // Dispatch UI event to log entry into preview mode
+                                    scope.launch {
+                                        events.dispatch(
+                                            Event.LogPhotopickerUIEvent(
+                                                FeatureToken.PREVIEW.token,
+                                                configuration.sessionId,
+                                                configuration.callingPackageUid ?: -1,
+                                                Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
+                                            )
+                                        )
+                                    }
+                                    navController.navigateToPreviewMedia(item.media)
+                                }
+                            },
+                        )
+                    }
+                }
                 LaunchedEffect(Unit) {
-                    // Dispatch UI event to log loading of meadia set contents
+                    // Dispatch UI event to log loading of media set contents
                     events.dispatch(
                         Event.LogPhotopickerUIEvent(
                             FeatureToken.CATEGORY_GRID.token,

@@ -50,9 +50,8 @@ data class PhotopickerFlags(
     val PICKER_SEARCH_ENABLED: Boolean = Flags.enablePhotopickerSearch(),
     val PICKER_DATESCRUBBER_ENABLED: Boolean = Flags.enablePhotopickerDatescrubber(),
     val PICKER_TRANSCODING_ENABLED: Boolean = Flags.enablePhotopickerTranscoding(),
-    val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean = Flags.highlightSearchResultsFeature(),
-    val PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED: Boolean =
-        Flags.enablePickerHighlightSearchResultsApis(),
+    val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean =
+        Flags.enablePickerHighlightSearchResultsApis() && Flags.highlightSearchResultsFeature(),
     val OWNED_PHOTOS_ENABLED: Boolean = Flags.revokeAccessOwnedPhotos(),
     val EXPRESSIVE_THEME_ENABLED: Boolean = Flags.enablePhotopickerExpressiveTheme(),
     val MEDIA_GRID_TOUCH_FEATURES_ENABLED: Boolean = Flags.enableMediaGridTouchFeatures(),
@@ -76,8 +75,6 @@ data class PhotopickerFlags(
             return false
         if (PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED != other.PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED)
             return false
-        if (PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED != other.PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED)
-            return false
 
         return true
     }
@@ -98,6 +95,5 @@ data class PhotopickerFlags(
             PICKER_TRANSCODING_ENABLED,
             MEDIA_GRID_TOUCH_FEATURES_ENABLED,
             PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED,
-            PICKER_HIGHLIGHT_MEDIA_APIS_ENABLED,
         )
 }
