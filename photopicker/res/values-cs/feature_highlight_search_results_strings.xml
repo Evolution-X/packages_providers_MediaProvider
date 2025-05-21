@@ -17,8 +17,8 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="photopicker_hsr_see_all_button_label" msgid="7165405920645678201">"Ver tudo"</string>
-    <string name="photopicker_hsr_suggestions_text" msgid="8649021863740749051">"Sugestões"</string>
+    <string name="photopicker_hsr_see_all_button_label" msgid="7165405920645678201">"Zobrazit vše"</string>
+    <string name="photopicker_hsr_suggestions_text" msgid="8649021863740749051">"Návrhy"</string>
     <!-- no translation found for photopicker_hsr_recents_label (8922013053088031820) -->
     <skip />
 </resources>
