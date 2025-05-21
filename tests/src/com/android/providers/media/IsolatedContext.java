@@ -26,6 +26,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.os.Bundle;
@@ -37,6 +38,7 @@ import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
 import com.android.providers.media.cloudproviders.CloudProviderPrimary;
@@ -61,6 +63,7 @@ public class IsolatedContext extends ContextWrapper {
     private final MediaProvider mMediaProvider;
     private final UserHandle mUserHandle;
     private final FlakyCloudProvider mFlakyCloudProvider;
+    private final LauncherApps mLauncherApps;
 
     private PackageManager mSpyPackageManager;
     private Map<String, ApplicationInfo> mPackageNameToAppInfoMap = new HashMap<>();
@@ -76,17 +79,26 @@ public class IsolatedContext extends ContextWrapper {
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread,
             UserHandle userHandle, ConfigStore configStore) {
-        this(base, tag, asFuseThread, userHandle, configStore, new MaliciousAppDetector(base));
+        this(base, tag, asFuseThread, userHandle, configStore, new MaliciousAppDetector(base),
+                base.getSystemService(LauncherApps.class));
     }
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread,
             MaliciousAppDetector maliciousAppDetector) {
-        this(base, tag, asFuseThread, base.getUser(), new TestConfigStore(), maliciousAppDetector);
+        this(base, tag, asFuseThread, base.getUser(), new TestConfigStore(), maliciousAppDetector,
+                base.getSystemService(LauncherApps.class));
+    }
+
+    public IsolatedContext(Context base, String tag, boolean asFuseThread,
+            LauncherApps launcherApps) {
+        this(base, tag, asFuseThread, base.getUser(), new TestConfigStore(),
+                new MaliciousAppDetector(base), launcherApps);
     }
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread,
             UserHandle userHandle, ConfigStore configStore,
-            MaliciousAppDetector maliciousAppDetector) {
+            MaliciousAppDetector maliciousAppDetector,
+            LauncherApps launcherApps) {
         super(base);
         mDir = new File(base.getFilesDir(), tag);
         mDir.mkdirs();
@@ -121,6 +133,8 @@ public class IsolatedContext extends ContextWrapper {
         MediaStore.waitForIdle(mResolver);
 
         mSpyPackageManager = spy(base.getPackageManager());
+
+        mLauncherApps = launcherApps;
     }
 
     private MediaProvider getMockedMediaProvider(boolean asFuseThread,
@@ -195,6 +209,23 @@ public class IsolatedContext extends ContextWrapper {
             return mSpyPackageManager;
         }
         return getBaseContext().getPackageManager();
+    }
+
+    @Override
+    public Object getSystemService(@NonNull String name) {
+        if (Context.LAUNCHER_APPS_SERVICE.equals(name)) {
+            return mLauncherApps;
+        }
+        return super.getSystemService(name);
+    }
+
+    @Override
+    @Nullable
+    public String getSystemServiceName(@NonNull Class<?> serviceClass) {
+        if (LauncherApps.class.equals(serviceClass)) {
+            return Context.LAUNCHER_APPS_SERVICE;
+        }
+        return super.getSystemServiceName(serviceClass);
     }
 
     public void setPickerUriResolver(PickerUriResolver resolver) {

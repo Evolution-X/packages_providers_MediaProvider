@@ -40,11 +40,14 @@ import static com.android.providers.media.photopicker.util.CursorUtils.getCursor
 import static com.android.providers.media.util.DatabaseUtils.bindList;
 import static com.android.providers.media.util.DatabaseUtils.replaceMatchAnyChar;
 
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.LauncherActivityInfo;
+import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
@@ -56,6 +59,7 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.UserHandle;
 import android.provider.CloudMediaProviderContract;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Files.FileColumns;
@@ -75,8 +79,11 @@ import com.android.providers.media.util.MimeUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * This is a facade that hides the complexities of executing some SQL statements on the external db.
@@ -874,7 +881,6 @@ public class ExternalDbFacade {
                 Log.e(TAG, "Found unrecognized mediaCategoryId: " + mediaCategoryId);
                 cursor = new MatrixCursor(MediaSetColumns.ALL_PROJECTION);
             }
-            Log.d("PhotopickerDebug", "cursor extras = " + cursor.getExtras());
             return cursor;
         } catch (Exception exception) {
             Log.e(TAG, String.format(Locale.ROOT,
@@ -1066,11 +1072,15 @@ public class ExternalDbFacade {
         projectionList.add(AlbumColumns.DATE_TAKEN_MILLIS);
         String[] projectionKey = projectionList.toArray(new String[0]);
         MatrixCursor appMediaSetCursor = new MatrixCursor(projectionKey);
+        // Propagate extras from 'cursor' to 'appMediaSetCursor' to preserve essential metadata.
+        appMediaSetCursor.setExtras(cursor.getExtras());
         if (!cursor.moveToFirst()) {
             return appMediaSetCursor;
         }
+
         do {
             String ownerPackageName = getCursorString(cursor, MediaColumns.OWNER_PACKAGE_NAME);
+
             PackageManager packageManager = mContext.getPackageManager();
             try {
                 assert ownerPackageName != null;
@@ -1116,7 +1126,8 @@ public class ExternalDbFacade {
         final String subQueryString = switch (categoryType) {
             case MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS -> appendWhereForDeviceMediaSet(subQueryBuilder,
                     selectionArgs);
-            case MEDIA_CATEGORY_TYPE_APP_FOLDERS -> appendWhereForAppsMediaSet(subQueryBuilder);
+            case MEDIA_CATEGORY_TYPE_APP_FOLDERS -> appendWhereForAppsMediaSet(subQueryBuilder,
+                    selectionArgs);
             default -> {
                 Log.e(TAG, "Unrecognized media category type received: " + categoryType);
                 yield null;
@@ -1193,10 +1204,28 @@ public class ExternalDbFacade {
         );
     }
 
-    private String appendWhereForAppsMediaSet(@NonNull SQLiteQueryBuilder subQueryBuilder) {
+    private String appendWhereForAppsMediaSet(
+            @NonNull SQLiteQueryBuilder subQueryBuilder,
+            @NonNull List<String> selectionArgs) {
         subQueryBuilder.appendWhereStandalone(WHERE_OWNER_PACKAGE_NAME_IS_NOT_NULL);
         subQueryBuilder.appendWhereStandalone(WHERE_IS_NOT_DOWNLOAD);
-        // TODO: b/409706052 filter system ui and other non-launchable apps
+        Set<String> launchableOwnerPackageNameSet = getLaunchableOwnerPackageNameSet();
+        if (!launchableOwnerPackageNameSet.isEmpty()) {
+            String inClause = String.format(Locale.ROOT,
+                    "%s IN (%s)",
+                    MediaColumns.OWNER_PACKAGE_NAME,
+                    TextUtils.join(
+                            ",",
+                            Collections.nCopies(launchableOwnerPackageNameSet.size(), "?")));
+
+            subQueryBuilder.appendWhereStandalone(inClause);
+
+            // Add each item from the set as a separate selection argument
+            selectionArgs.addAll(launchableOwnerPackageNameSet);
+        } else {
+            // Return an null subQuery
+            return null;
+        }
         return subQueryBuilder.buildQuery(
                 PROJECTION_APPS_MEDIA_SET_SUBQUERY,
                 /* selection */ null,
@@ -1205,6 +1234,43 @@ public class ExternalDbFacade {
                 /* sortOrder */ null,
                 /* limit */ null
         );
+    }
+
+    @NonNull
+    private Set<String> getLaunchableOwnerPackageNameSet() {
+        List<LauncherActivityInfo> launcherActivityInfos = null;
+        Set<String> launchableOwnerPackageNameSet = new HashSet<>();
+        try {
+            LauncherApps launcherApps = mContext.getSystemService(LauncherApps.class);
+
+            UserHandle userHandle = mContext.getUser();
+
+            if (launcherApps != null) {
+                launcherActivityInfos = launcherApps.getActivityList(null, userHandle);
+            } else {
+                Log.e(TAG, "LauncherApps service was null.");
+                return launchableOwnerPackageNameSet;
+            }
+
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Error getting launcher activity infos.", e);
+            return launchableOwnerPackageNameSet;
+        }
+
+        for (LauncherActivityInfo info : launcherActivityInfos) {
+            if (info != null) {
+                ComponentName componentName = info.getComponentName();
+                if (componentName != null) {
+                    String ownerPackageName = componentName.getPackageName();
+                    launchableOwnerPackageNameSet.add(ownerPackageName);
+                } else {
+                    Log.w(TAG, "LauncherActivityInfo had a null ComponentName.");
+                }
+            } else {
+                Log.w(TAG, "Encountered a null LauncherActivityInfo in the list.");
+            }
+        }
+        return launchableOwnerPackageNameSet;
     }
 
     private static String getMediaSetOrderByClause() {

@@ -44,11 +44,14 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.LauncherActivityInfo;
+import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -112,12 +115,18 @@ public class ExternalDbFacadeTest {
     private static final String[] VIDEO_MIME_TYPES_QUERY = new String[]{"video/mp4"};
     private static final long DURATION_MS = 5;
     private static final int IS_FAVORITE = 0;
+    private static final String MAIN_ACTIVITY = ".MainActivity";
     private static final String SYSTEM_PACKAGE = "com.android.app";
     private static final String PACKAGE_NAME1 = "com.example.app1";
+    private static final String ACTIVITY_NAME1 = PACKAGE_NAME1 + MAIN_ACTIVITY;
     private static final String PACKAGE_NAME2 = "com.example.app2";
+    private static final String ACTIVITY_NAME2 = PACKAGE_NAME2 + MAIN_ACTIVITY;
     private static final String PACKAGE_NAME3 = "com.example.app3";
+    private static final String ACTIVITY_NAME3 = PACKAGE_NAME3 + MAIN_ACTIVITY;
     private static final String PACKAGE_NAME4 = "com.example.app4";
+    private static final String ACTIVITY_NAME4 = PACKAGE_NAME4 + MAIN_ACTIVITY;
     private static final String PACKAGE_NAME5 = "com.example.app5";
+    private static final String ACTIVITY_NAME5 = PACKAGE_NAME5 + MAIN_ACTIVITY;
     private static final String APP_LABEL = "mock_app";
     private static final int RES_ID = 123456;
     private static final String FOLDER_NAME1 = "Folder1";
@@ -127,7 +136,6 @@ public class ExternalDbFacadeTest {
     @Before
     public void setUp() {
         final Context context = InstrumentationRegistry.getTargetContext();
-        sIsolatedContext = new IsolatedContext(context, TAG, /*asFuseThread*/ false);
         Map<String, ApplicationInfo> packageNameToAppInfoMap = new HashMap<>();
         packageNameToAppInfoMap.put(
                 PACKAGE_NAME1,
@@ -144,7 +152,32 @@ public class ExternalDbFacadeTest {
         packageNameToAppInfoMap.put(
                 PACKAGE_NAME5,
                 createFakeAppInfo(PACKAGE_NAME5, APP_LABEL, RES_ID));
+
+        LauncherApps mockLauncherApps = mock(LauncherApps.class);
+        List<String> packageNameList = Arrays.asList(PACKAGE_NAME1, PACKAGE_NAME2, PACKAGE_NAME3,
+                PACKAGE_NAME4, PACKAGE_NAME5);
+        List<String> activityNameList = Arrays.asList(ACTIVITY_NAME1, ACTIVITY_NAME2,
+                ACTIVITY_NAME3, ACTIVITY_NAME4, ACTIVITY_NAME5);
+        List<LauncherActivityInfo> activityList = new ArrayList<>();
+        for (int i = 0; i < packageNameList.size(); ++i) {
+            activityList.add(getMockLauncherActivityInfoFor(
+                    packageNameList.get(i), activityNameList.get(i)));
+        }
+
+        sIsolatedContext = new IsolatedContext(context, TAG, /*asFuseThread*/ false,
+                mockLauncherApps);
+        when(mockLauncherApps.getActivityList(null, sIsolatedContext.getUser()))
+                .thenReturn(activityList);
         sIsolatedContext.stubApplicationInfoCalls(packageNameToAppInfoMap);
+    }
+
+    private LauncherActivityInfo getMockLauncherActivityInfoFor(String packageName,
+            String activityName) {
+        LauncherActivityInfo mockLauncherActivityInfo = mock(LauncherActivityInfo.class);
+        ComponentName componentName = new ComponentName(packageName, activityName);
+        when(mockLauncherActivityInfo.getComponentName()).thenReturn(componentName);
+        when(mockLauncherActivityInfo.getName()).thenReturn(activityName);
+        return mockLauncherActivityInfo;
     }
 
     @Test
@@ -2383,6 +2416,87 @@ public class ExternalDbFacadeTest {
                 assertWithMessage("Unexpected media id found, implying incorrect order")
                         .that(getCursorString(cursor, CloudMediaProviderContract.MediaColumns.ID))
                         .isEqualTo(String.valueOf(ID2));
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_appMediaSet_nonLaunchableAppsAreSkipped() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media owned by launchable app
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media owned by non-launchable app
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, SYSTEM_PACKAGE);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME1, DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_appMediaSetWithNoLaunchableApp_returnsEmptyCursor() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media owned by non-launchable app
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, SYSTEM_PACKAGE);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media owned by non-launchable app
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, SYSTEM_PACKAGE);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
             }
         }
     }
