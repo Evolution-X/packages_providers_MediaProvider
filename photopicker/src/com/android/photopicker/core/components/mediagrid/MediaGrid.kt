@@ -79,6 +79,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -729,7 +730,7 @@ private fun defaultBuildMediaItem(
                 // A background surface that is shown behind selected images.
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                 ) {
                     // Container for the image and it's mimetype icon
                     Box(
@@ -746,12 +747,18 @@ private fun defaultBuildMediaItem(
                         )
 
                         // Scrim to separate the text and mimetypes from the image behind them.
+                        val scrimGradient =
+                            Brush.verticalGradient(
+                                listOf(Color.Black.copy(alpha = 0.1f), Color.Transparent)
+                            )
+
                         Surface(
-                            color = Color.Black.copy(alpha = 0.2f),
+                            modifier = Modifier.background(scrimGradient),
+                            color = Color.Transparent,
                             contentColor = Color.White,
                         ) {
                             MimeTypeOverlay(item)
-                        } // Scrim
+                        }
                     }
 
                     // This is outside the box that wraps the image so it doesn't get clipped
