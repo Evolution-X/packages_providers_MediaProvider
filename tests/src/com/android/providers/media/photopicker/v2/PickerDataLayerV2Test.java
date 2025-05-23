@@ -241,6 +241,9 @@ public class PickerDataLayerV2Test {
         doReturn(mCategoriesState).when(mMockSyncController).getCategoriesState();
         doReturn(new PickerSyncLockManager()).when(mMockSyncController).getPickerSyncLockManager();
         doReturn(mMockContentResolver).when(mMockContext).getContentResolver();
+        doReturn(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+                    .getTargetContext().getResources())
+                .when(mMockContext).getResources();
 
         androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
                 .getUiAutomation()

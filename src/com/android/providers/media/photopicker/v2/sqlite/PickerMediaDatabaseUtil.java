@@ -22,6 +22,7 @@ import static com.android.providers.media.photopicker.v2.PickerDataLayerV2.getDe
 import static com.android.providers.media.photopicker.v2.sqlite.MediaProjection.prependTableName;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -32,6 +33,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.providers.media.R;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.v2.model.AlbumMediaQuery;
 import com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper;
@@ -49,6 +51,8 @@ import java.util.Objects;
  */
 public class PickerMediaDatabaseUtil {
     private static final String TAG = "PickerMediaDBUtil";
+
+    private static final String DEFAULT_DISPLAY_NAME = "Album";
 
     /**
      * Query media from the database and prepare a cursor in response.
@@ -476,7 +480,7 @@ public class PickerMediaDatabaseUtil {
                         /* albumId */ albumId,
                         pickerDBResponse.getString(pickerDBResponse.getColumnIndex(
                                 PickerSQLConstants.MediaResponse.DATE_TAKEN_MS.getProjectedName())),
-                        /* displayName */ albumId,
+                        /* displayName */ getLocalizedDisplayName(albumId, appContext, albumId),
                         pickerDBResponse.getString(pickerDBResponse.getColumnIndex(
                                 PickerSQLConstants.MediaResponse.MEDIA_ID.getProjectedName())),
                         /* count */ "0", // This value is not used anymore
@@ -513,6 +517,29 @@ public class PickerMediaDatabaseUtil {
                 database.endTransaction();
             }
         }
+    }
+
+    @Nullable
+    private static String getLocalizedDisplayName(
+            @Nullable String albumId,
+            @Nullable Context appContext,
+            @NonNull String defaultDisplayName) {
+        if (albumId == null || appContext == null) {
+            Log.e(TAG, "Received null albumId or null appContext, returning default display name.");
+            return defaultDisplayName;
+        }
+        Resources resources = appContext.getResources();
+        return switch (albumId) {
+            case CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORITES -> resources.getString(
+                    R.string.favorites_album_display_name);
+            case CloudMediaProviderContract.AlbumColumns.ALBUM_ID_VIDEOS -> resources.getString(
+                    R.string.videos_album_display_name);
+            default -> {
+                Log.e(TAG, "Unrecognized merged album id: " + albumId
+                        + ", Could not localize the display name.");
+                yield defaultDisplayName;
+            }
+        };
     }
 
 

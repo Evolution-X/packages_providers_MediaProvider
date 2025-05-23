@@ -73,6 +73,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.R;
 import com.android.providers.media.VolumeCache;
+import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.util.MimeUtils;
 
@@ -324,6 +325,16 @@ public class ExternalDbFacade {
             ALBUM_ID_CAMERA,
             ALBUM_ID_SCREENSHOTS,
             ALBUM_ID_DOWNLOADS
+    };
+
+    /**
+     * Local album ids that are displayed along with other collections in the "Collections" tab in
+     * the picker ui, when the feature flag
+     * {@link Flags#FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES} is enabled
+     */
+    private static final String[] COLLECTION_TAB_LOCAL_ALBUM_IDS = {
+            ALBUM_ID_CAMERA,
+            ALBUM_ID_SCREENSHOTS
     };
 
     private final Context mContext;
@@ -642,7 +653,11 @@ public class ExternalDbFacade {
     public Cursor queryAlbums(String[] mimeTypes) {
         final MatrixCursor c = new MatrixCursor(AlbumColumns.ALL_PROJECTION);
 
-        for (String albumId : LOCAL_ALBUM_IDS) {
+        String[] albumIds = LOCAL_ALBUM_IDS;
+        if (Flags.enableLocalMediaProviderCapabilities()) {
+            albumIds = COLLECTION_TAB_LOCAL_ALBUM_IDS;
+        }
+        for (String albumId : albumIds) {
             Cursor cursor = mDatabaseHelper.runWithTransaction(db -> {
                 final SQLiteQueryBuilder qb = createMediaQueryBuilder();
                 final List<String> selectionArgs = new ArrayList<>();
