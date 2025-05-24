@@ -178,6 +178,7 @@ fun MediaSetGrid(
                                     )
                                 }
                             },
+                            onItemLongPress = {},
                             isExpandedScreen = isExpandedScreen,
                             columns =
                                 when (isExpandedScreen) {

@@ -205,6 +205,10 @@ class HighlightMediaResultsFeatureTest {
 
     @Test
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+    )
     fun testHighlightMediaFeatureWhenAlbumHighlightIsRequested() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
             TestPhotopickerConfiguration.build {
@@ -229,5 +233,37 @@ class HighlightMediaResultsFeatureTest {
                 )
             )
             .isEqualTo(true)
+    }
+
+    @Test
+    @DisableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+    )
+    fun testAlbumHighlightMediaFeatureWithHighlightAndSearchFlagsDisabled() {
+        val testActionPickImagesConfiguration: PhotopickerConfiguration =
+            TestPhotopickerConfiguration.build {
+                action(MediaStore.ACTION_PICK_IMAGES)
+                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                highlightQueryResultsParams(
+                    HighlightQueryResultsParams(
+                        queryResultsHighlightQuery =
+                            HighlightQuery.Album(album = HighlightAlbumName.HIGHLIGHT_ALBUM_CAMERA),
+                        queryResultsHighlightType =
+                            QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                    )
+                )
+            }
+        assertWithMessage(
+                "HighlightMediaResults feature should be disabled when its flags are disabled"
+            )
+            .that(
+                HighlightMediaResultsFeature.isEnabled(
+                    testActionPickImagesConfiguration,
+                    deferredPrefetchResultsMap,
+                )
+            )
+            .isEqualTo(false)
     }
 }

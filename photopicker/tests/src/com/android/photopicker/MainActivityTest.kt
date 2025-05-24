@@ -70,6 +70,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -400,6 +401,14 @@ class MainActivityTest {
 
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+        // HSUM does not have documentsUI installed on system user, and this test requires
+        // documentsUI to be present in the user the test is running under.
+        assumeFalse(
+            "Skipping test not supported on HSUM devices.",
+            UserManager.isHeadlessSystemUserMode(),
+        )
+
         val intent =
             Intent()
                 .setAction(Intent.ACTION_GET_CONTENT)
