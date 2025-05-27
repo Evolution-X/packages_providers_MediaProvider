@@ -18,6 +18,7 @@
 #define MEDIAPROVIDER_PDF_JNI_PDFCLIENT_ANNOTATION_H_
 
 #include <map>
+#include <vector>
 
 #include "fpdf_annot.h"
 #include "fpdfview.h"
