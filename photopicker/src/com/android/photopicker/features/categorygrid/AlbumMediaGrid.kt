@@ -162,6 +162,35 @@ private fun AlbumMediaGrid(
             }
             else -> {
 
+                val onItemPreview = { item: MediaGridItem ->
+                    // If the [PreviewFeature] is enabled, launch the preview route.
+                    if (isPreviewEnabled && item is MediaGridItem.MediaItem) {
+                        // Dispatch UI event to log long pressing the media item
+                        scope.launch {
+                            events.dispatch(
+                                Event.LogPhotopickerUIEvent(
+                                    FeatureToken.PREVIEW.token,
+                                    configuration.sessionId,
+                                    configuration.callingPackageUid ?: -1,
+                                    Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
+                                )
+                            )
+                        }
+                        // Dispatch UI event to log entry into preview mode
+                        scope.launch {
+                            events.dispatch(
+                                Event.LogPhotopickerUIEvent(
+                                    FeatureToken.PREVIEW.token,
+                                    configuration.sessionId,
+                                    configuration.callingPackageUid ?: -1,
+                                    Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
+                                )
+                            )
+                        }
+                        navController.navigateToPreviewMedia(item.media)
+                    }
+                }
+
                 when (
                     configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED &&
                         configuration.selectionLimit > 1
@@ -173,6 +202,8 @@ private fun AlbumMediaGrid(
                             selection = selection,
                             dragSelectionEnabled = true,
                             dragSelectIndexOffset = 0, // by default, which is suitable here.
+                            pinchToZoomEnabled = true,
+                            onZoomAtMaxZoom = onItemPreview,
                             onItemClick = { item ->
                                 if (item is MediaGridItem.MediaItem) {
                                     viewModel.handleAlbumMediaGridItemSelection(
@@ -206,34 +237,10 @@ private fun AlbumMediaGrid(
                                     )
                                 }
                             },
-                            onItemLongPress = { item ->
-                                // If the [PreviewFeature] is enabled, launch the preview route.
-                                if (isPreviewEnabled && item is MediaGridItem.MediaItem) {
-                                    // Dispatch UI event to log long pressing the media item
-                                    scope.launch {
-                                        events.dispatch(
-                                            Event.LogPhotopickerUIEvent(
-                                                FeatureToken.PREVIEW.token,
-                                                configuration.sessionId,
-                                                configuration.callingPackageUid ?: -1,
-                                                Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
-                                            )
-                                        )
-                                    }
-                                    // Dispatch UI event to log entry into preview mode
-                                    scope.launch {
-                                        events.dispatch(
-                                            Event.LogPhotopickerUIEvent(
-                                                FeatureToken.PREVIEW.token,
-                                                configuration.sessionId,
-                                                configuration.callingPackageUid ?: -1,
-                                                Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
-                                            )
-                                        )
-                                    }
-                                    navController.navigateToPreviewMedia(item.media)
-                                }
-                            },
+                            onItemLongPress = onItemPreview,
+                            pinchToZoomEnabled =
+                                configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
+                            onZoomAtMaxZoom = onItemPreview,
                         )
                     }
                 }

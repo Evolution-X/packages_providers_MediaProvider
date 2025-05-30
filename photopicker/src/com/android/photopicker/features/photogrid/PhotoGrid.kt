@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -277,7 +276,9 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     }
                 }
 
-                val onItemLongClick = { item: MediaGridItem ->
+                // Preview Handler for previewing a item. Used either for pinch at max zoom, or long
+                // press when media grid gestures are disabled.
+                val onPreviewItem = { item: MediaGridItem ->
                     if (isPreviewEnabled) {
                         scope.launch {
                             events.dispatch(
@@ -335,8 +336,10 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                                     )
                                 }
                             },
+                            pinchToZoomEnabled = true,
+                            onZoomAtMaxZoom = onPreviewItem,
                             onItemClick = onItemClick,
-                            columns = GridCells.Fixed(cellsPerRow),
+                            initialColumns = cellsPerRow,
                             selectionTransform = {
                                 Media.withSelectable(
                                     item = it,
@@ -367,14 +370,17 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                                         maxSlots = 1,
                                         params =
                                             LocationParams.WithLongClickAction { item ->
-                                                onItemLongClick(item)
+                                                onPreviewItem(item)
                                             },
                                     )
                                 }
                             },
                             onItemClick = onItemClick,
-                            onItemLongPress = onItemLongClick,
-                            columns = GridCells.Fixed(cellsPerRow),
+                            onItemLongPress = onPreviewItem,
+                            pinchToZoomEnabled =
+                                configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
+                            onZoomAtMaxZoom = onPreviewItem,
+                            initialColumns = cellsPerRow,
                         )
                     }
                 }

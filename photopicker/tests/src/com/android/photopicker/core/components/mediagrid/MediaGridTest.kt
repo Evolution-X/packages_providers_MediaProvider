@@ -18,6 +18,7 @@ package com.android.photopicker.core.components
 
 import android.content.ContentProvider
 import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -25,14 +26,20 @@ import android.provider.MediaStore
 import android.view.SurfaceControlViewHost
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertAll
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -47,9 +54,12 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.testing.TestNavHostController
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -73,6 +83,8 @@ import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.core.embedded.EmbeddedState
 import com.android.photopicker.core.embedded.LocalEmbeddedState
 import com.android.photopicker.core.glide.GlideTestRule
+import com.android.photopicker.core.navigation.LocalNavController
+import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.selection.SelectionImpl
 import com.android.photopicker.core.theme.PhotopickerTheme
 import com.android.photopicker.data.TestDataServiceImpl
@@ -99,6 +111,7 @@ import dagger.hilt.components.SingletonComponent
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -142,6 +155,9 @@ class MediaGridTest {
     @get:Rule(order = 0) var hiltRule = HiltAndroidRule(this)
     @get:Rule(order = 1) val composeTestRule = createComposeRule()
     @get:Rule(order = 2) val glideRule = GlideTestRule()
+
+    private val START_DESTINATION_TEXT = "Start Destination"
+    private val PREVIEW_SCREEN_TEXT_PREFIX = "Preview Screen for "
 
     /**
      * MediaGrid uses Glide for loading images, so we have to mock out the dependencies for Glide
@@ -240,6 +256,54 @@ class MediaGridTest {
             add(MediaGridItem.SeparatorItem(SECOND_SEPARATOR_LABEL))
         }
 
+    private val pinchToZoomTestData =
+        buildList<MediaGridItem>() {
+            // Separator takes up a full row
+            add(MediaGridItem.SeparatorItem("Pinch Separator"))
+            // Media items
+            for (i in 1..6) { // Enough items to test column changes
+                add(
+                    MediaGridItem.MediaItem(
+                        media =
+                            Media.Image(
+                                mediaId = "pinch_media_$i",
+                                pickerId = (i + 200).toLong(), // Unique pickerId
+                                authority = "pinch_authority",
+                                mediaSource = MediaSource.LOCAL,
+                                mediaUri =
+                                    Uri.EMPTY.buildUpon()
+                                        .apply {
+                                            scheme("content")
+                                            authority("media")
+                                            path("picker")
+                                            path("pinch_authority")
+                                            path("pinch_media_$i")
+                                        }
+                                        .build(),
+                                glideLoadableUri =
+                                    Uri.EMPTY.buildUpon()
+                                        .apply {
+                                            scheme("content")
+                                            authority("pinch_authority")
+                                            path("pinch_media_$i")
+                                        }
+                                        .build(),
+                                dateTakenMillisLong =
+                                    LocalDateTime.now()
+                                        .minus(
+                                            (i + 10).toLong(),
+                                            ChronoUnit.DAYS,
+                                        ) // Ensure different dates
+                                        .toEpochSecond(ZoneOffset.UTC) * 1000,
+                                sizeInBytes = 100L * i,
+                                mimeType = "image/png",
+                                standardMimeTypeExtension = 1,
+                            )
+                    )
+                )
+            }
+        }
+
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
@@ -265,6 +329,10 @@ class MediaGridTest {
         // Keep the flow processing out of the composable as that drastically cuts down on the
         // flakiness of individual test runs.
         flow = pager.flow.toMediaGridItemFromMedia().insertMonthSeparators()
+    }
+
+    private fun getTestableContext(): Context {
+        return InstrumentationRegistry.getInstrumentation().getContext()
     }
 
     /** Initialize [EmbeddedState] instances */
@@ -294,14 +362,77 @@ class MediaGridTest {
         val items = flow.collectAsLazyPagingItems()
         val selected by selection.flow.collectAsStateWithLifecycle()
 
-        mediaGrid(
-            items = items,
-            selection = selected,
-            onItemClick = onItemClick,
-            onItemLongPress = onItemLongPress,
-            bannerContent = bannerContent,
-            modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG),
-        )
+        CompositionLocalProvider(
+            LocalNavController provides TestNavHostController(getTestableContext()),
+            LocalSelection provides selection,
+        ) {
+            mediaGrid(
+                items = items,
+                selection = selected,
+                onItemClick = onItemClick,
+                onItemLongPress = onItemLongPress,
+                bannerContent = bannerContent,
+                modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG),
+            )
+        }
+    }
+
+    /** Test wrapper for MediaGrid with pinch-to-zoom enabled. */
+    @Composable
+    private fun pinchToZoomGrid(
+        testItems: List<MediaGridItem>,
+        selection: SelectionImpl<Media>,
+        initialColumns: Int,
+        minColumns: Int = 2,
+        maxColumns: Int = 5,
+        onItemClick: (MediaGridItem) -> Unit = {},
+        onZoomAtMaxZoom: (MediaGridItem) -> Unit = {},
+    ) {
+        CompositionLocalProvider(
+            LocalNavController provides TestNavHostController(getTestableContext()),
+            LocalSelection provides selection,
+        ) {
+            val itemsFlow = flowOf(PagingData.from(testItems))
+            // Use testDispatcher for consistency if advanced paging features were used,
+            // though PagingData.from is simple.
+            val lazyPagingItems = itemsFlow.collectAsLazyPagingItems()
+            val selected by selection.flow.collectAsStateWithLifecycle()
+            val dragSelectState = rememberGridDragSelectState()
+
+            // Provide a fixed size Box for predictable gesture coordinates and grid layout.
+            Box(modifier = Modifier.size(300.dp, 500.dp)) {
+                mediaGrid(
+                    items = lazyPagingItems,
+                    selection = selected,
+                    onItemClick = onItemClick,
+                    initialColumns = initialColumns,
+                    pinchToZoomEnabled = true,
+                    pinchToZoomMinColumns = minColumns,
+                    pinchToZoomMaxColumns = maxColumns,
+                    onZoomAtMaxZoom = onZoomAtMaxZoom,
+                    dragSelectState = dragSelectState, // Provides the LazyGridState
+                    modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG).fillMaxSize(),
+                    // Reduce default padding to ensure more items are visible for testing layout
+                    // changes.
+                    contentPadding = PaddingValues(0.dp),
+                    contentItemFactory = { item, _, onClick, _, _ ->
+                        when (item) {
+                            is MediaGridItem.MediaItem -> {
+                                Box(
+                                    modifier =
+                                        Modifier.fillMaxSize().semantics(mergeDescendants = true) {
+                                            contentDescription = "${item.media.mediaId}"
+                                        }
+                                ) {
+                                    Text("${item.media.mediaId}")
+                                }
+                            }
+                            else -> {}
+                        }
+                    },
+                )
+            }
+        }
     }
 
     /**
@@ -333,6 +464,94 @@ class MediaGridTest {
         ) {
             Text(CUSTOM_ITEM_SEPARATOR_TEXT)
         }
+    }
+
+    @Test
+    fun testMediaGrid_pinchToZoom_invokesCallbackWhenMinColumnsReached() = runTest {
+        val selection =
+            SelectionImpl<Media>(
+                scope = backgroundScope,
+                configuration = provideTestConfigurationFlow(scope = backgroundScope),
+                preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+            )
+
+        val callbackInvoked = CompletableDeferred<Boolean>()
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(
+                LocalSelection provides selection,
+                LocalPhotopickerConfiguration provides
+                    TestPhotopickerConfiguration.build {
+                        action("TEST_ACTION")
+                        intent(Intent("TEST_ACTION"))
+                    },
+            ) {
+                val itemsFlow = flowOf(PagingData.from(pinchToZoomTestData))
+                val lazyPagingItems = itemsFlow.collectAsLazyPagingItems()
+                val selected by selection.flow.collectAsStateWithLifecycle()
+                val dragSelectState = rememberGridDragSelectState()
+
+                Box(modifier = Modifier.size(300.dp, 500.dp)) { // Fixed size for predictable layout
+                    mediaGrid(
+                        items = lazyPagingItems,
+                        selection = selected,
+                        onItemClick = {},
+                        initialColumns = 2, // Start at min columns
+                        pinchToZoomEnabled = true,
+                        pinchToZoomMinColumns = 2, // Min columns to trigger callback
+                        pinchToZoomMaxColumns = 5,
+                        onZoomAtMaxZoom = { callbackInvoked.complete(true) },
+                        dragSelectState = dragSelectState, // Provides the LazyGridState
+                        modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG).fillMaxSize(),
+                        contentPadding = PaddingValues(0.dp), // Minimal padding
+                        contentItemFactory = { item, _, _, _, _ ->
+                            when (item) {
+                                is MediaGridItem.MediaItem -> {
+                                    Box(Modifier.fillMaxSize()) { Text(item.media.mediaId) }
+                                }
+                                else -> {}
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        advanceTimeBy(500)
+        composeTestRule.waitForIdle()
+
+        // The first item in pinchToZoomTestData is a separator, so media starts at index 1.
+        val targetMediaItem = pinchToZoomTestData[1] as MediaGridItem.MediaItem
+        val targetNodeText = targetMediaItem.media.mediaId!!
+
+        val itemNode = composeTestRule.onNode(hasText(targetNodeText), useUnmergedTree = true)
+        itemNode.assertExists()
+        itemNode.assertIsDisplayed()
+
+        // Perform pinch-out (zoom in) gesture
+        val itemBounds = itemNode.fetchSemanticsNode().boundsInRoot
+        val itemCenter = itemBounds.center
+
+        val pointer1Initial = Offset(10f, 0f) // Pointers start close
+        val pointer2Initial = Offset(15f, 0f)
+        val pointer1Final = Offset(50f, 0f) // Pointers end further apart
+        val pointer2Final = Offset(65f, 50f)
+
+        itemNode.performTouchInput {
+            pinch(
+                center + pointer1Initial,
+                center + pointer2Initial,
+                center + pointer1Final,
+                center + pointer2Final,
+                durationMillis = 200L,
+            )
+        }
+
+        composeTestRule.waitForIdle()
+
+        val wasInvoked = callbackInvoked.await()
+
+        assertWithMessage("Callback should have been invoked at max zoom").that(wasInvoked).isTrue()
     }
 
     /** Ensures the MediaGrid loads media with the correct semantic information */
@@ -811,7 +1030,9 @@ class MediaGridTest {
                         TestPhotopickerConfiguration.build {
                             action("TEST_ACTION")
                             intent(Intent("TEST_ACTION"))
-                        }
+                        },
+                    LocalNavController provides TestNavHostController(getTestableContext()),
+                    LocalSelection provides selection,
                 ) {
                     val items = dataFlow.collectAsLazyPagingItems()
                     val selected by selection.flow.collectAsStateWithLifecycle()
@@ -860,17 +1081,22 @@ class MediaGridTest {
                             intent(Intent("TEST_ACTION"))
                         }
                 ) {
-                    val items = flow.collectAsLazyPagingItems()
-                    val selected by selection.flow.collectAsStateWithLifecycle()
-                    mediaGrid(
-                        items = items,
-                        selection = selected,
-                        onItemClick = {},
-                        onItemLongPress = {},
-                        contentItemFactory = { item, _, onClick, _, _ ->
-                            customContentItemFactory(item, onClick)
-                        },
-                    )
+                    CompositionLocalProvider(
+                        LocalNavController provides TestNavHostController(getTestableContext()),
+                        LocalSelection provides selection,
+                    ) {
+                        val items = flow.collectAsLazyPagingItems()
+                        val selected by selection.flow.collectAsStateWithLifecycle()
+                        mediaGrid(
+                            items = items,
+                            selection = selected,
+                            onItemClick = {},
+                            onItemLongPress = {},
+                            contentItemFactory = { item, _, onClick, _, _ ->
+                                customContentItemFactory(item, onClick)
+                            },
+                        )
+                    }
                 }
             }
 
@@ -902,7 +1128,9 @@ class MediaGridTest {
                         TestPhotopickerConfiguration.build {
                             action("TEST_ACTION")
                             intent(Intent("TEST_ACTION"))
-                        }
+                        },
+                    LocalNavController provides TestNavHostController(getTestableContext()),
+                    LocalSelection provides selection,
                 ) {
                     val items = dataFlow.collectAsLazyPagingItems()
                     val selected by selection.flow.collectAsStateWithLifecycle()
@@ -1165,5 +1393,235 @@ class MediaGridTest {
         // Verify whether the method to transfer touch events is not invoked during testing
         @Suppress("DEPRECATION")
         verify(mockSurfaceControlViewHost, never()).transferTouchGestureToHost()
+    }
+
+    @Test
+    fun testMediaGrid_pinchToZoom_zoomIn_reducesColumns() = runTest {
+        val config =
+            TestPhotopickerConfiguration.build {
+                action("TEST_ACTION")
+                intent(Intent("TEST_ACTION"))
+            }
+        val initialColumns = 3
+        val minColumns = 2
+        val selection =
+            SelectionImpl<Media>(
+                scope = backgroundScope,
+                configuration =
+                    provideTestConfigurationFlow(
+                        defaultConfiguration = config,
+                        scope = backgroundScope,
+                    ),
+                preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+            )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalPhotopickerConfiguration provides config) {
+                PhotopickerTheme(isDarkTheme = false, config = config) {
+                    pinchToZoomGrid(
+                        testItems = pinchToZoomTestData,
+                        selection = selection,
+                        initialColumns = initialColumns,
+                        minColumns = minColumns,
+                        maxColumns = initialColumns + 1, // ensure max is > initial
+                    )
+                }
+            }
+        }
+        advanceTimeBy(500) // Allow time for collectors
+        composeTestRule.waitForIdle() // Wait for recomposition.
+
+        // pinchToZoomTestData has a separator at index 0.
+        // Media items start from index 1 of pinchToZoomTestData.
+        // Item "pinch_media_1" (MediaGridItem index 1)
+        // Item "pinch_media_2" (MediaGridItem index 2)
+        // Item "pinch_media_3" (MediaGridItem index 3)
+        // Item "pinch_media_4" (MediaGridItem index 4)
+
+        // With 3 columns:
+        // Row 0 (Grid): Separator (spans 3 columns)
+        // Row 1 (Grid): pinch_media_1, pinch_media_2, pinch_media_3
+        // Row 2 (Grid): pinch_media_4, pinch_media_5, pinch_media_6
+        // So, pinch_media_1 and pinch_media_4 should be in different rows.
+        assertWithMessage(
+                "Initially, item pinch_media_1 and pinch_media_4 should be in different rows"
+            )
+            .that(areItemsInSameRow("pinch_media_1", "pinch_media_4"))
+            .isFalse()
+        assertWithMessage(
+                "Initially, item pinch_media_1 and pinch_media_2 should be in the same row"
+            )
+            .that(areItemsInSameRow("pinch_media_1", "pinch_media_2"))
+            .isTrue()
+
+        // Perform pinch-out (zoom in) gesture to reduce columns to minColumns (2)
+        composeTestRule.onNode(hasTestTag(MEDIA_GRID_TEST_TAG)).performTouchInput {
+            val start0 = center + Offset(-50f, 0f)
+            val end0 = center + Offset(-100f, 0f)
+            val start1 = center + Offset(50f, 0f)
+            val end1 = center + Offset(100f, 0f)
+            val duration = 300L
+
+            // First finger down
+            down(pointerId = 0, position = start0)
+            // Second finger down
+            down(pointerId = 1, position = start1)
+
+            // Move fingers over half the duration
+            // advanceEventTime is critical for gestures to be processed correctly.
+            advanceEventTime(duration / 2)
+            moveTo(pointerId = 0, position = end0)
+            moveTo(pointerId = 1, position = end1)
+
+            // Hold for the second half of the duration
+            advanceEventTime(duration / 2)
+
+            // Lift fingers
+            up(pointerId = 0)
+            up(pointerId = 1)
+        }
+        advanceTimeBy(1000) // Allow time for recomposition and animation
+        composeTestRule.waitForIdle()
+
+        // With 2 columns:
+        // Row 0 (Grid): Separator (spans 2 columns)
+        // Row 1 (Grid): pinch_media_1, pinch_media_2
+        // Row 2 (Grid): pinch_media_3, pinch_media_4
+        // Row 3 (Grid): pinch_media_5, pinch_media_6
+        // Now, pinch_media_1 and pinch_media_3 should be in different rows.
+        // pinch_media_1 and pinch_media_2 should still be in the same row.
+        // pinch_media_2 and pinch_media_3 should be in different rows.
+
+        assertWithMessage(
+                "After zoom in, item pinch_media_1 and pinch_media_3 should be in different rows"
+            )
+            .that(areItemsInSameRow("pinch_media_1", "pinch_media_3"))
+            .isFalse()
+        assertWithMessage(
+                "After zoom in, item pinch_media_1 and pinch_media_2 should be in the same row"
+            )
+            .that(areItemsInSameRow("pinch_media_1", "pinch_media_2"))
+            .isTrue()
+        assertWithMessage(
+                "After zoom in, item pinch_media_2 and pinch_media_3 should be in different rows"
+            )
+            .that(areItemsInSameRow("pinch_media_2", "pinch_media_3"))
+            .isFalse()
+    }
+
+    @Test
+    fun testMediaGrid_pinchToZoom_zoomOut_increasesColumns() = runTest {
+        val config =
+            TestPhotopickerConfiguration.build {
+                action("TEST_ACTION")
+                intent(Intent("TEST_ACTION"))
+            }
+        val initialColumns = 3
+        val maxColumns = 4
+        val selection =
+            SelectionImpl<Media>(
+                scope = backgroundScope,
+                configuration =
+                    provideTestConfigurationFlow(
+                        defaultConfiguration = config,
+                        scope = backgroundScope,
+                    ),
+                preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+            )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalPhotopickerConfiguration provides config) {
+                PhotopickerTheme(isDarkTheme = false, config = config) {
+                    pinchToZoomGrid(
+                        testItems = pinchToZoomTestData,
+                        selection = selection,
+                        initialColumns = initialColumns,
+                        minColumns = initialColumns - 1, // ensure min is < initial
+                        maxColumns = maxColumns,
+                    )
+                }
+            }
+        }
+
+        advanceTimeBy(500) // Allow time for recomposition and animation
+        composeTestRule.waitForIdle()
+
+        // With 3 columns:
+        // Row 0 (Grid): Separator
+        // Row 1 (Grid): pinch_media_1, pinch_media_2, pinch_media_3
+        // Row 2 (Grid): pinch_media_4, pinch_media_5, pinch_media_6
+        // pinch_media_3 and pinch_media_4 are in different rows.
+        assertWithMessage(
+                "Initially, item pinch_media_3 and pinch_media_4 should be in different rows"
+            )
+            .that(areItemsInSameRow("pinch_media_3", "pinch_media_4"))
+            .isFalse()
+        assertWithMessage(
+                "Initially, items pinch_media_1, pinch_media_2, pinch_media_3 should be in the same row"
+            )
+            .that(
+                areItemsInSameRow("pinch_media_1", "pinch_media_2") &&
+                    areItemsInSameRow("pinch_media_2", "pinch_media_3")
+            )
+            .isTrue()
+
+        // Perform pinch-in (zoom out) gesture to increase columns to maxColumns (4)
+        composeTestRule.onNode(hasTestTag(MEDIA_GRID_TEST_TAG)).performTouchInput {
+            pinch(
+                start0 = center + Offset(-100f, 0f), // Start points for two fingers
+                end0 = center + Offset(-50f, 0f), // End points after moving inwards
+                start1 = center + Offset(100f, 0f),
+                end1 = center + Offset(50f, 0f),
+                durationMillis = 300L,
+            )
+        }
+        advanceTimeBy(500) // Allow time for recomposition and animation
+        composeTestRule.waitForIdle()
+
+        // With 4 columns:
+        // Row 0 (Grid): Separator
+        // Row 1 (Grid): pinch_media_1, pinch_media_2, pinch_media_3, pinch_media_4
+        // Row 2 (Grid): pinch_media_5, pinch_media_6
+        // Now, pinch_media_3 and pinch_media_4 should be in the SAME row.
+        assertWithMessage(
+                "After zoom out, item pinch_media_3 and pinch_media_4 should be in the same row"
+            )
+            .that(areItemsInSameRow("pinch_media_3", "pinch_media_4"))
+            .isTrue()
+        assertWithMessage(
+                "After zoom out, item pinch_media_4 and pinch_media_5 should be in different rows"
+            )
+            .that(areItemsInSameRow("pinch_media_4", "pinch_media_5"))
+            .isFalse()
+    }
+
+    private fun SemanticsNodeInteraction.getTop(): Float {
+        return fetchSemanticsNode().boundsInRoot.top
+    }
+
+    // Helper to check if two items are visually in the same row.
+    // Items are identified by their content description (mediaId part).
+    private fun areItemsInSameRow(
+        item1IdSubstring: String,
+        item2IdSubstring: String,
+        allowSmallDelta: Boolean = true,
+    ): Boolean {
+        val item1Node =
+            composeTestRule.onNode(
+                hasContentDescription(item1IdSubstring, substring = true)
+                // useUnmergedTree = true,
+            )
+        val item2Node =
+            composeTestRule.onNode(
+                hasContentDescription(item2IdSubstring, substring = true)
+                // useUnmergedTree = true,
+            )
+        item1Node.assertExists()
+        item2Node.assertExists()
+        val top1 = item1Node.getTop()
+        val top2 = item2Node.getTop()
+        // Using a small delta for float comparison can be useful if exact pixel alignment isn't
+        // guaranteed.
+        return if (allowSmallDelta) kotlin.math.abs(top1 - top2) < 5.0f else top1 == top2
     }
 }

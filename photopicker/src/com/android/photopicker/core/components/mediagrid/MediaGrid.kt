@@ -25,6 +25,7 @@ import android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_ANIMATED_WE
 import android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_GIF
 import android.provider.MediaStore.Files.FileColumns._SPECIAL_FORMAT_MOTION_PHOTO
 import android.text.format.DateUtils
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -73,6 +74,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
@@ -83,6 +85,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -95,6 +98,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -115,6 +119,7 @@ import com.android.photopicker.data.model.Group.Album
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.circleBackground
 import com.android.photopicker.extensions.insertMonthSeparators
+import com.android.photopicker.extensions.itemIndexAtPosition
 import com.android.photopicker.extensions.toMediaGridItemFromAlbum
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
 import com.android.photopicker.extensions.transferScrollableTouchesToHostInEmbedded
@@ -125,6 +130,7 @@ import com.android.photopicker.util.calculateWindowRect
 import com.android.photopicker.util.getMediaContentDescription
 import java.text.DateFormat
 import java.text.NumberFormat
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 /** The number of grid cells per row for Phone / narrow layouts */
@@ -188,36 +194,44 @@ val MEASUREMENT_DEFAULT_ALBUM_BOTTOM_PADDING = 16.dp
 val MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE = 12.dp
 
 /**
- * Composable for creating a MediaItemGrid from a [PagingData] source of data that implements
- * [Media] or [Album]
+ * Composable for creating a MediaItemGrid from a [LazyPagingItems] source of data that implements
+ * [Media] or [Album].
  *
- * The mediaGrid uses a custom wrapper class to distinguish between individual grid cells and
- * horizontal separators. In order to convert a [Media] into a [MediaGridItem] use the flow
- * extension method [toMediaGridItemFromMedia] and to convert an [Album] into a [MediaGridItem] use
- * the flow extension method [toMediaGridItemFromAlbum]. Additionally, to insert separators, the
- * [Flow] extension method [insertMonthSeparators] will separate list items by month.
+ * The mediaGrid uses a custom wrapper class [MediaGridItem] to distinguish between individual grid
+ * cells (like media or albums) and horizontal separators. To convert a [Media] into a
+ * [MediaGridItem], use the flow extension method [toMediaGridItemFromMedia]. To convert an [Album]
+ * into a [MediaGridItem], use the flow extension method [toMediaGridItemFromAlbum]. Additionally,
+ * to insert month-based separators, the [kotlinx.coroutines.flow.Flow] extension method
+ * [insertMonthSeparators] can be used.
  *
- * @param items The LazyPagingItems that have been collected. See [collectAsLazyPagingItems] to
- *   transform a PagingData flow into the correct format for this composable.
- * @param focusItem Optional item that needs to request focus when the media grid is drawn.
- * @param selection The set of currently selected media items. Used to highlight selected items.
- * @param onItemClick Callback invoked when a grid item is clicked.
- * @param onItemLongPress Callback invoked when a grid item is long-pressed.
+ * @param items The [LazyPagingItems] that have been collected, representing the data to display.
+ *   See [collectAsLazyPagingItems] to transform a PagingData flow into this format.
+ * @param focusItem Optional [MediaGridItem] that should request focus when the media grid is drawn.
+ * @param selection The set of currently selected [Media] items. Used to highlight selected items.
+ * @param onItemClick Callback invoked when a grid item (e.g., media, album) is clicked.
+ * @param onItemLongPress Callback invoked when a grid item is long-pressed. Defaults to no-op.
  * @param isExpandedScreen Whether the device is using an expanded screen size. This impacts the
- *   default number of cells shown per row. Has no effect if columns parameter is set directly.
- * @param columns number of cells per row.
- * @param gridCellPadding padding for the grid elements from the wall and individual items.
- * @param modifier A modifier to apply to the top level [LazyVerticalGrid] this composable creates.
- * @param state the [LazyGridState] to use with this Lazy resource.
- * @param contentPadding [PaddingValues] that will be applied to the [LazyVerticalGrid].
- * @param userScrollEnabled Whether the user is able to scroll the grid.
- * @param spanFactory Optional custom implementation for how mediaGrid will decide span sizes.
- * @param contentTypeFactory Optional custom implementation for how mediaGrid will decide
- *   contentType for its items.
- * @param contentItemFactory Optional custom implementation for composing individual grid items.
- * @param contentSeparatorFactory Optional custom implementation for composing individual grid
- *   separators.
- * @param bannerContent Optional custom implementation for banner content to be displayed
+ *   default number of cells shown per row if `initialColumns` is not set directly.
+ * @param initialColumns The initial number of cells per row. Defaults based on [isExpandedScreen].
+ * @param gridCellPadding Padding between grid cells. Defaults to [MEASUREMENT_CELL_SPACING].
+ * @param modifier A [Modifier] to apply to the top-level [LazyVerticalGrid] this composable
+ *   creates.
+ * @param state The [LazyGridState] for observing and controlling the grid's scroll state. Defaults
+ *   to a remembered state.
+ * @param contentPadding [PaddingValues] that will be applied to the [LazyVerticalGrid]. Defaults to
+ *   padding at the bottom.
+ * @param userScrollEnabled Whether the user is able to scroll the grid. Defaults to true.
+ * @param spanFactory Optional factory to determine the [GridItemSpan] for each item, based on the
+ *   item and current column count. Defaults to [defaultBuildSpan].
+ * @param contentTypeFactory Optional factory to determine the content type for each item, used for
+ *   efficient item recycling. Defaults to [defaultBuildContentType].
+ * @param contentItemFactory Optional factory to compose individual [MediaGridItem]s (media, albums,
+ *   categories, etc.). Receives the item, its selection state, click/long-press handlers, and a
+ *   date formatter. Defaults to a factory providing default item rendering.
+ * @param contentSeparatorFactory Optional factory to compose [MediaGridItem.SeparatorItem]s.
+ *   Defaults to [defaultBuildSeparator].
+ * @param bannerContent Optional composable content to be displayed as a banner at the top of the
+ *   grid.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid.
  */
@@ -229,14 +243,17 @@ fun mediaGrid(
     onItemClick: (item: MediaGridItem) -> Unit,
     onItemLongPress: (item: MediaGridItem) -> Unit = {},
     isExpandedScreen: Boolean = false,
-    columns: GridCells = GridCells.Fixed(getCellsPerRow(isExpandedScreen)),
+    pinchToZoomEnabled: Boolean = false,
+    pinchToZoomMaxColumns: Int = 5,
+    pinchToZoomMinColumns: Int = 2,
+    onZoomAtMaxZoom: (MediaGridItem) -> Unit = {},
+    initialColumns: Int = getCellsPerRow(isExpandedScreen),
     gridCellPadding: Dp = MEASUREMENT_CELL_SPACING,
     modifier: Modifier = Modifier,
     state: LazyGridState = rememberLazyGridState(),
     contentPadding: PaddingValues = PaddingValues(bottom = MEASUREMENT_DEFAULT_CONTENT_PADDING),
     userScrollEnabled: Boolean = true,
-    spanFactory: (item: MediaGridItem?, isExpandedScreen: Boolean) -> GridItemSpan =
-        ::defaultBuildSpan,
+    spanFactory: (item: MediaGridItem?, currentColumns: Int) -> GridItemSpan = ::defaultBuildSpan,
     contentTypeFactory: (item: MediaGridItem?) -> Int = ::defaultBuildContentType,
     contentItemFactory:
         @Composable
@@ -282,8 +299,12 @@ fun mediaGrid(
         onItemLongPress = onItemLongPress,
         dragSelectionEnabled = false,
         isExpandedScreen = isExpandedScreen,
-        columns = columns,
+        initialColumns = initialColumns,
         gridCellPadding = gridCellPadding,
+        pinchToZoomEnabled = pinchToZoomEnabled,
+        pinchToZoomMaxColumns = pinchToZoomMaxColumns,
+        pinchToZoomMinColumns = pinchToZoomMinColumns,
+        onZoomAtMaxZoom = onZoomAtMaxZoom,
         modifier = modifier,
         state = state,
         contentPadding = contentPadding,
@@ -298,50 +319,53 @@ fun mediaGrid(
 }
 
 /**
- * Composable for creating a MediaItemGrid from a [PagingData] source of data that implements
+ * Composable for creating a MediaItemGrid from a [LazyPagingItems] source of data that implements
  * [Media] or [Album].
  *
- * The mediaGrid uses a custom wrapper class to distinguish between individual grid cells and
- * horizontal separators. In order to convert a [Media] into a [MediaGridItem] use the flow
- * extension method [toMediaGridItemFromMedia] and to convert an [Album] into a [MediaGridItem] use
- * the flow extension method [toMediaGridItemFromAlbum]. Additionally, to insert separators, the
- * [Flow] extension method [insertMonthSeparators] will separate list items by month.
+ * The mediaGrid uses a custom wrapper class [MediaGridItem] to distinguish between individual grid
+ * cells and horizontal separators. To convert [Media] or [Album] to [MediaGridItem], use
+ * [toMediaGridItemFromMedia] or [toMediaGridItemFromAlbum] respectively. The
+ * [insertMonthSeparators] extension can add month-based separators.
  *
- * This overload simplifies usage by providing a no-op long press handler.
+ * This overload simplifies usage by providing a no-op long press handler to the default item
+ * factory and introduces drag-to-select and pinch-to-zoom capabilities.
  *
- * @param items The LazyPagingItems that have been collected. See [collectAsLazyPagingItems] to
- *   transform a PagingData flow into the correct format for this composable.
- * @param focusItem Optional item that needs to request focus when the media grid is drawn.
- * @param selection Set of currently selected [Media] items. Used to highlight selected items.
+ * @param items The [LazyPagingItems] collected for display. See [collectAsLazyPagingItems].
+ * @param focusItem Optional [MediaGridItem] to request focus when the grid is drawn.
+ * @param selection Set of currently selected [Media] items, used for highlighting.
  * @param onItemClick Callback invoked when a grid item is clicked.
  * @param dragSelectionEnabled Whether drag-to-select functionality is enabled. Defaults to false.
- * @param dragSelectState State for managing drag selection within the grid. Defaults to a
- *   remembered [GridDragSelectState].
- * @param dragSelectIndexOffset An offset applied to the indices reported to the drag selection
- *   manager. Useful if the grid is part of a larger list with other items preceding it. Defaults
- *   to 0.
- * @param selectionTransform A function to transform a [Media] item during selection operations,
- *   e.g., to modify its properties before it's added to the selection. Defaults to an identity
- *   function.
- * @param isExpandedScreen Whether the device is using an expanded screen size. This impacts the
- *   default number of cells shown per row. Has no effect if columns parameter is set directly.
- * @param columns Number of cells per row. Defaults based on [isExpandedScreen].
- * @param gridCellPadding Padding for the grid elements from the wall and individual items.
- * @param modifier A [Modifier] to apply to the top level [LazyVerticalGrid] this composable
- *   creates.
- * @param contentPadding [PaddingValues] that will be applied to the [LazyVerticalGrid].
- * @param userScrollEnabled Whether the user is able to scroll the grid. Defaults to true.
- * @param spanFactory Optional custom implementation for how mediaGrid will decide span sizes.
- * @param contentTypeFactory Optional custom implementation for how mediaGrid will decide
- *   contentType for its items.
- * @param contentItemFactory Optional custom implementation for composing individual grid items. The
- *   factory lambda receives parameters including the item, its selection state, click handler, and
- *   date format. Note: The long press handler provided to this factory by this overload is a no-op,
- *   as this function overload does not support long press actions directly.
- * @param contentSeparatorFactory Optional custom implementation for composing individual grid
- *   separators.
- * @param bannerContent Optional custom composable content to be displayed as a banner, typically at
- *   the top of the grid.
+ * @param dragSelectState State for managing drag selection. Defaults to a remembered
+ *   [GridDragSelectState].
+ * @param dragSelectIndexOffset Offset for indices reported to drag selection, useful if the grid is
+ *   part of a larger list. Defaults to 0.
+ * @param selectionTransform Function to transform a [Media] item during selection. Defaults to an
+ *   identity function.
+ * @param pinchToZoomEnabled Whether pinch-to-zoom functionality for changing column count is
+ *   enabled. Defaults to false.
+ * @param pinchToZoomMaxColumns Maximum number of columns achievable via pinch-to-zoom. Defaults
+ *   to 5.
+ * @param pinchToZoomMinColumns Minimum number of columns achievable via pinch-to-zoom. Defaults
+ *   to 2.
+ * @param onZoomAtMaxZoom Callback invoked when a pinch-zoom gesture attempts to zoom in further
+ *   while already at the `pinchToZoomMinColumns` (maximum zoom level). The [MediaGridItem] under
+ *   the gesture's focal point is provided. Defaults to no-op.
+ * @param isExpandedScreen Whether the device uses an expanded screen size, affecting default column
+ *   count if `initialColumns` isn't set.
+ * @param initialColumns Initial number of cells per row. Defaults based on [isExpandedScreen].
+ * @param gridCellPadding Padding between grid cells. Defaults to [MEASUREMENT_CELL_SPACING].
+ * @param modifier A [Modifier] for the top-level [LazyVerticalGrid].
+ * @param contentPadding [PaddingValues] for the [LazyVerticalGrid]. Defaults to bottom padding.
+ * @param userScrollEnabled Whether user scrolling is enabled. Defaults to true.
+ * @param spanFactory Optional factory for item [GridItemSpan]. Defaults to [defaultBuildSpan].
+ * @param contentTypeFactory Optional factory for item content type. Defaults to
+ *   [MediaGridItem.Companion.defaultBuildContentType].
+ * @param contentItemFactory Optional factory for [MediaGridItem] composition. Receives item,
+ *   selection state, click handler, a no-op long-press handler for this overload, and date format.
+ *   Defaults to a factory providing default item rendering.
+ * @param contentSeparatorFactory Optional factory for [MediaGridItem.SeparatorItem] composition.
+ *   Defaults to [defaultBuildSeparator].
+ * @param bannerContent Optional composable banner content at the top of the grid.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid
  */
@@ -355,14 +379,17 @@ fun mediaGrid(
     dragSelectState: GridDragSelectState = rememberGridDragSelectState(),
     dragSelectIndexOffset: Int = 0,
     selectionTransform: (Media) -> Media = { it },
+    pinchToZoomEnabled: Boolean = false,
+    pinchToZoomMaxColumns: Int = 5,
+    pinchToZoomMinColumns: Int = 2,
+    onZoomAtMaxZoom: (MediaGridItem) -> Unit = {},
     isExpandedScreen: Boolean = false,
-    columns: GridCells = GridCells.Fixed(getCellsPerRow(isExpandedScreen)),
+    initialColumns: Int = getCellsPerRow(isExpandedScreen),
     gridCellPadding: Dp = MEASUREMENT_CELL_SPACING,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = MEASUREMENT_DEFAULT_CONTENT_PADDING),
     userScrollEnabled: Boolean = true,
-    spanFactory: (item: MediaGridItem?, isExpandedScreen: Boolean) -> GridItemSpan =
-        ::defaultBuildSpan,
+    spanFactory: (item: MediaGridItem?, currentColumns: Int) -> GridItemSpan = ::defaultBuildSpan,
     contentTypeFactory: (item: MediaGridItem?) -> Int = ::defaultBuildContentType,
     contentItemFactory:
         @Composable
@@ -410,8 +437,12 @@ fun mediaGrid(
         dragSelectState = dragSelectState,
         dragSelectIndexOffset = dragSelectIndexOffset,
         selectionTransform = selectionTransform,
+        pinchToZoomEnabled = pinchToZoomEnabled,
+        pinchToZoomMaxColumns = pinchToZoomMaxColumns,
+        pinchToZoomMinColumns = pinchToZoomMinColumns,
+        onZoomAtMaxZoom = onZoomAtMaxZoom,
         isExpandedScreen = isExpandedScreen,
-        columns = columns,
+        initialColumns = initialColumns,
         gridCellPadding = gridCellPadding,
         modifier = modifier,
         state = dragSelectState.gridState,
@@ -427,45 +458,41 @@ fun mediaGrid(
 }
 
 /**
- * Composable for creating a MediaItemGrid from a [PagingData] source of data that implements
- * [Media] or [Album]
+ * Core composable implementation for creating a MediaItemGrid from a [LazyPagingItems] source.
  *
- * The mediaGrid uses a custom wrapper class to distinguish between individual grid cells and
- * horizontal separators. In order to convert a [Media] into a [MediaGridItem] use the flow
- * extension method [toMediaGridItemFromMedia] and to convert an [Album] into a [MediaGridItem] use
- * the flow extension method [toMediaGridItemFromAlbum]. Additionally, to insert separators, the
- * [Flow] extension method [insertMonthSeparators] will separate list items by month.
+ * This function underpins the public `mediaGrid` composables, providing the main layout and
+ * interaction logic. It handles item rendering, selection, drag-to-select, pinch-to-zoom, and other
+ * grid behaviors.
  *
- * @param items The LazyPagingItems that have been collected. See [collectAsLazyPagingItems] to
- *   transform a PagingData flow into the correct format for this composable.
- * @param focusItem Optional item that needs to request focus when the media grid is drawn.
+ * @param items The [LazyPagingItems] representing the data to display.
+ * @param focusItem Optional [MediaGridItem] that should request focus.
  * @param selection The current set of selected [Media] items.
- * @param dragSelectionEnabled Whether drag-to-select functionality is enabled for the grid.
+ * @param dragSelectionEnabled Whether drag-to-select functionality is enabled.
  * @param dragSelectState The state object for managing drag-to-select behavior. Required if
  *   [dragSelectionEnabled] is true.
- * @param dragSelectIndexOffset An offset applied to the indices reported by [dragSelectState].
- *   Useful when the grid is part of a larger list with preceding items.
- * @param selectionTransform A function to transform a [Media] item during the selection process,
- *   e.g., to modify its properties before it's added to the selection.
+ * @param dragSelectIndexOffset An offset applied to indices reported by [dragSelectState].
+ * @param pinchToZoomEnabled Whether pinch-to-zoom functionality for changing column count is
+ *   enabled.
+ * @param pinchToZoomMaxColumns Maximum number of columns achievable via pinch-to-zoom.
+ * @param pinchToZoomMinColumns Minimum number of columns achievable via pinch-to-zoom.
+ * @param onZoomAtMaxZoom Callback for zoom attempts beyond maximum zoom.
+ * @param selectionTransform A function to transform a [Media] item during selection.
  * @param onItemClick Callback triggered when a grid item is clicked.
  * @param onItemLongPress Callback triggered when a grid item is long-pressed.
- * @param isExpandedScreen Whether the device is using an expanded screen size. This impacts the
- *   default number of cells shown per row. Has no effect if columns parameter is set directly.
- * @param columns number of cells per row.
- * @param gridCellPadding padding for the grid elements from the wall and individual items
- * @param modifier A modifier to apply to the top level [LazyVerticalGrid] this composable creates.
- * @param contentPadding [PaddingValues] that will be applied to the [LazyVerticalGrid].
- * @param userScrollEnabled Whether the user is able to scroll the grid
- * @param spanFactory Optional custom implementation for how mediaGrid will decide span sizes.
- * @param contentTypeFactory Optional custom implementation for how mediaGrid will decide
- *   contentType for its items
- * @param contentItemFactory Optional custom implementation for composing individual grid items.
- * @param contentSeparatorFactory Optional custom implementation for composing individual grid
- *   separators.
- * @param bannerContent Optional custom implementation for banner content to be displayed
+ * @param isExpandedScreen Whether the device is using an expanded screen size.
+ * @param initialColumns Initial number of cells per row.
+ * @param gridCellPadding Padding between grid cells.
+ * @param modifier A [Modifier] to apply to the [LazyVerticalGrid].
+ * @param contentPadding [PaddingValues] for the [LazyVerticalGrid].
+ * @param userScrollEnabled Whether the user can scroll the grid.
+ * @param spanFactory Factory to determine [GridItemSpan] for items.
+ * @param contentTypeFactory Factory to determine content type for items.
+ * @param contentItemFactory Factory to compose individual [MediaGridItem]s.
+ * @param contentSeparatorFactory Factory to compose [MediaGridItem.SeparatorItem]s.
+ * @param bannerContent Optional composable banner content.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid
- * @param state the [LazyGridState] to use with this Lazy resource.
+ * @param state The [LazyGridState] to use with the [LazyVerticalGrid].
  */
 @Composable
 private fun mediaGrid(
@@ -475,16 +502,20 @@ private fun mediaGrid(
     dragSelectionEnabled: Boolean = false,
     dragSelectState: GridDragSelectState? = null,
     dragSelectIndexOffset: Int = 0,
+    pinchToZoomEnabled: Boolean = false,
+    pinchToZoomMaxColumns: Int = 5,
+    pinchToZoomMinColumns: Int = 2,
+    onZoomAtMaxZoom: (MediaGridItem) -> Unit = {},
     selectionTransform: (Media) -> Media = { it },
     onItemClick: (item: MediaGridItem) -> Unit,
     onItemLongPress: (item: MediaGridItem) -> Unit = {},
     isExpandedScreen: Boolean = false,
-    columns: GridCells = GridCells.Fixed(getCellsPerRow(isExpandedScreen)),
+    initialColumns: Int = getCellsPerRow(isExpandedScreen),
     gridCellPadding: Dp = MEASUREMENT_CELL_SPACING,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = MEASUREMENT_DEFAULT_CONTENT_PADDING),
     userScrollEnabled: Boolean = true,
-    spanFactory: (item: MediaGridItem?, isExpandedScreen: Boolean) -> GridItemSpan,
+    spanFactory: (item: MediaGridItem?, currentColumns: Int) -> GridItemSpan,
     contentTypeFactory: (item: MediaGridItem?) -> Int,
     contentItemFactory:
         @Composable
@@ -510,149 +541,198 @@ private fun mediaGrid(
             timeStyle = DateFormat.SHORT,
         )
 
+    var zoom by rememberSaveable(initialColumns) { mutableStateOf(1f) }
+    var currentColumns by rememberSaveable(initialColumns) { mutableStateOf(initialColumns) }
+    var zoomCanPreview by remember { mutableStateOf(currentColumns == pinchToZoomMinColumns) }
+
+    val minZoomFactor =
+        remember(initialColumns) { initialColumns / pinchToZoomMaxColumns.toFloat() }
+    val maxZoomFactor =
+        remember(initialColumns) { initialColumns / pinchToZoomMinColumns.toFloat() }
+
+    val pinchToZoomHandler: (PinchToZoomEvent) -> Boolean = pinchToZoomHandler@{ event ->
+        when (event) {
+            is PinchToZoomEvent.Started -> {
+                // Only allow "zooming to preview" for this gesture if the zoom level is already at
+                // the minimum zoom factor. This prevents a disruptive experience where zooming in
+                // too much navigates you away from the current screen, the user can change the zoom
+                // level in the first gesture, and then zoom to preview in a second gesture.
+                zoomCanPreview = currentColumns == pinchToZoomMinColumns
+            }
+            is PinchToZoomEvent.Changed -> {
+                zoom = (zoom * event.value).coerceIn(minZoomFactor, maxZoomFactor)
+                currentColumns =
+                    (initialColumns / zoom)
+                        .roundToInt()
+                        .coerceIn(pinchToZoomMinColumns, pinchToZoomMaxColumns)
+                if (event.value < 1f) {
+                    zoomCanPreview = false
+                }
+                if (zoomCanPreview && event.value > 1f) {
+                    // positive zoom
+                    if (currentColumns == pinchToZoomMinColumns) {
+                        state
+                            .itemIndexAtPosition(event.offset)
+                            ?.minus(dragSelectIndexOffset)
+                            ?.let { index ->
+                                val item =
+                                    try {
+                                        items.peek(index)
+                                    } catch (e: Exception) {
+                                        // Prevent crashes when the item cannot
+                                        // be accessed at the requested index,
+                                        // and instead do nothing.
+                                        Log.w("Could not find item to preview at index: $index", e)
+                                        null
+                                    }
+                                item?.let {
+                                    onZoomAtMaxZoom(it)
+                                    return@pinchToZoomHandler true
+                                }
+                            }
+                    }
+                }
+            }
+            is PinchToZoomEvent.Ended -> {}
+        }
+        return@pinchToZoomHandler false
+    }
+
     /**
      * Bottom sheet current state in runtime Embedded Photopicker. This assignment is necessary to
      * get the regular updates of bottom sheet current state inside [LazyVerticalGrid]
      */
     val isExpanded = rememberUpdatedState(LocalEmbeddedState.current?.isExpanded ?: false)
-    LazyVerticalGrid(
-        columns = columns,
+
+    // PinchToZoom is handled above the Grid so that it can intercept touch events above the
+    // LazyVerticalGrid in the "initial" touch event handling pass so that when handling pinch
+    // gestures the pinch gestures themselves don't also scroll the grid.
+    val boxModifier: Modifier = Modifier
+    Box(
         modifier =
-            // Modifier order here matters greatly. Since both of these modifiers
-            // register pointerInput handlers, ensure that embedded transfer
-            // gestures are evaluated first, before evaluating any drag-to-select
-            // input.
-            modifier
-                .applyWhen(
-                    SdkLevel.isAtLeastU() && isEmbedded && host != null,
-                    {
-                        // This can be safely suppressed as the condition includes the SdkLevel
-                        // check, but the Linter doesn't understand the precondition to this block
-                        // being run.
-                        @SuppressLint("NewApi")
-                        transferScrollableTouchesToHostInEmbedded(
-                            state,
-                            isExpanded,
-                            checkNotNull(host) { "surfaceHost cannot be null" },
-                        )
-                    },
-                )
-                .applyWhen(
-                    dragSelectionEnabled,
-                    {
-                        onGridDragSelect(
-                            config = LocalPhotopickerConfiguration.current,
-                            items = items,
-                            state =
-                                checkNotNull(dragSelectState) {
-                                    "GridDragSelectState cannot be null"
-                                },
-                            windowRect = if (isEmbedded) null else calculateWindowRect(),
-                            indexOffset = dragSelectIndexOffset,
-                            autoScrollThreshold = GridDragSelectDefaults.autoScrollThreshold,
-                            hapticFeedback = GridDragSelectDefaults.hapticsFeedback,
-                            selectionTransform = selectionTransform,
-                        )
-                    },
-                ),
-        state = state,
-        contentPadding = contentPadding,
-        userScrollEnabled = userScrollEnabled,
-        horizontalArrangement = Arrangement.spacedBy(gridCellPadding),
-        verticalArrangement = Arrangement.spacedBy(gridCellPadding),
+            boxModifier.applyWhen(
+                pinchToZoomEnabled,
+                { pinchToZoom(PointerEventPass.Initial, pinchToZoomHandler) },
+            )
     ) {
-
-        // If banner content was passed add it to the grid as a full span item
-        // so that it appears inside the scroll container.
-        bannerContent?.let {
-            item(
-                span = {
-                    if (isExpandedScreen) GridItemSpan(CELLS_PER_ROW_EXPANDED)
-                    else GridItemSpan(CELLS_PER_ROW)
-                }
-            ) {
-                it()
-            }
-        }
-
-        // If highlight content was passed, add it to the grid as a full span item
-        // so that it appears inside the scroll container.
-        highlightMediaContent?.let {
-            item(
-                span = {
-                    if (isExpandedScreen) GridItemSpan(CELLS_PER_ROW_EXPANDED)
-                    else GridItemSpan(CELLS_PER_ROW)
-                }
-            ) {
-                it()
-            }
-        }
-
-        // Add the media items from the LazyPagingItems
-        items(
-            count = items.itemCount,
-            key = { index -> MediaGridItem.keyFactory(items.peek(index), index) },
-            span = { index -> spanFactory(items.peek(index), isExpandedScreen) },
-            contentType = { index -> contentTypeFactory(items.peek(index)) },
-        ) { index ->
-            val item: MediaGridItem? = items.get(index)
-            item?.let {
-                when (item) {
-                    is MediaGridItem.MediaItem ->
-                        contentItemFactory(
-                            item,
-                            selection.contains(item.media),
-                            onItemClick,
-                            onItemLongPress,
-                            dateFormat,
-                        )
-
-                    is MediaGridItem.AlbumItem,
-                    is MediaGridItem.CategoryItem,
-                    is MediaGridItem.MediaSetItem,
-                    is MediaGridItem.PersonMediaSetItem ->
-                        contentItemFactory(
-                            item,
-                            /* isSelected */ false,
-                            onItemClick,
-                            onItemLongPress,
-                            dateFormat,
-                        )
-                    is MediaGridItem.SeparatorItem -> contentSeparatorFactory(item)
-                }
-            }
-        }
-    }
-    if (isEmbedded) {
-        // Remember the previous value of isExpanded
-        val wasPreviouslyExpanded = remember { mutableStateOf(!isExpanded.value) }
-
-        // Any time isExpanded changes, check if grid animation is required.
-        LaunchedEffect(isExpanded.value) {
-            val isCollapsed = !isExpanded.value
-            if (wasPreviouslyExpanded.value && isCollapsed) {
-                // Only animate if going from Expanded -> Collapsed
-                if (state.firstVisibleItemScrollOffset > 0) {
-                    state.animateScrollBy(
-                        value = -state.firstVisibleItemScrollOffset.toFloat(),
-                        animationSpec = tween(durationMillis = 500),
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(currentColumns),
+            modifier =
+                // Modifier order here matters greatly. Since both of these modifiers
+                // register pointerInput handlers, ensure that embedded transfer
+                // gestures are evaluated first, before evaluating any drag-to-select
+                // input.
+                modifier
+                    .applyWhen(
+                        SdkLevel.isAtLeastU() && isEmbedded && host != null,
+                        {
+                            // This can be safely suppressed as the condition includes the SdkLevel
+                            // check, but the Linter doesn't understand the precondition to this
+                            // block being run.
+                            @SuppressLint("NewApi")
+                            transferScrollableTouchesToHostInEmbedded(
+                                state,
+                                isExpanded,
+                                checkNotNull(host) { "surfaceHost cannot be null" },
+                            )
+                        },
                     )
+                    .applyWhen(
+                        dragSelectionEnabled,
+                        {
+                            onGridDragSelect(
+                                config = LocalPhotopickerConfiguration.current,
+                                items = items,
+                                state =
+                                    checkNotNull(dragSelectState) {
+                                        "GridDragSelectState cannot be null"
+                                    },
+                                windowRect = if (isEmbedded) null else calculateWindowRect(),
+                                indexOffset = dragSelectIndexOffset,
+                                autoScrollThreshold = GridDragSelectDefaults.autoScrollThreshold,
+                                hapticFeedback = GridDragSelectDefaults.hapticsFeedback,
+                                selectionTransform = selectionTransform,
+                            )
+                        },
+                    ),
+            state = state,
+            contentPadding = contentPadding,
+            userScrollEnabled = userScrollEnabled,
+            horizontalArrangement = Arrangement.spacedBy(gridCellPadding),
+            verticalArrangement = Arrangement.spacedBy(gridCellPadding),
+        ) {
+
+            // If banner content was passed add it to the grid as a full span item
+            // so that it appears inside the scroll container.
+            bannerContent?.let { item(span = { GridItemSpan(currentColumns) }) { it() } }
+            // If highlight content was passed, add it to the grid as a full span item
+            // so that it appears inside the scroll container.
+            highlightMediaContent?.let { item(span = { GridItemSpan(currentColumns) }) { it() } }
+
+            // Add the media items from the LazyPagingItems
+            items(
+                count = items.itemCount,
+                key = { index -> MediaGridItem.keyFactory(items.peek(index), index) },
+                span = { index -> spanFactory(items.peek(index), currentColumns) },
+                contentType = { index -> contentTypeFactory(items.peek(index)) },
+            ) { index ->
+                val item: MediaGridItem? = items.get(index)
+                item?.let {
+                    when (item) {
+                        is MediaGridItem.MediaItem ->
+                            contentItemFactory(
+                                item,
+                                selection.contains(item.media),
+                                onItemClick,
+                                onItemLongPress,
+                                dateFormat,
+                            )
+
+                        is MediaGridItem.AlbumItem,
+                        is MediaGridItem.CategoryItem,
+                        is MediaGridItem.MediaSetItem,
+                        is MediaGridItem.PersonMediaSetItem ->
+                            contentItemFactory(
+                                item,
+                                /* isSelected */ false,
+                                onItemClick,
+                                onItemLongPress,
+                                dateFormat,
+                            )
+                        is MediaGridItem.SeparatorItem -> contentSeparatorFactory(item)
+                    }
                 }
             }
-            // Update the previous state as the current state
-            wasPreviouslyExpanded.value = isExpanded.value
+        }
+        if (isEmbedded) {
+            // Remember the previous value of isExpanded
+            val wasPreviouslyExpanded = remember { mutableStateOf(!isExpanded.value) }
+
+            // Any time isExpanded changes, check if grid animation is required.
+            LaunchedEffect(isExpanded.value) {
+                val isCollapsed = !isExpanded.value
+
+                // Only animate if going from Expanded -> Collapsed
+                if (wasPreviouslyExpanded.value && isCollapsed) {
+                    if (state.firstVisibleItemScrollOffset > 0) {
+                        state.animateScrollBy(
+                            value = -state.firstVisibleItemScrollOffset.toFloat(),
+                            animationSpec = tween(durationMillis = 500),
+                        )
+                    }
+                }
+                // Update the previous state as the current state
+                wasPreviouslyExpanded.value = isExpanded.value
+            }
         }
     }
 }
 
 /** Default builder for calculating the [GridItemSpan] of the provided [MediaGridItem]. */
-private fun defaultBuildSpan(item: MediaGridItem?, isExpandedScreen: Boolean): GridItemSpan {
+private fun defaultBuildSpan(item: MediaGridItem?, currentColumns: Int): GridItemSpan {
     return when (item) {
         is MediaGridItem.MediaItem -> GridItemSpan(1)
-        is MediaGridItem.SeparatorItem ->
-            if (isExpandedScreen) GridItemSpan(CELLS_PER_ROW_EXPANDED)
-            else GridItemSpan(CELLS_PER_ROW)
-
+        is MediaGridItem.SeparatorItem -> GridItemSpan(currentColumns)
         is MediaGridItem.AlbumItem -> GridItemSpan(1)
         else -> GridItemSpan(1)
     }
