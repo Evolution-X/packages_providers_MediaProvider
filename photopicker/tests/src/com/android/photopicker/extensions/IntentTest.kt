@@ -23,6 +23,7 @@ import androidx.core.os.bundleOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.android.photopicker.core.configuration.IllegalIntentExtraException
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -155,7 +156,7 @@ class IntentTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
-    fun testGetHighlightMediaQueryInfoFromIntent() {
+    fun testGetSearchHighlightMediaQueryInfoFromIntent() {
         val searchQuery = "dog"
         val highlightQueryResultsParams =
             HighlightQueryResultsParams(
@@ -164,11 +165,39 @@ class IntentTest {
             )
         val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
         intent.putExtra(
-            MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA,
+            MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS,
             bundleOf(
                 MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
                     MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
-                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to searchQuery,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY to searchQuery,
+            ),
+        )
+
+        val retrievedHighlightQueryParams = intent.getHighlightQueryResultsParams()
+
+        assertThat(retrievedHighlightQueryParams.queryResultsHighlightType)
+            .isEqualTo(highlightQueryResultsParams.queryResultsHighlightType)
+        assertThat(retrievedHighlightQueryParams.queryResultsHighlightQuery)
+            .isEqualTo(highlightQueryResultsParams.queryResultsHighlightQuery)
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    fun testGetAlbumHighlightMediaQueryInfoFromIntent() {
+        val highlightQueryResultsParams =
+            HighlightQueryResultsParams(
+                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                queryResultsHighlightQuery =
+                    HighlightQuery.Album(HighlightAlbumName.HIGHLIGHT_ALBUM_FAVORITES),
+            )
+        val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+        intent.putExtra(
+            MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_ALBUM,
+            bundleOf(
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_ALBUM_ID to
+                    MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES,
             ),
         )
 
@@ -185,11 +214,11 @@ class IntentTest {
     fun testGetHighlightQueryMediaInfoFromIntentDefault() {
         val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
         intent.putExtra(
-            MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA,
+            MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS,
             bundleOf(
                 MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
                     MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
-                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY to "",
+                MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY to "",
             ),
         )
 

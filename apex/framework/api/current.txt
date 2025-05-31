@@ -217,7 +217,8 @@ package android.provider {
     field public static final String EXTRA_OUTPUT = "output";
     field @FlaggedApi("com.android.providers.media.flags.picker_pre_selection_extra") public static final String EXTRA_PICKER_PRE_SELECTION_URIS = "android.provider.extra.PICKER_PRE_SELECTION_URIS";
     field @FlaggedApi("com.android.providers.media.flags.picker_accent_color") public static final String EXTRA_PICK_IMAGES_ACCENT_COLOR = "android.provider.extra.PICK_IMAGES_ACCENT_COLOR";
-    field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String EXTRA_PICK_IMAGES_HIGHLIGHT_MEDIA = "android.provider.extra.PICK_IMAGES_HIGHLIGHT_MEDIA";
+    field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String EXTRA_PICK_IMAGES_HIGHLIGHT_ALBUM = "android.provider.extra.PICK_IMAGES_HIGHLIGHT_ALBUM";
+    field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS = "android.provider.extra.PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS";
     field @FlaggedApi("com.android.providers.media.flags.pick_ordered_images") public static final String EXTRA_PICK_IMAGES_IN_ORDER = "android.provider.extra.PICK_IMAGES_IN_ORDER";
     field @FlaggedApi("com.android.providers.media.flags.picker_default_tab") public static final String EXTRA_PICK_IMAGES_LAUNCH_TAB = "android.provider.extra.PICK_IMAGES_LAUNCH_TAB";
     field public static final String EXTRA_PICK_IMAGES_MAX = "android.provider.extra.PICK_IMAGES_MAX";
@@ -233,7 +234,8 @@ package android.provider {
     field public static final String INTENT_ACTION_TEXT_OPEN_FROM_SEARCH = "android.media.action.TEXT_OPEN_FROM_SEARCH";
     field public static final String INTENT_ACTION_VIDEO_CAMERA = "android.media.action.VIDEO_CAMERA";
     field public static final String INTENT_ACTION_VIDEO_PLAY_FROM_SEARCH = "android.media.action.VIDEO_PLAY_FROM_SEARCH";
-    field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String KEY_PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY = "android.provider.media.key.PICK_IMAGES_HIGHLIGHT_MEDIA_TEXT_QUERY";
+    field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String KEY_PICK_IMAGES_HIGHLIGHT_ALBUM_ID = "android.provider.media.key.PICK_IMAGES_HIGHLIGHT_MEDIA_ALBUM_ID";
+    field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY = "android.provider.media.key.PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY";
     field @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") public static final String KEY_PICK_IMAGES_HIGHLIGHT_TYPE = "android.provider.media.key.PICK_IMAGES_HIGHLIGHT_TYPE";
     field public static final int MATCH_DEFAULT = 0; // 0x0
     field public static final int MATCH_EXCLUDE = 2; // 0x2
