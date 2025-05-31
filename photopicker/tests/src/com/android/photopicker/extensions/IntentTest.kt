@@ -23,7 +23,7 @@ import androidx.core.os.bundleOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.android.photopicker.core.configuration.IllegalIntentExtraException
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -188,7 +188,7 @@ class IntentTest {
             HighlightQueryResultsParams(
                 queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
                 queryResultsHighlightQuery =
-                    HighlightQuery.Album(HighlightAlbumName.HIGHLIGHT_ALBUM_FAVORITES),
+                    HighlightQuery.Album(HighlightAlbum.HIGHLIGHT_ALBUM_FAVORITES),
             )
         val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
         intent.putExtra(

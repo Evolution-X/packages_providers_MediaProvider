@@ -33,7 +33,7 @@ import com.android.photopicker.extensions.getPhotopickerSelectionLimitOrDefault
 import com.android.photopicker.extensions.getPickImagesInOrderEnabled
 import com.android.photopicker.extensions.getPickImagesPreSelectedUris
 import com.android.photopicker.extensions.getStartDestination
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -205,9 +205,9 @@ class ConfigurationManager(
             )
         }
         if (highlightAlbumQuery.isNotEmpty()) {
-            val highlightAlbum: HighlightAlbumName =
-                HighlightAlbumName.toHighlightAlbumName(highlightAlbumQuery)
-            if (highlightAlbum == HighlightAlbumName.UNSET_HIGHLIGHT_ALBUM) {
+            val highlightAlbum: HighlightAlbum =
+                HighlightAlbum.toHighlightAlbum(highlightAlbumQuery)
+            if (highlightAlbum == HighlightAlbum.UNSET_HIGHLIGHT_ALBUM) {
                 throw IllegalArgumentException("Unexpected highlight album")
             }
             return HighlightQueryResultsParams(

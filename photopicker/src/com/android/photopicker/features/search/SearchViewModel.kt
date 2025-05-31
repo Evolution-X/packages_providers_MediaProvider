@@ -77,6 +77,7 @@ constructor(
 
     companion object {
         private const val SEARCH_RESULT_GRID_PAGE_SIZE = 50
+        private const val HIGHLIGHT_SEARCH_RESULTS_GRID_PAGE_SIZE = 10
         private const val SEARCH_RESULT_GRID_MAX_ITEMS_IN_MEMORY = SEARCH_RESULT_GRID_PAGE_SIZE * 10
         const val ZERO_STATE_SEARCH_QUERY = ""
         const val HISTORY_SUGGESTION_MAX_LIMIT = 3
@@ -254,6 +255,29 @@ constructor(
         return pagerForSearchResult.flow
             .toMediaGridItemFromMedia()
             .insertMonthSeparators()
+            // After the load and transformations, cache the data in the viewModelScope.
+            // This ensures that the list position and state will be remembered by the
+            // MediaGrid when navigating back to the SearchResult route.
+            .cachedIn(scope)
+    }
+
+    /**
+     * Returns [PagingData] of type [MediaGridItem.MediaItem] as a [Flow] containing search results
+     * for the highlight query. The flow will not be inserted with any date separators.
+     */
+    fun getHighlightSearchResults(searchQuery: String): Flow<PagingData<MediaGridItem.MediaItem>> {
+        val pagerForSearchResult =
+            Pager(
+                PagingConfig(
+                    pageSize = HIGHLIGHT_SEARCH_RESULTS_GRID_PAGE_SIZE,
+                    prefetchDistance = 0,
+                    maxSize = SEARCH_RESULT_GRID_MAX_ITEMS_IN_MEMORY,
+                )
+            ) {
+                searchDataService.getSearchResults(searchText = searchQuery)
+            }
+        return pagerForSearchResult.flow
+            .toMediaGridItemFromMedia()
             // After the load and transformations, cache the data in the viewModelScope.
             // This ensures that the list position and state will be remembered by the
             // MediaGrid when navigating back to the SearchResult route.
