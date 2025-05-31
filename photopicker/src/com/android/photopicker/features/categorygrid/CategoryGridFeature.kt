@@ -270,11 +270,11 @@ class CategoryGridFeature : PhotopickerUiFeature {
 
                 @Composable
                 override fun composable(navBackStackEntry: NavBackStackEntry?) {
-                    val flow: StateFlow<Group.Album?> =
+                    val flow: StateFlow<Group.BaseAlbum?> =
                         checkNotNull(
                             navBackStackEntry
                                 ?.savedStateHandle
-                                ?.getStateFlow<Group.Album?>(GROUP_KEY, null)
+                                ?.getStateFlow<Group.BaseAlbum?>(GROUP_KEY, null)
                         ) {
                             "Unable to get a savedStateHandle for album content grid"
                         }

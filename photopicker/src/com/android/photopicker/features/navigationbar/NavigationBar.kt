@@ -341,14 +341,18 @@ private fun NavigationBarForGroup(modifier: Modifier) {
                 ?.getStateFlow<Group?>(CategoryGridFeature.GROUP_KEY, null)
         val group = flow?.value
         when (group) {
-            is Group.Album -> {
+            is Group.BaseAlbum -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // back button
                     IconButton(
                         modifier =
                             Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH)
                                 .padding(horizontal = MEASUREMENT_ICON_BUTTON_OUTSIDE_PADDING),
-                        onClick = { navController.navigateToCategoryGrid() },
+                        // Navigate to the previous screen when the back button is pressed instead
+                        // of going to the CategoryGrid directly.
+                        // We need to move back to the PhotoGrid when the See All button of the
+                        // highlight section is pressed and to the CategoryGrid otherwise.
+                        onClick = { navController.popBackStack() },
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,

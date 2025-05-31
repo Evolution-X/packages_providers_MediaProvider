@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun AlbumMediaGrid(
-    flow: StateFlow<Group.Album?>,
+    flow: StateFlow<Group.BaseAlbum?>,
     viewModel: CategoryGridViewModel = obtainViewModel(),
 ) {
     val albumState by flow.collectAsStateWithLifecycle(initialValue = null)
@@ -98,7 +98,7 @@ fun AlbumMediaGrid(
 /** Initialises all the states and media source required to load media for the input [album]. */
 @Composable
 private fun AlbumMediaGrid(
-    album: Group.Album,
+    album: Group.BaseAlbum,
     albumItems: Flow<PagingData<MediaGridItem>>,
     viewModel: CategoryGridViewModel = obtainViewModel(),
 ) {
@@ -260,7 +260,9 @@ private fun AlbumMediaGrid(
  * @return a [Triple] that contains the [Title, Body, Icon] for the empty state.
  */
 @Composable
-private fun getEmptyStateContentForAlbum(album: Group.Album): Triple<String, String, ImageVector> {
+private fun getEmptyStateContentForAlbum(
+    album: Group.BaseAlbum
+): Triple<String, String, ImageVector> {
     return when (album.id) {
         ALBUM_ID_FAVORITES ->
             Triple(

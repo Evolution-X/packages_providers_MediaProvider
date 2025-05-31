@@ -28,7 +28,7 @@ import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.features.PhotopickerUiFeature
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.features.Priority
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.search.SearchFeature
 import kotlinx.coroutines.Deferred
@@ -58,7 +58,7 @@ class HighlightMediaResultsFeature : PhotopickerUiFeature {
             val highlightQuery = config.highlightQueryResultsParams.queryResultsHighlightQuery
             return when (highlightQuery) {
                 is HighlightQuery.Album ->
-                    return highlightQuery.album != HighlightAlbumName.UNSET_HIGHLIGHT_ALBUM
+                    return highlightQuery.album != HighlightAlbum.UNSET_HIGHLIGHT_ALBUM
                 else -> false
             }
         }
@@ -78,7 +78,8 @@ class HighlightMediaResultsFeature : PhotopickerUiFeature {
     @Composable
     override fun compose(location: Location, modifier: Modifier, params: LocationParams) {
         when (location) {
-            Location.HIGHLIGHT_MEDIA_CAROUSEL -> HighlightMedia()
+            Location.HIGHLIGHT_MEDIA_CAROUSEL ->
+                HighlightMedia(modifier = modifier, params = params)
             else -> {}
         }
     }

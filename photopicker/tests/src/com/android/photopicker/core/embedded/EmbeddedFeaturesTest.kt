@@ -28,19 +28,24 @@ import android.os.UserManager
 import android.platform.test.annotations.DisableFlags
 import android.platform.test.annotations.EnableFlags
 import android.platform.test.flag.junit.SetFlagsRule
+import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORITES
+import android.provider.MediaStore
 import android.test.mock.MockContentResolver
 import android.view.SurfaceControlViewHost
+import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasAnyChild
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
@@ -93,9 +98,11 @@ import com.android.photopicker.core.theme.PhotopickerTheme
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.model.CollectionInfo
+import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.overflowmenu.OverflowMenuFeature
 import com.android.photopicker.features.preview.PreviewFeature
 import com.android.photopicker.features.snackbar.SnackbarFeature
@@ -1262,5 +1269,242 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun testHighlightMediaSectionIsNotShownInCollapsedMode() =
+        testScope.runTest {
+            val testQuery = "cats"
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightSearchMediaTextQuery(testQuery)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Verify search query, Recents label and the SeeAll button are not displayed
+            composeTestRule.onNode(hasText(testQuery)).assertIsNotDisplayed()
+            val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            // Verify the lazy grid is displayed, there should be only one scrollable component
+            // which is the photo grid
+            composeTestRule
+                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
+                .assertCountEquals(1)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun testSearchHighlightMediaSectionIsShownInExpandedMode() =
+        testScope.runTest {
+            assumeTrue(SdkLevel.isAtLeastU())
+
+            val testQuery = "cats"
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightSearchMediaTextQuery(testQuery)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify search query, Recents label and the SeeAll button are displayed
+            composeTestRule.onNode(hasText(testQuery)).assertIsDisplayed()
+            val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            // Verify the lazy grids are displayed, there should be two grid i.e. scrollable
+            // components: photogrid with a vertical scroll nad highlight grid with a horizontal
+            // scroll
+            composeTestRule.onAllNodes(hasScrollAction()).assertCountEquals(2)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun testAlbumHighlightMediaSectionIsShownInExpandedMode() =
+        testScope.runTest {
+            assumeTrue(SdkLevel.isAtLeastU())
+
+            val highlightAlbum = MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder().setHighlightAlbumId(highlightAlbum).build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.albumMediaSetSize = 0
+            testDataService.albumsList =
+                listOf(
+                    Group.Album(
+                        id = ALBUM_ID_FAVORITES,
+                        pickerId = 1234L,
+                        authority = "a",
+                        displayName = "Favorites",
+                        coverUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority("a")
+                                    path("1234")
+                                }
+                                .build(),
+                        dateTakenMillisLong = 12345678L,
+                        coverMediaSource = MediaSource.LOCAL,
+                    )
+                )
+            testDataService._availableProviders.value =
+                listOf(
+                    Provider(
+                        authority = "local_authority",
+                        mediaSource = MediaSource.LOCAL,
+                        uid = 1,
+                        displayName = "Local Provider",
+                    )
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Wait sufficiently for albums list to be available
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify album name, Recents label and the SeeAll button are displayed
+            composeTestRule
+                .onNode(hasText(HighlightAlbum.HIGHLIGHT_ALBUM_FAVORITES.albumId))
+                .assertIsDisplayed()
+            val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            // Verify the lazy grids are displayed, there should be two grid i.e. scrollable
+            // components: photogrid with a vertical scroll and highlight grid with a horizontal
+            // scroll
+            composeTestRule.onAllNodes(hasScrollAction()).assertCountEquals(2)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun testHighlightMediaSectionIsNotShownInExpandedModeWithEmptyTestQuery() =
+        testScope.runTest {
+            val testQuery = ""
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightSearchMediaTextQuery(testQuery)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Verify search query, Recents label and the SeeAll button are not displayed
+            val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+
+            // Verify the lazy grid is displayed, there should be only one scrollable component
+            // which is the photo grid
+            composeTestRule.onAllNodes(hasScrollAction()).assertCountEquals(1)
         }
 }

@@ -18,6 +18,7 @@
 #define MEDIAPROVIDER_PDF_JNI_PDFCLIENT_PAGE_OBJECT_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <algorithm>
 

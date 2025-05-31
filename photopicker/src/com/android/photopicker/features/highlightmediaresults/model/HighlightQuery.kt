@@ -25,5 +25,5 @@ sealed interface HighlightQuery {
     data class Search(val searchQuery: String) : HighlightQuery
 
     /** HighlightQuery of type Album which holds the album to highlight */
-    data class Album(val album: HighlightAlbumName) : HighlightQuery
+    data class Album(val album: HighlightAlbum) : HighlightQuery
 }

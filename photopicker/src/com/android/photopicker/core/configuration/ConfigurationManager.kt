@@ -33,7 +33,7 @@ import com.android.photopicker.extensions.getPhotopickerSelectionLimitOrDefault
 import com.android.photopicker.extensions.getPickImagesInOrderEnabled
 import com.android.photopicker.extensions.getPickImagesPreSelectedUris
 import com.android.photopicker.extensions.getStartDestination
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbumName
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -175,8 +175,7 @@ class ConfigurationManager(
          * Check if a valid highlight media query was set and get a [HighLightQueryResultsParam]
          * object
          */
-        val highlightQueryResultsParams =
-            getEmbeddedHighlightQueryResultsParams(featureInfo.highlightMediaTextQuery)
+        val highlightQueryResultsParams = getEmbeddedHighlightQueryResultsParams(featureInfo)
 
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.
@@ -192,28 +191,37 @@ class ConfigurationManager(
         }
     }
 
-    /**
-     * The embedded picker only supports showing a highlighted media section. Thus, we only set the
-     * highlight query
-     */
+    /** Returns the appropriate highlight params for embedded picker. */
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun getEmbeddedHighlightQueryResultsParams(
-        highlightMediaQuery: String
+        featureInfo: EmbeddedPhotoPickerFeatureInfo
     ): HighlightQueryResultsParams {
-        if (highlightMediaQuery.isEmpty()) {
+        val highlightTextQuery: String = featureInfo.highlightSearchMediaTextQuery
+        val highlightAlbumQuery: String = featureInfo.highlightAlbumId
+
+        if (highlightTextQuery.isNotEmpty() && highlightAlbumQuery.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "Only one of text highlight or album highlight can be specified."
+            )
+        }
+        if (highlightAlbumQuery.isNotEmpty()) {
+            val highlightAlbum: HighlightAlbum =
+                HighlightAlbum.toHighlightAlbum(highlightAlbumQuery)
+            if (highlightAlbum == HighlightAlbum.UNSET_HIGHLIGHT_ALBUM) {
+                throw IllegalArgumentException("Unexpected highlight album")
+            }
+            return HighlightQueryResultsParams(
+                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                queryResultsHighlightQuery = HighlightQuery.Album(highlightAlbum),
+            )
+        } else if (highlightTextQuery.isNotEmpty()) {
+            return HighlightQueryResultsParams(
+                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                queryResultsHighlightQuery = HighlightQuery.Search(highlightTextQuery),
+            )
+        } else {
             return DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
         }
-        val albumFromTextQuery: HighlightAlbumName =
-            HighlightAlbumName.toHighlightAlbumName(highlightMediaQuery)
-        val highlightQuery: HighlightQuery =
-            when (albumFromTextQuery) {
-                HighlightAlbumName.UNSET_HIGHLIGHT_ALBUM ->
-                    HighlightQuery.Search(searchQuery = highlightMediaQuery)
-                else -> HighlightQuery.Album(album = albumFromTextQuery)
-            }
-        return HighlightQueryResultsParams(
-            queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
-            queryResultsHighlightQuery = highlightQuery,
-        )
     }
 
     /**

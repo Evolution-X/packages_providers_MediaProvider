@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -118,6 +119,7 @@ import com.android.photopicker.extensions.toMediaGridItemFromAlbum
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
 import com.android.photopicker.extensions.transferScrollableTouchesToHostInEmbedded
 import com.android.photopicker.util.LocalLocalizationHelper
+import com.android.photopicker.util.applyChoice
 import com.android.photopicker.util.applyWhen
 import com.android.photopicker.util.calculateWindowRect
 import com.android.photopicker.util.getMediaContentDescription
@@ -160,6 +162,12 @@ private val MEASUREMENT_SELECTED_ICON_BORDER = 2.dp
 
 /** The radius to use for the corners of grid cells that are selected */
 private val MEASUREMENT_SELECTED_CORNER_RADIUS = 16.dp
+
+/** The radius to use for the corners of grid cells in the highlight grid */
+private val MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS = 28.dp
+
+/** The height of the cells in the highlight grid */
+private val MEASUREMENT_HIGHLIGHT_GRID_CELL_HEIGHT = 176.dp
 
 /** The padding to use around the default separator's content. */
 private val MEASUREMENT_SEPARATOR_PADDING = 16.dp
@@ -209,7 +217,9 @@ val MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE = 12.dp
  * @param contentItemFactory Optional custom implementation for composing individual grid items.
  * @param contentSeparatorFactory Optional custom implementation for composing individual grid
  *   separators.
- * @param bannerContent Optional custom implementation for banner content to be displayed.
+ * @param bannerContent Optional custom implementation for banner content to be displayed
+ * @param highlightMediaContent Optional custom implementation for highlight media content to be
+ *   displayed at the top of the photogrid.
  */
 @Composable
 fun mediaGrid(
@@ -262,6 +272,7 @@ fun mediaGrid(
         defaultBuildSeparator(item)
     },
     bannerContent: (@Composable () -> Unit)? = null,
+    highlightMediaContent: (@Composable () -> Unit)? = null,
 ) {
     mediaGrid(
         items = items,
@@ -282,6 +293,7 @@ fun mediaGrid(
         contentItemFactory = contentItemFactory,
         contentSeparatorFactory = contentSeparatorFactory,
         bannerContent = bannerContent,
+        highlightMediaContent = highlightMediaContent,
     )
 }
 
@@ -330,6 +342,8 @@ fun mediaGrid(
  *   separators.
  * @param bannerContent Optional custom composable content to be displayed as a banner, typically at
  *   the top of the grid.
+ * @param highlightMediaContent Optional custom implementation for highlight media content to be
+ *   displayed at the top of the photogrid
  */
 @Composable
 fun mediaGrid(
@@ -384,6 +398,7 @@ fun mediaGrid(
         defaultBuildSeparator(item)
     },
     bannerContent: (@Composable () -> Unit)? = null,
+    highlightMediaContent: (@Composable () -> Unit)? = null,
 ) {
     mediaGrid(
         items = items,
@@ -407,6 +422,7 @@ fun mediaGrid(
         contentItemFactory = contentItemFactory,
         contentSeparatorFactory = contentSeparatorFactory,
         bannerContent = bannerContent,
+        highlightMediaContent = highlightMediaContent,
     )
 }
 
@@ -446,7 +462,9 @@ fun mediaGrid(
  * @param contentItemFactory Optional custom implementation for composing individual grid items.
  * @param contentSeparatorFactory Optional custom implementation for composing individual grid
  *   separators.
- * @param bannerContent Optional custom implementation for banner content to displayed
+ * @param bannerContent Optional custom implementation for banner content to be displayed
+ * @param highlightMediaContent Optional custom implementation for highlight media content to be
+ *   displayed at the top of the photogrid
  * @param state the [LazyGridState] to use with this Lazy resource.
  */
 @Composable
@@ -479,6 +497,7 @@ private fun mediaGrid(
         ) -> Unit,
     contentSeparatorFactory: @Composable (item: MediaGridItem.SeparatorItem) -> Unit,
     bannerContent: (@Composable () -> Unit)? = null,
+    highlightMediaContent: (@Composable () -> Unit)? = null,
     state: LazyGridState,
 ) {
     // To know whether the request in coming from Embedded or PhotoPicker
@@ -556,6 +575,19 @@ private fun mediaGrid(
             }
         }
 
+        // If highlight content was passed, add it to the grid as a full span item
+        // so that it appears inside the scroll container.
+        highlightMediaContent?.let {
+            item(
+                span = {
+                    if (isExpandedScreen) GridItemSpan(CELLS_PER_ROW_EXPANDED)
+                    else GridItemSpan(CELLS_PER_ROW)
+                }
+            ) {
+                it()
+            }
+        }
+
         // Add the media items from the LazyPagingItems
         items(
             count = items.itemCount,
@@ -598,9 +630,8 @@ private fun mediaGrid(
         // Any time isExpanded changes, check if grid animation is required.
         LaunchedEffect(isExpanded.value) {
             val isCollapsed = !isExpanded.value
-
-            // Only animate if going from Expanded -> Collapsed
             if (wasPreviouslyExpanded.value && isCollapsed) {
+                // Only animate if going from Expanded -> Collapsed
                 if (state.firstVisibleItemScrollOffset > 0) {
                     state.animateScrollBy(
                         value = -state.firstVisibleItemScrollOffset.toFloat(),
@@ -640,8 +671,9 @@ public fun getCellsPerRow(isExpandedScreen: Boolean): Int {
  * GridCell, and provides animations and an icon for the selected state.
  */
 @Composable
-private fun defaultBuildMediaItem(
+fun defaultBuildMediaItem(
     item: MediaGridItem,
+    isHighlightMediaItem: Boolean = false,
     isSelected: Boolean,
     selectedPosition: Int,
     onClick: ((item: MediaGridItem) -> Unit)?,
@@ -729,14 +761,42 @@ private fun defaultBuildMediaItem(
             ) {
                 // A background surface that is shown behind selected images.
                 Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier =
+                        Modifier.fillMaxSize()
+                            .applyWhen(
+                                condition = isHighlightMediaItem,
+                                block = {
+                                    clip(
+                                        RoundedCornerShape(MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS)
+                                    )
+                                },
+                            ),
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 ) {
+                    val boxModifier: Modifier = Modifier
                     // Container for the image and it's mimetype icon
                     Box(
                         // Switch which modifier is getting applied based on if the item is
                         // selected or not.
-                        modifier = if (shouldIndicateSelected) selectedModifier else baseModifier
+                        modifier =
+                            boxModifier.applyChoice(
+                                condition = shouldIndicateSelected,
+                                trueBlock = { selectedModifier },
+                                falseBlock = {
+                                    applyChoice(
+                                        condition = isHighlightMediaItem,
+                                        trueBlock = {
+                                            Modifier.height(MEASUREMENT_HIGHLIGHT_GRID_CELL_HEIGHT)
+                                                .clip(
+                                                    RoundedCornerShape(
+                                                        MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS
+                                                    )
+                                                )
+                                        },
+                                        falseBlock = { baseModifier },
+                                    )
+                                },
+                            )
                     ) {
 
                         // Load the media item through the Glide entrypoint.
@@ -914,7 +974,7 @@ private fun SelectedIconOverlay(isSelected: Boolean, selectedIndex: Int) {
  * GridCell, and provides a text title for it just below the thumbnail.
  */
 @Composable
-private fun defaultBuildAlbumItem(
+fun defaultBuildAlbumItem(
     item: MediaGridItem,
     onClick: ((item: MediaGridItem) -> Unit)?,
     focusItem: MediaGridItem? = null,
@@ -1226,7 +1286,7 @@ fun CategoryIcon(icon: ParcelableGlideLoadable, modifier: Modifier, categoryType
  * label.
  */
 @Composable
-private fun defaultBuildSeparator(item: MediaGridItem.SeparatorItem) {
+fun defaultBuildSeparator(item: MediaGridItem.SeparatorItem) {
     Box(Modifier.padding(MEASUREMENT_SEPARATOR_PADDING).semantics(mergeDescendants = true) {}) {
         Text(item.label, style = MaterialTheme.typography.titleSmall)
     }
