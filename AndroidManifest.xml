@@ -95,7 +95,7 @@
             android:forceQueryable="true"
             android:usesCleartextTraffic="true"
             android:crossProfile="true"
-            android:allowBackup="true"
+            android:allowBackup="@bool/platformIsAtLeastBaklava"
             android:fullBackupOnly="true"
             android:backupInForeground="true"
             android:killAfterRestore="false"
