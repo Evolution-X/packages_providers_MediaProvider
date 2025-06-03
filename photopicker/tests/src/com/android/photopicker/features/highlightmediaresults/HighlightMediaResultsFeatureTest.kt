@@ -40,6 +40,7 @@ import androidx.compose.ui.test.assertAll
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -48,6 +49,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
@@ -79,6 +81,7 @@ import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.theme.PhotopickerTheme
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.TestDataServiceImpl
+import com.android.photopicker.data.TestSearchDataServiceImpl
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
@@ -90,6 +93,7 @@ import com.android.photopicker.features.highlightmediaresults.model.HighlightAlb
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
+import com.android.photopicker.features.search.data.SearchDataService
 import com.android.photopicker.features.search.model.GlobalSearchState
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
@@ -169,6 +173,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var userHandle: UserHandle
     @Inject override lateinit var configurationManager: Lazy<ConfigurationManager>
     @Inject lateinit var dataService: DataService
+    @Inject lateinit var searchDataService: SearchDataService
 
     @BindValue @ApplicationOwned val contentResolver: ContentResolver = MockContentResolver()
     private lateinit var provider: MockContentProviderWrapper
@@ -177,6 +182,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
     @Mock lateinit var mockContentProvider: ContentProvider
+    private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
 
     val deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>> =
         mapOf(
@@ -555,8 +561,14 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 }
             }
 
-            advanceTimeBy(100)
+            // Wait sufficiently for albums list to be available
+            advanceTimeBy(3000)
             composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
 
             // Assert the UI elements before button click
             composeTestRule.onNode(hasText(testQuery), useUnmergedTree = true).assertIsDisplayed()
@@ -693,6 +705,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     LocalNavController provides createNavController(),
                     LocalSelection provides selection,
                     LocalFeatureManager provides featureManager,
+                    LocalEvents provides events,
                     LocalLocalizationHelper provides LocalizationHelper(),
                 ) {
                     PhotopickerTheme(
@@ -706,16 +719,19 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     ) {
                         // Compose only the highlight section to prevent assertion conflicts with
                         // the photo grid
-                        HighlightMedia()
+                        HighlightGrid()
                     }
                 }
             }
 
             // Wait sufficiently for the album list to be available. Null will be thrown otherwise
-            advanceTimeBy(100)
+            advanceTimeBy(3000)
             composeTestRule.waitForIdle()
-            advanceTimeBy(100)
+            advanceTimeBy(1000)
             composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
 
             // Verify album name, Recents label and the SeeAll button are displayed
             composeTestRule
@@ -847,10 +863,13 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             }
 
             // Wait sufficiently for album list to be available
-            advanceTimeBy(100)
+            advanceTimeBy(3000)
             composeTestRule.waitForIdle()
-            advanceTimeBy(100)
+            advanceTimeBy(1000)
             composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
 
             // Verify the UI elements
             composeTestRule
@@ -1021,6 +1040,303 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule
                 .onNode(hasTestTag(HIGHLIGHT_GRID_TEST_TAG), useUnmergedTree = true)
                 .assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun highlightSectionContent_initialState_showsLoadingPlaceholders() =
+        testScope.runTest {
+            val testQuery = "cats"
+            val highlightParams =
+                HighlightQueryResultsParams(
+                    queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                    queryResultsHighlightQuery = HighlightQuery.Search(testQuery),
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            highlightQueryResultsParams(highlightParams)
+                            action(MediaStore.ACTION_PICK_IMAGES)
+                            intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            selectionLimit(50)
+                        },
+                    LocalNavController provides createNavController(),
+                    LocalSelection provides selection,
+                    LocalFeatureManager provides featureManager,
+                    LocalLocalizationHelper provides LocalizationHelper(),
+                ) {
+                    PhotopickerTheme(
+                        isDarkTheme = false,
+                        config =
+                            TestPhotopickerConfiguration.build {
+                                highlightQueryResultsParams(highlightParams)
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ) {
+                        // Calling just the Highlight composable to avoid any assertion conflicts
+                        // with
+                        // the photogrid
+                        HighlightGrid()
+                    }
+                }
+            }
+
+            // Advance time to allow initial composition but not past timeout
+            advanceTimeBy(500) // Small delay to allow composition
+
+            composeTestRule
+                .onNode(hasText(testQuery), useUnmergedTree = true)
+                .assertIsNotDisplayed()
+            val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            // Placeholders are displayed
+            composeTestRule
+                .onNodeWithContentDescription(
+                    resources.getString(R.string.photopicker_hsr_query_placeholder_text)
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNodeWithContentDescription(
+                    resources.getString(R.string.photopicker_hsr_media_placeholder_text)
+                )
+                .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun highlightSectionContent_afterTimeout_whenNoResult_hasNoHighlight() = runTest {
+        val testQuery = ""
+        val highlightParams =
+            HighlightQueryResultsParams(
+                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                queryResultsHighlightQuery = HighlightQuery.Search(testQuery),
+            )
+
+        val testDataService = searchDataService as? TestSearchDataServiceImpl
+        checkNotNull(testDataService) { "Expected a TestSearchDataServiceImpl" }
+        testDataService.mediaSetSize = 0
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(
+                LocalFeatureManager provides featureManager,
+                LocalPhotopickerConfiguration provides
+                    TestPhotopickerConfiguration.build {
+                        highlightQueryResultsParams(highlightParams)
+                        action(MediaStore.ACTION_PICK_IMAGES)
+                        intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                        selectionLimit(50)
+                    },
+                LocalNavController provides createNavController(),
+                LocalSelection provides selection,
+                LocalEvents provides events,
+                LocalLocalizationHelper provides LocalizationHelper(),
+            ) {
+                PhotopickerTheme(
+                    isDarkTheme = false,
+                    config =
+                        TestPhotopickerConfiguration.build {
+                            highlightQueryResultsParams(highlightParams)
+                            action(MediaStore.ACTION_PICK_IMAGES)
+                            intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                        },
+                ) {
+                    HighlightGrid()
+                }
+            }
+        }
+
+        advanceTimeBy(4000)
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNode(hasTestTag(HIGHLIGHT_GRID_TEST_TAG), useUnmergedTree = true)
+            .assertIsNotDisplayed()
+        composeTestRule.onNode(hasText("Suggestions")).assertIsNotDisplayed()
+        composeTestRule.onNode(hasText(testQuery)).assertIsNotDisplayed()
+        val resources = getTestableContext().getResources()
+        composeTestRule
+            .onNode(
+                hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                useUnmergedTree = true,
+            )
+            .assertIsNotDisplayed()
+        // Placeholders are not displayed
+        composeTestRule
+            .onNodeWithContentDescription(
+                resources.getString(R.string.photopicker_hsr_query_placeholder_text)
+            )
+            .assertIsNotDisplayed()
+        composeTestRule
+            .onNodeWithContentDescription(
+                resources.getString(R.string.photopicker_hsr_media_placeholder_text)
+            )
+            .assertIsNotDisplayed()
+    }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun highlightSectionContent_whenResults_afterTimeout_showsHighlightGrid() =
+        testScope.runTest {
+            val testQuery = "Test"
+            val highlightParams =
+                HighlightQueryResultsParams(
+                    queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                    queryResultsHighlightQuery = HighlightQuery.Search(testQuery),
+                )
+
+            val testDataService = searchDataService as? TestSearchDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestSearchDataServiceImpl" }
+            testDataService.mediaSetSize = 1
+            testDataService.mediaList =
+                listOf(
+                    Media.Image(
+                        mediaId = "Test",
+                        pickerId = 1000L,
+                        authority = "a",
+                        mediaSource = MediaSource.LOCAL,
+                        mediaUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority("media")
+                                    path("picker")
+                                    path("a")
+                                    path("id")
+                                }
+                                .build(),
+                        glideLoadableUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority(MockContentProviderWrapper.AUTHORITY)
+                                    path("id")
+                                }
+                                .build(),
+                        dateTakenMillisLong = 123456789L,
+                        sizeInBytes = 1000L,
+                        mimeType = "image/png",
+                        standardMimeTypeExtension = 1,
+                    )
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalFeatureManager provides featureManager,
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            highlightQueryResultsParams(highlightParams)
+                            action(MediaStore.ACTION_PICK_IMAGES)
+                            intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            selectionLimit(50)
+                        },
+                    LocalNavController provides createNavController(),
+                    LocalSelection provides selection,
+                    LocalEvents provides events,
+                    LocalLocalizationHelper provides LocalizationHelper(),
+                ) {
+                    PhotopickerTheme(
+                        isDarkTheme = false,
+                        config =
+                            TestPhotopickerConfiguration.build {
+                                highlightQueryResultsParams(highlightParams)
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ) {
+                        HighlightGrid()
+                    }
+                }
+            }
+
+            // Repeated calls to advanceTimeBy followed by waitForIdle  are necessary because the
+            // animations/transitions relies on the passage of time to complete its rendering.
+            advanceTimeBy(3000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            val resources = getTestableContext().getResources()
+            // Placeholders are not displayed
+            composeTestRule
+                .onNodeWithContentDescription(
+                    resources.getString(R.string.photopicker_hsr_query_placeholder_text)
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNodeWithContentDescription(
+                    resources.getString(R.string.photopicker_hsr_media_placeholder_text)
+                )
+                .assertIsNotDisplayed()
+
+            composeTestRule
+                .onNode(hasTestTag(HIGHLIGHT_GRID_TEST_TAG), useUnmergedTree = true)
+                .assertIsDisplayed()
+            composeTestRule.onNode(hasText(testQuery)).assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNodeWithContentDescription(
+                    resources.getString(R.string.photopicker_hsr_media_text)
+                )
+                .onChildren()
+                .filter(
+                    hasContentDescription(
+                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .onFirst()
+                .performClick()
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Ensure the click handler correctly ran by checking the selection snapshot.
+            assertWithMessage("Expected selection to contain an item, but it did not.")
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
         }
 
     @Composable

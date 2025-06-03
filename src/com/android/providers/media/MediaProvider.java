@@ -492,10 +492,15 @@ public class MediaProvider extends ContentProvider {
      */
     private static final long POLLING_TIME_IN_MILLIS = 100;
 
-    private static final String WORK_INFO_STATE = "work_info_state";
-    private static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
-    private static final String VOLUME_NAME = "volume_name";
-    private static final String WAIT_TIME_MILLIS = "wait_time_millis";
+    private static final long TIMEOUT_MILLIS = 10000;
+    private static final long POLL_INTERVAL_MILLIS = 100;
+    static final String WORK_INFO_STATE = "work_info_state";
+    static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
+    static final String VOLUME_NAME = "volume_name";
+    static final String IS_SCAN_VOLUME_CALL = "is_scan_volume_call";
+    static final String BROADCAST_INTENT = "broadcast_intent";
+    static final String CANCEL_WORK_AFTER_ENQUEUEING = "cancel_work_after_enqueueing";
+    static final String REMOVE_VOL_BEFORE_ENQUEUEING = "remove_vol_before_enqueueing";
 
     /**
      * Enable option to defer the scan triggered as part of MediaProvider#update()
@@ -2292,9 +2297,10 @@ public class MediaProvider extends ContentProvider {
      * volume.
      *
      * @param mediaVolume Volume for which we want to cancel the scan
+     * @param scanReason reason why scan was triggered
      */
-    public void onScanVolumeWorkStopped(MediaVolume mediaVolume) {
-        mMediaScanner.onScanVolumeStopped(mediaVolume);
+    public void onScanVolumeWorkStopped(MediaVolume mediaVolume, int scanReason) {
+        mMediaScanner.onScanVolumeStopped(mediaVolume, scanReason);
     }
 
     /**
@@ -7349,8 +7355,8 @@ public class MediaProvider extends ContentProvider {
                 removeRecoveryData();
                 return new Bundle();
             }
-            case MediaStore.QUEUE_SCAN_VOLUME: {
-                return getResultForQueueScanVolume(extras);
+            case MediaStore.MEDIA_SERVICE_V2_CALL: {
+                return getResultForMediaServiceV2Call(extras);
             }
             case MediaStore.BULK_UPDATE_OEM_METADATA_CALL: {
                 callForBulkUpdateOemMetadataColumn();
@@ -8222,20 +8228,38 @@ public class MediaProvider extends ContentProvider {
     }
 
     /**
-     * Utility function to trigger scan volume using WorkManagerAPIs. Only to be used to testing.
+     * Utility function to test MediaServiceV2. Only to be used to testing.
      */
-    private Bundle getResultForQueueScanVolume(Bundle extras) {
+    private Bundle getResultForMediaServiceV2Call(Bundle extras) {
         getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
                 "Permission missing to call QUEUE_SCAN_VOLUME by uid:"
                         + Binder.getCallingUid());
 
         try {
+            Optional<UUID> uuidOptional;
+            MediaVolume volume;
+
+            boolean removeVolBeforeEnqueueing =
+                    extras.getBoolean(REMOVE_VOL_BEFORE_ENQUEUEING, false);
+            if (removeVolBeforeEnqueueing) {
+                volume = getVolume(extras.getString(VOLUME_NAME));
+                synchronized (mAttachedVolumes) {
+                    if (mAttachedVolumes.contains(volume)) {
+                        mAttachedVolumes.remove(volume);
+                    }
+                }
+            }
+
+            boolean isScanVolumeCall = extras.getBoolean(IS_SCAN_VOLUME_CALL, false);
+            if (isScanVolumeCall) {
+                volume = getVolume(extras.getString(VOLUME_NAME));
+                uuidOptional = MediaServiceV2.queueVolumeScan(getContext(), volume, REASON_UNKNOWN);
+            } else {
+                Intent intent = extras.getParcelable(BROADCAST_INTENT);
+                uuidOptional = MediaServiceV2.enqueueWork(getContext(), intent);
+            }
+
             Bundle result = new Bundle();
-
-            MediaVolume volume = getVolume(extras.getString(VOLUME_NAME));
-            Optional<UUID> uuidOptional =
-                    MediaServiceV2.queueVolumeScan(getContext(), volume, REASON_UNKNOWN);
-
             if (uuidOptional.isEmpty()) {
                 result.putString(WORK_INFO_STATE, null);
                 return result;
@@ -8245,15 +8269,32 @@ public class MediaProvider extends ContentProvider {
 
             WorkManager workManager =  WorkManager.getInstance(getContext());
 
-            boolean waitForScanCompletion = extras.getBoolean(WAIT_FOR_SCAN_COMPLETION, false);
+            boolean waitForScanCompletion = extras.getBoolean(WAIT_FOR_SCAN_COMPLETION, true);
             if (waitForScanCompletion) {
-                long waitTimeMillis = extras.getLong(WAIT_TIME_MILLIS, 10000);
+                long waitTimeRemainingMillis = TIMEOUT_MILLIS;
                 WorkInfo.State currentState = workManager.getWorkInfoById(uuid).get().getState();
-                while (!currentState.isFinished() && waitTimeMillis >= 0) {
-                    SystemClock.sleep(POLLING_TIME_IN_MILLIS);
-                    waitTimeMillis -= POLLING_TIME_IN_MILLIS;
+                while (!currentState.isFinished() && waitTimeRemainingMillis >= 0) {
+                    SystemClock.sleep(POLL_INTERVAL_MILLIS);
+                    waitTimeRemainingMillis -= POLL_INTERVAL_MILLIS;
                     currentState = workManager.getWorkInfoById(uuid).get().getState();
                 }
+            }
+
+            boolean cancelWorkAfterEnqueuing =
+                    extras.getBoolean(CANCEL_WORK_AFTER_ENQUEUEING, false);
+            if (cancelWorkAfterEnqueuing) {
+                //wait for work to enqueue
+                long waitTimeRemainingMillis = TIMEOUT_MILLIS;
+                WorkInfo.State currentState = workManager.getWorkInfoById(uuid).get().getState();
+                while (WorkInfo.State.ENQUEUED.equals(currentState)
+                        && waitTimeRemainingMillis >= 0) {
+                    SystemClock.sleep(POLL_INTERVAL_MILLIS);
+                    waitTimeRemainingMillis -= POLL_INTERVAL_MILLIS;
+                    currentState = workManager.getWorkInfoById(uuid).get().getState();
+                }
+
+                // cancel work once work is enqueued
+                workManager.cancelWorkById(uuid);
             }
 
             WorkInfo workInfo = workManager.getWorkInfoById(uuid).get();

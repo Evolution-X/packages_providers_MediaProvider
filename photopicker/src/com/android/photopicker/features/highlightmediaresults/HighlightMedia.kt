@@ -16,28 +16,53 @@
 
 package com.android.photopicker.features.highlightmediaresults
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -52,16 +77,18 @@ import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.extensions.navigateToAlbumMediaGridForCategories
-import com.android.photopicker.features.albumgrid.AlbumGridViewModel
+import com.android.photopicker.extensions.shimmerEffect
 import com.android.photopicker.features.categorygrid.CategoryGridViewModel
-import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 import com.android.photopicker.features.search.SearchViewModel
 import com.android.photopicker.util.LocalLocalizationHelper
 import java.text.DateFormat
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 
 val RECENTS_LABEL_PADDING = PaddingValues(top = 16.dp)
 val HIGHLIGHT_TEXT_LABELS_PADDING = PaddingValues(bottom = 8.dp, start = 16.dp, end = 16.dp)
@@ -70,6 +97,11 @@ val HIGHLIGHT_GRID_CONTENT_PADDING = PaddingValues(start = 16.dp, end = 16.dp, b
 val MEASUREMENT_HIGHLIGHT_GRID_CELL_ARRANGEMENT = 8.dp
 const val HIGHLIGHT_GRID_CELL_COUNT = 10
 const val HIGHLIGHT_GRID_ROW_COUNT = 1
+const val HIGHLIGHT_SEARCH_DURATION_MS = 3000L
+
+val HIGHLIGHT_QUERY_PLACEHOLDER_HEIGHT = 30.dp
+val HIGHLIGHT_QUERY_PLACEHOLDER_WIDTH = 150.dp
+val HIGHLIGHT_QUERY_PLACEHOLDER_CORNER = 28.dp
 
 /**
  * A composable function which displays a media highlight section based on the given input highlight
@@ -84,6 +116,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
     val highlightParams: HighlightQueryResultsParams =
         LocalPhotopickerConfiguration.current.highlightQueryResultsParams
     val highlightQuery: HighlightQuery = highlightParams.queryResultsHighlightQuery
+    var showHighlightSection by rememberSaveable { mutableStateOf(true) }
 
     if (!checkHighlightParamsValidity(highlightParams)) {
         return
@@ -92,108 +125,199 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
     val onItemLongClick: (item: MediaGridItem) -> Unit = { item ->
         longClickActionParams?.onLongClick(item)
     }
-    when (highlightQuery) {
-        is HighlightQuery.Search ->
-            HighlightSearchQueryMedia(
-                highlightQuery = highlightQuery.searchQuery,
-                modifier = modifier,
-                onItemLongClick = onItemLongClick,
-            )
-        is HighlightQuery.Album -> {
-            HighlightAlbumMedia(
-                highlightAlbum = highlightQuery.album,
-                onItemLongClick = onItemLongClick,
-                modifier = modifier,
-            )
+
+    val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
+    val selectionLimitExceededMessage =
+        stringResource(R.string.photopicker_selection_limit_exceeded_snackbar, selectionLimit)
+    AnimatedVisibility(
+        visible = showHighlightSection,
+        exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
+    ) {
+        Column {
+            Box(modifier = modifier.animateContentSize()) {
+                when (highlightQuery) {
+                    is HighlightQuery.Search -> {
+                        val viewModel: SearchViewModel = obtainViewModel(isActivityScoped = true)
+                        var searchQuery by rememberSaveable {
+                            mutableStateOf(highlightQuery.searchQuery)
+                        }
+                        val pagingItems =
+                            remember(searchQuery) {
+                                getSearchHighlightMediaItems(searchQuery, viewModel)
+                            }
+
+                        HighlightSectionContent(
+                            highlightQuery = highlightQuery.searchQuery,
+                            highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
+                            onItemLongClick = onItemLongClick,
+                            onClick = {
+                                setSearchParametersForHighlightMedia(
+                                    highlightQuery.searchQuery,
+                                    viewModel,
+                                )
+                            },
+                            modifier = modifier,
+                            dispatcher = viewModel.backgroundDispatcher,
+                            onGridItemSelection = { highlightMediaItem ->
+                                viewModel.handleGridItemSelection(
+                                    item = highlightMediaItem.media,
+                                    selectionLimitExceededMessage = selectionLimitExceededMessage,
+                                )
+                            },
+                            onEmptyResults = { showHighlightSection = false },
+                        )
+                    }
+
+                    is HighlightQuery.Album -> {
+                        val navController = LocalNavController.current
+                        val viewModel: CategoryGridViewModel =
+                            obtainViewModel(isActivityScoped = true)
+                        // Create the album object to fetch the album media. Fetching the album
+                        // media requires only the base album data: album id and its authority.
+                        val highlightBaseAlbum =
+                            Group.BaseAlbum(
+                                id = highlightQuery.album.albumId,
+                                authority = viewModel.getLocalAlbumAuthority(),
+                                // TODO Add album name as a resource string for localisation:
+                                // b/420605240
+                                displayName = highlightQuery.album.albumId,
+                            )
+
+                        var albumName by rememberSaveable {
+                            mutableStateOf(highlightBaseAlbum.displayName)
+                        }
+                        val pagingItems =
+                            remember(albumName) {
+                                viewModel.getHighlightAlbumMedia(highlightBaseAlbum)
+                            }
+
+                        HighlightSectionContent(
+                            highlightQuery = highlightBaseAlbum.displayName,
+                            highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
+                            onItemLongClick = onItemLongClick,
+                            onClick = {
+                                navController.navigateToAlbumMediaGridForCategories(
+                                    album = highlightBaseAlbum
+                                )
+                            },
+                            modifier = modifier,
+                            dispatcher = viewModel.backgroundDispatcher,
+                            onGridItemSelection = { highlightMediaItem ->
+                                viewModel.handleAlbumMediaGridItemSelection(
+                                    highlightMediaItem.media,
+                                    selectionLimitExceededMessage,
+                                    highlightBaseAlbum,
+                                )
+                            },
+                            onEmptyResults = { showHighlightSection = false },
+                        )
+                    }
+                }
+            }
+            // Display the "Recents" label below the highlight grid
+            RecentsLabel()
         }
     }
 }
 
 /**
- * The highlight composable to be rendered in case the app wants to highlight an album
- *
- * @param highlightAlbum The input album of type [HighlightAlbum] mapped from the given input album
- *   string
- * @param viewModel [AlbumGridViewModel] object to communicate with the data layer
- * @param onItemLongClick Callback triggered when a media item is long-pressed.
- * @param modifier The modifier to be applied to the given composable
- */
-@Composable
-fun HighlightAlbumMedia(
-    highlightAlbum: HighlightAlbum,
-    viewModel: CategoryGridViewModel = obtainViewModel(),
-    onItemLongClick: (item: MediaGridItem) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // Create the album object to fetch the album media. Fetching the album media requires only
-    // the base album data: album id and its authority.
-    val highlightBaseAlbum =
-        Group.BaseAlbum(
-            id = highlightAlbum.albumId,
-            authority = viewModel.getLocalAlbumAuthority(),
-            // TODO Add album name as a resource string for localisation: b/420605240
-            displayName = highlightAlbum.albumId,
-        )
-
-    val albumMediaItems =
-        viewModel.getHighlightAlbumMedia(highlightBaseAlbum).collectAsLazyPagingItems()
-    val navController = LocalNavController.current
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Show the album name and the "See All" button
-        // TODO Add album name as a resource string for localisation: b/420605240
-        HighlightQueryAndSeeAllButton(
-            highlightText = highlightBaseAlbum.displayName,
-            onClick = {
-                navController.navigateToAlbumMediaGridForCategories(album = highlightBaseAlbum)
-            },
-        )
-        // Show the horizontal highlight grid
-        HighlightMediaGrid(
-            highlightItems = albumMediaItems,
-            viewModel = viewModel,
-            highlightAlbum = highlightBaseAlbum,
-            onItemLongClick = onItemLongClick,
-        )
-        // Display the "Recents" label below the highlight grid
-        RecentsLabel()
-    }
-}
-
-/**
  * The highlight composable to be rendered in case an app wants to highlight media based on a search
- * query.
+ * query or an album.
  *
  * @param highlightQuery The input highlight text query to highlight
- * @param viewModel [SearchViewModel] object to communicate with the data layer
+ * @param highlightMediaItems The items to be displayed in the grid as [LazyPagingItems]
  * @param onItemLongClick Callback triggered when a media item is long-pressed.
+ * @param onClick Defines the onClick behaviour of the See All button.
  * @param modifier The modifier to be applied if any
+ * @param dispatcher Background Coroutine dispatcher.
+ * @param onGridItemSelection Defines click action on the item.
+ * @param onEmptyResults A callback function to be invoked when there are no results to show.
  */
 @Composable
-fun HighlightSearchQueryMedia(
+fun HighlightSectionContent(
     highlightQuery: String,
-    viewModel: SearchViewModel = obtainViewModel(isActivityScoped = true),
+    highlightMediaItems: LazyPagingItems<MediaGridItem.MediaItem>,
     onItemLongClick: (item: MediaGridItem) -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    dispatcher: CoroutineDispatcher,
+    onGridItemSelection: (item: MediaGridItem.MediaItem) -> Unit,
+    onEmptyResults: () -> Unit,
 ) {
-    val highlightMediaItems =
-        getSearchHighlightMediaItems(highlightQuery, viewModel).collectAsLazyPagingItems()
+    var highlightSectionState by rememberSaveable { mutableStateOf(HighlightSectionState.LOADING) }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        // Show the search query and the "See All" button
-        HighlightQueryAndSeeAllButton(
+    AnimatedVisibility(
+        visible = highlightSectionState == HighlightSectionState.LOADING,
+        exit = fadeOut(animationSpec = tween(durationMillis = 100, easing = LinearEasing)),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            HighlightQueryPlaceholder()
+            HighlightMediaPlaceholder()
+        }
+    }
+
+    AnimatedVisibility(
+        visible = highlightSectionState == HighlightSectionState.TIMEOUT,
+        enter =
+            fadeIn(
+                animationSpec =
+                    tween(durationMillis = 200, delayMillis = 400, easing = LinearEasing)
+            ),
+    ) {
+        SuggestionsChip(
             highlightText = highlightQuery,
-            onClick = { setSearchParametersForHighlightMedia(highlightQuery, viewModel) },
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
         )
+    }
 
-        // Show the horizontal highlight grid
-        HighlightMediaGrid(
-            highlightItems = highlightMediaItems,
-            viewModel = viewModel,
-            onItemLongClick = onItemLongClick,
-        )
-        // Display the "Recents" label below the highlight grid
-        RecentsLabel()
+    AnimatedVisibility(
+        visible = highlightSectionState == HighlightSectionState.RESULTS_AVAILABLE,
+        enter = fadeIn(animationSpec = tween(durationMillis = 200)),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Show the highlight query and the "See All" button
+            HighlightQueryAndSeeAllButton(highlightText = highlightQuery, onClick = onClick)
+
+            // Show the horizontal highlight grid
+            HighlightMediaGrid(
+                highlightItems = highlightMediaItems,
+                onItemLongClick = onItemLongClick,
+                onGridItemSelection = onGridItemSelection,
+            )
+        }
+    }
+
+    LaunchedEffect(highlightMediaItems.loadState.refresh) {
+        if (highlightSectionState == HighlightSectionState.LOADING) {
+            val refreshLoadState = highlightMediaItems.loadState.refresh
+            val itemsCount = highlightMediaItems.itemCount
+            withContext(dispatcher) {
+                if (
+                    itemsCount == 0 &&
+                        refreshLoadState is LoadState.Loading &&
+                        highlightSectionState == HighlightSectionState.LOADING
+                ) {
+                    delay(HIGHLIGHT_SEARCH_DURATION_MS)
+                }
+                when {
+                    itemsCount == 0 &&
+                        (refreshLoadState is LoadState.Loading ||
+                            refreshLoadState is LoadState.Error) -> {
+                        highlightSectionState = HighlightSectionState.TIMEOUT
+                    }
+
+                    itemsCount == 0 && refreshLoadState is LoadState.NotLoading -> {
+                        highlightSectionState = HighlightSectionState.EMPTY
+                        onEmptyResults()
+                    }
+
+                    else -> {
+                        highlightSectionState = HighlightSectionState.RESULTS_AVAILABLE
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -244,35 +368,33 @@ private fun HighlightQueryAndSeeAllButton(highlightText: String, onClick: () -> 
  * items based on the query, whichever is lower. The items in the grid are selectable.
  *
  * @param highlightItems The items to be displayed in the grid as [LazyPagingItems]
- * @param viewModel An instance of [ViewModel] passed down as [SearchViewModel] for search highlight
- *   or [AlbumGridViewModel] for album highlight.
- * @param highlightAlbum A [Group.Album] to highlight in case of album highlight.
+ * @param onItemLongClick Defines long click action on the item.
+ * @param onGridItemSelection Defines click action on the item.
  */
 @Composable
 private fun HighlightMediaGrid(
     highlightItems: LazyPagingItems<MediaGridItem.MediaItem>,
-    viewModel: ViewModel,
     onItemLongClick: (item: MediaGridItem) -> Unit,
-    highlightAlbum: Group.BaseAlbum? = null,
+    onGridItemSelection: (item: MediaGridItem.MediaItem) -> Unit,
 ) {
     val state = rememberLazyGridState()
-    val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
-    val selectionLimitExceededMessage =
-        stringResource(R.string.photopicker_selection_limit_exceeded_snackbar, selectionLimit)
+    val description = stringResource(R.string.photopicker_hsr_media_text)
+
     val dateFormat =
         LocalLocalizationHelper.current.getLocalizedDateTimeFormatter(
             dateStyle = DateFormat.MEDIUM,
             timeStyle = DateFormat.SHORT,
         )
-
     LazyHorizontalGrid(
         rows = GridCells.Fixed(HIGHLIGHT_GRID_ROW_COUNT),
-        modifier = Modifier.fillMaxWidth().height(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT),
+        modifier =
+            Modifier.fillMaxWidth().height(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT).semantics {
+                contentDescription = description
+            },
         state = state,
         contentPadding = HIGHLIGHT_GRID_CONTENT_PADDING,
         horizontalArrangement = Arrangement.spacedBy(MEASUREMENT_HIGHLIGHT_GRID_CELL_ARRANGEMENT),
-        userScrollEnabled = true,
     ) {
         items(
             count = minOf(highlightItems.itemCount, HIGHLIGHT_GRID_CELL_COUNT),
@@ -285,28 +407,106 @@ private fun HighlightMediaGrid(
                     isHighlightMediaItem = true,
                     isSelected = selection.contains(highlightMediaItem.media),
                     selectedPosition = selection.indexOf(highlightMediaItem.media),
-                    onClick = {
-                        when (viewModel) {
-                            is SearchViewModel -> {
-                                viewModel.handleGridItemSelection(
-                                    item = highlightMediaItem.media,
-                                    selectionLimitExceededMessage = selectionLimitExceededMessage,
-                                )
-                            }
-                            is CategoryGridViewModel -> {
-                                viewModel.handleAlbumMediaGridItemSelection(
-                                    highlightMediaItem.media,
-                                    selectionLimitExceededMessage,
-                                    highlightAlbum!!,
-                                )
-                            }
-                        }
-                    },
+                    onClick = { onGridItemSelection(highlightMediaItem) },
                     onLongPress = { onItemLongClick(highlightMediaItem) },
                     dateFormat = dateFormat,
                     focusItem = null,
                 )
             }
+        }
+    }
+}
+
+/** Displays suggestion chip with a clickable search query in case of search timeout. */
+@Composable
+private fun SuggestionsChip(
+    highlightText: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Box(modifier = modifier) {
+        Column {
+            Row(
+                modifier = Modifier.padding(HIGHLIGHT_TEXT_LABELS_PADDING),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    modifier = Modifier.width(20.dp).height(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.photopicker_search_suggestions_text),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(PaddingValues(start = 16.dp)),
+                )
+            }
+
+            AssistChip(
+                onClick = onClick,
+                label = { Text(highlightText) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription =
+                            stringResource(R.string.photopicker_search_placeholder_text),
+                        modifier = Modifier.size(AssistChipDefaults.IconSize),
+                    )
+                },
+                modifier = Modifier.padding(HIGHLIGHT_GRID_CONTENT_PADDING),
+                shape = RoundedCornerShape(16.dp),
+            )
+        }
+    }
+}
+
+/**
+ * Displays a shimmering placeholder for a highlight query.
+ *
+ * This composable creates a `Box` with a fixed height and width, styled to resemble a search or
+ * query input field in a loading state.
+ */
+@Composable
+private fun HighlightQueryPlaceholder() {
+    val description = stringResource(R.string.photopicker_hsr_query_placeholder_text)
+    Box(
+        modifier =
+            Modifier.height(HIGHLIGHT_QUERY_PLACEHOLDER_HEIGHT)
+                .width(HIGHLIGHT_QUERY_PLACEHOLDER_WIDTH)
+                .padding(HIGHLIGHT_TEXT_LABELS_PADDING)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shape = RoundedCornerShape(HIGHLIGHT_QUERY_PLACEHOLDER_CORNER),
+                )
+                .clip(RoundedCornerShape(HIGHLIGHT_QUERY_PLACEHOLDER_CORNER))
+                .shimmerEffect()
+                .semantics { contentDescription = description }
+    )
+}
+
+/**
+ * Displays a horizontal grid of media items with a shimmering animation. Each item in the grid is
+ * represented by a `Box` with a shimmering effect, indicating a loading state.
+ */
+@Composable
+private fun HighlightMediaPlaceholder() {
+    val description = stringResource(R.string.photopicker_hsr_media_placeholder_text)
+    LazyHorizontalGrid(
+        rows = GridCells.Fixed(HIGHLIGHT_GRID_ROW_COUNT),
+        modifier =
+            Modifier.fillMaxWidth().height(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT).semantics {
+                contentDescription = description
+            },
+        contentPadding = HIGHLIGHT_TEXT_LABELS_PADDING,
+        horizontalArrangement = Arrangement.spacedBy(MEASUREMENT_HIGHLIGHT_GRID_CELL_ARRANGEMENT),
+    ) {
+        items(HIGHLIGHT_GRID_CELL_COUNT) { index ->
+            Box(
+                modifier =
+                    Modifier.size(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT)
+                        .clip(RoundedCornerShape(HIGHLIGHT_QUERY_PLACEHOLDER_CORNER))
+                        .shimmerEffect()
+            )
         }
     }
 }
@@ -347,4 +547,12 @@ private fun checkHighlightParamsValidity(highlightParams: HighlightQueryResultsP
             else -> true
         }
     return validHighlightType && validQuery
+}
+
+/** Represents the different UI states for the Highlight section. */
+enum class HighlightSectionState {
+    LOADING,
+    TIMEOUT,
+    RESULTS_AVAILABLE,
+    EMPTY,
 }
