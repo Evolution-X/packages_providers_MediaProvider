@@ -21,4 +21,10 @@
     <string name="photopicker_hsr_suggestions_text" translation_description="Text for describing the suggestion chips that are shown when the photopicker search times out">Suggestions</string>
     <!-- Recents label -->
     <string name="photopicker_hsr_recents_label" translation_description="Text label to be shown above the Recent photos in case the highlight photogrid is shown">Recents</string>
+    <!-- Content description for query animation placeholder-->
+    <string name="photopicker_hsr_query_placeholder_text" translation_description="Text for describing the animation placeholder for search query composable while the results are fetched">Loading highlighted media results query</string>
+    <!-- Content description for media animation placeholder-->
+    <string name="photopicker_hsr_media_placeholder_text" translation_description="Text for describing the animation placeholder of the horizontal media grid composable while the results are fetched">Loading highlighted media results</string>
+    <!-- Content description for highlight search media grid-->
+    <string name="photopicker_hsr_media_text" translation_description="Text for describing the highlight search horizontal media grid">Highlighted media results</string>
 </resources>

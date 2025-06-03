@@ -1391,7 +1391,8 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
-            testDataService.albumMediaSetSize = 0
+            testDataService.albumMediaSetSize = 1
+            testDataService.albumSetSize = 1
             testDataService.albumsList =
                 listOf(
                     Group.Album(
@@ -1433,10 +1434,15 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             }
 
             // Wait sufficiently for albums list to be available
-            advanceTimeBy(100)
+            // Repeated calls to advanceTimeBy followed by waitForIdle  are necessary because the
+            // animations/transitions relies on the passage of time to complete its rendering.
+            advanceTimeBy(3000)
             composeTestRule.waitForIdle()
-            advanceTimeBy(100)
+            advanceTimeBy(1000)
             composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
 
             // Verify album name, Recents label and the SeeAll button are displayed
             composeTestRule
