@@ -129,7 +129,10 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
     val selectionLimitExceededMessage =
         stringResource(R.string.photopicker_selection_limit_exceeded_snackbar, selectionLimit)
-    if (showHighlightSection) {
+    AnimatedVisibility(
+        visible = showHighlightSection,
+        exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
+    ) {
         Column {
             Box(modifier = modifier.animateContentSize()) {
                 when (highlightQuery) {
