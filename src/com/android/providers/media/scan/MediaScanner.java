@@ -63,11 +63,12 @@ public interface MediaScanner {
     void onIdleScanStopped();
 
     /**
-     * Stops scan for given volume.
+     * Stops scanning for the given volume and reason.
      *
-     * @param volume {@link MediaVolume} for which scan needs to be stopped
+     * @param volume {@link MediaVolume} the media volume to stop scanning
+     * @param scanReason the reason the scan was triggered
      */
-    void onScanVolumeStopped(@NonNull MediaVolume volume);
+    void onScanVolumeStopped(@NonNull MediaVolume volume, int scanReason);
 
     void onDirectoryDirty(@NonNull File file);
 

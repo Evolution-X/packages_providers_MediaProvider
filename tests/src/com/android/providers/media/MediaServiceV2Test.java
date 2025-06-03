@@ -16,28 +16,50 @@
 
 package com.android.providers.media;
 
+import static android.content.Intent.ACTION_LOCALE_CHANGED;
+import static android.content.Intent.ACTION_MEDIA_MOUNTED;
+import static android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE;
+import static android.content.Intent.ACTION_PACKAGE_DATA_CLEARED;
+import static android.content.Intent.ACTION_PACKAGE_FULLY_REMOVED;
+
+import static com.android.providers.media.MediaProvider.BROADCAST_INTENT;
+import static com.android.providers.media.MediaProvider.CANCEL_WORK_AFTER_ENQUEUEING;
+import static com.android.providers.media.MediaProvider.IS_SCAN_VOLUME_CALL;
+import static com.android.providers.media.MediaProvider.REMOVE_VOL_BEFORE_ENQUEUEING;
+import static com.android.providers.media.MediaProvider.VOLUME_NAME;
+import static com.android.providers.media.MediaProvider.WAIT_FOR_SCAN_COMPLETION;
+import static com.android.providers.media.MediaProvider.WORK_INFO_STATE;
 import static com.android.providers.media.scan.MediaScannerTest.stage;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import android.Manifest;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.SystemClock;
+import android.os.UserHandle;
+import android.os.storage.StorageManager;
+import android.os.storage.StorageVolume;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.MediaStore;
 
+import androidx.annotation.Nullable;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.work.WorkInfo;
+
+import junit.framework.Assert;
 
 import org.junit.Before;
 import org.junit.Rule;
@@ -53,10 +75,6 @@ import java.util.List;
 public class MediaServiceV2Test {
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
-    private static final String WORK_INFO_STATE = "work_info_state";
-    private static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
-    private static final String VOLUME_NAME = "volume_name";
-    private static final String WAIT_TIME_MILLIS = "wait_time_millis";
     private Context mContext;
     private File mDownloadsDir;
 
@@ -78,11 +96,10 @@ public class MediaServiceV2Test {
         try {
             Bundle extras = new Bundle();
             extras.putString(VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
-            extras.putBoolean(WAIT_FOR_SCAN_COMPLETION, true);
-            extras.putLong(WAIT_TIME_MILLIS, 10000L);
+            extras.putBoolean(IS_SCAN_VOLUME_CALL, true);
 
             Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
-                    MediaStore.QUEUE_SCAN_VOLUME, /* arg */ null, extras);
+                    MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
 
             assertThat(result.getString(WORK_INFO_STATE))
                     .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
@@ -93,11 +110,12 @@ public class MediaServiceV2Test {
     }
 
     @Test
-    public void testDuplicateScanVolumeWorkNotCreated() throws Exception {
-        // Create 1000 files that we will scan. This will act as long running task and will be
-        // executed by first scan volume work. The second scan volume work should not be created.
+    public void testIsStopped() throws Exception {
         List<File> files = new ArrayList<>();
-        for (int i = 0; i < 1000; i++) {
+
+        // create 500 files and it will act as a long running work.
+        // We will cancel the work before it gets completed.
+        for (int i = 0; i < 500; i++) {
             File testFile = new File(mDownloadsDir,
                     i + "_" + SystemClock.elapsedRealtimeNanos() + ".jpg");
             stageNewFile(R.raw.test_image, testFile);
@@ -107,19 +125,16 @@ public class MediaServiceV2Test {
         try {
             Bundle extras = new Bundle();
             extras.putString(VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            extras.putBoolean(IS_SCAN_VOLUME_CALL, true);
+            extras.putBoolean(WAIT_FOR_SCAN_COMPLETION, false);
+            extras.putBoolean(CANCEL_WORK_AFTER_ENQUEUEING, true);
 
-            // We make 2 scan volume calls. The first scan volume should create work and start
-            // scanning the images. The returned work state should not be null.
-            Bundle resultForFirstScan = mContext.getContentResolver().call(MediaStore.AUTHORITY,
-                    MediaStore.QUEUE_SCAN_VOLUME, /* arg */ null, extras);
+            Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
+                    MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
 
-            // The second scan volume call should not be appended as the first scan would be going
-            // on. The returned work state should be null as no work is appended.
-            Bundle resultForSecondScan = mContext.getContentResolver().call(MediaStore.AUTHORITY,
-                    MediaStore.QUEUE_SCAN_VOLUME, /* arg */ null, extras);
-
-            assertThat(resultForFirstScan.getString(WORK_INFO_STATE)).isNotNull();
-            assertThat(resultForSecondScan.getString(WORK_INFO_STATE)).isNull();
+            assertThat(result.getString(WORK_INFO_STATE))
+                    .isEqualTo(WorkInfo.State.CANCELLED.toString());
+            assertAllFilesNotScanned(files);
         } finally {
             for (File file : files) {
                 file.delete();
@@ -127,20 +142,224 @@ public class MediaServiceV2Test {
         }
     }
 
+    @Test
+    public void testPackageDataCleared() {
+        // add an entry to files table with a random package that we will orphan for given uid.
+        String fileName = "a1_" + System.nanoTime() + ".jpeg";
+        Uri uri = addDummyContentValuesForFile(fileName);
+
+        try {
+            verifyPackageRemovalOrphansFile(ACTION_PACKAGE_DATA_CLEARED, fileName);
+        } finally {
+            mContext.getContentResolver().delete(uri, /* extras */ null);
+        }
+    }
+
+
+    @Test
+    public void testPackageFullyRemoved() {
+        // add an entry to files table with a random package that we will orphan for given uid.
+        String fileName = "a2_" + System.nanoTime() + ".jpeg";
+        Uri uri = addDummyContentValuesForFile(fileName);
+
+        try {
+            verifyPackageRemovalOrphansFile(ACTION_PACKAGE_FULLY_REMOVED, fileName);
+        } finally {
+            mContext.getContentResolver().delete(uri, /* extras */ null);
+        }
+    }
+
+    private void verifyPackageRemovalOrphansFile(String action, String fileName) {
+        //create intent for ACTION_PACKAGE_FULLY_REMOVED or ACTION_PACKAGE_DATA_CLEARED
+        Intent broadcastIntent = new Intent();
+        broadcastIntent.setAction(action);
+        broadcastIntent.setData(
+                Uri.fromParts("content", mContext.getPackageName(), /*fragment*/ null));
+        broadcastIntent.putExtra(Intent.EXTRA_UID, UserHandle.myUserId());
+
+        // create work for action
+        Bundle extras = new Bundle();
+        extras.putParcelable(BROADCAST_INTENT, broadcastIntent);
+        Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
+                MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
+
+        // assert work finished successfully and entry for dummy package is removed.
+        assertThat(result.getString(WORK_INFO_STATE))
+                .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
+        assertThat(getFileOwnerPackageName(fileName)).isNull();
+    }
+
+    @Test
+    public void testMediaMountedWhenVolumeAlreadyAttached() throws Exception {
+        File testFile = new File(mDownloadsDir,
+                "c1_" + SystemClock.elapsedRealtimeNanos() + ".jpg");
+        stageNewFile(R.raw.test_image, testFile);
+
+        try {
+            Bundle result = getResultForMountMedia(/* removeVolumeBeforeEnqueueing */ false);
+
+            assertThat(result.getString(WORK_INFO_STATE))
+                    .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
+            // scan volume is not called if the volume is already attached.
+            // So we do not expect file to be scanned.
+            assertThat(isFileScanned(testFile)).isFalse();
+        } finally {
+            testFile.delete();
+        }
+    }
+
+    @Test
+    public void testMediaMountedWhenVolumeNotAttached() throws Exception {
+        File testFile = new File(mDownloadsDir,
+                "c2_" + SystemClock.elapsedRealtimeNanos() + ".jpg");
+        stageNewFile(R.raw.test_image, testFile);
+
+        try {
+            Bundle result = getResultForMountMedia(/* removeMediaVolumeBeforeEnqueueing */ true);
+
+            assertThat(result.getString(WORK_INFO_STATE))
+                    .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
+            assertThat(isFileScanned(testFile)).isTrue();
+        } finally {
+            testFile.delete();
+        }
+    }
+
+    @Nullable
+    private Bundle getResultForMountMedia(boolean removeMediaVolumeBeforeEnqueueing) {
+        StorageVolume vol = getExternalPrimaryStorageVolume();
+        Assert.assertNotNull(vol);
+
+        //create intent for ACTION_MEDIA_MOUNTED.
+        Intent broadcastIntent = new Intent();
+        broadcastIntent.setAction(ACTION_MEDIA_MOUNTED);
+        broadcastIntent.putExtra(StorageVolume.EXTRA_STORAGE_VOLUME, vol);
+
+        // create work for ACTION_MEDIA_MOUNTED
+        Bundle extras = new Bundle();
+        extras.putBoolean(REMOVE_VOL_BEFORE_ENQUEUEING, removeMediaVolumeBeforeEnqueueing);
+        extras.putString(VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        extras.putParcelable(BROADCAST_INTENT, broadcastIntent);
+        Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
+                MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
+        return result;
+    }
+
+    private StorageVolume getExternalPrimaryStorageVolume() {
+        List<StorageVolume> volumes =
+                mContext.getSystemService(StorageManager.class).getStorageVolumes();
+        for (StorageVolume vol : volumes) {
+            if (MediaStore.VOLUME_EXTERNAL_PRIMARY
+                    .equalsIgnoreCase(vol.getMediaStoreVolumeName())) {
+                return vol;
+            }
+        }
+        return null;
+    }
+
+    @Test
+    public void testOnLocalChanged() {
+        String fileName = "f_" + System.nanoTime() + ".jpeg";
+        Uri uri = addDummyContentValuesForFile(fileName);
+
+        try {
+            //create intent for ACTION_LOCALE_CHANGED
+            Intent broadcastIntent = new Intent();
+            broadcastIntent.setAction(ACTION_LOCALE_CHANGED);
+
+            // create work for ACTION_LOCALE_CHANGED
+            Bundle extras = new Bundle();
+            extras.putParcelable(BROADCAST_INTENT, broadcastIntent);
+            Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
+                    MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
+
+            // assert work finished successfully and file is scanned.
+            assertThat(result.getString(WORK_INFO_STATE))
+                    .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
+
+        } finally {
+            mContext.getContentResolver().delete(uri, /* extras */ null);
+        }
+    }
+
+    @Test
+    public void testScanFile() throws Exception {
+        // add an entry to files table with a random package that we will orphan for given uid.
+        File testFile = new File(mDownloadsDir,
+                "b_" + SystemClock.elapsedRealtimeNanos() + ".jpg");
+        stageNewFile(R.raw.test_image, testFile);
+
+        try {
+            //create intent for ACTION_MEDIA_SCANNER_SCAN_FILE
+            Intent broadcastIntent = new Intent();
+            broadcastIntent.setAction(ACTION_MEDIA_SCANNER_SCAN_FILE);
+            broadcastIntent.setData(Uri.fromFile(testFile));
+
+            // create work for ACTION_MEDIA_SCANNER_SCAN_FILE
+            Bundle extras = new Bundle();
+            extras.putParcelable(BROADCAST_INTENT, broadcastIntent);
+            Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
+                    MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
+
+            // assert work finished successfully and file is scanned.
+            assertThat(result.getString(WORK_INFO_STATE))
+                    .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
+            assertTrue(isFileScanned(testFile));
+        } finally {
+            testFile.delete();
+        }
+    }
+
+    private Uri addDummyContentValuesForFile(String fileName) {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, "Download");
+
+        Uri uri = mContext.getContentResolver()
+                .insert(MediaStore.Files.EXTERNAL_CONTENT_URI, values);
+        assertThat(getFileOwnerPackageName(fileName)).isEqualTo(mContext.getPackageName());
+        return uri;
+    }
+
+    private String getFileOwnerPackageName(String fileName) {
+        Uri filesUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        String selection = MediaStore.Files.FileColumns.DISPLAY_NAME + "=?";
+        String[] args = new String[]{fileName};
+        try (Cursor cursor = mContext.getContentResolver().query(
+                filesUri,
+                new String[]{MediaStore.Files.FileColumns.OWNER_PACKAGE_NAME},
+                selection,
+                args,
+                /*sortOrder*/ null)) {
+            cursor.moveToFirst();
+            return cursor.getString(0);
+        }
+    }
+
     private boolean isFileScanned(File file) {
-        Uri filesUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL);
+        Uri filesUri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         String selection = MediaStore.Files.FileColumns.DISPLAY_NAME + " = ?";
         String[] selectionArgs = new String[] { file.getName() };
 
         try (Cursor cursor = mContext.getContentResolver().query(
                 filesUri,
-                new String[] { MediaStore.Files.FileColumns._ID },
+                new String[] { MediaStore.Files.FileColumns.DATE_TAKEN },
                 selection,
                 selectionArgs,
                 null)) {
-
-            return cursor != null && cursor.moveToFirst();
+            // DATE_TAKEN is populated when file is scanned.
+            return cursor != null && cursor.moveToFirst() && cursor.getLong(0) > 0;
         }
+    }
+
+    private void assertAllFilesNotScanned(List<File> files) {
+        for (File file : files) {
+            if (!isFileScanned(file)) {
+                return;
+            }
+        }
+        fail("Did not expect all files to be scanned.");
     }
 
     private void stageNewFile(int resId, File file) throws IOException {

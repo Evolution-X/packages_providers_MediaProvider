@@ -67,6 +67,10 @@ public class MediaService extends JobIntentService {
         enqueueWork(context, intent);
     }
 
+    /**
+     * @deprecated Enqueues work for given given intent.
+     */
+    @Deprecated
     public static void enqueueWork(Context context, Intent work) {
         enqueueWork(context, MediaService.class, JOB_ID, work);
     }
@@ -80,22 +84,24 @@ public class MediaService extends JobIntentService {
         try {
             switch (intent.getAction()) {
                 case Intent.ACTION_LOCALE_CHANGED: {
-                    onLocaleChanged();
+                    onLocaleChanged(this);
                     break;
                 }
                 case Intent.ACTION_PACKAGE_FULLY_REMOVED:
                 case Intent.ACTION_PACKAGE_DATA_CLEARED: {
                     final String packageName = intent.getData().getSchemeSpecificPart();
                     final int uid = intent.getIntExtra(Intent.EXTRA_UID, 0);
-                    onPackageOrphaned(packageName, uid);
+                    onPackageOrphaned(this, packageName, uid);
                     break;
                 }
                 case Intent.ACTION_MEDIA_SCANNER_SCAN_FILE: {
-                    onScanFile(this, intent.getData());
+                    onScanFile(this, intent.getData().getPath());
                     break;
                 }
                 case Intent.ACTION_MEDIA_MOUNTED: {
-                    onMediaMountedBroadcast(this, intent);
+                    final StorageVolume volume =
+                            intent.getParcelableExtra(StorageVolume.EXTRA_STORAGE_VOLUME);
+                    onMediaMountedBroadcast(this, volume);
                     break;
                 }
                 case ACTION_SCAN_VOLUME: {
@@ -122,23 +128,22 @@ public class MediaService extends JobIntentService {
         }
     }
 
-    private void onLocaleChanged() {
-        try (ContentProviderClient cpc = getContentResolver()
+    static void onLocaleChanged(Context context) {
+        try (ContentProviderClient cpc = context.getContentResolver()
                 .acquireContentProviderClient(MediaStore.AUTHORITY)) {
             ((MediaProvider) cpc.getLocalContentProvider()).onLocaleChanged();
         }
     }
 
-    private void onPackageOrphaned(String packageName, int uid) {
-        try (ContentProviderClient cpc = getContentResolver()
+    static void onPackageOrphaned(Context context, String packageName, int uid) {
+        try (ContentProviderClient cpc = context.getContentResolver()
                 .acquireContentProviderClient(MediaStore.AUTHORITY)) {
             ((MediaProvider) cpc.getLocalContentProvider()).onPackageOrphaned(packageName, uid);
         }
     }
 
-    private static void onMediaMountedBroadcast(Context context, Intent intent)
+    static void onMediaMountedBroadcast(Context context, StorageVolume volume)
             throws IOException {
-        final StorageVolume volume = intent.getParcelableExtra(StorageVolume.EXTRA_STORAGE_VOLUME);
         if (volume != null) {
             MediaVolume mediaVolume = MediaVolume.fromStorageVolume(volume);
             try (ContentProviderClient cpc = context.getContentResolver()
@@ -162,7 +167,7 @@ public class MediaService extends JobIntentService {
     /**
      * Attempts to recover a public media volume.
      */
-    public static void recoverPublicVolumeIfNeeded(MediaVolume volume,
+    static void recoverPublicVolumeIfNeeded(MediaVolume volume,
             ContentResolver contentResolver) {
         try (ContentProviderClient cpc = contentResolver
                 .acquireContentProviderClient(MediaStore.AUTHORITY)) {
@@ -242,8 +247,8 @@ public class MediaService extends JobIntentService {
         }
     }
 
-    private static Uri onScanFile(Context context, Uri uri) throws IOException {
-        final File file = new File(uri.getPath()).getCanonicalFile();
+    static Uri onScanFile(Context context, String path) throws IOException {
+        final File file = new File(path).getCanonicalFile();
         try (ContentProviderClient cpc = context.getContentResolver()
                 .acquireContentProviderClient(MediaStore.AUTHORITY)) {
             final MediaProvider provider = ((MediaProvider) cpc.getLocalContentProvider());
