@@ -1299,8 +1299,10 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             }
 
             // Verify search query, Recents label and the SeeAll button are not displayed
-            composeTestRule.onNode(hasText(testQuery)).assertIsNotDisplayed()
             val resources = getTestableContext().getResources()
+            val highlightText =
+                resources.getString(R.string.photopicker_hsr_suggestions_for_text) + " " + testQuery
+            composeTestRule.onNode(hasText(highlightText)).assertIsNotDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
@@ -1353,8 +1355,10 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
 
             // Verify search query, Recents label and the SeeAll button are displayed
-            composeTestRule.onNode(hasText(testQuery)).assertIsDisplayed()
             val resources = getTestableContext().getResources()
+            val highlightText =
+                resources.getString(R.string.photopicker_hsr_suggestions_for_text) + " " + testQuery
+            composeTestRule.onNode(hasText(highlightText)).assertIsDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
