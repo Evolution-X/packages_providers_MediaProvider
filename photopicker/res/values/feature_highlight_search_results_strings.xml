@@ -21,6 +21,16 @@
     <string name="photopicker_hsr_suggestions_text" translation_description="Text for describing the suggestion chips that are shown when the photopicker search times out">Suggestions</string>
     <!-- Recents label -->
     <string name="photopicker_hsr_recents_label" translation_description="Text label to be shown above the Recent photos in case the highlight photogrid is shown">Recents</string>
+    <!-- Favorites album label [CHAR LIMIT=50] -->
+    <string name="photopicker_hsr_favorites_album_label" translation_description="Favorites album text label to be shown above the Recent photos when the Favorites album is highlighted">Favorites</string>
+    <!-- Screenshots album label [CHAR LIMIT=50] -->
+    <string name="photopicker_hsr_screenshots_album_label" translation_description="Screenshots album text label to be shown above the Recent photos when the Screenshots album is highlighted">Screenshots</string>
+    <!-- Camera album label [CHAR LIMIT=50] -->
+    <string name="photopicker_hsr_camera_album_label" translation_description="Camera album text label to be shown above the Recent photos when the Camera album is highlighted">Camera</string>
+    <!-- Downloads album label [CHAR LIMIT=50] -->
+    <string name="photopicker_hsr_downloads_album_label" translation_description="Downloads album text label to be shown above the Recent photos when the Downloads album is highlighted">Downloads</string>
+    <!-- Videos album label [CHAR LIMIT=50] -->
+    <string name="photopicker_hsr_videos_album_label" translation_description="Videos album text label to be shown above the Recent photos when the Videos album is highlighted">Videos</string>
     <!-- Content description for query animation placeholder-->
     <string name="photopicker_hsr_query_placeholder_text" translation_description="Text for describing the animation placeholder for search query composable while the results are fetched">Loading highlighted media results query</string>
     <!-- Content description for media animation placeholder-->
