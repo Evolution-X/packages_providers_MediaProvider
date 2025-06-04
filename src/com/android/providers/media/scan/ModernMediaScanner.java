@@ -397,6 +397,7 @@ public class ModernMediaScanner implements MediaScanner {
 
         try (Scan scan = new Scan(file, reason)) {
             scan.run();
+            BackupAndRestoreStatsManager.logStats();
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Couldn't find directory to scan", e);
         } catch (OperationCanceledException ignored) {
@@ -1304,16 +1305,24 @@ public class ModernMediaScanner implements MediaScanner {
             return scanItemDirectory(existingId, file, attrs, mimeType, volumeName);
         }
 
+        ContentProviderOperation.Builder op;
+        long restoreStartTimeNs, restoreTimeNs;
+
         // Recovery is performed on first scan of file in target device
         try {
             if (restoreExecutor != null) {
+                restoreStartTimeNs = SystemClock.elapsedRealtimeNanos();
                 Optional<ContentValues> restoredDataOptional = restoreExecutor
                         .getMetadataForFileIfBackedUp(file.getAbsolutePath(), mContext);
                 if (restoredDataOptional.isPresent()) {
                     ContentValues valuesRestored = restoredDataOptional.get();
                     if (isRestoredMetadataOfActualFile(valuesRestored, attrs)) {
-                        return restoreDataFromBackup(valuesRestored, file, attrs, mimeType,
+                        op = restoreDataFromBackup(valuesRestored, file, attrs, mimeType,
                                 existingId);
+                        restoreTimeNs = SystemClock.elapsedRealtimeNanos() - restoreStartTimeNs;
+                        BackupAndRestoreStatsManager.addStatForMediaType(mediaType,
+                                /*fromBackup*/ true, restoreTimeNs);
+                        return  op;
                     }
                 }
             }
@@ -1321,22 +1330,26 @@ public class ModernMediaScanner implements MediaScanner {
             Log.e(TAG, "Error while attempting to restore metadata from backup", e);
         }
 
-        switch (mediaType) {
-            case FileColumns.MEDIA_TYPE_AUDIO:
-                return scanItemAudio(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_VIDEO:
-                return scanItemVideo(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_IMAGE:
-                return scanItemImage(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_PLAYLIST:
-                return scanItemPlaylist(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_SUBTITLE:
-                return scanItemSubtitle(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_DOCUMENT:
-                return scanItemDocument(existingId, file, attrs, mimeType, mediaType, volumeName);
-            default:
-                return scanItemFile(existingId, file, attrs, mimeType, mediaType, volumeName);
-        }
+        restoreStartTimeNs = SystemClock.elapsedRealtimeNanos();
+        op = switch (mediaType) {
+            case FileColumns.MEDIA_TYPE_AUDIO -> scanItemAudio(existingId, file, attrs, mimeType,
+                    mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_VIDEO -> scanItemVideo(existingId, file, attrs, mimeType,
+                    mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_IMAGE -> scanItemImage(existingId, file, attrs, mimeType,
+                    mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_PLAYLIST -> scanItemPlaylist(existingId, file, attrs,
+                    mimeType, mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_SUBTITLE -> scanItemSubtitle(existingId, file, attrs,
+                    mimeType, mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_DOCUMENT -> scanItemDocument(existingId, file, attrs,
+                    mimeType, mediaType, volumeName);
+            default -> scanItemFile(existingId, file, attrs, mimeType, mediaType, volumeName);
+        };
+        restoreTimeNs = SystemClock.elapsedRealtimeNanos() - restoreStartTimeNs;
+        BackupAndRestoreStatsManager.addStatForMediaType(mediaType, /* fromBackup */ false,
+                restoreTimeNs);
+        return op;
     }
 
     private boolean isRestoredMetadataOfActualFile(@NonNull ContentValues contentValues,
