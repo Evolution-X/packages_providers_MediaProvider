@@ -11014,7 +11014,7 @@ public class MediaProvider extends ContentProvider {
             FileAccessAttributes attrs = queryForFileAttributes(path);
             final long sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
 
-            if (attrs != null) {
+            if (attrs != null && attrsFromLevelDb != null) {
                 MediaProviderStatsLog.write(
                         MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
                         (int) sqlQueryTime, (int) leveldbQueryTime, attrs.equals(attrsFromLevelDb));
