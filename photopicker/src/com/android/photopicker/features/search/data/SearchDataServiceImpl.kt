@@ -23,7 +23,10 @@ import android.os.CancellationSignal
 import android.util.Log
 import androidx.paging.PagingSource
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
+import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
+import com.android.photopicker.core.events.Telemetry
+import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.user.UserStatus
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.MediaProviderClient
@@ -168,6 +171,7 @@ class SearchDataServiceImpl(
         limit: Int,
         cancellationSignal: CancellationSignal?,
     ): List<SearchSuggestion> {
+        val config: PhotopickerConfiguration = photopickerConfiguration.value
         // Switch to a background thread.
         return withContext(dispatcher) {
             try {
@@ -184,6 +188,14 @@ class SearchDataServiceImpl(
                 }
             } catch (e: TimeoutException) {
                 Log.w(SearchDataService.TAG, "Search suggestions timed out for prefix $prefix", e)
+                events.dispatch(
+                    Event.LogPhotopickerUIEvent(
+                        FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                        config.sessionId,
+                        config.callingPackageUid ?: -1,
+                        Telemetry.UiEvent.PICKER_SEARCH_SUGGESTION_TIMEOUT,
+                    )
+                )
 
                 cancellationSignal?.cancel()
                 emptyList<SearchSuggestion>()

@@ -262,10 +262,11 @@ constructor(
         item: Media,
         selectionLimitExceededMessage: String,
         album: Group.BaseAlbum,
+        selectionSource: Telemetry.MediaLocation = Telemetry.MediaLocation.ALBUM,
     ) {
         // Update the selectable values in the received media item.
         val updatedMediaItem =
-            Media.withSelectable(item, /* selectionSource */ Telemetry.MediaLocation.ALBUM, album)
+            Media.withSelectable(item, /* selectionSource */ selectionSource, album)
         scope.launch {
             val result = selection.toggle(updatedMediaItem)
             if (result == FAILURE_SELECTION_LIMIT_EXCEEDED) {

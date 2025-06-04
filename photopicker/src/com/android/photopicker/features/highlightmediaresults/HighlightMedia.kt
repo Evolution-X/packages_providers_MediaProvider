@@ -50,6 +50,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -75,6 +76,10 @@ import com.android.photopicker.core.components.defaultBuildSeparator
 import com.android.photopicker.core.components.onGridDragSelect
 import com.android.photopicker.core.components.rememberGridDragSelectState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
+import com.android.photopicker.core.events.Event
+import com.android.photopicker.core.events.LocalEvents
+import com.android.photopicker.core.events.Telemetry
+import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.obtainViewModel
@@ -94,6 +99,7 @@ import java.text.DateFormat
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 val RECENTS_LABEL_PADDING = PaddingValues(top = 16.dp)
@@ -124,12 +130,26 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
     val highlightQuery: HighlightQuery = highlightParams.queryResultsHighlightQuery
     var showHighlightSection by rememberSaveable { mutableStateOf(true) }
 
+    val scope = rememberCoroutineScope()
+    val events = LocalEvents.current
+    val configuration = LocalPhotopickerConfiguration.current
+
     if (!checkHighlightParamsValidity(highlightParams)) {
         return
     }
     val longClickActionParams = params as? LocationParams.WithLongClickAction
     val onItemLongClick: (item: MediaGridItem) -> Unit = { item ->
         longClickActionParams?.onLongClick(item)
+        scope.launch {
+            events.dispatch(
+                Event.LogPhotopickerUIEvent(
+                    FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                    configuration.sessionId,
+                    configuration.callingPackageUid ?: -1,
+                    Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
+                )
+            )
+        }
     }
 
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
@@ -172,7 +192,18 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                                 viewModel.handleGridItemSelection(
                                     item = highlightMediaItem.media,
                                     selectionLimitExceededMessage = selectionLimitExceededMessage,
+                                    selectionSource = Telemetry.MediaLocation.HIGHLIGHT_MEDIA_GRID,
                                 )
+                                scope.launch {
+                                    events.dispatch(
+                                        Event.LogPhotopickerUIEvent(
+                                            FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                                            configuration.sessionId,
+                                            configuration.callingPackageUid ?: -1,
+                                            Telemetry.UiEvent.PICKER_SELECT_HSR_RESULT,
+                                        )
+                                    )
+                                }
                             },
                             onEmptyResults = { showHighlightSection = false },
                         )
@@ -217,7 +248,18 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                                     highlightMediaItem.media,
                                     selectionLimitExceededMessage,
                                     highlightBaseAlbum,
+                                    Telemetry.MediaLocation.HIGHLIGHT_MEDIA_GRID,
                                 )
+                                scope.launch {
+                                    events.dispatch(
+                                        Event.LogPhotopickerUIEvent(
+                                            FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                                            configuration.sessionId,
+                                            configuration.callingPackageUid ?: -1,
+                                            Telemetry.UiEvent.PICKER_SELECT_HSR_RESULT,
+                                        )
+                                    )
+                                }
                             },
                             onEmptyResults = { showHighlightSection = false },
                         )
@@ -255,6 +297,8 @@ fun HighlightSectionContent(
     onEmptyResults: () -> Unit,
 ) {
     var highlightSectionState by rememberSaveable { mutableStateOf(HighlightSectionState.LOADING) }
+    val events = LocalEvents.current
+    val configuration = LocalPhotopickerConfiguration.current
 
     AnimatedVisibility(
         visible = highlightSectionState == HighlightSectionState.LOADING,
@@ -315,15 +359,39 @@ fun HighlightSectionContent(
                         (refreshLoadState is LoadState.Loading ||
                             refreshLoadState is LoadState.Error) -> {
                         highlightSectionState = HighlightSectionState.TIMEOUT
+                        events.dispatch(
+                            Event.LogPhotopickerUIEvent(
+                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                                configuration.sessionId,
+                                configuration.callingPackageUid ?: -1,
+                                Telemetry.UiEvent.UI_LOADED_HSR_TIMEOUT,
+                            )
+                        )
                     }
 
                     itemsCount == 0 && refreshLoadState is LoadState.NotLoading -> {
                         highlightSectionState = HighlightSectionState.EMPTY
+                        events.dispatch(
+                            Event.LogPhotopickerUIEvent(
+                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                                configuration.sessionId,
+                                configuration.callingPackageUid ?: -1,
+                                Telemetry.UiEvent.UI_LOADED_EMPTY_STATE,
+                            )
+                        )
                         onEmptyResults()
                     }
 
                     else -> {
                         highlightSectionState = HighlightSectionState.RESULTS_AVAILABLE
+                        events.dispatch(
+                            Event.LogPhotopickerUIEvent(
+                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                                configuration.sessionId,
+                                configuration.callingPackageUid ?: -1,
+                                Telemetry.UiEvent.UI_LOADED_HSR_RESULTS,
+                            )
+                        )
                     }
                 }
             }
@@ -357,12 +425,30 @@ private fun HighlightQueryAndSeeAllButton(highlightText: String, onClick: () -> 
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val scope = rememberCoroutineScope()
+        val events = LocalEvents.current
+        val configuration = LocalPhotopickerConfiguration.current
+
         Text(
             text = highlightText,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        TextButton(onClick = onClick) {
+        TextButton(
+            onClick = {
+                onClick()
+                scope.launch {
+                    events.dispatch(
+                        Event.LogPhotopickerUIEvent(
+                            FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                            configuration.sessionId,
+                            configuration.callingPackageUid ?: -1,
+                            Telemetry.UiEvent.PICKER_SELECT_HSR_SEE_ALL,
+                        )
+                    )
+                }
+            }
+        ) {
             Text(
                 text = stringResource(R.string.photopicker_hsr_see_all_button_label),
                 style = MaterialTheme.typography.labelLarge,
@@ -451,6 +537,9 @@ private fun SuggestionsChip(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val events = LocalEvents.current
+    val configuration = LocalPhotopickerConfiguration.current
     Box(modifier = modifier) {
         Column {
             Row(
@@ -470,7 +559,19 @@ private fun SuggestionsChip(
             }
 
             AssistChip(
-                onClick = onClick,
+                onClick = {
+                    onClick()
+                    scope.launch {
+                        events.dispatch(
+                            Event.LogPhotopickerUIEvent(
+                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                                configuration.sessionId,
+                                configuration.callingPackageUid ?: -1,
+                                Telemetry.UiEvent.PICKER_SELECT_HSR_SUGGESTION_CHIP,
+                            )
+                        )
+                    }
+                },
                 label = { Text(highlightText) },
                 leadingIcon = {
                     Icon(

@@ -58,6 +58,7 @@ import com.android.photopicker.core.events.dispatchPhotopickerExpansionStateChan
 import com.android.photopicker.core.events.dispatchReportPhotopickerApiInfoEvent
 import com.android.photopicker.core.events.dispatchReportPhotopickerMediaItemStatusEvent
 import com.android.photopicker.core.events.dispatchReportPhotopickerSessionInfoEvent
+import com.android.photopicker.core.events.dispatchReportPickerSearchBarStatus
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.selection.LocalSelection
@@ -278,6 +279,8 @@ open class Session(
 
         // Log the picker launch details
         reportPhotopickerApiInfo()
+
+        reportPhotopickerSearchBarStatus()
 
         // Start listening to selection/deselection events for this Session so
         // we can grant/revoke permission to selected/deselected uris immediately.
@@ -632,6 +635,16 @@ open class Session(
     /** Log the picker launch details by dispatching [Event.ReportPhotopickerApiInfo] */
     private fun reportPhotopickerApiInfo() {
         dispatchReportPhotopickerApiInfoEvent(
+            coroutineScope = _backgroundScope,
+            lazyEvents = _dependencies.events(),
+            photopickerConfiguration =
+                _dependencies.configurationManager().get().configuration.value,
+            lazyFeatureManager = _dependencies.featureManager(),
+        )
+    }
+
+    private fun reportPhotopickerSearchBarStatus() {
+        dispatchReportPickerSearchBarStatus(
             coroutineScope = _backgroundScope,
             lazyEvents = _dependencies.events(),
             photopickerConfiguration =
