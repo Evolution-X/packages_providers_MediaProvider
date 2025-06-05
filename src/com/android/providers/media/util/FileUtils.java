@@ -1014,6 +1014,9 @@ public class FileUtils {
                     + "(?:\\.picker_transcoded$)|"
                     + "(?:(?:Movies|Music|Pictures)/.thumbnails$))");
 
+    private static final String REGEX_DEFAULT_IGNORABLE_CODE_POINT =
+            "[[:Default_Ignorable_Code_Point:]]";
+
     /**
      * Normalizes the given path to NFD form and removes all default ignorable Unicode characters.
      * These include characters (e.g., invisible zero-width spaces) that are ignored by the lower
@@ -1032,7 +1035,7 @@ public class FileUtils {
         }
 
         return Normalizer.normalize(path, Normalizer.Form.NFD)
-                .replaceAll("[[:Default_Ignorable_Code_Point:]]", "");
+                .replaceAll(REGEX_DEFAULT_IGNORABLE_CODE_POINT, "");
     }
 
     /**
@@ -1152,7 +1155,6 @@ public class FileUtils {
             return null;
         }
 
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
         final Matcher matcher = PATTERN_RELATIVE_PATH.matcher(path);
         if (matcher.find()) {
             final int lastSlash = path.lastIndexOf('/');
@@ -1174,7 +1176,6 @@ public class FileUtils {
     @VisibleForTesting
     public static @Nullable String extractRelativePathWithDisplayName(@Nullable String path) {
         if (path == null) return null;
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
 
         if (path.equals("/storage/emulated") || path.equals("/storage/emulated/")) {
             // This path is not reachable for MediaProvider.
@@ -1203,7 +1204,6 @@ public class FileUtils {
 
     public static @Nullable String extractPathOwnerPackageName(@Nullable String path) {
         if (path == null) return null;
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
         final Matcher m = PATTERN_OWNED_PATH.matcher(path);
         if (m.matches()) {
             return m.group(1);
@@ -1213,7 +1213,6 @@ public class FileUtils {
 
     public static @Nullable String extractOwnerPackageNameFromRelativePath(@Nullable String path) {
         if (path == null) return null;
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
         final Matcher m = PATTERN_OWNED_RELATIVE_PATH.matcher(path);
         if (m.matches()) {
             return m.group(1);
@@ -1247,7 +1246,6 @@ public class FileUtils {
      */
     public static boolean isDataOrObbPath(@Nullable String path) {
         if (path == null) return false;
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
         final Matcher m = PATTERN_DATA_OR_OBB_PATH.matcher(path);
         return m.matches();
     }
@@ -1257,7 +1255,6 @@ public class FileUtils {
      */
     public static boolean isDataOrObbRelativePath(@Nullable String path) {
         if (path == null) return false;
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
         final Matcher m = PATTERN_DATA_OR_OBB_RELATIVE_PATH.matcher(path);
         return m.matches();
     }
@@ -1267,7 +1264,6 @@ public class FileUtils {
      */
     public static boolean isObbOrChildRelativePath(@Nullable String path) {
         if (path == null) return false;
-        path = normalizeAndFilterDefaultIgnorableCodepoints(path);
         final Matcher m = PATTERN_OBB_OR_CHILD_RELATIVE_PATH.matcher(path);
         return m.matches();
     }
