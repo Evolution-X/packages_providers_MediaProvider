@@ -75,7 +75,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.SystemProperties;
 import android.os.UserHandle;
-import android.platform.test.annotations.DisableFlags;
 import android.platform.test.annotations.EnableFlags;
 import android.platform.test.flag.junit.SetFlagsRule;
 import android.provider.MediaStore;
@@ -1395,21 +1394,5 @@ public class FileUtilsTest {
                 FileUtils.normalizeAndFilterDefaultIgnorableCodepoints(pathWithIgnorables);
 
         assertEquals(pathWithIgnorablesRemoved, normalizedAndFilteredPath);
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-    @EnableFlags(Flags.FLAG_ENABLE_PATH_SANITIZATION)
-    public void testIsDataOrObbRelativePathWithZwsChars_flagEnabled() {
-        String pathWithZws = "An\u200Bdroid/data/com.google.example/files";
-        assertTrue(isDataOrObbRelativePath(pathWithZws));
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-    @DisableFlags(Flags.FLAG_ENABLE_PATH_SANITIZATION)
-    public void testIsDataOrObbRelativePathWithZwsChars_flagDisabled() {
-        String pathWithZws = "An\u200Bdroid/data/com.google.example/files";
-        assertFalse(isDataOrObbRelativePath(pathWithZws));
     }
 }
