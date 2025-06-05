@@ -7853,8 +7853,9 @@ public class MediaProvider extends ContentProvider {
     }
 
     private Bundle markMediaAsFavorite(Bundle extras) {
-        final ContentValues values = extras.getParcelable(MediaStore.EXTRA_CONTENT_VALUES);
+        final boolean areFavorites = extras.getBoolean(MediaColumns.IS_FAVORITE);
         final ClipData clipData = extras.getParcelable(MediaStore.EXTRA_CLIP_DATA);
+
         final List<Uri> uris = collectUris(clipData);
 
         if (!isCallingPackageManager()) {
@@ -7865,6 +7866,13 @@ public class MediaProvider extends ContentProvider {
                             + " does not have required permission to mark media as favorite");
                 }
             }
+        }
+
+        final ContentValues values = new ContentValues();
+        if (areFavorites) {
+            values.put(MediaColumns.IS_FAVORITE, 1);
+        } else {
+            values.put(MediaColumns.IS_FAVORITE, 0);
         }
 
         final LocalCallingIdentity token = clearLocalCallingIdentity();
