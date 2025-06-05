@@ -487,8 +487,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             }
 
             // Verify highlight query text label, Recents label and the SeeAll button are displayed
-            composeTestRule.onNode(hasText(testQuery), useUnmergedTree = true).assertIsDisplayed()
             val resources = getTestableContext().getResources()
+            val highlightText =
+                resources.getString(R.string.photopicker_hsr_suggestions_for_text) + " " + testQuery
+            composeTestRule
+                .onNode(hasText(highlightText), useUnmergedTree = true)
+                .assertIsDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
@@ -587,8 +591,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             advanceTimeBy(1000)
 
             // Assert the UI elements before button click
-            composeTestRule.onNode(hasText(testQuery), useUnmergedTree = true).assertIsDisplayed()
             val resources = getTestableContext().getResources()
+            val highlightText =
+                resources.getString(R.string.photopicker_hsr_suggestions_for_text) + " " + testQuery
+            composeTestRule
+                .onNode(hasText(highlightText), useUnmergedTree = true)
+                .assertIsDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
@@ -1162,10 +1170,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             // Advance time to allow initial composition but not past timeout
             advanceTimeBy(500) // Small delay to allow composition
 
-            composeTestRule
-                .onNode(hasText(testQuery), useUnmergedTree = true)
-                .assertIsNotDisplayed()
             val resources = getTestableContext().getResources()
+            val highlightText =
+                resources.getString(R.string.photopicker_hsr_suggestions_for_text) + " " + testQuery
+            composeTestRule
+                .onNode(hasText(highlightText), useUnmergedTree = true)
+                .assertIsNotDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
@@ -1373,7 +1383,9 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule
                 .onNode(hasTestTag(HIGHLIGHT_GRID_TEST_TAG), useUnmergedTree = true)
                 .assertIsDisplayed()
-            composeTestRule.onNode(hasText(testQuery)).assertIsDisplayed()
+            val highlightText =
+                resources.getString(R.string.photopicker_hsr_suggestions_for_text) + " " + testQuery
+            composeTestRule.onNode(hasText(highlightText)).assertIsDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_recents_label)),

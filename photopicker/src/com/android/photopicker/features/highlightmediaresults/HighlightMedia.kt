@@ -146,8 +146,12 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                                 getSearchHighlightMediaItems(searchQuery, viewModel)
                             }
 
+                        val highlightText =
+                            stringResource(R.string.photopicker_hsr_suggestions_for_text) +
+                                " " +
+                                highlightQuery.searchQuery
                         HighlightSectionContent(
-                            highlightQuery = highlightQuery.searchQuery,
+                            highlightQuery = highlightText,
                             highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
                             onItemLongClick = onItemLongClick,
                             onClick = {
