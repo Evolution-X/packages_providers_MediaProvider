@@ -16,7 +16,9 @@
 
 package com.android.photopicker.features.highlightmediaresults.model
 
+import android.content.Context
 import android.provider.MediaStore
+import com.android.photopicker.R
 
 /**
  * An enum class representing the possible media albums that can be highlighted by an app in
@@ -44,6 +46,22 @@ enum class HighlightAlbum(val albumId: String) {
                 MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_VIDEOS -> HIGHLIGHT_ALBUM_VIDEOS
                 MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS -> HIGHLIGHT_ALBUM_DOWNLOADS
                 else -> UNSET_HIGHLIGHT_ALBUM
+            }
+        }
+
+        fun getAlbumNameFromAlbum(context: Context, album: HighlightAlbum): String {
+            return when (album) {
+                HIGHLIGHT_ALBUM_FAVORITES ->
+                    context.getString(R.string.photopicker_hsr_favorites_album_label)
+                HIGHLIGHT_ALBUM_SCREENSHOTS ->
+                    context.getString(R.string.photopicker_hsr_screenshots_album_label)
+                HIGHLIGHT_ALBUM_CAMERA ->
+                    context.getString(R.string.photopicker_hsr_camera_album_label)
+                HIGHLIGHT_ALBUM_DOWNLOADS ->
+                    context.getString(R.string.photopicker_hsr_downloads_album_label)
+                HIGHLIGHT_ALBUM_VIDEOS ->
+                    context.getString(R.string.photopicker_hsr_videos_album_label)
+                else -> throw IllegalArgumentException("Unsupported album id received")
             }
         }
     }

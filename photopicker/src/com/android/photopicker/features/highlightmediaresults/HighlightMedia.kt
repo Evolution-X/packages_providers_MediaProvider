@@ -56,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -79,6 +80,7 @@ import com.android.photopicker.data.model.Group
 import com.android.photopicker.extensions.navigateToAlbumMediaGridForCategories
 import com.android.photopicker.extensions.shimmerEffect
 import com.android.photopicker.features.categorygrid.CategoryGridViewModel
+import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum.Companion.getAlbumNameFromAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -176,15 +178,15 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                         val navController = LocalNavController.current
                         val viewModel: CategoryGridViewModel =
                             obtainViewModel(isActivityScoped = true)
+                        val context = LocalContext.current
+
                         // Create the album object to fetch the album media. Fetching the album
                         // media requires only the base album data: album id and its authority.
                         val highlightBaseAlbum =
                             Group.BaseAlbum(
                                 id = highlightQuery.album.albumId,
                                 authority = viewModel.getLocalAlbumAuthority(),
-                                // TODO Add album name as a resource string for localisation:
-                                // b/420605240
-                                displayName = highlightQuery.album.albumId,
+                                displayName = getAlbumNameFromAlbum(context, highlightQuery.album),
                             )
 
                         var albumName by rememberSaveable {
