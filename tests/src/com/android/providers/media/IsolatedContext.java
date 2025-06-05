@@ -44,7 +44,6 @@ import androidx.annotation.VisibleForTesting;
 import com.android.providers.media.cloudproviders.CloudProviderPrimary;
 import com.android.providers.media.cloudproviders.FlakyCloudProvider;
 import com.android.providers.media.dao.FileRow;
-import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.PhotoPickerProvider;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.util.FileUtils;
@@ -79,26 +78,17 @@ public class IsolatedContext extends ContextWrapper {
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread,
             UserHandle userHandle, ConfigStore configStore) {
-        this(base, tag, asFuseThread, userHandle, configStore, new MaliciousAppDetector(base),
-                base.getSystemService(LauncherApps.class));
-    }
-
-    public IsolatedContext(Context base, String tag, boolean asFuseThread,
-            MaliciousAppDetector maliciousAppDetector) {
-        this(base, tag, asFuseThread, base.getUser(), new TestConfigStore(), maliciousAppDetector,
+        this(base, tag, asFuseThread, userHandle, configStore,
                 base.getSystemService(LauncherApps.class));
     }
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread,
             LauncherApps launcherApps) {
-        this(base, tag, asFuseThread, base.getUser(), new TestConfigStore(),
-                new MaliciousAppDetector(base), launcherApps);
+        this(base, tag, asFuseThread, base.getUser(), new TestConfigStore(), launcherApps);
     }
 
     public IsolatedContext(Context base, String tag, boolean asFuseThread,
-            UserHandle userHandle, ConfigStore configStore,
-            MaliciousAppDetector maliciousAppDetector,
-            LauncherApps launcherApps) {
+            UserHandle userHandle, ConfigStore configStore, LauncherApps launcherApps) {
         super(base);
         mDir = new File(base.getFilesDir(), tag);
         mDir.mkdirs();
@@ -107,7 +97,7 @@ public class IsolatedContext extends ContextWrapper {
         mResolver = new MockContentResolver(this);
         mUserHandle = userHandle;
 
-        mMediaProvider = getMockedMediaProvider(asFuseThread, configStore, maliciousAppDetector);
+        mMediaProvider = getMockedMediaProvider(asFuseThread, configStore);
         attachInfoAndAddProvider(base, mMediaProvider, MediaStore.AUTHORITY);
 
         MediaDocumentsProvider documentsProvider = new MediaDocumentsProvider();
@@ -138,7 +128,7 @@ public class IsolatedContext extends ContextWrapper {
     }
 
     private MediaProvider getMockedMediaProvider(boolean asFuseThread,
-            ConfigStore configStore, MaliciousAppDetector maliciousAppDetector) {
+            ConfigStore configStore) {
         return new MediaProvider() {
             @Override
             public boolean isFuseThread() {
@@ -169,16 +159,6 @@ public class IsolatedContext extends ContextWrapper {
             boolean shouldLockdownMediaStoreVersion() {
                 // TODO(b/370999570): Set to true once Baklava is in dev
                 return false;
-            }
-
-            @Override
-            protected MaliciousAppDetector createMaliciousAppDetector() {
-                return maliciousAppDetector;
-            }
-
-            @Override
-            protected boolean shouldCheckForMaliciousActivity() {
-                return Flags.enableMaliciousAppDetector();
             }
 
             @Override
