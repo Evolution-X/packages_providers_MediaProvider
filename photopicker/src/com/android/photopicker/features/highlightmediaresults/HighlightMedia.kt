@@ -35,7 +35,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -68,9 +67,13 @@ import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.android.photopicker.R
+import com.android.photopicker.core.components.GridDragSelectDefaults
 import com.android.photopicker.core.components.MediaGridItem
+import com.android.photopicker.core.components.ScrollOrientation
 import com.android.photopicker.core.components.defaultBuildMediaItem
 import com.android.photopicker.core.components.defaultBuildSeparator
+import com.android.photopicker.core.components.onGridDragSelect
+import com.android.photopicker.core.components.rememberGridDragSelectState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.navigation.LocalNavController
@@ -86,6 +89,7 @@ import com.android.photopicker.features.highlightmediaresults.model.HighlightQue
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 import com.android.photopicker.features.search.SearchViewModel
 import com.android.photopicker.util.LocalLocalizationHelper
+import com.android.photopicker.util.applyWhen
 import java.text.DateFormat
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
@@ -242,7 +246,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
 @Composable
 fun HighlightSectionContent(
     highlightQuery: String,
-    highlightMediaItems: LazyPagingItems<MediaGridItem.MediaItem>,
+    highlightMediaItems: LazyPagingItems<MediaGridItem>,
     onItemLongClick: (item: MediaGridItem) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -379,11 +383,11 @@ private fun HighlightQueryAndSeeAllButton(highlightText: String, onClick: () -> 
  */
 @Composable
 private fun HighlightMediaGrid(
-    highlightItems: LazyPagingItems<MediaGridItem.MediaItem>,
+    highlightItems: LazyPagingItems<MediaGridItem>,
     onItemLongClick: (item: MediaGridItem) -> Unit,
     onGridItemSelection: (item: MediaGridItem.MediaItem) -> Unit,
 ) {
-    val state = rememberLazyGridState()
+    val state = rememberGridDragSelectState()
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
     val description = stringResource(R.string.photopicker_hsr_media_text)
 
@@ -395,10 +399,26 @@ private fun HighlightMediaGrid(
     LazyHorizontalGrid(
         rows = GridCells.Fixed(HIGHLIGHT_GRID_ROW_COUNT),
         modifier =
-            Modifier.fillMaxWidth().height(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT).semantics {
-                contentDescription = description
-            },
-        state = state,
+            Modifier.fillMaxWidth()
+                .height(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT)
+                .semantics { contentDescription = description }
+                .applyWhen(
+                    LocalPhotopickerConfiguration.current.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
+                    {
+                        onGridDragSelect(
+                            config = LocalPhotopickerConfiguration.current,
+                            items = highlightItems,
+                            state = state,
+                            windowRect = null,
+                            indexOffset = 0,
+                            autoScrollThreshold = GridDragSelectDefaults.autoScrollThreshold,
+                            autoScrollOrientation = ScrollOrientation.HORIZONTAL,
+                            hapticFeedback = GridDragSelectDefaults.hapticsFeedback,
+                            selectionTransform = { it },
+                        )
+                    },
+                ),
+        state = state.gridState,
         contentPadding = HIGHLIGHT_GRID_CONTENT_PADDING,
         horizontalArrangement = Arrangement.spacedBy(MEASUREMENT_HIGHLIGHT_GRID_CELL_ARRANGEMENT),
     ) {
@@ -415,6 +435,7 @@ private fun HighlightMediaGrid(
                     selectedPosition = selection.indexOf(highlightMediaItem.media),
                     onClick = { onGridItemSelection(highlightMediaItem) },
                     onLongPress = { onItemLongClick(highlightMediaItem) },
+                    dragSelectionEnabled = true,
                     dateFormat = dateFormat,
                     focusItem = null,
                 )
@@ -521,7 +542,7 @@ private fun HighlightMediaPlaceholder() {
 private fun getSearchHighlightMediaItems(
     highlightQuery: String,
     viewModel: SearchViewModel,
-): Flow<PagingData<MediaGridItem.MediaItem>> {
+): Flow<PagingData<MediaGridItem>> {
     return viewModel.getHighlightSearchResults(searchQuery = highlightQuery)
 }
 

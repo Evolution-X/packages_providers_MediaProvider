@@ -151,42 +151,37 @@ class GridDragSelectNode(
         detectDragGesturesAfterLongPress(
             onDragStart = { offset ->
                 // Attempt to find the item index at the drag start position.
-                state.gridState
-                    .itemIndexAtPosition(offset)
-                    ?.minus(indexOffset)
-                    // Ensure no negative index access
-                    ?.coerceIn(0, Int.MAX_VALUE)
-                    ?.let { startIndex ->
-                        val item =
-                            try {
-                                items.peek(startIndex)
-                            } catch (_: Exception) {
-                                // Prevent crashes if the item cannot be accessed for any reason,
-                                // and just return null.
-                                null
-                            }
-                        item?.let {
-                            when (it) {
-                                is MediaGridItem.MediaItem -> {
-                                    // Start the drag operation.
-                                    coroutineScope.launch {
-                                        state.startDrag(startIndex) {
-                                            // Perform haptic feedback if enabled.
-                                            hapticFeedback?.performHapticFeedback(
-                                                HapticFeedbackType.LongPress
-                                            )
-                                            // Add the initially selected item.
-                                            runBlocking {
-                                                state.selection.add(selectionTransform(it.media))
-                                            }
+                state.gridState.itemIndexAtPosition(offset)?.minus(indexOffset)?.let { startIndex ->
+                    val item =
+                        try {
+                            items.peek(startIndex)
+                        } catch (_: Exception) {
+                            // Prevent crashes if the item cannot be accessed for any reason,
+                            // and just return null.
+                            null
+                        }
+                    item?.let {
+                        when (it) {
+                            is MediaGridItem.MediaItem -> {
+                                // Start the drag operation.
+                                coroutineScope.launch {
+                                    state.startDrag(startIndex) {
+                                        // Perform haptic feedback if enabled.
+                                        hapticFeedback?.performHapticFeedback(
+                                            HapticFeedbackType.LongPress
+                                        )
+                                        // Add the initially selected item.
+                                        runBlocking {
+                                            state.selection.add(selectionTransform(it.media))
                                         }
                                     }
                                 }
-                                // Do nothing for non-media items (e.g., headers, placeholders).
-                                else -> {}
                             }
+                            // Do nothing for non-media items (e.g., headers, placeholders).
+                            else -> {}
                         }
                     }
+                }
             },
             onDragCancel = state::stopDrag, // Stop drag on cancellation.
             onDragEnd = state::stopDrag, // Stop drag on gesture end.

@@ -34,6 +34,7 @@ import com.android.photopicker.core.selection.SelectionModifiedResult
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.insertMonthSeparators
+import com.android.photopicker.extensions.toMediaGridItemBaseFromMedia
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
 import com.android.photopicker.features.search.data.SearchDataService
 import com.android.photopicker.features.search.model.SearchSuggestion
@@ -265,7 +266,7 @@ constructor(
      * Returns [PagingData] of type [MediaGridItem.MediaItem] as a [Flow] containing search results
      * for the highlight query. The flow will not be inserted with any date separators.
      */
-    fun getHighlightSearchResults(searchQuery: String): Flow<PagingData<MediaGridItem.MediaItem>> {
+    fun getHighlightSearchResults(searchQuery: String): Flow<PagingData<MediaGridItem>> {
         val pagerForSearchResult =
             Pager(
                 PagingConfig(
@@ -277,7 +278,7 @@ constructor(
                 searchDataService.getSearchResults(searchText = searchQuery)
             }
         return pagerForSearchResult.flow
-            .toMediaGridItemFromMedia()
+            .toMediaGridItemBaseFromMedia()
             // After the load and transformations, cache the data in the viewModelScope.
             // This ensures that the list position and state will be remembered by the
             // MediaGrid when navigating back to the SearchResult route.

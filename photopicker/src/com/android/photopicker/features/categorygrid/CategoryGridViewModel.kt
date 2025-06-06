@@ -36,6 +36,7 @@ import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.extensions.insertMonthSeparators
+import com.android.photopicker.extensions.toMediaGridItemBaseFromMedia
 import com.android.photopicker.extensions.toMediaGridItemFromCategory
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
 import com.android.photopicker.extensions.toMediaGridItemFromMediaSet
@@ -140,7 +141,7 @@ constructor(
      * Returns [PagingData] of type [MediaGridItem.MediaItem] as a [Flow] containing media for the
      * album represented by [Group.CoreAlbum] without any date separators.
      */
-    fun getHighlightAlbumMedia(album: Group.BaseAlbum): Flow<PagingData<MediaGridItem.MediaItem>> {
+    fun getHighlightAlbumMedia(album: Group.BaseAlbum): Flow<PagingData<MediaGridItem>> {
         val pagerForAlbumMedia =
             Pager(
                 PagingConfig(
@@ -156,7 +157,7 @@ constructor(
         /** Export the data from the pager and prepare it for use in the [AlbumMediaGrid] */
         val albumMedia =
             pagerForAlbumMedia.flow
-                .toMediaGridItemFromMedia()
+                .toMediaGridItemBaseFromMedia()
                 // After the load and transformations, cache the data in the viewModelScope.
                 // This ensures that the list position and state will be remembered by the MediaGrid
                 // when navigating back to the AlbumGrid route.
