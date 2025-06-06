@@ -53,7 +53,6 @@ data class PhotopickerFlags(
     val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean =
         Flags.enablePickerHighlightSearchResultsApis() && Flags.highlightSearchResultsFeature(),
     val OWNED_PHOTOS_ENABLED: Boolean = Flags.revokeAccessOwnedPhotos(),
-    val EXPRESSIVE_THEME_ENABLED: Boolean = Flags.enablePhotopickerExpressiveTheme(),
     val MEDIA_GRID_TOUCH_FEATURES_ENABLED: Boolean = Flags.enableMediaGridTouchFeatures(),
 ) {
     /**
