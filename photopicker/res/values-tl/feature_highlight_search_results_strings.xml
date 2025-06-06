@@ -20,4 +20,19 @@
     <string name="photopicker_hsr_see_all_button_label" msgid="7165405920645678201">"Tingnan Lahat"</string>
     <string name="photopicker_hsr_suggestions_text" msgid="8649021863740749051">"Mga Suhestyon"</string>
     <string name="photopicker_hsr_recents_label" msgid="8922013053088031820">"Mga Kamakailan"</string>
+    <!-- no translation found for photopicker_hsr_favorites_album_label (507125735792216176) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_screenshots_album_label (6223215479220055671) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_camera_album_label (2887020928583531751) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_downloads_album_label (5687964289769180836) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_videos_album_label (1290755476191083105) -->
+    <skip />
+    <string name="photopicker_hsr_query_placeholder_text" msgid="2929114759123252442">"Nilo-load ang query sa mga naka-highlight na resulta sa media"</string>
+    <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"Nilo-load ang mga naka-highlight na resulta sa media"</string>
+    <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"Mga naka-highlight na resulta sa media"</string>
+    <!-- no translation found for photopicker_hsr_suggestions_for_text (729432575959823808) -->
+    <skip />
 </resources>
