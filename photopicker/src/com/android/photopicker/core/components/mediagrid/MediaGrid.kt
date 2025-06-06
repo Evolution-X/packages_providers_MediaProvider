@@ -1117,7 +1117,7 @@ private fun defaultBuildMediaSetItem(
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS))
                     .aspectRatio(1f)
-            DefaultAlbumIcon(/* icon */ Icons.Outlined.PhotoCamera, modifier)
+            loadMedia(media = icon, resolution = Resolution.THUMBNAIL, modifier = modifier)
             Spacer(Modifier.size(MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE))
             // Media set title shown on the media set grid.
             Text(
@@ -1206,6 +1206,23 @@ fun IconGrid(
             val paddedIcons = (icons + List(maxIcon) { null }).take(maxIcon)
             val iconsInRow = paddedIcons.chunked(iconPerRow)
 
+            val clipShape =
+                when (categoryType) {
+                    CategoryType.PEOPLE_AND_PETS,
+                    CategoryType.APP_FOLDERS -> {
+                        CircleShape
+                    }
+                    else -> {
+                        RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS)
+                    }
+                }
+
+            val iconGridModifier =
+                Modifier.fillMaxSize()
+                    .size(48.dp)
+                    .clip(clipShape)
+                    .background(MaterialTheme.colorScheme.surface)
+
             iconsInRow.forEachIndexed { rowIndex, rowItem ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1214,20 +1231,16 @@ fun IconGrid(
                     rowItem.forEachIndexed { colIndex, icon ->
                         Box(modifier = Modifier.weight(1f).aspectRatio(1f)) {
                             if (icons.isNotEmpty() && icon is ParcelableGlideLoadable) {
-                                CategoryIcon(icon, Modifier.fillMaxSize(), categoryType)
+                                CategoryIcon(icon, iconGridModifier)
                             } else {
                                 if (
                                     icons.isEmpty() &&
                                         !(rowIndex == iconsInRow.lastIndex &&
                                             colIndex == rowItem.lastIndex)
                                 ) {
-                                    CategoryIconPlaceholder(Modifier.fillMaxSize(), categoryType)
+                                    CategoryIconPlaceholder(iconGridModifier)
                                 } else {
-                                    CategoryIconPlaceholder(
-                                        Modifier.fillMaxSize(),
-                                        categoryType,
-                                        false,
-                                    )
+                                    CategoryIconPlaceholder(iconGridModifier, false)
                                 }
                             }
                         }
@@ -1239,46 +1252,19 @@ fun IconGrid(
 }
 
 @Composable
-fun CategoryIconPlaceholder(
-    modifier: Modifier,
-    categoryType: CategoryType,
-    showPlaceholder: Boolean = true,
-) {
+fun CategoryIconPlaceholder(modifier: Modifier, showPlaceholder: Boolean = true) {
     Box(
         modifier =
-            if (categoryType == CategoryType.PEOPLE_AND_PETS) {
-                when (showPlaceholder) {
-                    true ->
-                        modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                    false -> modifier.size(48.dp)
-                }
-            } else {
-                modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS))
-                    .background(MaterialTheme.colorScheme.surface)
+            when (showPlaceholder) {
+                true -> modifier
+                false -> Modifier
             }
     )
 }
 
 @Composable
-fun CategoryIcon(icon: ParcelableGlideLoadable, modifier: Modifier, categoryType: CategoryType) {
-    loadMedia(
-        media = icon,
-        resolution = Resolution.THUMBNAIL,
-        modifier =
-            if (categoryType == CategoryType.PEOPLE_AND_PETS) {
-                modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface)
-            } else {
-                modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS))
-                    .background(MaterialTheme.colorScheme.surface)
-            },
-    )
+fun CategoryIcon(icon: ParcelableGlideLoadable, modifier: Modifier) {
+    loadMedia(media = icon, resolution = Resolution.THUMBNAIL, modifier = modifier)
 }
 
 /**

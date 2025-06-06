@@ -40,19 +40,16 @@ import static com.android.providers.media.photopicker.util.CursorUtils.getCursor
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Environment;
@@ -1300,81 +1297,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    public void testQueryMediaCategories_oneDeviceFolder_returnsFolderNameAsDisplayName() {
-        assumeTrue("Test skipped because the system locale is not English.", isEnglishLocale());
-        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
-            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
-                    mock(VolumeCache.class));
-
-            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
-            contentValues.put(MediaColumns._ID, ID1);
-            contentValues.put(MediaColumns.BUCKET_ID, ID1);
-            contentValues.put(MediaColumns.IS_DOWNLOAD, 0);
-            contentValues.put(MediaColumns.RELATIVE_PATH, "");
-            contentValues.put(MediaColumns.BUCKET_DISPLAY_NAME, FOLDER_NAME1);
-            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
-
-            try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES with for all media")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-            }
-
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES for categories")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-
-                cursor.moveToFirst();
-                assertWithMessage("Incorrect category display name found")
-                        .that(getCursorString(cursor,
-                                CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME))
-                        .isEqualTo(FOLDER_NAME1);
-            }
-        }
-    }
-
-    @Test
-    public void testQueryMediaCategories_oneAppFolder_returnsPackageNameAsDisplayName()
-            throws PackageManager.NameNotFoundException {
-        assumeTrue("Test skipped because the system locale is not English.", isEnglishLocale());
-        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
-            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
-                    mock(VolumeCache.class));
-
-            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
-            contentValues.put(MediaColumns._ID, ID1);
-            // use self package name, as it is guaranteed to be present
-            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
-            contentValues.put(MediaColumns.RELATIVE_PATH, "");
-            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
-
-            try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES with for all media")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-            }
-
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES for categories")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-
-                cursor.moveToFirst();
-                assertWithMessage("Incorrect category display name found")
-                        .that(getCursorString(cursor,
-                                CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME))
-                        .isEqualTo(APP_LABEL);
-            }
-        }
-    }
-
-    @Test
-    public void testDeviceCategoryCoverIdsOrder() {
+    public void testQueryMediaCategories_deviceCategory_coverIdsInOrder() {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
                     mock(VolumeCache.class));
@@ -1435,7 +1358,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    public void testAppsCategoryCoverIdsOrder() {
+    public void testQueryMediaCategories_appsCategory_coverIdsInOrder() {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
                     mock(VolumeCache.class));
@@ -1445,6 +1368,7 @@ public class ExternalDbFacadeTest {
             // The last media item belong to different media set and
             // has the same date_taken as the second media item, but has a higher _id
             ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(FileColumns._USER_ID, sIsolatedContext.getUserId());
             contentValues.put(MediaColumns._ID, ID1);
             contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
             helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
@@ -1473,12 +1397,12 @@ public class ExternalDbFacadeTest {
                 // Media cover ids for App Folder Collection is the app icon res id uri
                 String expectedCoverIdForPackage1 = String.format(
                         Locale.ROOT,
-                        "%s://%s/%s",
-                        ContentResolver.SCHEME_ANDROID_RESOURCE, PACKAGE_NAME1, RES_ID);
+                        "%s/%s/%s",
+                        PACKAGE_NAME1, RES_ID, sIsolatedContext.getUserId());
                 String expectedCoverIdForPackage2 = String.format(
                         Locale.ROOT,
-                        "%s://%s/%s",
-                        ContentResolver.SCHEME_ANDROID_RESOURCE, PACKAGE_NAME2, RES_ID);
+                        "%s/%s/%s",
+                        PACKAGE_NAME2, RES_ID, sIsolatedContext.getUserId());
                 cursor.moveToFirst();
                 assertWithMessage("Incorrect MEDIA_COVER_ID1 found, implying wrong order")
                         .that(getCursorString(cursor,

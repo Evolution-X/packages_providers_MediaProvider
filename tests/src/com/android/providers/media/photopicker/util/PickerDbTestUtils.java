@@ -79,6 +79,7 @@ public class PickerDbTestUtils {
     public static final String PACKAGE_NAME2 = "com.example.app2";
     public static final int RES_ID1 = 1234;
     public static final int RES_ID2 = 1235;
+    public static final int USER_ID = 0;
 
     public static Cursor queryMediaAll(PickerDbFacade mFacade) {
         return mFacade.queryMediaForUi(
@@ -365,8 +366,8 @@ public class PickerDbTestUtils {
 
         String[] coverIds = new String[] {LOCAL_ID_1, LOCAL_ID_2};
         if (CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS.equals(categoryType)) {
-            coverIds[0] = getAndroidResourceUri(PACKAGE_NAME1, RES_ID1);
-            coverIds[1] = getAndroidResourceUri(PACKAGE_NAME2, RES_ID2);
+            coverIds[0] = getDrawableMediaId(PACKAGE_NAME1, RES_ID1, USER_ID);
+            coverIds[1] = getDrawableMediaId(PACKAGE_NAME2, RES_ID2, USER_ID);
         } else if (CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS.equals(
                 categoryType)
                 || CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_USER_ALBUMS.equals(
@@ -391,19 +392,57 @@ public class PickerDbTestUtils {
     }
 
     /**
-     * Builds an Android resource URI string: {@code "android.resource://<packageName>/<resId>"}.
+     * Builds an Android resource URI string:
+     * {@code "android.resource://<userId>@<packageName>/<resId>"}.
      *
      * @param packageName The application's package name.
      * @param resId The integer resource ID.
+     * @param userId The user ID that the resource belongs
      * @return The resource URI string.
      */
-    public static String getAndroidResourceUri(String packageName, int resId) {
+    public static String getAndroidResourceUriString(String packageName, int resId, int userId) {
         return String.format(
                 Locale.ROOT,
-                "%s://%s/%s",
+                "%s://%s@%s/%s",
                 ContentResolver.SCHEME_ANDROID_RESOURCE,
+                userId,
                 packageName,
                 resId);
+    }
+
+    /**
+     * Builds a media id for a drawable resource: {@code "<packageName>/<resId>/<userId>"}.
+     *
+     * @param packageName The application's package name.
+     * @param resId The integer resource ID.
+     * @param userId The user ID that the resource belongs
+     * @return The media ID.
+     */
+    public static String getDrawableMediaId(String packageName, int resId, int userId) {
+        return String.format(
+                Locale.ROOT,
+                "%s/%s/%s",
+                packageName,
+                resId,
+                userId);
+    }
+
+    /**
+     * Builds a picker uri string: {@code "content://<userId>@<authority>/media/<mediaId>"}.
+     *
+     * @param mediaId ID of the media item.
+     * @param authority The authority of the provider.
+     * @param userId The user ID that the resource belongs
+     * @return The picker URI string.
+     */
+    public static String getPickerUriString(String mediaId, String authority, int userId) {
+        return String.format(
+                Locale.ROOT,
+                "content://%s@%s/%s/%s",
+                userId,
+                authority,
+                CloudMediaProviderContract.URI_PATH_MEDIA,
+                mediaId);
     }
 
     public static String toMediaStoreUri(String localId) {
