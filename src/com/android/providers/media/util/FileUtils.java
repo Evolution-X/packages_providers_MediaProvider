@@ -46,6 +46,8 @@ import android.content.ClipDescription;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.icu.lang.UCharacter;
+import android.icu.lang.UProperty;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
@@ -1014,9 +1016,6 @@ public class FileUtils {
                     + "(?:\\.picker_transcoded$)|"
                     + "(?:(?:Movies|Music|Pictures)/.thumbnails$))");
 
-    private static final String REGEX_DEFAULT_IGNORABLE_CODE_POINT =
-            "[[:Default_Ignorable_Code_Point:]]";
-
     /**
      * Normalizes the given path to NFD form and removes all default ignorable Unicode characters.
      * These include characters (e.g., invisible zero-width spaces) that are ignored by the lower
@@ -1026,16 +1025,39 @@ public class FileUtils {
      * @return a normalized path string with ignorable characters removed
      */
     public static String normalizeAndFilterDefaultIgnorableCodepoints(String path) {
+        // Normalization is not enabled.
         if (!Flags.enablePathSanitization()) {
             return path;
         }
 
+        // Nothing to normalize.
         if (path == null || path.isEmpty()) {
             return path;
         }
 
-        return Normalizer.normalize(path, Normalizer.Form.NFD)
-                .replaceAll(REGEX_DEFAULT_IGNORABLE_CODE_POINT, "");
+        path = Normalizer.normalize(path, Normalizer.Form.NFD);
+        final int[] codePoints = path.codePoints().toArray();
+
+        boolean hasIgnorableCodepoints = false;
+        for (int codePoint : codePoints) {
+            if (UCharacter.hasBinaryProperty(codePoint, UProperty.DEFAULT_IGNORABLE_CODE_POINT)) {
+                hasIgnorableCodepoints = true;
+                break;
+            }
+        }
+        // Input is already normalized.
+        if (!hasIgnorableCodepoints) {
+            return path;
+        }
+
+        // Remove default ignorable code points.
+        StringBuilder normalizedPath = new StringBuilder(codePoints.length);
+        for (int codePoint : codePoints) {
+            if (!UCharacter.hasBinaryProperty(codePoint, UProperty.DEFAULT_IGNORABLE_CODE_POINT)) {
+                normalizedPath.appendCodePoint(codePoint);
+            }
+        }
+        return normalizedPath.toString();
     }
 
     /**
