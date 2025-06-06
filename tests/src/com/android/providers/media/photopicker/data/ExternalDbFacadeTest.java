@@ -53,6 +53,11 @@ import android.content.pm.LauncherApps;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Environment;
+import android.platform.test.annotations.EnableFlags;
+import android.platform.test.annotations.RequiresFlagsDisabled;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.CloudMediaProviderContract;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Files.FileColumns;
@@ -67,9 +72,11 @@ import com.android.providers.media.ProjectionHelper;
 import com.android.providers.media.TestConfigStore;
 import com.android.providers.media.TestDatabaseBackupAndRecovery;
 import com.android.providers.media.VolumeCache;
+import com.android.providers.media.flags.Flags;
 import com.android.providers.media.util.UserCache;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -84,6 +91,9 @@ import java.util.Map;
 @RunWith(AndroidJUnit4.class)
 public class ExternalDbFacadeTest {
     private static final String TAG = "ExternalDbFacadeTest";
+
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
 
     private static final long ID1 = 1;
     private static final long ID2 = 2;
@@ -1153,6 +1163,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
     public void testQueryAlbums() throws Exception {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
@@ -1179,6 +1190,78 @@ public class ExternalDbFacadeTest {
                 cursor.moveToNext();
                 assertAlbumColumns(facade, cursor, ALBUM_ID_DOWNLOADS, DATE_TAKEN_MS3,
                         /* count */ 1);
+            }
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
+    public void testQueryAlbums_withLocalCategoriesEnabled() throws Exception {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            initMediaInAllAlbums(helper);
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertThat(cursor.getCount()).isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+                assertThat(cursor.getCount()).isEqualTo(2);
+
+                // We verify the order of the albums:
+                // Camera, Screenshots
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_CAMERA, DATE_TAKEN_MS1, /* count */ 1);
+
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_SCREENSHOTS, DATE_TAKEN_MS2,
+                        /* count */ 1);
+            }
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
+    public void testQueryAlbums_categoriesEnabled_downloadsIsPartOfCollection() throws Exception {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            initMediaInAllAlbums(helper);
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for all media")
+                        .that(cursor.getCount()).isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for albums")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                // We verify the order of the albums:
+                // Camera, Screenshots and Downloads
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_CAMERA, DATE_TAKEN_MS1, /* count */ 1);
+
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_SCREENSHOTS, DATE_TAKEN_MS2,
+                        /* count */ 1);
+            }
+
+            try (Cursor cursor = facade.queryMediaCategories(/* mimeTypes */ null)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for categories")
+                        .that(cursor.getCount()).isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertWithMessage("Incorrect category id found in the cursor")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.ID))
+                        .isEqualTo(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
             }
         }
     }
