@@ -948,6 +948,7 @@ public final class PdfRenderer implements AutoCloseable {
          * Returns null if no page object is found at the given position.
          * @throws IllegalStateException if the {@link PdfRenderer.Page} is
          *                               closed before invocation
+         * @throws IllegalArgumentException if the provided type(s) are not supported.
          */
         @Nullable
         @FlaggedApi(Flags.FLAG_ENABLE_GET_TOP_PDF_PAGE_OBJECT_AT_POSITION)
@@ -956,6 +957,7 @@ public final class PdfRenderer implements AutoCloseable {
             throwIfDocumentOrPageClosed();
             Preconditions.checkNotNull(point, "Argument point cannot be null");
             Preconditions.checkNotNull(types, "Argument types cannot be null");
+            Preconditions.checkValidPageObjectTypes(types);
             return mPdfProcessor.getTopPageObjectAtPosition(mIndex, point, types);
         }
 
