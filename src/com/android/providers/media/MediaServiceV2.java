@@ -19,6 +19,7 @@ package com.android.providers.media;
 import static com.android.providers.media.MediaService.ACTION_SCAN_VOLUME;
 import static com.android.providers.media.MediaService.EXTRA_MEDIAVOLUME;
 import static com.android.providers.media.MediaService.EXTRA_SCAN_REASON;
+import static com.android.providers.media.scan.MediaScanner.REASON_MOUNTED;
 import static com.android.providers.media.scan.MediaScanner.REASON_UNKNOWN;
 
 import android.content.ContentProviderClient;
@@ -26,6 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Parcel;
 import android.os.Trace;
+import android.os.storage.StorageVolume;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -34,7 +36,6 @@ import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.OutOfQuotaPolicy;
-import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
@@ -44,15 +45,19 @@ import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.sync.WorkManagerInitializer;
 import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 
 public class MediaServiceV2 extends Worker {
     private static final String KEY_INTENT_ACTION = "intent_action";
     private static final String KEY_MEDIA_VOLUME_SERIALISED = "media_volume_serialised";
+    private static final String KEY_STORAGE_VOLUME_SERIALISED = "storage_volume_serialised";
     private static final String KEY_SCAN_REASON = "scan_reason";
+    private static final String KEY_PACKAGE_NAME = "package_name";
+    private static final String KEY_UID = "uid";
+    private static final String KEY_PATH = "path";
+    private static final String SCAN_VOLUME_WORK_CHAIN = "scan_volume_work_chain";
+    private static final String MEDIA_BROADCAST_WORK_CHAIN = "media_broadcast_work_chain";
     private static final String TAG = MediaServiceV2.class.getSimpleName();
     private final Context mContext;
 
@@ -62,7 +67,7 @@ public class MediaServiceV2 extends Worker {
     }
 
     /**
-     * Queues a volume scan operation. To be used for version S or higher.
+     * Queues a volume scan operation.
      *
      * @param context The application context.
      * @param volume The {@link MediaVolume} to scan.
@@ -71,11 +76,6 @@ public class MediaServiceV2 extends Worker {
      * @return {@link UUID} UUID of work request for scan volume
      */
     public static Optional<UUID> queueVolumeScan(Context context, MediaVolume volume, int reason) {
-        if (!SdkLevel.isAtLeastS()) {
-            Log.i(TAG, "MediaServiceV2 is to be used for sdk version S or higher!");
-            return Optional.empty();
-        }
-
         Intent intent = new Intent(ACTION_SCAN_VOLUME);
         intent.putExtra(EXTRA_MEDIAVOLUME, volume);
         intent.putExtra(EXTRA_SCAN_REASON, reason);
@@ -83,12 +83,13 @@ public class MediaServiceV2 extends Worker {
     }
 
     /**
-     * Enqueues work for given given intent. This is currently implemented only for
-     * ACTION_SCAN_VOLUME, more actions present in {@link MediaService} will be added in future.
+     * Enqueues work for given given intent. Ensure that SdkLevel >= S and enable_media_service_v2
+     * flag is enabled before calling this function.
      */
     public static Optional<UUID> enqueueWork(Context context, Intent intent) {
-        if (!Flags.enableMediaServiceV2()) {
-            Log.i(TAG, "enqueueWork was called but enable_media_service_v2 flag is disabled.");
+        if (!Flags.enableMediaServiceV2() || !SdkLevel.isAtLeastS()) {
+            Log.e(TAG, "Work not enqueued because enable_media_service_v2 flag was disabled "
+                    + "or SdkLevel was less than S.");
             return Optional.empty();
         }
 
@@ -96,58 +97,36 @@ public class MediaServiceV2 extends Worker {
         String action = intent.getAction();
 
         if (action == null) {
-            Log.i(TAG, "Intent does not have action. No work created");
+            Log.e(TAG, "Intent does not have action. No work created.");
             return Optional.empty();
         }
 
         WorkManager workManager = WorkManagerInitializer.getWorkManager(context);
 
-        if (ACTION_SCAN_VOLUME.equals(action)) {
-            MediaVolume mediaVolume = intent.getParcelableExtra(EXTRA_MEDIAVOLUME);
-            if (!shouldAppendWorkForScanVolume(workManager, mediaVolume.getName())) {
-                Log.i(TAG, "Work already exists for " + intent);
-                return Optional.empty();
-            }
+        // All scan volume work and media mounted (which internally calls scan volume) work are
+        // enqueued on one thread and all other broadcasts are enqueued on other thread.
+        final String uniqueChainName;
+        if (ACTION_SCAN_VOLUME.equalsIgnoreCase(action)
+                || Intent.ACTION_MEDIA_MOUNTED.equalsIgnoreCase(action)) {
+            uniqueChainName = SCAN_VOLUME_WORK_CHAIN;
+        }  else {
+            uniqueChainName = MEDIA_BROADCAST_WORK_CHAIN;
         }
 
-        OneTimeWorkRequest workRequest = getWorkRequest(intent);
-        workManager.enqueueUniqueWork(action, ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest);
-        Log.i(TAG, "Work appended for " + intent);
+        Optional<OneTimeWorkRequest> workRequestOptional = getWorkRequest(intent);
+        if (workRequestOptional.isEmpty()) {
+            return Optional.empty();
+        }
+
+        OneTimeWorkRequest workRequest = workRequestOptional.get();
+        workManager.enqueueUniqueWork(uniqueChainName,
+                ExistingWorkPolicy.APPEND_OR_REPLACE, workRequest);
+        Log.i(TAG, "Work enqueued for intent: " + intent);
 
         return Optional.of(workRequest.getId());
     }
 
-    /**
-     * If there is a existing work for ACTION_SCAN_VOLUME and tag that is not completed (i.e, is in
-     * PENDING or RUNNING stated), then do not enqueue new ACTION_SCAN_VOLUME work as it will
-     * create duplicate work.
-     * <p>
-     * If there is a existing work for ACTION_SCAN_VOLUME and different tag, then we APPEND the new
-     * work. This will ensure the newly appended work will be executed after the existing work is
-     * completed.
-     */
-    private static boolean shouldAppendWorkForScanVolume(WorkManager workManager,
-            String tagOfNewWork) {
-        try {
-            List<WorkInfo> workInfos =
-                    workManager.getWorkInfosForUniqueWork(ACTION_SCAN_VOLUME).get();
-            for (WorkInfo workInfo : workInfos) {
-                if (!workInfo.getState().isFinished()) {
-                    Set<String> tags = workInfo.getTags();
-                    for (String tag : tags) {
-                        if (tag.equalsIgnoreCase(tagOfNewWork)) {
-                            return false;
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Log.i(TAG, "Unable to check state of existing work.", e);
-        }
-        return true;
-    }
-
-    private static OneTimeWorkRequest getWorkRequest(Intent intent) {
+    private static Optional<OneTimeWorkRequest> getWorkRequest(Intent intent) {
         OneTimeWorkRequest.Builder workRequestBuilder =
                 new OneTimeWorkRequest.Builder(MediaServiceV2.class);
         Data.Builder dataBuilder = new Data.Builder();
@@ -156,6 +135,24 @@ public class MediaServiceV2 extends Worker {
         dataBuilder.put(KEY_INTENT_ACTION, action);
 
         switch (action) {
+            case Intent.ACTION_PACKAGE_FULLY_REMOVED:
+            case Intent.ACTION_PACKAGE_DATA_CLEARED: {
+                dataBuilder.putString(KEY_PACKAGE_NAME, intent.getData().getSchemeSpecificPart());
+                dataBuilder.putInt(KEY_UID, intent.getIntExtra(Intent.EXTRA_UID, 0));
+                break;
+            }
+            case Intent.ACTION_MEDIA_SCANNER_SCAN_FILE: {
+                dataBuilder.putString(KEY_PATH, intent.getData().getPath());
+                break;
+            }
+            case Intent.ACTION_MEDIA_MOUNTED: {
+                final StorageVolume storageVolume =
+                        intent.getParcelableExtra(StorageVolume.EXTRA_STORAGE_VOLUME);
+                byte[] bytes = serializeStorageVolume(storageVolume);
+                dataBuilder.putByteArray(KEY_STORAGE_VOLUME_SERIALISED, bytes);
+                workRequestBuilder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST);
+                break;
+            }
             case ACTION_SCAN_VOLUME: {
                 MediaVolume mediaVolume = intent.getParcelableExtra(EXTRA_MEDIAVOLUME);
                 byte[] bytes = serializeMediaVolume(mediaVolume);
@@ -163,18 +160,21 @@ public class MediaServiceV2 extends Worker {
                 int scanReason = intent.getIntExtra(EXTRA_SCAN_REASON, REASON_UNKNOWN);
                 dataBuilder.putInt(KEY_SCAN_REASON, scanReason);
                 workRequestBuilder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST);
-                workRequestBuilder.addTag(mediaVolume.getName());
+                break;
+            }
+            case Intent.ACTION_LOCALE_CHANGED: {
+                // This is a no-op
                 break;
             }
             default : {
-                Log.i(TAG, "Unknown intent action " + action);
-                break;
+                Log.e(TAG, "Unknown intent action " + action);
+                return Optional.empty();
             }
         }
 
         Data inputData = dataBuilder.build();
         workRequestBuilder.setInputData(inputData);
-        return workRequestBuilder.build();
+        return Optional.of(workRequestBuilder.build());
     }
 
     @NonNull
@@ -188,7 +188,30 @@ public class MediaServiceV2 extends Worker {
         try {
             Trace.beginSection("MediaServiceV2.handle [ " + action +  " ]");
             checkIsWorkerStopped();
+            Data inputData = getInputData();
             switch (action) {
+                case Intent.ACTION_LOCALE_CHANGED: {
+                    MediaService.onLocaleChanged(mContext);
+                    break;
+                }
+                case Intent.ACTION_PACKAGE_FULLY_REMOVED:
+                case Intent.ACTION_PACKAGE_DATA_CLEARED: {
+                    final String packageName = inputData.getString(KEY_PACKAGE_NAME);
+                    final int uid = inputData.getInt(KEY_UID, 0);
+                    MediaService.onPackageOrphaned(mContext, packageName, uid);
+                    break;
+                }
+                case Intent.ACTION_MEDIA_SCANNER_SCAN_FILE: {
+                    final String path = inputData.getString(KEY_PATH);
+                    MediaService.onScanFile(mContext, path);
+                    break;
+                }
+                case Intent.ACTION_MEDIA_MOUNTED: {
+                    byte[] bytes = data.getByteArray(KEY_STORAGE_VOLUME_SERIALISED);
+                    StorageVolume storageVolume = deserializeStorageVolume(bytes);
+                    MediaService.onMediaMountedBroadcast(mContext, storageVolume);
+                    break;
+                }
                 case ACTION_SCAN_VOLUME : {
                     byte[] bytes = data.getByteArray(KEY_MEDIA_VOLUME_SERIALISED);
                     final MediaVolume volume = deserializeMediaVolume(bytes);
@@ -224,19 +247,31 @@ public class MediaServiceV2 extends Worker {
         Log.i(TAG, "[onStopped] Work stopped for action: " + action);
 
         try {
+            Trace.beginSection("MediaServiceV2.onStopped [ " + action +  " ]");
             switch (action) {
                 case ACTION_SCAN_VOLUME : {
                     byte[] bytes = data.getByteArray(KEY_MEDIA_VOLUME_SERIALISED);
-                    final MediaVolume volume = deserializeMediaVolume(bytes);
-                    try (ContentProviderClient cpc = mContext.getContentResolver()
-                            .acquireContentProviderClient(MediaStore.AUTHORITY)) {
-                        ((MediaProvider) cpc.getLocalContentProvider())
-                                .onScanVolumeWorkStopped(volume);
-                    }
+                    int scanReason = data.getInt(KEY_SCAN_REASON, REASON_UNKNOWN);
+                    final MediaVolume mediaVolume = deserializeMediaVolume(bytes);
+                    stopScanVolume(mediaVolume, scanReason);
+                    break;
+                }
+                case Intent.ACTION_MEDIA_MOUNTED: {
+                    byte[] bytes = data.getByteArray(KEY_STORAGE_VOLUME_SERIALISED);
+                    final StorageVolume storageVolume = deserializeStorageVolume(bytes);
+                    final MediaVolume mediaVolume = MediaVolume.fromStorageVolume(storageVolume);
+                    stopScanVolume(mediaVolume, REASON_MOUNTED);
+                    break;
+                }
+                case Intent.ACTION_LOCALE_CHANGED:
+                case Intent.ACTION_PACKAGE_FULLY_REMOVED:
+                case Intent.ACTION_PACKAGE_DATA_CLEARED:
+                case Intent.ACTION_MEDIA_SCANNER_SCAN_FILE: {
+                    // This is a no-op
                     break;
                 }
                 default: {
-                    Log.i(TAG, "[onStopped] Unknown intent action received: " + action);
+                    Log.e(TAG, "[onStopped] Unknown intent action received: " + action);
                 }
             }
         } catch (Exception e) {
@@ -245,6 +280,14 @@ public class MediaServiceV2 extends Worker {
         } finally {
             Log.i(TAG, "[onStopped] Finished handling stop for action: " + action);
             Trace.endSection();
+        }
+    }
+
+    private void stopScanVolume(MediaVolume volume, int scanReason) {
+        try (ContentProviderClient cpc = mContext.getContentResolver()
+                .acquireContentProviderClient(MediaStore.AUTHORITY)) {
+            ((MediaProvider) cpc.getLocalContentProvider())
+                    .onScanVolumeWorkStopped(volume, scanReason);
         }
     }
 
@@ -274,6 +317,27 @@ public class MediaServiceV2 extends Worker {
             parcel.unmarshall(bytes, 0, bytes.length);
             parcel.setDataPosition(0);
             return MediaVolume.CREATOR.createFromParcel(parcel);
+        } finally {
+            parcel.recycle();
+        }
+    }
+
+    private static byte[] serializeStorageVolume(StorageVolume storageVolume) {
+        Parcel parcel = Parcel.obtain();
+        try {
+            storageVolume.writeToParcel(parcel, 0);
+            return parcel.marshall();
+        } finally {
+            parcel.recycle();
+        }
+    }
+
+    private static StorageVolume deserializeStorageVolume(byte[] bytes) {
+        Parcel parcel = Parcel.obtain();
+        try {
+            parcel.unmarshall(bytes, 0, bytes.length);
+            parcel.setDataPosition(0);
+            return StorageVolume.CREATOR.createFromParcel(parcel);
         } finally {
             parcel.recycle();
         }

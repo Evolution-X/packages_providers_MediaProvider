@@ -492,10 +492,15 @@ public class MediaProvider extends ContentProvider {
      */
     private static final long POLLING_TIME_IN_MILLIS = 100;
 
-    private static final String WORK_INFO_STATE = "work_info_state";
-    private static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
-    private static final String VOLUME_NAME = "volume_name";
-    private static final String WAIT_TIME_MILLIS = "wait_time_millis";
+    private static final long TIMEOUT_MILLIS = 10000;
+    private static final long POLL_INTERVAL_MILLIS = 100;
+    static final String WORK_INFO_STATE = "work_info_state";
+    static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
+    static final String VOLUME_NAME = "volume_name";
+    static final String IS_SCAN_VOLUME_CALL = "is_scan_volume_call";
+    static final String BROADCAST_INTENT = "broadcast_intent";
+    static final String CANCEL_WORK_AFTER_ENQUEUEING = "cancel_work_after_enqueueing";
+    static final String REMOVE_VOL_BEFORE_ENQUEUEING = "remove_vol_before_enqueueing";
 
     /**
      * Enable option to defer the scan triggered as part of MediaProvider#update()
@@ -670,7 +675,6 @@ public class MediaProvider extends ContentProvider {
     private int mExternalStorageAuthorityAppId;
     private int mDownloadsAuthorityAppId;
     private Size mThumbSize;
-    private MaliciousAppDetector mMaliciousAppDetector;
 
     /**
      * Map from UID to cached {@link LocalCallingIdentity}. Values are only
@@ -1125,20 +1129,6 @@ public class MediaProvider extends ContentProvider {
                 }
 
                 mDatabaseBackupAndRecovery.backupVolumeDbData(helper, insertedRow);
-
-
-                // check for potentially malicious file creation activity
-                // to prevent excessive file creation that could exhaust system inodes,
-                // this check periodically monitors the number of files created by an app.
-                // if an app exceeds a defined threshold, it is flagged as potentially malicious
-                if (shouldCheckForMaliciousActivity()
-                        && insertedRow.getVolumeName().equals(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-                        && insertedRow.getId()
-                        % mMaliciousAppDetector.getFrequencyOfMaliciousInsertionCheck()
-                        == 0) {
-                    mMaliciousAppDetector.detectFileCreationByMaliciousApp(getContext(), helper,
-                            insertedRow.getOwnerPackageName());
-                }
             });
         }
 
@@ -1645,7 +1635,6 @@ public class MediaProvider extends ContentProvider {
                 BackgroundThread.getExecutor(), this::storageNativeBootPropertyChangeListener);
 
         PulledMetrics.initialize(context);
-        mMaliciousAppDetector = createMaliciousAppDetector();
 
         initializeMimeTypeFixHandlerForAndroid15(getContext());
 
@@ -2292,9 +2281,10 @@ public class MediaProvider extends ContentProvider {
      * volume.
      *
      * @param mediaVolume Volume for which we want to cancel the scan
+     * @param scanReason reason why scan was triggered
      */
-    public void onScanVolumeWorkStopped(MediaVolume mediaVolume) {
-        mMediaScanner.onScanVolumeStopped(mediaVolume);
+    public void onScanVolumeWorkStopped(MediaVolume mediaVolume, int scanReason) {
+        mMediaScanner.onScanVolumeStopped(mediaVolume, scanReason);
     }
 
     /**
@@ -5721,13 +5711,6 @@ public class MediaProvider extends ContentProvider {
     @Nullable
     private Uri insertInternal(@NonNull Uri uri, @Nullable ContentValues initialValues,
             @Nullable Bundle extras) throws FallbackException {
-        if (shouldCheckForMaliciousActivity() && !mMaliciousAppDetector.isAppAllowedToCreateFiles(
-                mCallingIdentity.get().uid)) {
-            Log.w(TAG, "Cannot be created, app has created files more than threshold limit of "
-                    + mMaliciousAppDetector.getFileCreationThresholdLimit());
-            throw new UnsupportedOperationException(
-                    "Cannot be created, app has created files more than threshold limit");
-        }
         final String originalVolumeName = getVolumeName(uri);
         PulledMetrics.logVolumeAccessViaMediaProvider(getCallingUidOrSelf(), originalVolumeName);
 
@@ -7349,8 +7332,8 @@ public class MediaProvider extends ContentProvider {
                 removeRecoveryData();
                 return new Bundle();
             }
-            case MediaStore.QUEUE_SCAN_VOLUME: {
-                return getResultForQueueScanVolume(extras);
+            case MediaStore.MEDIA_SERVICE_V2_CALL: {
+                return getResultForMediaServiceV2Call(extras);
             }
             case MediaStore.BULK_UPDATE_OEM_METADATA_CALL: {
                 callForBulkUpdateOemMetadataColumn();
@@ -7853,8 +7836,9 @@ public class MediaProvider extends ContentProvider {
     }
 
     private Bundle markMediaAsFavorite(Bundle extras) {
-        final ContentValues values = extras.getParcelable(MediaStore.EXTRA_CONTENT_VALUES);
+        final boolean areFavorites = extras.getBoolean(MediaColumns.IS_FAVORITE);
         final ClipData clipData = extras.getParcelable(MediaStore.EXTRA_CLIP_DATA);
+
         final List<Uri> uris = collectUris(clipData);
 
         if (!isCallingPackageManager()) {
@@ -7865,6 +7849,13 @@ public class MediaProvider extends ContentProvider {
                             + " does not have required permission to mark media as favorite");
                 }
             }
+        }
+
+        final ContentValues values = new ContentValues();
+        if (areFavorites) {
+            values.put(MediaColumns.IS_FAVORITE, 1);
+        } else {
+            values.put(MediaColumns.IS_FAVORITE, 0);
         }
 
         final LocalCallingIdentity token = clearLocalCallingIdentity();
@@ -8222,20 +8213,38 @@ public class MediaProvider extends ContentProvider {
     }
 
     /**
-     * Utility function to trigger scan volume using WorkManagerAPIs. Only to be used to testing.
+     * Utility function to test MediaServiceV2. Only to be used to testing.
      */
-    private Bundle getResultForQueueScanVolume(Bundle extras) {
+    private Bundle getResultForMediaServiceV2Call(Bundle extras) {
         getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
                 "Permission missing to call QUEUE_SCAN_VOLUME by uid:"
                         + Binder.getCallingUid());
 
         try {
+            Optional<UUID> uuidOptional;
+            MediaVolume volume;
+
+            boolean removeVolBeforeEnqueueing =
+                    extras.getBoolean(REMOVE_VOL_BEFORE_ENQUEUEING, false);
+            if (removeVolBeforeEnqueueing) {
+                volume = getVolume(extras.getString(VOLUME_NAME));
+                synchronized (mAttachedVolumes) {
+                    if (mAttachedVolumes.contains(volume)) {
+                        mAttachedVolumes.remove(volume);
+                    }
+                }
+            }
+
+            boolean isScanVolumeCall = extras.getBoolean(IS_SCAN_VOLUME_CALL, false);
+            if (isScanVolumeCall) {
+                volume = getVolume(extras.getString(VOLUME_NAME));
+                uuidOptional = MediaServiceV2.queueVolumeScan(getContext(), volume, REASON_UNKNOWN);
+            } else {
+                Intent intent = extras.getParcelable(BROADCAST_INTENT);
+                uuidOptional = MediaServiceV2.enqueueWork(getContext(), intent);
+            }
+
             Bundle result = new Bundle();
-
-            MediaVolume volume = getVolume(extras.getString(VOLUME_NAME));
-            Optional<UUID> uuidOptional =
-                    MediaServiceV2.queueVolumeScan(getContext(), volume, REASON_UNKNOWN);
-
             if (uuidOptional.isEmpty()) {
                 result.putString(WORK_INFO_STATE, null);
                 return result;
@@ -8245,15 +8254,32 @@ public class MediaProvider extends ContentProvider {
 
             WorkManager workManager =  WorkManager.getInstance(getContext());
 
-            boolean waitForScanCompletion = extras.getBoolean(WAIT_FOR_SCAN_COMPLETION, false);
+            boolean waitForScanCompletion = extras.getBoolean(WAIT_FOR_SCAN_COMPLETION, true);
             if (waitForScanCompletion) {
-                long waitTimeMillis = extras.getLong(WAIT_TIME_MILLIS, 10000);
+                long waitTimeRemainingMillis = TIMEOUT_MILLIS;
                 WorkInfo.State currentState = workManager.getWorkInfoById(uuid).get().getState();
-                while (!currentState.isFinished() && waitTimeMillis >= 0) {
-                    SystemClock.sleep(POLLING_TIME_IN_MILLIS);
-                    waitTimeMillis -= POLLING_TIME_IN_MILLIS;
+                while (!currentState.isFinished() && waitTimeRemainingMillis >= 0) {
+                    SystemClock.sleep(POLL_INTERVAL_MILLIS);
+                    waitTimeRemainingMillis -= POLL_INTERVAL_MILLIS;
                     currentState = workManager.getWorkInfoById(uuid).get().getState();
                 }
+            }
+
+            boolean cancelWorkAfterEnqueuing =
+                    extras.getBoolean(CANCEL_WORK_AFTER_ENQUEUEING, false);
+            if (cancelWorkAfterEnqueuing) {
+                //wait for work to enqueue
+                long waitTimeRemainingMillis = TIMEOUT_MILLIS;
+                WorkInfo.State currentState = workManager.getWorkInfoById(uuid).get().getState();
+                while (WorkInfo.State.ENQUEUED.equals(currentState)
+                        && waitTimeRemainingMillis >= 0) {
+                    SystemClock.sleep(POLL_INTERVAL_MILLIS);
+                    waitTimeRemainingMillis -= POLL_INTERVAL_MILLIS;
+                    currentState = workManager.getWorkInfoById(uuid).get().getState();
+                }
+
+                // cancel work once work is enqueued
+                workManager.cancelWorkById(uuid);
             }
 
             WorkInfo workInfo = workManager.getWorkInfoById(uuid).get();
@@ -10597,7 +10623,7 @@ public class MediaProvider extends ContentProvider {
         // Check if the caller has access to private app directories. Checks for Android/data,
         // Android/media and Android/obb
         boolean isUidAllowedAccessToDataOrObbPath =
-                isUidAllowedAccessToDataOrObbPathForFuse(mCallingIdentity.get().uid, filePath);
+                isUidAllowedAccessToDataOrObbPath(mCallingIdentity.get().uid, filePath);
 
         /*
          * If owned photos is enabled, then image or video stored in app's private directory may
@@ -10646,6 +10672,7 @@ public class MediaProvider extends ContentProvider {
      * the caller does not have special access.
      */
     private boolean isPrivatePackagePathNotAccessibleByCaller(String path) {
+        path = FileUtils.normalizeAndFilterDefaultIgnorableCodepoints(path);
         // Files under the apps own private directory
         final String appSpecificDir = extractPathOwnerPackageName(path);
 
@@ -10658,7 +10685,7 @@ public class MediaProvider extends ContentProvider {
         if (isExternalMediaDirectory(path)) {
             return false;
         }
-        return !isUidAllowedAccessToDataOrObbPathForFuse(mCallingIdentity.get().uid, path);
+        return !isUidAllowedAccessToDataOrObbPath(mCallingIdentity.get().uid, path);
     }
 
     private boolean shouldBypassDatabaseAndSetDirtyForFuse(int uid, String path) {
@@ -11014,7 +11041,7 @@ public class MediaProvider extends ContentProvider {
             FileAccessAttributes attrs = queryForFileAttributes(path);
             final long sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
 
-            if (attrs != null) {
+            if (attrs != null && attrsFromLevelDb != null) {
                 MediaProviderStatsLog.write(
                         MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
                         (int) sqlQueryTime, (int) leveldbQueryTime, attrs.equals(attrsFromLevelDb));
@@ -11543,6 +11570,11 @@ public class MediaProvider extends ContentProvider {
 
     @Keep
     public boolean isUidAllowedAccessToDataOrObbPathForFuse(int uid, String path) {
+        return isUidAllowedAccessToDataOrObbPath(uid,
+                FileUtils.normalizeAndFilterDefaultIgnorableCodepoints(path));
+    }
+
+    private boolean isUidAllowedAccessToDataOrObbPath(int uid, String path) {
         final LocalCallingIdentity token =
                 clearLocalCallingIdentity(getCachedCallingIdentityForFuse(uid));
         try {
@@ -12618,19 +12650,5 @@ public class MediaProvider extends ContentProvider {
 
     protected DatabaseBackupAndRecovery createDatabaseBackupAndRecovery() {
         return new DatabaseBackupAndRecovery(mConfigStore, mVolumeCache);
-    }
-
-    protected MaliciousAppDetector createMaliciousAppDetector() {
-        return new MaliciousAppDetector(getContext());
-    }
-
-    protected boolean shouldCheckForMaliciousActivity() {
-        // Check for malicious activity if not a system gallery app, not the media provider itself,
-        // and the malicious app detector flag is enabled
-        if (!SdkLevel.isAtLeastS()) {
-            return false;
-        }
-        return Flags.enableMaliciousAppDetector() && !isCallingPackageSystemGallery()
-                && !isCallingPackageSelf();
     }
 }

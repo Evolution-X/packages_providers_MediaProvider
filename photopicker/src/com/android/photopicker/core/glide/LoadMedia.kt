@@ -61,9 +61,8 @@ fun loadMedia(
         modifier = modifier.defaultMinSize(minWidth = 1.dp, minHeight = 1.dp),
     ) {
         requestBuilderTransformation?.invoke(media, resolution, it)
-            // If no RequestBuilder function was provided, then apply the loadables signature to
-            // ensure
-            // the cache is populated.
+            // If no RequestBuilder function was provided, then apply the loadable signature to
+            // ensure the cache is populated.
             ?: it.set(RESOLUTION_REQUESTED, resolution)
                 .centerCrop()
                 .signature(media.getSignature(resolution))

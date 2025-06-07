@@ -40,22 +40,24 @@ import static com.android.providers.media.photopicker.util.CursorUtils.getCursor
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Environment;
+import android.platform.test.annotations.EnableFlags;
+import android.platform.test.annotations.RequiresFlagsDisabled;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.CloudMediaProviderContract;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Files.FileColumns;
@@ -70,9 +72,11 @@ import com.android.providers.media.ProjectionHelper;
 import com.android.providers.media.TestConfigStore;
 import com.android.providers.media.TestDatabaseBackupAndRecovery;
 import com.android.providers.media.VolumeCache;
+import com.android.providers.media.flags.Flags;
 import com.android.providers.media.util.UserCache;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -87,6 +91,9 @@ import java.util.Map;
 @RunWith(AndroidJUnit4.class)
 public class ExternalDbFacadeTest {
     private static final String TAG = "ExternalDbFacadeTest";
+
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
 
     private static final long ID1 = 1;
     private static final long ID2 = 2;
@@ -1156,6 +1163,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
     public void testQueryAlbums() throws Exception {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
@@ -1182,6 +1190,78 @@ public class ExternalDbFacadeTest {
                 cursor.moveToNext();
                 assertAlbumColumns(facade, cursor, ALBUM_ID_DOWNLOADS, DATE_TAKEN_MS3,
                         /* count */ 1);
+            }
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
+    public void testQueryAlbums_withLocalCategoriesEnabled() throws Exception {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            initMediaInAllAlbums(helper);
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertThat(cursor.getCount()).isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+                assertThat(cursor.getCount()).isEqualTo(2);
+
+                // We verify the order of the albums:
+                // Camera, Screenshots
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_CAMERA, DATE_TAKEN_MS1, /* count */ 1);
+
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_SCREENSHOTS, DATE_TAKEN_MS2,
+                        /* count */ 1);
+            }
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
+    public void testQueryAlbums_categoriesEnabled_downloadsIsPartOfCollection() throws Exception {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            initMediaInAllAlbums(helper);
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for all media")
+                        .that(cursor.getCount()).isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for albums")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                // We verify the order of the albums:
+                // Camera, Screenshots and Downloads
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_CAMERA, DATE_TAKEN_MS1, /* count */ 1);
+
+                cursor.moveToNext();
+                assertAlbumColumns(facade, cursor, ALBUM_ID_SCREENSHOTS, DATE_TAKEN_MS2,
+                        /* count */ 1);
+            }
+
+            try (Cursor cursor = facade.queryMediaCategories(/* mimeTypes */ null)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for categories")
+                        .that(cursor.getCount()).isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertWithMessage("Incorrect category id found in the cursor")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.ID))
+                        .isEqualTo(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
             }
         }
     }
@@ -1300,81 +1380,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    public void testQueryMediaCategories_oneDeviceFolder_returnsFolderNameAsDisplayName() {
-        assumeTrue("Test skipped because the system locale is not English.", isEnglishLocale());
-        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
-            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
-                    mock(VolumeCache.class));
-
-            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
-            contentValues.put(MediaColumns._ID, ID1);
-            contentValues.put(MediaColumns.BUCKET_ID, ID1);
-            contentValues.put(MediaColumns.IS_DOWNLOAD, 0);
-            contentValues.put(MediaColumns.RELATIVE_PATH, "");
-            contentValues.put(MediaColumns.BUCKET_DISPLAY_NAME, FOLDER_NAME1);
-            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
-
-            try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES with for all media")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-            }
-
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES for categories")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-
-                cursor.moveToFirst();
-                assertWithMessage("Incorrect category display name found")
-                        .that(getCursorString(cursor,
-                                CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME))
-                        .isEqualTo(FOLDER_NAME1);
-            }
-        }
-    }
-
-    @Test
-    public void testQueryMediaCategories_oneAppFolder_returnsPackageNameAsDisplayName()
-            throws PackageManager.NameNotFoundException {
-        assumeTrue("Test skipped because the system locale is not English.", isEnglishLocale());
-        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
-            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
-                    mock(VolumeCache.class));
-
-            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
-            contentValues.put(MediaColumns._ID, ID1);
-            // use self package name, as it is guaranteed to be present
-            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
-            contentValues.put(MediaColumns.RELATIVE_PATH, "");
-            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
-
-            try (Cursor cursor = queryAllMedia(facade)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES with for all media")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-            }
-
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
-                assertWithMessage(
-                        "Unexpected number of rows on querying TABLES_FILES for categories")
-                        .that(cursor.getCount())
-                        .isEqualTo(1);
-
-                cursor.moveToFirst();
-                assertWithMessage("Incorrect category display name found")
-                        .that(getCursorString(cursor,
-                                CloudMediaProviderContract.MediaCategoryColumns.DISPLAY_NAME))
-                        .isEqualTo(APP_LABEL);
-            }
-        }
-    }
-
-    @Test
-    public void testDeviceCategoryCoverIdsOrder() {
+    public void testQueryMediaCategories_deviceCategory_coverIdsInOrder() {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
                     mock(VolumeCache.class));
@@ -1435,7 +1441,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    public void testAppsCategoryCoverIdsOrder() {
+    public void testQueryMediaCategories_appsCategory_coverIdsInOrder() {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
                     mock(VolumeCache.class));
@@ -1445,6 +1451,7 @@ public class ExternalDbFacadeTest {
             // The last media item belong to different media set and
             // has the same date_taken as the second media item, but has a higher _id
             ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(FileColumns._USER_ID, sIsolatedContext.getUserId());
             contentValues.put(MediaColumns._ID, ID1);
             contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
             helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
@@ -1473,12 +1480,12 @@ public class ExternalDbFacadeTest {
                 // Media cover ids for App Folder Collection is the app icon res id uri
                 String expectedCoverIdForPackage1 = String.format(
                         Locale.ROOT,
-                        "%s://%s/%s",
-                        ContentResolver.SCHEME_ANDROID_RESOURCE, PACKAGE_NAME1, RES_ID);
+                        "%s/%s/%s",
+                        PACKAGE_NAME1, RES_ID, sIsolatedContext.getUserId());
                 String expectedCoverIdForPackage2 = String.format(
                         Locale.ROOT,
-                        "%s://%s/%s",
-                        ContentResolver.SCHEME_ANDROID_RESOURCE, PACKAGE_NAME2, RES_ID);
+                        "%s/%s/%s",
+                        PACKAGE_NAME2, RES_ID, sIsolatedContext.getUserId());
                 cursor.moveToFirst();
                 assertWithMessage("Incorrect MEDIA_COVER_ID1 found, implying wrong order")
                         .that(getCursorString(cursor,

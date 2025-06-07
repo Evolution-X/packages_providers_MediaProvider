@@ -397,6 +397,7 @@ public class ModernMediaScanner implements MediaScanner {
 
         try (Scan scan = new Scan(file, reason)) {
             scan.run();
+            BackupAndRestoreStatsManager.logStats();
         } catch (FileNotFoundException e) {
             Log.e(TAG, "Couldn't find directory to scan", e);
         } catch (OperationCanceledException ignored) {
@@ -430,7 +431,11 @@ public class ModernMediaScanner implements MediaScanner {
     @Override
     public void onDetachVolume(@NonNull MediaVolume volume) {
         synchronized (mActiveScans) {
-            stopScanForVolume(volume);
+            for (Scan scan : mActiveScans) {
+                if (volume.equals(scan.mVolume)) {
+                    scan.mSignal.cancel();
+                }
+            }
         }
     }
 
@@ -446,22 +451,20 @@ public class ModernMediaScanner implements MediaScanner {
     }
 
     /**
-     * Stops scan for given volume.
+     * Stops scanning for the given volume and reason.
      *
-     * @param volume {@link MediaVolume} for which scan needs to be stopped
+     * @param volume {@link MediaVolume} the media volume to stop scanning
+     * @param scanReason the reason the scan was triggered
      */
     @Override
-    public void onScanVolumeStopped(@NonNull MediaVolume volume) {
-        synchronized (mActiveScans) {
-            stopScanForVolume(volume);
-        }
-    }
-
     @GuardedBy("mActiveScans")
-    private void stopScanForVolume(@NonNull MediaVolume volume) {
-        for (Scan scan : mActiveScans) {
-            if (volume.equals(scan.mVolume)) {
-                scan.mSignal.cancel();
+    public void onScanVolumeStopped(@NonNull MediaVolume volume, int scanReason) {
+        synchronized (mActiveScans) {
+            for (Scan scan : mActiveScans) {
+                if (volume.equals(scan.mVolume) && scanReason == scan.mReason) {
+                    Log.i(TAG, "Sending cancel signal for volume name " + volume.getName());
+                    scan.mSignal.cancel();
+                }
             }
         }
     }
@@ -1302,16 +1305,24 @@ public class ModernMediaScanner implements MediaScanner {
             return scanItemDirectory(existingId, file, attrs, mimeType, volumeName);
         }
 
+        ContentProviderOperation.Builder op;
+        long restoreStartTimeNs, restoreTimeNs;
+
         // Recovery is performed on first scan of file in target device
         try {
             if (restoreExecutor != null) {
+                restoreStartTimeNs = SystemClock.elapsedRealtimeNanos();
                 Optional<ContentValues> restoredDataOptional = restoreExecutor
                         .getMetadataForFileIfBackedUp(file.getAbsolutePath(), mContext);
                 if (restoredDataOptional.isPresent()) {
                     ContentValues valuesRestored = restoredDataOptional.get();
                     if (isRestoredMetadataOfActualFile(valuesRestored, attrs)) {
-                        return restoreDataFromBackup(valuesRestored, file, attrs, mimeType,
+                        op = restoreDataFromBackup(valuesRestored, file, attrs, mimeType,
                                 existingId);
+                        restoreTimeNs = SystemClock.elapsedRealtimeNanos() - restoreStartTimeNs;
+                        BackupAndRestoreStatsManager.addStatForMediaType(mediaType,
+                                /*fromBackup*/ true, restoreTimeNs);
+                        return  op;
                     }
                 }
             }
@@ -1319,22 +1330,26 @@ public class ModernMediaScanner implements MediaScanner {
             Log.e(TAG, "Error while attempting to restore metadata from backup", e);
         }
 
-        switch (mediaType) {
-            case FileColumns.MEDIA_TYPE_AUDIO:
-                return scanItemAudio(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_VIDEO:
-                return scanItemVideo(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_IMAGE:
-                return scanItemImage(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_PLAYLIST:
-                return scanItemPlaylist(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_SUBTITLE:
-                return scanItemSubtitle(existingId, file, attrs, mimeType, mediaType, volumeName);
-            case FileColumns.MEDIA_TYPE_DOCUMENT:
-                return scanItemDocument(existingId, file, attrs, mimeType, mediaType, volumeName);
-            default:
-                return scanItemFile(existingId, file, attrs, mimeType, mediaType, volumeName);
-        }
+        restoreStartTimeNs = SystemClock.elapsedRealtimeNanos();
+        op = switch (mediaType) {
+            case FileColumns.MEDIA_TYPE_AUDIO -> scanItemAudio(existingId, file, attrs, mimeType,
+                    mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_VIDEO -> scanItemVideo(existingId, file, attrs, mimeType,
+                    mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_IMAGE -> scanItemImage(existingId, file, attrs, mimeType,
+                    mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_PLAYLIST -> scanItemPlaylist(existingId, file, attrs,
+                    mimeType, mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_SUBTITLE -> scanItemSubtitle(existingId, file, attrs,
+                    mimeType, mediaType, volumeName);
+            case FileColumns.MEDIA_TYPE_DOCUMENT -> scanItemDocument(existingId, file, attrs,
+                    mimeType, mediaType, volumeName);
+            default -> scanItemFile(existingId, file, attrs, mimeType, mediaType, volumeName);
+        };
+        restoreTimeNs = SystemClock.elapsedRealtimeNanos() - restoreStartTimeNs;
+        BackupAndRestoreStatsManager.addStatForMediaType(mediaType, /* fromBackup */ false,
+                restoreTimeNs);
+        return op;
     }
 
     private boolean isRestoredMetadataOfActualFile(@NonNull ContentValues contentValues,

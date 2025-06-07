@@ -227,7 +227,7 @@ public final class BackupAndRestoreUtils {
      *         {@code false} otherwise.
      */
     static boolean isBackupAndRestoreSupported(Context context) {
-        if (!SdkLevel.isAtLeastS()) {
+        if (!SdkLevel.isAtLeastB()) {
             return false;
         }
 
