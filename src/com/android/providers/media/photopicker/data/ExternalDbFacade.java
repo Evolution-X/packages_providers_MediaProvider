@@ -41,7 +41,6 @@ import static com.android.providers.media.util.DatabaseUtils.bindList;
 import static com.android.providers.media.util.DatabaseUtils.replaceMatchAnyChar;
 
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -74,6 +73,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.R;
 import com.android.providers.media.VolumeCache;
+import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.util.MimeUtils;
 
@@ -183,7 +183,11 @@ public class ExternalDbFacade {
                     "%s AS %s",
                     MediaColumns._ID,
                     MediaSetColumns.MEDIA_COVER_ID),
-            CloudMediaProviderContract.AlbumColumns.DATE_TAKEN_MILLIS};
+            CloudMediaProviderContract.AlbumColumns.DATE_TAKEN_MILLIS,
+            String.format(Locale.ROOT,
+                    "%s AS %s",
+                    FileColumns._USER_ID,
+                    CloudMediaProviderContract.MediaColumns.USER_ID)};
 
     /**
      * Projection array for the inner subquery used when querying device media sets (folders).
@@ -228,7 +232,11 @@ public class ExternalDbFacade {
             String.format(Locale.ROOT,
                     "COUNT(*) OVER (PARTITION BY %s) AS %s",
                     MediaColumns.OWNER_PACKAGE_NAME,
-                    MediaSetColumns.MEDIA_COUNT)};
+                    MediaSetColumns.MEDIA_COUNT),
+            String.format(Locale.ROOT,
+                    "%s AS %s",
+                    FileColumns._USER_ID,
+                    CloudMediaProviderContract.MediaColumns.USER_ID)};
 
     private static final String WHERE_IMAGE_TYPE = FileColumns.MEDIA_TYPE + " = "
             + FileColumns.MEDIA_TYPE_IMAGE;
@@ -317,6 +325,16 @@ public class ExternalDbFacade {
             ALBUM_ID_CAMERA,
             ALBUM_ID_SCREENSHOTS,
             ALBUM_ID_DOWNLOADS
+    };
+
+    /**
+     * Local album ids that are displayed along with other collections in the "Collections" tab in
+     * the picker ui, when the feature flag
+     * {@link Flags#FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES} is enabled
+     */
+    private static final String[] COLLECTION_TAB_LOCAL_ALBUM_IDS = {
+            ALBUM_ID_CAMERA,
+            ALBUM_ID_SCREENSHOTS
     };
 
     private final Context mContext;
@@ -635,7 +653,11 @@ public class ExternalDbFacade {
     public Cursor queryAlbums(String[] mimeTypes) {
         final MatrixCursor c = new MatrixCursor(AlbumColumns.ALL_PROJECTION);
 
-        for (String albumId : LOCAL_ALBUM_IDS) {
+        String[] albumIds = LOCAL_ALBUM_IDS;
+        if (Flags.enableLocalMediaProviderCapabilities()) {
+            albumIds = COLLECTION_TAB_LOCAL_ALBUM_IDS;
+        }
+        for (String albumId : albumIds) {
             Cursor cursor = mDatabaseHelper.runWithTransaction(db -> {
                 final SQLiteQueryBuilder qb = createMediaQueryBuilder();
                 final List<String> selectionArgs = new ArrayList<>();
@@ -1070,6 +1092,7 @@ public class ExternalDbFacade {
         List<String> projectionList =
                 new ArrayList<>(Arrays.asList(MediaSetColumns.ALL_PROJECTION));
         projectionList.add(AlbumColumns.DATE_TAKEN_MILLIS);
+        projectionList.add(CloudMediaProviderContract.MediaColumns.USER_ID);
         String[] projectionKey = projectionList.toArray(new String[0]);
         MatrixCursor appMediaSetCursor = new MatrixCursor(projectionKey);
         // Propagate extras from 'cursor' to 'appMediaSetCursor' to preserve essential metadata.
@@ -1094,7 +1117,9 @@ public class ExternalDbFacade {
                                 displayName,
                                 getCursorString(cursor, MediaSetColumns.MEDIA_COUNT),
                                 getCursorString(cursor, MediaSetColumns.MEDIA_COVER_ID),
-                                getCursorString(cursor, AlbumColumns.DATE_TAKEN_MILLIS)}
+                                getCursorString(cursor, AlbumColumns.DATE_TAKEN_MILLIS),
+                                getCursorString(cursor,
+                                        CloudMediaProviderContract.MediaColumns.USER_ID)}
                 );
             } catch (PackageManager.NameNotFoundException exception) {
                 Log.e(TAG, String.format(
@@ -1364,34 +1389,23 @@ public class ExternalDbFacade {
             String columnName = coverIdColumnNames.get(i);
             if (MEDIA_CATEGORY_TYPE_APP_FOLDERS.equals(mediaCategoryType)) {
                 String mediaCoverId = getAppIconCoverId(
-                        getCursorString(folder, MediaSetColumns.ID));
+                        getCursorString(folder, MediaSetColumns.ID),
+                        getCursorString(folder, CloudMediaProviderContract.MediaColumns.USER_ID));
                 row.add(columnName, mediaCoverId);
             } else {
                 row.add(columnName, getCursorString(folder, MediaSetColumns.MEDIA_COVER_ID));
             }
             folder.moveToNext();
         }
-        // If any of the category contains only one folder,
-        // set the category display name to the folder's name.
-        // Otherwise, use the default category type display name.
-        if (folder.getCount() == 1) {
-            folder.moveToFirst();
-            row.add(MediaCategoryColumns.DISPLAY_NAME,
-                    getLocalizedDisplayName(
-                            getCursorString(folder, MediaSetColumns.DISPLAY_NAME),
-                            mContext)
-            );
-        } else {
-            row.add(MediaCategoryColumns.DISPLAY_NAME, getLocalizedDisplayName(
-                    mediaCategoryType, mContext));
-        }
+        row.add(MediaCategoryColumns.DISPLAY_NAME, getLocalizedDisplayName(
+                mediaCategoryType, mContext));
         row.add(MediaCategoryColumns.ID, mediaCategoryType);
         row.add(MediaCategoryColumns.MEDIA_CATEGORY_TYPE, mediaCategoryType);
 
         return cursor;
     }
 
-    private String getAppIconCoverId(@Nullable String mediaSetId) {
+    private String getAppIconCoverId(@Nullable String mediaSetId, @Nullable String userId) {
         String coverId = null;
         if (mediaSetId == null) {
             return coverId;
@@ -1404,13 +1418,13 @@ public class ExternalDbFacade {
                 ApplicationInfo applicationInfo = packageManager
                         .getApplicationInfo(ownerPackageName, /* flags = */0);
                 int appIconResId = applicationInfo.icon;
-                // android resource uri is of the form "android.resource://[package_name]/[res_id]"
+                // cover id of the form "[package_name]/[res_id]/[user_id]"
                 coverId = String.format(
                         Locale.ROOT,
-                        "%s://%s/%s",
-                        ContentResolver.SCHEME_ANDROID_RESOURCE,
+                        "%s/%s/%s",
                         ownerPackageName,
-                        appIconResId);
+                        appIconResId,
+                        userId);
             } catch (PackageManager.NameNotFoundException exception) {
                 Log.e(TAG, String.format(
                                 Locale.ROOT,

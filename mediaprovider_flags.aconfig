@@ -257,15 +257,6 @@ flag {
 }
 
 flag {
-    name: "enable_photopicker_expressive_theme"
-    is_exported: false
-    namespace: "mediaprovider"
-    description: "This flag controls the material expressive theme in com.android.photopicker"
-    is_fixed_read_only: true
-    bug: "390142346"
-}
-
-flag {
     name: "exclude_unreliable_volumes"
     is_exported: true
     namespace: "mediaprovider"
