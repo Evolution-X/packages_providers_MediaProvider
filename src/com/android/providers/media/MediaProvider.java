@@ -1480,6 +1480,8 @@ public class MediaProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        long onCreateStartTime = SystemClock.elapsedRealtimeNanos();
+
         synchronized (MediaProvider.class) {
             sInstance = this;
         }
@@ -1640,6 +1642,9 @@ public class MediaProvider extends ContentProvider {
 
         initializeMimeTypeFixHandlerForAndroid15(getContext());
 
+        long onCreateExecutionTime = SystemClock.elapsedRealtimeNanos() - onCreateStartTime;
+        Metrics.logMediaProviderOp(Metrics.ON_CREATE, Metrics.UNSPECIFIED_URI, null, -1,
+                onCreateExecutionTime);
         return true;
     }
 
@@ -4513,7 +4518,10 @@ public class MediaProvider extends ContentProvider {
         }
     }
 
-    private boolean isRedactedUri(Uri uri) {
+    /**
+     * Check if given uri is a redacted uri.
+     */
+    public boolean isRedactedUri(Uri uri) {
         String id = uri.getLastPathSegment();
         return id != null && id.startsWith(REDACTED_URI_ID_PREFIX)
                 && id.length() == REDACTED_URI_ID_SIZE;
@@ -5131,6 +5139,8 @@ public class MediaProvider extends ContentProvider {
 
     @Override
     public int bulkInsert(Uri uri, ContentValues[] values) {
+        long bulkInsertStartTime = SystemClock.elapsedRealtimeNanos();
+
         final int targetSdkVersion = getCallingPackageTargetSdkVersion();
         final boolean allowHidden = isCallingPackageAllowedHidden();
         final int match = matchUri(uri, allowHidden);
@@ -5158,7 +5168,14 @@ public class MediaProvider extends ContentProvider {
                 enforceCallingPermission(audioUri, Bundle.EMPTY, false);
             }
 
-            return bulkInsertPlaylist(playlistUri, values);
+            try {
+                return bulkInsertPlaylist(playlistUri, values);
+            } finally {
+                long bulkInsertExecutionTime =
+                        SystemClock.elapsedRealtimeNanos() - bulkInsertStartTime;
+                Metrics.logMediaProviderOp(Metrics.BULK_INSERT, Metrics.MEDIA_URI,
+                        resolvedVolumeName, mCallingIdentity.get().uid, bulkInsertExecutionTime);
+            }
         }
 
         final DatabaseHelper helper;
@@ -5175,6 +5192,9 @@ public class MediaProvider extends ContentProvider {
             return result;
         } finally {
             helper.endTransaction();
+            long bulkInsertExecutionTime = SystemClock.elapsedRealtimeNanos() - bulkInsertStartTime;
+            Metrics.logMediaProviderOp(Metrics.BULK_INSERT, this, uri, mCallingIdentity.get().uid,
+                    bulkInsertExecutionTime);
         }
     }
 
@@ -5678,7 +5698,7 @@ public class MediaProvider extends ContentProvider {
     }
 
     @NonNull
-    private static String resolveVolumeName(@NonNull Uri uri) {
+    public static String resolveVolumeName(@NonNull Uri uri) {
         final String volumeName = getVolumeName(uri);
         if (MediaStore.VOLUME_EXTERNAL.equals(volumeName)) {
             return MediaStore.VOLUME_EXTERNAL_PRIMARY;
@@ -5702,6 +5722,7 @@ public class MediaProvider extends ContentProvider {
     public Uri insert(@NonNull Uri uri, @Nullable ContentValues values,
             @Nullable Bundle extras) {
         Trace.beginSection(safeTraceSectionNameWithUri("insert", uri));
+        long insertStartTime = SystemClock.elapsedRealtimeNanos();
         try {
             try {
                 return insertInternal(uri, values, extras);
@@ -5715,6 +5736,9 @@ public class MediaProvider extends ContentProvider {
         } catch (FallbackException e) {
             return e.translateForInsert(getCallingPackageTargetSdkVersion());
         } finally {
+            long insertExecutionTime = SystemClock.elapsedRealtimeNanos() - insertStartTime;
+            Metrics.logMediaProviderOp(Metrics.INSERT, this, uri, mCallingIdentity.get().uid,
+                    insertExecutionTime);
             Trace.endSection();
         }
     }
@@ -6047,7 +6071,9 @@ public class MediaProvider extends ContentProvider {
 
     @Override
     public ContentProviderResult[] applyBatch(ArrayList<ContentProviderOperation> operations)
-                throws OperationApplicationException {
+            throws OperationApplicationException {
+        long applyBatchStartTime = SystemClock.elapsedRealtimeNanos();
+
         // Open transactions on databases for requested volumes
         final Set<DatabaseHelper> transactions = new ArraySet<>();
         try {
@@ -6081,6 +6107,9 @@ public class MediaProvider extends ContentProvider {
             for (DatabaseHelper helper : transactions) {
                 helper.endTransaction();
             }
+            long applyBatchExecutionTime = SystemClock.elapsedRealtimeNanos() - applyBatchStartTime;
+            Metrics.logMediaProviderOp(Metrics.APPLY_BATCH, Metrics.UNSPECIFIED_URI, null,
+                    mCallingIdentity.get().uid, applyBatchExecutionTime);
         }
     }
 
@@ -6835,11 +6864,16 @@ public class MediaProvider extends ContentProvider {
     @Override
     public int delete(@NonNull Uri uri, @Nullable Bundle extras) {
         Trace.beginSection(safeTraceSectionNameWithUri("delete", uri));
+        long deleteStartTime = SystemClock.elapsedRealtimeNanos();
+
         try {
             return deleteInternal(uri, extras);
         } catch (FallbackException e) {
             return e.translateForUpdateDelete(getCallingPackageTargetSdkVersion());
         } finally {
+            long deleteExecutionTime = SystemClock.elapsedRealtimeNanos() - deleteStartTime;
+            Metrics.logMediaProviderOp(Metrics.DELETE, this, uri, mCallingIdentity.get().uid,
+                    deleteExecutionTime);
             Trace.endSection();
         }
     }
@@ -7433,6 +7467,8 @@ public class MediaProvider extends ContentProvider {
             return;
         }
 
+        long opStartTime = SystemClock.elapsedRealtimeNanos();
+
         enforcePermissionCheckForOemMetadataUpdate();
         Set<String> oemSupportedMimeTypes = mMediaScanner.getOemSupportedMimeTypes();
         if (oemSupportedMimeTypes == null || oemSupportedMimeTypes.isEmpty()) {
@@ -7467,6 +7503,9 @@ public class MediaProvider extends ContentProvider {
             update(MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL), values, extras);
         } finally {
             restoreLocalCallingIdentity(token);
+            long opExecutionTime = SystemClock.elapsedRealtimeNanos() - opStartTime;
+            Metrics.logMediaProviderOp(Metrics.BULK_UPDATE_OEM_METADATA_CALL,
+                    Metrics.UNSPECIFIED_URI, null, mCallingIdentity.get().uid, opExecutionTime);
         }
     }
 
@@ -7581,14 +7620,24 @@ public class MediaProvider extends ContentProvider {
 
     @Nullable
     private Bundle getResultForResolvePlaylistMembers(Bundle extras) {
+        long resolvePlaylistMembersCallStartTime = SystemClock.elapsedRealtimeNanos();
+        String volumeName = null;
+
         final LocalCallingIdentity token = clearLocalCallingIdentity();
         final CallingIdentity providerToken = clearCallingIdentity();
         try {
             final Uri playlistUri = extras.getParcelable(MediaStore.EXTRA_URI);
+            volumeName = resolveVolumeName(playlistUri);
             resolvePlaylistMembers(playlistUri);
         } finally {
             restoreCallingIdentity(providerToken);
             restoreLocalCallingIdentity(token);
+
+            long resolvePlaylistMembersCallExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - resolvePlaylistMembersCallStartTime;
+            Metrics.logMediaProviderOp(Metrics.RESOLVE_PLAYLIST_MEMBERS_CALL, Metrics.MEDIA_URI,
+                    volumeName, mCallingIdentity.get().uid,
+                    resolvePlaylistMembersCallExecutionTime);
         }
         return null;
     }
@@ -7704,6 +7753,8 @@ public class MediaProvider extends ContentProvider {
 
     @NotNull
     private Bundle getResultForGetVersion(Bundle extras) {
+        long getVersionCallStartTime = SystemClock.elapsedRealtimeNanos();
+
         final String volumeName = extras.getString(Intent.EXTRA_TEXT);
 
         final DatabaseHelper helper;
@@ -7729,6 +7780,12 @@ public class MediaProvider extends ContentProvider {
                     });
         final Bundle res = new Bundle();
         res.putString(Intent.EXTRA_TEXT, version);
+
+        long getVersionCallExecutionTime =
+                SystemClock.elapsedRealtimeNanos() - getVersionCallStartTime;
+        Metrics.logMediaProviderOp(Metrics.GET_VERSION_CALL, Metrics.UNSPECIFIED_URI, volumeName,
+                mCallingIdentity.get().uid, getVersionCallExecutionTime);
+
         return res;
     }
 
@@ -7740,6 +7797,8 @@ public class MediaProvider extends ContentProvider {
 
     @NotNull
     private Bundle getResultForGetGeneration(Bundle extras) {
+        long getGenerationStartTime = SystemClock.elapsedRealtimeNanos();
+
         final String volumeName = extras.getString(Intent.EXTRA_TEXT);
 
         final DatabaseHelper helper;
@@ -7753,10 +7812,17 @@ public class MediaProvider extends ContentProvider {
 
         final Bundle res = new Bundle();
         res.putLong(Intent.EXTRA_INDEX, generation);
+
+        long getGenerationExecutionTime =
+                SystemClock.elapsedRealtimeNanos() - getGenerationStartTime;
+        Metrics.logMediaProviderOp(Metrics.GET_GENERATION_CALL, Metrics.UNSPECIFIED_URI, volumeName,
+                mCallingIdentity.get().uid, getGenerationExecutionTime);
         return res;
     }
 
     private Bundle getResultForGetDocumentUri(String method, Bundle extras) {
+        long getDocumentUriStartTime = SystemClock.elapsedRealtimeNanos();
+
         final Uri mediaUri = extras.getParcelable(MediaStore.EXTRA_URI);
         enforceCallingPermission(mediaUri, extras, false);
 
@@ -7777,11 +7843,19 @@ public class MediaProvider extends ContentProvider {
             return client.call(method, null, extras);
         } catch (RemoteException e) {
             throw new IllegalStateException(e);
+        } finally {
+            long getDocumentUriExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - getDocumentUriStartTime;
+            Metrics.logMediaProviderOp(Metrics.GET_DOCUMENT_URI_CALL, Metrics.MEDIA_URI,
+                    resolveVolumeName(mediaUri), mCallingIdentity.get().uid,
+                    getDocumentUriExecutionTime);
         }
     }
 
     @NotNull
     private Bundle getResultForGetMediaUri(String method, Bundle extras) {
+        long getMediaUriStartTime = SystemClock.elapsedRealtimeNanos();
+
         final Uri documentUri = extras.getParcelable(MediaStore.EXTRA_URI);
         getContext().enforceCallingUriPermission(documentUri,
                 Intent.FLAG_GRANT_READ_URI_PERMISSION, TAG);
@@ -7814,11 +7888,17 @@ public class MediaProvider extends ContentProvider {
             throw new IllegalStateException(e);
         } finally {
             restoreCallingIdentity(token);
+            long getMediaUriExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - getMediaUriStartTime;
+            Metrics.logMediaProviderOp(Metrics.GET_MEDIA_URI_CALL, Metrics.DOCUMENT_URI,
+                    null, mCallingIdentity.get().uid, getMediaUriExecutionTime);
         }
     }
 
     @NotNull
     private Bundle getResultForGetRedactedMediaUri(Bundle extras) {
+        long getRedactedMediaUriStartTime = SystemClock.elapsedRealtimeNanos();
+
         final Uri uri = extras.getParcelable(MediaStore.EXTRA_URI);
         // NOTE: It is ok to update the DB and return a redacted URI for the cases when
         // the user code only has read access, hence we don't check for write permission.
@@ -7830,11 +7910,18 @@ public class MediaProvider extends ContentProvider {
             return res;
         } finally {
             restoreLocalCallingIdentity(token);
+            long getRedactedMediaUriExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - getRedactedMediaUriStartTime;
+            Metrics.logMediaProviderOp(Metrics.GET_REDACTED_MEDIA_URI_CALL, Metrics.MEDIA_URI,
+                    resolveVolumeName(uri), mCallingIdentity.get().uid,
+                    getRedactedMediaUriExecutionTime);
         }
     }
 
     @NotNull
     private Bundle getResultForGetRedactedMediaUriList(Bundle extras) {
+        long getRedactedMediaUriListStartTime = SystemClock.elapsedRealtimeNanos();
+
         final List<Uri> uris = extras.getParcelableArrayList(EXTRA_URI_LIST);
         // NOTE: It is ok to update the DB and return a redacted URI for the cases when
         // the user code only has read access, hence we don't check for write permission.
@@ -7847,6 +7934,11 @@ public class MediaProvider extends ContentProvider {
             return res;
         } finally {
             restoreLocalCallingIdentity(token);
+            long getRedactedMediaUriListExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - getRedactedMediaUriListStartTime;
+            Metrics.logMediaProviderOp(Metrics.GET_REDACTED_MEDIA_URI_LIST_CALL,
+                    Metrics.MEDIA_URI, resolveVolumeName(uris.get(0)),
+                    mCallingIdentity.get().uid, getRedactedMediaUriListExecutionTime);
         }
     }
 
@@ -7909,13 +8001,21 @@ public class MediaProvider extends ContentProvider {
 
     @NotNull
     private Bundle getResultForCreateOperationsRequest(String method, Bundle extras) {
+        long createOperationsRequestCallStartTime = SystemClock.elapsedRealtimeNanos();
+
         final PendingIntent pi = createRequest(method, extras);
         final Bundle res = new Bundle();
         res.putParcelable(MediaStore.EXTRA_RESULT, pi);
+
+        long createOperationsRequestCallExecutionTime =
+                SystemClock.elapsedRealtimeNanos() - createOperationsRequestCallStartTime;
+        Metrics.logCreateRequestOp(method, Metrics.MEDIA_URI, null,
+                mCallingIdentity.get().uid, createOperationsRequestCallExecutionTime);
         return res;
     }
 
     private Bundle markMediaAsFavorite(Bundle extras) {
+        long markMediaAsFavoriteStartTime = SystemClock.elapsedRealtimeNanos();
         final boolean areFavorites = extras.getBoolean(MediaColumns.IS_FAVORITE);
         final ClipData clipData = extras.getParcelable(MediaStore.EXTRA_CLIP_DATA);
 
@@ -7946,6 +8046,13 @@ public class MediaProvider extends ContentProvider {
         } finally {
             restoreLocalCallingIdentity(token);
         }
+
+        long markMediaAsFavoriteExecutionTime =
+                SystemClock.elapsedRealtimeNanos() - markMediaAsFavoriteStartTime;
+        Metrics.logMediaProviderOp(Metrics.MARK_MEDIA_AS_FAVORITE, Metrics.MEDIA_URI,
+                resolveVolumeName(uris.get(0)), mCallingIdentity.get().uid,
+                markMediaAsFavoriteExecutionTime);
+
         return null;
     }
 
@@ -8058,6 +8165,8 @@ public class MediaProvider extends ContentProvider {
 
     @NotNull
     private Bundle getResultForPickerTranscode(@NonNull Bundle extras) {
+        long pickerTranscodeCallStartTime = SystemClock.elapsedRealtimeNanos();
+
         Log.i(TAG, "Received media transcode request for extras: " + extras);
 
         // Check the caller.
@@ -8077,6 +8186,11 @@ public class MediaProvider extends ContentProvider {
         // Return the result.
         final Bundle bundle = new Bundle();
         bundle.putBoolean(MediaStore.PICKER_TRANSCODE_RESULT, transcodeResult);
+
+        long pickerTranscodeCallExecutionTime =
+                SystemClock.elapsedRealtimeNanos() - pickerTranscodeCallStartTime;
+        Metrics.logMediaProviderOp(Metrics.PICKER_TRANSCODE_CALL, Metrics.PICKER_URI,
+                null, mCallingIdentity.get().uid, pickerTranscodeCallExecutionTime);
         return bundle;
     }
 
@@ -8135,7 +8249,14 @@ public class MediaProvider extends ContentProvider {
 
     @NotNull
     private Bundle getResultForSyncProviders() {
+        long syncProvidersCallStartTime = SystemClock.elapsedRealtimeNanos();
+
         syncAllMedia();
+
+        long syncProvidersCallExecutionTime =
+                SystemClock.elapsedRealtimeNanos() - syncProvidersCallStartTime;
+        Metrics.logMediaProviderOp(Metrics.SYNC_PROVIDERS_CALL, Metrics.UNSPECIFIED_URI, null,
+                mCallingIdentity.get().uid, syncProvidersCallExecutionTime);
         return new Bundle();
     }
 
@@ -8872,11 +8993,15 @@ public class MediaProvider extends ContentProvider {
     public int update(@NonNull Uri uri, @Nullable ContentValues values,
             @Nullable Bundle extras) {
         Trace.beginSection(safeTraceSectionNameWithUri("update", uri));
+        long updateStartTime = SystemClock.elapsedRealtimeNanos();
         try {
             return updateInternal(uri, values, extras);
         } catch (FallbackException e) {
             return e.translateForUpdateDelete(getCallingPackageTargetSdkVersion());
         } finally {
+            long updateExecutionTime = SystemClock.elapsedRealtimeNanos() - updateStartTime;
+            Metrics.logMediaProviderOp(Metrics.UPDATE, this, uri, mCallingIdentity.get().uid,
+                    updateExecutionTime);
             Trace.endSection();
         }
     }
@@ -9843,7 +9968,10 @@ public class MediaProvider extends ContentProvider {
         return -1;
     }
 
-    private boolean isPickerUri(Uri uri) {
+    /**
+     * Check if given uri is a picker uri.
+     */
+    public boolean isPickerUri(Uri uri) {
         final int match = matchUri(uri, /* allowHidden */ isCallingPackageAllowedHidden());
         return match == PICKER_ID || match == PICKER_GET_CONTENT_ID
                 || match == PICKER_TRANSCODED_ID;
@@ -9851,13 +9979,27 @@ public class MediaProvider extends ContentProvider {
 
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        return openFileCommon(uri, mode, /*signal*/ null, /*opts*/ null);
+        long openFileStartTime = SystemClock.elapsedRealtimeNanos();
+        try {
+            return openFileCommon(uri, mode, /*signal*/ null, /*opts*/ null);
+        } finally {
+            long openFileExecutionTime = SystemClock.elapsedRealtimeNanos() - openFileStartTime;
+            Metrics.logMediaProviderOp(Metrics.OPEN_FILE, this, uri,
+                    mCallingIdentity.get().uid, openFileExecutionTime);
+        }
     }
 
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode, CancellationSignal signal)
             throws FileNotFoundException {
-        return openFileCommon(uri, mode, signal, /*opts*/ null);
+        long openFileStartTime = SystemClock.elapsedRealtimeNanos();
+        try {
+            return openFileCommon(uri, mode, signal, /*opts*/ null);
+        } finally {
+            long openFileExecutionTime = SystemClock.elapsedRealtimeNanos() - openFileStartTime;
+            Metrics.logMediaProviderOp(Metrics.OPEN_FILE, this, uri,
+                    mCallingIdentity.get().uid, openFileExecutionTime);
+        }
     }
 
     private ParcelFileDescriptor openFileCommon(Uri uri, String mode, CancellationSignal signal,
@@ -9972,13 +10114,30 @@ public class MediaProvider extends ContentProvider {
     @Override
     public AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts)
             throws FileNotFoundException {
-        return openTypedAssetFileCommon(uri, mimeTypeFilter, opts, null);
+        long openTypedAssetFileStartTime = SystemClock.elapsedRealtimeNanos();
+        try {
+            return openTypedAssetFileCommon(uri, mimeTypeFilter, opts, null);
+        } finally {
+            long openTypedAssetFileExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - openTypedAssetFileStartTime;
+            Metrics.logMediaProviderOp(
+                    Metrics.OPEN_TYPED_ASSET_FILE,
+                    this, uri, mCallingIdentity.get().uid, openTypedAssetFileExecutionTime);
+        }
     }
 
     @Override
     public AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts,
             CancellationSignal signal) throws FileNotFoundException {
-        return openTypedAssetFileCommon(uri, mimeTypeFilter, opts, signal);
+        long openTypedAssetFileStartTime = SystemClock.elapsedRealtimeNanos();
+        try {
+            return openTypedAssetFileCommon(uri, mimeTypeFilter, opts, signal);
+        } finally {
+            long openTypedAssetFileExecutionTime =
+                    SystemClock.elapsedRealtimeNanos() - openTypedAssetFileStartTime;
+            Metrics.logMediaProviderOp(Metrics.OPEN_TYPED_ASSET_FILE, this, uri,
+                    mCallingIdentity.get().uid, openTypedAssetFileExecutionTime);
+        }
     }
 
     private AssetFileDescriptor openTypedAssetFileCommon(Uri uri, String mimeTypeFilter,
@@ -12212,6 +12371,9 @@ public class MediaProvider extends ContentProvider {
 
     public Uri attachVolume(MediaVolume volume, boolean validate, String volumeState) {
         Log.v(TAG, "attachVolume() called for " + volume.getName() + " with state:" + volumeState);
+
+        long attachVolumeStartTime = SystemClock.elapsedRealtimeNanos();
+
         if (mCallingIdentity.get().pid != android.os.Process.myPid()) {
             throw new SecurityException(
                     "Opening and closing databases not allowed.");
@@ -12264,6 +12426,12 @@ public class MediaProvider extends ContentProvider {
             mDatabaseBackupAndRecovery.setupVolumeDbBackupAndRecovery(volume.getName());
         }
 
+        long attachVolumeExecutionTime = SystemClock.elapsedRealtimeNanos() - attachVolumeStartTime;
+        Metrics.logMediaProviderOp(
+                Metrics.ATTACH_VOLUME,
+                Metrics.UNSPECIFIED_URI, volumeName,
+                mCallingIdentity.get().uid, attachVolumeExecutionTime);
+
         return uri;
     }
 
@@ -12284,6 +12452,7 @@ public class MediaProvider extends ContentProvider {
 
     public void detachVolume(MediaVolume volume) {
         Log.v(TAG, "detachVolume() received for " + volume.getName());
+        long detachVolumeStartTime = SystemClock.elapsedRealtimeNanos();
         if (mCallingIdentity.get().pid != android.os.Process.myPid()) {
             throw new SecurityException(
                     "Opening and closing databases not allowed.");
@@ -12319,6 +12488,11 @@ public class MediaProvider extends ContentProvider {
             });
         }
 
+        long detachVolumeExecutionTime = SystemClock.elapsedRealtimeNanos() - detachVolumeStartTime;
+        Metrics.logMediaProviderOp(
+                Metrics.DETACH_VOLUME,
+                Metrics.UNSPECIFIED_URI, volumeName,
+                mCallingIdentity.get().uid, detachVolumeExecutionTime);
         if (LOGV) Log.v(TAG, "Detached volume: " + volumeName);
     }
 
