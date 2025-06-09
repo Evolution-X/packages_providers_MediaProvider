@@ -43,6 +43,7 @@ public class TestConfigStore implements ConfigStore {
     private List<String> mAllowedCloudProviderPackages = Collections.emptyList();
     private @Nullable String mDefaultCloudProviderPackage = null;
     private List<Pair<Executor, Runnable>> mObservers = new ArrayList<>();
+    private boolean mIsLocalCategoriesEnabled = false;
 
     public void enableCloudMediaFeatureAndSetAllowedCloudProviderPackages(String... providers) {
         mAllowedCloudProviderPackages = Arrays.asList(providers);
@@ -52,6 +53,10 @@ public class TestConfigStore implements ConfigStore {
 
     public void setIsModernPickerEnabled(boolean isModernPickerEnabled) {
         mIsModernPickerEnabled = isModernPickerEnabled;
+    }
+
+    public void setIsLocalCategoriesEnabled(boolean isLocalCategoriesEnabled) {
+        mIsLocalCategoriesEnabled = isLocalCategoriesEnabled;
     }
 
     /**
@@ -77,6 +82,11 @@ public class TestConfigStore implements ConfigStore {
     @Override
     public boolean isModernPickerEnabled() {
         return mIsModernPickerEnabled;
+    }
+
+    @Override
+    public boolean isLocalCategoriesInPhotoPickerEnabled() {
+        return mIsLocalCategoriesEnabled;
     }
 
     public void enableCloudMediaFeature() {
