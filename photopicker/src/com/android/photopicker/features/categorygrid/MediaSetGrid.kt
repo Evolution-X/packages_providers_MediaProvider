@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Group
@@ -215,7 +214,7 @@ fun MediaSetGrid(
                             },
                             onItemLongPress = {},
                             isExpandedScreen = isExpandedScreen,
-                            columns = GridCells.Fixed(cellsPerRow),
+                            initialColumns = cellsPerRow,
                             selection = emptySet(),
                             gridCellPadding = gridCellPadding,
                             contentPadding = contentPadding,

@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -173,10 +172,10 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
             },
             onItemLongPress = {},
             isExpandedScreen = isExpandedScreen,
-            columns =
+            initialColumns =
                 when (isExpandedScreen) {
-                    true -> GridCells.Fixed(CELLS_PER_ROW_EXPANDED_FOR_CATEGORY_GRID)
-                    false -> GridCells.Fixed(CELLS_PER_ROW_FOR_CATEGORY_GRID)
+                    true -> CELLS_PER_ROW_EXPANDED_FOR_CATEGORY_GRID
+                    false -> CELLS_PER_ROW_FOR_CATEGORY_GRID
                 },
             selection = emptySet(),
             gridCellPadding = MEASUREMENT_HORIZONTAL_CELL_SPACING_CATEGORY_GRID,
