@@ -31,7 +31,7 @@ import static com.android.providers.media.photopicker.sync.PickerSyncManager.IMM
 import static com.android.providers.media.photopicker.sync.PickerSyncManager.IMMEDIATE_LOCAL_SYNC_WORK_NAME;
 import static com.android.providers.media.photopicker.sync.PickerSyncManager.SYNC_CLOUD_ONLY;
 import static com.android.providers.media.photopicker.sync.PickerSyncManager.SYNC_LOCAL_ONLY;
-import static com.android.providers.media.photopicker.sync.WorkManagerInitializer.getWorkManager;
+import static com.android.providers.media.WorkManagerInitializer.getWorkManager;
 import static com.android.providers.media.photopicker.v2.SearchSuggestionsProvider.getDefaultSuggestions;
 import static com.android.providers.media.photopicker.v2.SearchSuggestionsProvider.getSuggestionsFromCloudProvider;
 import static com.android.providers.media.photopicker.v2.SearchSuggestionsProvider.getSuggestionsFromLocalProvider;
