@@ -76,6 +76,7 @@ import android.util.Log;
 import android.util.Size;
 
 import androidx.annotation.RequiresApi;
+import androidx.annotation.RequiresPermission;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.providers.media.flags.Flags;
@@ -472,6 +473,34 @@ public final class MediaStore {
 
     private static final String LOCAL_PICKER_PROVIDER_AUTHORITY =
             "com.android.providers.media.photopicker";
+
+    /**
+     * Only used for testing.
+     * {@hide}
+     */
+    @VisibleForTesting
+    public static final String FILE_PATH = "file_path";
+
+    /**
+     * Only used for testing.
+     * {@hide}
+     */
+    @VisibleForTesting
+    public static final String PARENT_FILE_PATH = "parent_file_path";
+
+    /**
+     * Only used for testing.
+     * {@hide}
+     */
+    @VisibleForTesting
+    public static final String MARK_FILE_AS_TRASHED = "mark_file_as_trashed";
+
+    /**
+     * Only used for testing.
+     * {@hide}
+     */
+    @VisibleForTesting
+    public static final String MARK_FILE_AS_RESTORED = "mark_file_as_restored";
 
     /**
      * Activity Action: Launch a music player.
@@ -1863,6 +1892,97 @@ public final class MediaStore {
             values.put(MediaColumns.IS_TRASHED, 0);
         }
         return createRequest(resolver, CREATE_TRASH_REQUEST_CALL, uris, values);
+    }
+
+    /**
+     * Moves a file or directory to a trashed state.
+     * <p>
+     * If the specified {@code path} is a directory, all its contents (files and subdirectories)
+     * will also be trashed recursively.
+     * </p>
+     * <p>
+     * This API is available starting from Target SDK 37.
+     * Apps using this API must declare the
+     * {@link android.Manifest.permission#MANAGE_EXTERNAL_STORAGE} permission
+     * in their manifest and be granted it by the user.
+     * </p>
+     *
+     * @param resolver The {@link ContentResolver} to use for the call.
+     * @param path     The absolute path of the file or directory to be trashed.
+     * @return The path of the item that was trashed, which may differ from the input
+     * path if the system modifies it for trash management.
+     * @throws IllegalArgumentException if the file path is null or empty.
+     * @throws IllegalStateException    if the trash directory cannot be created or if the file
+     *                                  cannot be trashed.
+     * @throws SecurityException        if the caller lacks the
+     *                                  {@link android.Manifest.permission#MANAGE_EXTERNAL_STORAGE}
+     *                                  permission.
+     * @see #restoreFileFromTrash(ContentResolver, String, String)
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    @RequiresPermission(value = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+            conditional = true)
+    public static @NonNull String trashFile(@NonNull ContentResolver resolver,
+            @NonNull String path) {
+        try (ContentProviderClient client = resolver.acquireUnstableContentProviderClient(
+                AUTHORITY)) {
+            final Bundle extras = new Bundle();
+            extras.putString(FILE_PATH, path);
+            Bundle bundle = client.call(AUTHORITY, MARK_FILE_AS_TRASHED, null, extras);
+            return bundle.getString(FILE_PATH);
+        } catch (RemoteException e) {
+            throw e.rethrowAsRuntimeException();
+        }
+    }
+
+    /**
+     * Restores a file or directory from a trashed state.
+     * <p>
+     * The item will be restored from the system's trash to its original location by default.
+     * If the original parent directories do not exist, they will be created as part of the
+     * restoration process. Optionally, a new {@code targetPath} can be specified to restore
+     * the item to a different location. If the specified {@code path} refers to a trashed
+     * directory, all its trashed contents will also be restored.
+     * </p>
+     * <p>
+     * This API is available starting from **Target SDK 37**.
+     * Apps using this API must declare the
+     * {@link android.Manifest.permission#MANAGE_EXTERNAL_STORAGE} permission
+     * in their manifest and be granted it by the user.
+     * </p>
+     *
+     * @param resolver   The {@link ContentResolver} to use for the call.
+     * @param path       The absolute path of the trashed file or directory to be restored.
+     *                   This path should be the path of the item as it exists in the trash.
+     * @param targetPath An optional absolute path where the item should be restored.
+     *                   If {@code null}, the item will be restored to its original location
+     *                   prior to being trashed.
+     * @return The absolute path of the item after it has been restored.
+     * @throws IllegalArgumentException If the provided {@code path} is null or empty, or if the
+     *                                  {@code targetPath} (if provided) is invalid.
+     * @throws IllegalStateException    If the restoration operation fails due to an unexpected
+     *                                  internal system error, such as the system being unable to
+     *                                  restore the file
+     * @throws SecurityException        if the caller lacks the
+     *                                  {@link android.Manifest.permission#MANAGE_EXTERNAL_STORAGE}
+     *                                  permission.
+     * @see #trashFile(ContentResolver, String)
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    @RequiresPermission(value = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
+            conditional = true)
+    public static @NonNull String restoreFileFromTrash(@NonNull ContentResolver resolver,
+            @NonNull String path, @Nullable String targetPath) {
+        try (ContentProviderClient client = resolver.acquireUnstableContentProviderClient(
+                AUTHORITY)) {
+            final Bundle extras = new Bundle();
+            extras.putString(FILE_PATH, path);
+            extras.putString(PARENT_FILE_PATH, targetPath);
+            Bundle bundle = client.call(AUTHORITY, MARK_FILE_AS_RESTORED, null, extras);
+            return bundle.getString(FILE_PATH);
+        } catch (RemoteException e) {
+            throw e.rethrowAsRuntimeException();
+        }
     }
 
     /**

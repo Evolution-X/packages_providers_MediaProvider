@@ -328,6 +328,8 @@ import com.android.providers.media.scan.ModernMediaScanner;
 import com.android.providers.media.stableuris.dao.BackupIdRow;
 import com.android.providers.media.util.CachedSupplier;
 import com.android.providers.media.util.DatabaseUtils;
+import com.android.providers.media.util.FileRestoreManager;
+import com.android.providers.media.util.FileTrashManager;
 import com.android.providers.media.util.FileUtils;
 import com.android.providers.media.util.ForegroundThread;
 import com.android.providers.media.util.Logging;
@@ -5197,6 +5199,7 @@ public class MediaProvider extends ContentProvider {
 
     private long insertDirectory(@NonNull SQLiteDatabase db, @NonNull String path) {
         if (LOGV) Log.v(TAG, "inserting directory " + path);
+        String displayName = extractDisplayName(path);
         ContentValues values = new ContentValues();
         values.put(FileColumns.FORMAT, MtpConstants.FORMAT_ASSOCIATION);
         values.put(FileColumns.DATA, path);
@@ -5204,8 +5207,16 @@ public class MediaProvider extends ContentProvider {
         values.put(FileColumns.OWNER_PACKAGE_NAME, extractPathOwnerPackageName(path));
         values.put(FileColumns.VOLUME_NAME, extractVolumeName(path));
         values.put(FileColumns.RELATIVE_PATH, extractRelativePath(path));
-        values.put(FileColumns.DISPLAY_NAME, extractDisplayName(path));
+        values.put(FileColumns.DISPLAY_NAME, displayName);
         values.put(FileColumns.IS_DOWNLOAD, isDownload(path) ? 1 : 0);
+        if (Flags.enableTrashAndRestoreByFilePathApi()) {
+            final Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(displayName);
+            if (matcher.matches() && matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
+                values.put(MediaColumns.IS_TRASHED, 1);
+                values.put(MediaColumns.DATE_EXPIRES, Long.parseLong(matcher.group(2)));
+                values.put(MediaColumns.DISPLAY_NAME, matcher.group(3));
+            }
+        }
 
         // Getting UserId from the directory path, as clone user shares the MediaProvider
         // of user 0.
@@ -7343,9 +7354,78 @@ public class MediaProvider extends ContentProvider {
                 getResultForQueryFileAccessAttrsFromLevelDb(arg);
                 return new Bundle();
             }
+            case MediaStore.MARK_FILE_AS_TRASHED: {
+                return getResultForFileTrash(extras);
+            }
+            case MediaStore.MARK_FILE_AS_RESTORED: {
+                return getResultForFileRestore(extras);
+            }
             default:
                 throw new UnsupportedOperationException("Unsupported call: " + method);
         }
+    }
+
+    private Bundle getResultForFileTrash(Bundle extras) {
+        if (!isFileTrashRestoreEnabled()) {
+            throw new UnsupportedOperationException("File trash not supported");
+        }
+
+        // Apps cannot access trash API without MANAGE_EXTERNAL_STORAGE permission
+        if (!isCallingPackageManager()) {
+            throw new SecurityException("File trashing operations require the"
+                    + " MANAGE_EXTERNAL_STORAGE permission for the calling package");
+        }
+
+        Bundle result = new Bundle();
+
+        String path = null;
+        try {
+            path = extras.getString(MediaStore.FILE_PATH);
+
+            FileTrashManager.MediaScannerCallback mediaScannerCallback =
+                    this::scanFileAsMediaProvider;
+            String trashedPath = FileTrashManager.trashFile(path,
+                    mediaScannerCallback);
+
+            result.putString(MediaStore.FILE_PATH, trashedPath);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return result;
+    }
+
+    private Bundle getResultForFileRestore(Bundle extras) {
+        if (!isFileTrashRestoreEnabled()) {
+            throw new UnsupportedOperationException("File restore not supported");
+        }
+
+        // Apps cannot access Restore API without MANAGE_EXTERNAL_STORAGE permission
+        if (!isCallingPackageManager()) {
+            throw new IllegalArgumentException("File restoring operations require the "
+                    + "MANAGE_EXTERNAL_STORAGE permission for the calling package");
+        }
+
+        Bundle result = new Bundle();
+        String trashedPath = null;
+        String targetPath;
+        try {
+            trashedPath = extras.getString(MediaStore.FILE_PATH);
+            targetPath = extras.getString(MediaStore.PARENT_FILE_PATH); // This can be null
+
+            FileRestoreManager.MediaScannerCallback mediaScannerCallback =
+                    this::scanFileAsMediaProvider;
+
+            String restoredPath = FileRestoreManager.restoreFile(trashedPath,
+                    Optional.ofNullable(targetPath),
+                    mediaScannerCallback);
+
+            result.putString(MediaStore.FILE_PATH, restoredPath);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return result;
     }
 
     private void callForBulkUpdateOemMetadataColumn() {
@@ -12631,6 +12711,22 @@ public class MediaProvider extends ContentProvider {
                 Log.e(TAG, "Failed to initialize MimeTypeFixHandler: ", e);
             }
         });
+    }
+
+    /**
+     * Checks if file trash and restore functionality is enabled.
+     * This is determined by a feature flag and if the calling app's target SDK version is greater
+     * than 36
+     *
+     * @return {@code true} if file trash and restore is enabled, {@code false} otherwise.
+     */
+    private boolean isFileTrashRestoreEnabled() {
+        if (!Flags.enableTrashAndRestoreByFilePathApi()) {
+            return false;
+        }
+
+        // If the calling app's target SDK version is greater than Baklava (API 36)
+        return getCallingPackageTargetSdkVersion() > Build.VERSION_CODES.BAKLAVA;
     }
 
     /**
