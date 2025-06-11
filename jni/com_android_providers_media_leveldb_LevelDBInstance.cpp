@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <nativehelper/scoped_utf_chars.h>
 
+#include "android-base/logging.h"
 #include "leveldb/db.h"
 
 #ifndef _Included_com_android_providers_media_leveldb_LevelDBInstance
@@ -80,6 +81,9 @@ JNIEXPORT jlong JNICALL
     if (status.ok()) {
         return reinterpret_cast<jlong>(leveldb);
     } else {
+        LOG(INFO) << "Leveldb connection failed for path: " << path
+                  << " with error:" << status.ToString();
+
         long val = 0;
         return (jlong)val;
     }

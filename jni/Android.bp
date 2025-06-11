@@ -95,6 +95,10 @@ cc_library_shared {
         "libandroid",
     ],
 
+    static_libs: [
+        "libbase_ndk",
+    ],
+
     cflags: [
         "-Wall",
         "-Werror",
