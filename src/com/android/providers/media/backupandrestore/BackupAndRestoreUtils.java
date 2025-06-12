@@ -53,7 +53,7 @@ public final class BackupAndRestoreUtils {
      * {@link BackupAndRestoreUtils#BACKUP_COLUMNS}. A new level db instance will be created with
      * newly added columns.
      */
-    static final long LATEST_LEVEL_DB_VERSION = 2;
+    static final long LATEST_LEVEL_DB_VERSION = 3;
 
     /**
      * String separator used for separating key, value pairs.
@@ -150,6 +150,10 @@ public final class BackupAndRestoreUtils {
             BACKUP_COLUMNS.add(MediaStore.Files.FileColumns.DATE_MODIFIED);
         }
 
+        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 3) {
+            BACKUP_COLUMNS.add(MediaStore.DownloadColumns.DOWNLOAD_URI);
+        }
+
         // Keeping at the last as it is a BLOB type and can have separator used in our
         // serialisation. Added in version 1.
         BACKUP_COLUMNS.add(MediaStore.MediaColumns.XMP);
@@ -208,6 +212,10 @@ public final class BackupAndRestoreUtils {
         if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 2) {
             sIdToColumnBiMap.put("41", MediaStore.Files.FileColumns.DATE_ADDED);
             sIdToColumnBiMap.put("42", MediaStore.Files.FileColumns.DATE_MODIFIED);
+        }
+
+        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 3) {
+            sIdToColumnBiMap.put("43", MediaStore.DownloadColumns.DOWNLOAD_URI);
         }
 
         // Adding number gap to allow addition of new values
