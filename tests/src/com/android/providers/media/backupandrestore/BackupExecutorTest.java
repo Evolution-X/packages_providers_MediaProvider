@@ -132,7 +132,6 @@ public final class BackupExecutorTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.BAKLAVA)
     public void testBackup() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
-        assumeFalse((new File(mLevelDbPath)).exists());
 
         try {
             // Add all files in Downloads directory
@@ -225,7 +224,6 @@ public final class BackupExecutorTest {
     public void testLevelDbRecreatedOnVersionChange() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
         assumeTrue(Flags.enableVersioningForBackupAndRestore());
-        assumeFalse((new File(mLevelDbPath)).exists());
 
         try {
             // Add all files in Downloads directory
@@ -271,7 +269,6 @@ public final class BackupExecutorTest {
             maxSdkVersion = Build.VERSION_CODES.VANILLA_ICE_CREAM)
     public void testBackupDeletedForSdkLevelsLessThanB() {
         assumeFalse(isBackupAndRestoreSupported(mIsolatedContext));
-        assumeFalse((new File(mLevelDbPath)).exists());
 
         // create a new leveldb for backup
         LevelDBManager.getInstance(mLevelDbPath);
