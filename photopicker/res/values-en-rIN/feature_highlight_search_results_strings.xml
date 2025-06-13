@@ -20,22 +20,13 @@
     <string name="photopicker_hsr_see_all_button_label" msgid="7165405920645678201">"See all"</string>
     <string name="photopicker_hsr_suggestions_text" msgid="8649021863740749051">"Suggestions"</string>
     <string name="photopicker_hsr_recents_label" msgid="8922013053088031820">"Recent"</string>
-    <!-- no translation found for photopicker_hsr_favorites_album_label (507125735792216176) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_screenshots_album_label (6223215479220055671) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_camera_album_label (2887020928583531751) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_downloads_album_label (5687964289769180836) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_videos_album_label (1290755476191083105) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_query_placeholder_text (2929114759123252442) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_media_placeholder_text (5749653983266687172) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_media_text (2764361056677273805) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_suggestions_for_text (729432575959823808) -->
-    <skip />
+    <string name="photopicker_hsr_favorites_album_label" msgid="507125735792216176">"Favourites"</string>
+    <string name="photopicker_hsr_screenshots_album_label" msgid="6223215479220055671">"Screenshots"</string>
+    <string name="photopicker_hsr_camera_album_label" msgid="2887020928583531751">"Camera"</string>
+    <string name="photopicker_hsr_downloads_album_label" msgid="5687964289769180836">"Downloads"</string>
+    <string name="photopicker_hsr_videos_album_label" msgid="1290755476191083105">"Videos"</string>
+    <string name="photopicker_hsr_query_placeholder_text" msgid="2929114759123252442">"Loading highlighted media results query"</string>
+    <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"Loading highlighted media results"</string>
+    <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"Highlighted media results"</string>
+    <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"Suggestions for"</string>
 </resources>
