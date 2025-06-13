@@ -172,8 +172,6 @@
     <string name="camera_album_display_name" msgid="1093891161978593789">"카메라"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"스크린샷"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"다운로드"</string>
-    <!-- no translation found for favorites_album_display_name (3533041926539268094) -->
-    <skip />
-    <!-- no translation found for videos_album_display_name (4274973715629315179) -->
-    <skip />
+    <string name="favorites_album_display_name" msgid="3533041926539268094">"즐겨찾기"</string>
+    <string name="videos_album_display_name" msgid="4274973715629315179">"동영상"</string>
 </resources>
