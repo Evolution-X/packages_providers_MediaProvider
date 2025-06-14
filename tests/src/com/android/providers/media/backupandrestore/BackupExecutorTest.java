@@ -270,6 +270,11 @@ public final class BackupExecutorTest {
     public void testBackupDeletedForSdkLevelsLessThanB() {
         assumeFalse(isBackupAndRestoreSupported(mIsolatedContext));
 
+        File backupDir = new File(mLevelDbPath);
+        if (!backupDir.exists()) {
+            backupDir.mkdirs();
+        }
+
         // create a new leveldb for backup
         LevelDBManager.getInstance(mLevelDbPath);
         assertThat(LevelDBManager.isLevelDbPresentForPath(mLevelDbPath)).isTrue();
