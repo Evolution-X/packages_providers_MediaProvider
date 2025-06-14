@@ -30,12 +30,9 @@
     <skip />
     <!-- no translation found for photopicker_hsr_videos_album_label (1290755476191083105) -->
     <skip />
-    <!-- no translation found for photopicker_hsr_query_placeholder_text (2929114759123252442) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_media_placeholder_text (5749653983266687172) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_media_text (2764361056677273805) -->
-    <skip />
+    <string name="photopicker_hsr_query_placeholder_text" msgid="2929114759123252442">"Завантаження запиту на отримання виділених результатів пошуку медіафайлів"</string>
+    <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"Завантаження виділених результатів пошуку медіафайлів"</string>
+    <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"Виділені результати пошуку медіафайлів"</string>
     <!-- no translation found for photopicker_hsr_suggestions_for_text (729432575959823808) -->
     <skip />
 </resources>
