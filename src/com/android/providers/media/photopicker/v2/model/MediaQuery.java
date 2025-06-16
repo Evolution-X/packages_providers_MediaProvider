@@ -40,8 +40,9 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.providers.media.ConfigStore;
+import com.android.providers.media.MediaApplication;
 import com.android.providers.media.MediaGrants;
-import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.v2.PickerDataLayerV2;
 import com.android.providers.media.photopicker.v2.sqlite.PickerSQLConstants;
 import com.android.providers.media.photopicker.v2.sqlite.SelectSQLiteQueryBuilder;
@@ -131,9 +132,10 @@ public class MediaQuery {
         }
         // Indicate whether or not the Local Media Provider shows local device folders.
         // Set based on the state of the flag.
+        ConfigStore configStore = MediaApplication.getConfigStore();
         queryArgs.putBoolean(
                 CloudMediaProviderContract.EXTRA_PICKER_SHOWS_DEVICE_FOLDERS,
-                Flags.enableLocalMediaProviderCapabilities());
+                configStore.isLocalCategoriesInPhotoPickerEnabled());
         return queryArgs;
     }
 

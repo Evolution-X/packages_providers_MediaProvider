@@ -51,10 +51,9 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.LauncherActivityInfo;
 import android.content.pm.LauncherApps;
 import android.database.Cursor;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.platform.test.annotations.EnableFlags;
-import android.platform.test.annotations.RequiresFlagsDisabled;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.DeviceFlagsValueProvider;
@@ -64,6 +63,7 @@ import android.provider.MediaStore.Files.FileColumns;
 import android.provider.MediaStore.MediaColumns;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
 
 import com.android.providers.media.DatabaseHelper;
@@ -139,6 +139,8 @@ public class ExternalDbFacadeTest {
     private static final String FOLDER_NAME1 = "Folder1";
 
     private static IsolatedContext sIsolatedContext;
+
+    private static final TestConfigStore sTestConfigStore = new TestConfigStore();
 
     @Before
     public void setUp() {
@@ -1153,7 +1155,7 @@ public class ExternalDbFacadeTest {
                         .isEqualTo(1);
             }
 
-            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for albums is")
                         .that(cursor.getCount())
@@ -1163,8 +1165,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
-    public void testQueryAlbums() throws Exception {
+    public void testQueryAlbums_localCategoriesAreDisabled() throws Exception {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
                     mock(VolumeCache.class));
@@ -1175,7 +1176,8 @@ public class ExternalDbFacadeTest {
                 assertThat(cursor.getCount()).isEqualTo(3);
             }
 
-            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+            sTestConfigStore.setIsLocalCategoriesEnabled(false);
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null, sTestConfigStore)) {
                 assertThat(cursor.getCount()).isEqualTo(3);
 
                 // We verify the order of the albums:
@@ -1195,6 +1197,7 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
     public void testQueryAlbums_withLocalCategoriesEnabled() throws Exception {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
@@ -1207,7 +1210,8 @@ public class ExternalDbFacadeTest {
                 assertThat(cursor.getCount()).isEqualTo(3);
             }
 
-            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+            sTestConfigStore.setIsLocalCategoriesEnabled(true);
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null, sTestConfigStore)) {
                 assertThat(cursor.getCount()).isEqualTo(2);
 
                 // We verify the order of the albums:
@@ -1223,7 +1227,8 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_LOCAL_MEDIA_PROVIDER_CAPABILITIES)
     public void testQueryAlbums_categoriesEnabled_downloadsIsPartOfCollection() throws Exception {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
@@ -1237,7 +1242,8 @@ public class ExternalDbFacadeTest {
                         .that(cursor.getCount()).isEqualTo(3);
             }
 
-            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null)) {
+            sTestConfigStore.setIsLocalCategoriesEnabled(true);
+            try (Cursor cursor = facade.queryAlbums(/* mimeType */ null, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for albums")
                         .that(cursor.getCount()).isEqualTo(2);
@@ -1290,7 +1296,7 @@ public class ExternalDbFacadeTest {
                         .isEqualTo(2);
             }
 
-            try (Cursor cursor = facade.queryAlbums(IMAGE_MIME_TYPES_QUERY)) {
+            try (Cursor cursor = facade.queryAlbums(IMAGE_MIME_TYPES_QUERY, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for albums with "
                                 + "IMAGE_MIME_TYPES_QUERY")

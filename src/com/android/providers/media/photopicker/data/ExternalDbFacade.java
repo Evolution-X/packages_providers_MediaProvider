@@ -70,6 +70,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 
+import com.android.providers.media.ConfigStore;
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.R;
 import com.android.providers.media.VolumeCache;
@@ -650,11 +651,11 @@ public class ExternalDbFacade {
      * Categories are determined with the {@link #LOCAL_ALBUM_IDS}.
      * If there are no media items under an albumId, the album is skipped from the results.
      */
-    public Cursor queryAlbums(String[] mimeTypes) {
+    public Cursor queryAlbums(String[] mimeTypes, ConfigStore configStore) {
         final MatrixCursor c = new MatrixCursor(AlbumColumns.ALL_PROJECTION);
 
         String[] albumIds = LOCAL_ALBUM_IDS;
-        if (Flags.enableLocalMediaProviderCapabilities()) {
+        if (configStore.isLocalCategoriesInPhotoPickerEnabled()) {
             albumIds = COLLECTION_TAB_LOCAL_ALBUM_IDS;
         }
         for (String albumId : albumIds) {
