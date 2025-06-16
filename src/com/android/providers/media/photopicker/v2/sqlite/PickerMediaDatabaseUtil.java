@@ -52,8 +52,6 @@ import java.util.Objects;
 public class PickerMediaDatabaseUtil {
     private static final String TAG = "PickerMediaDBUtil";
 
-    private static final String DEFAULT_DISPLAY_NAME = "Album";
-
     /**
      * Query media from the database and prepare a cursor in response.
      *
