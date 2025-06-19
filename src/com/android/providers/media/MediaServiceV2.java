@@ -42,8 +42,6 @@ import androidx.work.WorkerParameters;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.flags.Flags;
-import com.android.providers.media.photopicker.sync.WorkManagerInitializer;
-import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -295,9 +293,9 @@ public class MediaServiceV2 extends Worker {
      * If the system crashes and calls onStopped(), the work is rescheduled afterwards. So if the
      * work is running, we stop it.
      */
-    private void checkIsWorkerStopped() throws RequestObsoleteException {
+    private void checkIsWorkerStopped() throws Exception {
         if (isStopped()) {
-            throw new RequestObsoleteException("Work is stopped. Id: " + getId());
+            throw new Exception("Work is stopped. Id: " + getId());
         }
     }
 

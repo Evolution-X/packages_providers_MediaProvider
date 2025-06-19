@@ -398,3 +398,12 @@ flag {
     is_exported: true
     bug: "421847749"
 }
+
+flag {
+    name: "enable_custom_work_manager_thread_pool"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables custom thread pool executor for work manager "
+    is_fixed_read_only: true
+    bug: "421129366"
+}

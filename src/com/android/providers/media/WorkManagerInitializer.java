@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.providers.media.photopicker.sync;
+package com.android.providers.media;
 
 import android.content.Context;
 import android.util.Log;
@@ -24,8 +24,13 @@ import androidx.annotation.Nullable;
 import androidx.work.Configuration;
 import androidx.work.WorkManager;
 
+import com.android.providers.media.flags.Flags;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class WorkManagerInitializer {
     private static final String TAG = "WorkManagerInitializer";
@@ -34,6 +39,9 @@ public class WorkManagerInitializer {
     // types. It is advisable to use unique work requests because in case the number of queued
     // requests grows, they should not block other work requests.
     private static final int WORK_MANAGER_THREAD_POOL_SIZE = 15;
+
+    private static final int CORE_POOL_SIZE = 4;
+    private static final long KEEP_ALIVE_TIME_SECONDS = 60;
     @Nullable
     private static volatile Executor sWorkManagerExecutor;
 
@@ -64,10 +72,33 @@ public class WorkManagerInitializer {
         if (sWorkManagerExecutor == null) {
             synchronized (WorkManagerInitializer.class) {
                 if (sWorkManagerExecutor == null) {
-                    sWorkManagerExecutor = Executors
-                            .newFixedThreadPool(WORK_MANAGER_THREAD_POOL_SIZE);
+                    if (Flags.enableCustomWorkManagerThreadPool()) {
+                        Log.i(TAG, "Using custom thread executor for WorkManager.");
+                        sWorkManagerExecutor = getCustomThreadPoolExecutor();
+                    } else {
+                        sWorkManagerExecutor = Executors
+                                .newFixedThreadPool(WORK_MANAGER_THREAD_POOL_SIZE);
+                    }
                 }
             }
         }
+    }
+
+    /**
+     * This thread pool maintains a fixed number of core threads, defined by {@code CORE_POOL_SIZE},
+     * which are always kept alive. When additional tasks arrive and all core threads are busy, the
+     * pool will create new threads to handle the load.
+     * <p>
+     * This is different from previously used fixed thread pool which retained all threads
+     * indefinitely, even when they are idle. This resulted in unnecessary resource retention.
+     * This executor can scale based on demand and release resources when threads are no longer
+     * needed.
+     *
+     * @return a {@link Executor} optimized for scalability
+     */
+    private static Executor getCustomThreadPoolExecutor() {
+        return new ThreadPoolExecutor(CORE_POOL_SIZE, Integer.MAX_VALUE,
+                KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>());
     }
 }
