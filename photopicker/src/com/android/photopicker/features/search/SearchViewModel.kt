@@ -315,13 +315,13 @@ constructor(
      * in the viewModelScope to ensure they aren't canceled if the user navigates away from the
      * PhotoGrid composable.
      */
-    fun handleGridItemSelection(item: Media, selectionLimitExceededMessage: String) {
+    fun handleGridItemSelection(
+        item: Media,
+        selectionLimitExceededMessage: String,
+        selectionSource: Telemetry.MediaLocation = Telemetry.MediaLocation.SEARCH_GRID,
+    ) {
         val updatedMediaItem =
-            Media.withSelectable(
-                item,
-                /* selectionSource */ Telemetry.MediaLocation.SEARCH_GRID,
-                /* album */ null,
-            )
+            Media.withSelectable(item, /* selectionSource */ selectionSource, /* album */ null)
         scope.launch {
             val result = selection.toggle(updatedMediaItem)
             if (result == SelectionModifiedResult.FAILURE_SELECTION_LIMIT_EXCEEDED) {
