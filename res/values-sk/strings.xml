@@ -172,8 +172,6 @@
     <string name="camera_album_display_name" msgid="1093891161978593789">"Kamera"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"Snímky obrazovky"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"Stiahnuté"</string>
-    <!-- no translation found for favorites_album_display_name (3533041926539268094) -->
-    <skip />
-    <!-- no translation found for videos_album_display_name (4274973715629315179) -->
-    <skip />
+    <string name="favorites_album_display_name" msgid="3533041926539268094">"Obľúbené"</string>
+    <string name="videos_album_display_name" msgid="4274973715629315179">"Videá"</string>
 </resources>
