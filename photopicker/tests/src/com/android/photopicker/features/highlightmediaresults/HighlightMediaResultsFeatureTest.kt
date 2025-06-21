@@ -1148,6 +1148,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     LocalNavController provides createNavController(),
                     LocalSelection provides selection,
                     LocalFeatureManager provides featureManager,
+                    LocalEvents provides events,
                     LocalLocalizationHelper provides LocalizationHelper(),
                 ) {
                     PhotopickerTheme(

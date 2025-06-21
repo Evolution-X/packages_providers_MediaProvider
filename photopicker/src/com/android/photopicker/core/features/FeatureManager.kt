@@ -125,6 +125,7 @@ class FeatureManager(
                 Event.ReportEmbeddedPhotopickerInfo::class.java,
                 Event.ReportPickerAppMediaCapabilities::class.java,
                 Event.ReportTranscodingVideoDetails::class.java,
+                Event.ReportSearchBarStatus::class.java,
             )
     }
 
@@ -142,7 +143,7 @@ class FeatureManager(
     // Prefetched data is the data that features can request FeatureManager to fetch for them
     // (typically from a different process), before the features have to decide if they are enabled
     // or not.
-    private val _deferredPrefetchResults: Map<PrefetchResultKey, Deferred<Any?>> =
+    public val deferredPrefetchResult: Map<PrefetchResultKey, Deferred<Any?>> =
         getDeferredPrefetchResults()
 
     /* Returns an immutable copy rather than the actual set. */
@@ -268,7 +269,7 @@ class FeatureManager(
         Log.d(TAG, "Beginning feature initialization with config: ${configuration.value}")
 
         for (featureCompanion in registeredFeatures) {
-            if (featureCompanion.isEnabled(config, _deferredPrefetchResults)) {
+            if (featureCompanion.isEnabled(config, deferredPrefetchResult)) {
                 val feature = featureCompanion.build(this)
                 _enabledFeatures.add(feature)
                 if (_tokenMap.contains(feature.token))

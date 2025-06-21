@@ -1005,8 +1005,19 @@ private fun ResultMediaGrid(
                 if (items.itemCount == 0) {
                     resultsState = ResultsState.LOADING_WITH_INDICATOR
                     delay(10000)
-                    if (resultsState == ResultsState.LOADING_WITH_INDICATOR)
+                    if (resultsState == ResultsState.LOADING_WITH_INDICATOR) {
+                        scope.launch {
+                            events.dispatch(
+                                Event.LogPhotopickerUIEvent(
+                                    FeatureToken.SEARCH.token,
+                                    configuration.sessionId,
+                                    configuration.callingPackageUid ?: -1,
+                                    Telemetry.UiEvent.UI_LOADED_SEARCH_RESULT_TIMEOUT,
+                                )
+                            )
+                        }
                         resultsState = ResultsState.EMPTY
+                    }
                 }
             }
         } else if (resultsState != ResultsState.EMPTY) {

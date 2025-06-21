@@ -101,6 +101,7 @@ class PhotopickerEventLogger(val dataService: Lazy<DataService>) {
                             event.isCloudSearchEnabled,
                             event.isLocalSearchEnabled,
                             event.isTranscodingRequested,
+                            event.highlightQuery.query,
                         )
                     }
                     is Event.LogPhotopickerUIEvent -> {
@@ -273,6 +274,14 @@ class PhotopickerEventLogger(val dataService: Lazy<DataService>) {
                             event.colorStandard,
                             event.colorTransfer,
                             event.mimeType,
+                        )
+                    }
+                    is Event.ReportSearchBarStatus -> {
+                        MediaProviderStatsLog.write(
+                            MediaProviderStatsLog
+                                .PHOTOPICKER_UIEVENT_LOGGED__UI_EVENT__PICKER_SEARCH_BAR_STATE,
+                            event.sessionId,
+                            event.searchStatus.state,
                         )
                     }
                 }
