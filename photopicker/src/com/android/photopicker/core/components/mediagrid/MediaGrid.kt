@@ -49,6 +49,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -162,6 +163,11 @@ private val MEASUREMENT_SELECTED_POSITION_FONT_SIZE = 14.sp
 
 /** The offset to apply to the selected icon to shift it over the corner of the image */
 private val MEASUREMENT_SELECTED_ICON_OFFSET = 8.dp
+/**
+ * The offset to apply to the selected icon to shift it over the corner of the image for a
+ * highlighted item
+ */
+private val MEASUREMENT_SELECTED_ICON_HIGHLIGHT_ITEM_OFFSET = 4.dp
 
 /** Border width for the selected icon */
 private val MEASUREMENT_SELECTED_ICON_BORDER = 2.dp
@@ -172,8 +178,17 @@ private val MEASUREMENT_SELECTED_CORNER_RADIUS = 16.dp
 /** The radius to use for the corners of grid cells in the highlight grid */
 private val MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS = 28.dp
 
-/** The height of the cells in the highlight grid */
-private val MEASUREMENT_HIGHLIGHT_GRID_CELL_HEIGHT = 176.dp
+/** The height of the unselected cells in the highlight grid */
+private val MEASUREMENT_HIGHLIGHT_GRID_UNSELECTED_CELL_HEIGHT = 176.dp
+
+/** The width of the unselected cells in the highlight grid */
+private val MEASUREMENT_HIGHLIGHT_GRID_UNSELECTED_CELL_WIDTH = 154.dp
+
+/** The height of the selected cells in the highlight grid */
+private val MEASUREMENT_HIGHLIGHT_GRID_SELECTED_CELL_HEIGHT = 152.dp
+
+/** The height of the unselected cells in the highlight grid */
+private val MEASUREMENT_HIGHLIGHT_GRID_SELECTED_CELL_WIDTH = 130.dp
 
 /** The padding to use around the default separator's content. */
 private val MEASUREMENT_SEPARATOR_PADDING = 16.dp
@@ -802,7 +817,15 @@ fun defaultBuildMediaItem(
             // Additionally, selected items get rounded corners, so that is added to the
             // baseModifier
             val selectedModifier =
-                baseModifier.clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS))
+                baseModifier.applyChoice(
+                    condition = isHighlightMediaItem,
+                    trueBlock = {
+                        width(MEASUREMENT_HIGHLIGHT_GRID_SELECTED_CELL_WIDTH)
+                            .height(MEASUREMENT_HIGHLIGHT_GRID_SELECTED_CELL_HEIGHT)
+                            .clip(RoundedCornerShape(MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS))
+                    },
+                    falseBlock = { clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS)) },
+                )
 
             val mediaDescription = getMediaContentDescription(item.media, dateFormat)
 
@@ -826,8 +849,14 @@ fun defaultBuildMediaItem(
                             )
                         }
                     }
-                    .aspectRatio(1f)
-                    .fillMaxSize()
+                    .applyChoice(
+                        condition = isHighlightMediaItem,
+                        trueBlock = {
+                            width(MEASUREMENT_HIGHLIGHT_GRID_UNSELECTED_CELL_WIDTH)
+                                .height(MEASUREMENT_HIGHLIGHT_GRID_UNSELECTED_CELL_HEIGHT)
+                        },
+                        falseBlock = { aspectRatio(1f).fillMaxSize() },
+                    )
                     .pointerInput(Unit) {
                         if (dragSelectionEnabled) {
                             detectTapGestures(onTap = { onClick?.invoke(item) })
@@ -866,12 +895,11 @@ fun defaultBuildMediaItem(
                                     applyChoice(
                                         condition = isHighlightMediaItem,
                                         trueBlock = {
-                                            Modifier.height(MEASUREMENT_HIGHLIGHT_GRID_CELL_HEIGHT)
-                                                .clip(
-                                                    RoundedCornerShape(
-                                                        MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS
-                                                    )
+                                            Modifier.clip(
+                                                RoundedCornerShape(
+                                                    MEASUREMENT_HIGHLIGHT_GRID_CELLS_RADIUS
                                                 )
+                                            )
                                         },
                                         falseBlock = { baseModifier },
                                     )
@@ -903,7 +931,7 @@ fun defaultBuildMediaItem(
 
                     // This is outside the box that wraps the image so it doesn't get clipped
                     // by the shape. Internally, it positions itself with similar padding.
-                    SelectedIconOverlay(isSelected, selectedPosition)
+                    SelectedIconOverlay(isSelected, selectedPosition, isHighlightMediaItem)
                 } // Surface
             } // Grid cell box
         } // when MediaItem branch
@@ -957,7 +985,11 @@ private fun MimeTypeOverlay(item: MediaGridItem.MediaItem) {
  * @param selectedIndex the index of the item in the selection set.
  */
 @Composable
-private fun SelectedIconOverlay(isSelected: Boolean, selectedIndex: Int) {
+private fun SelectedIconOverlay(
+    isSelected: Boolean,
+    selectedIndex: Int,
+    isHighlightMediaItem: Boolean = false,
+) {
 
     Box(modifier = Modifier.fillMaxSize().padding(MEASUREMENT_SELECTED_INTERNAL_PADDING)) {
         // Animate the visibility of the selected icon based on the [isSelected]
@@ -969,9 +1001,20 @@ private fun SelectedIconOverlay(isSelected: Boolean, selectedIndex: Int) {
                     // origin. (So that the center of the icon is closer to the
                     // actual visual corner). The offset is applied to the animation
                     // wrapper so the animation origin moves with the icon itself.
-                    .offset(
-                        x = -MEASUREMENT_SELECTED_ICON_OFFSET,
-                        y = -MEASUREMENT_SELECTED_ICON_OFFSET,
+                    .applyChoice(
+                        condition = isHighlightMediaItem,
+                        trueBlock = {
+                            offset(
+                                x = -MEASUREMENT_SELECTED_ICON_HIGHLIGHT_ITEM_OFFSET,
+                                y = -MEASUREMENT_SELECTED_ICON_HIGHLIGHT_ITEM_OFFSET,
+                            )
+                        },
+                        falseBlock = {
+                            offset(
+                                x = -MEASUREMENT_SELECTED_ICON_OFFSET,
+                                y = -MEASUREMENT_SELECTED_ICON_OFFSET,
+                            )
+                        },
                     ),
             visible = isSelected,
             enter = scaleIn(animationSpec = springDefaultEffectFloat),
