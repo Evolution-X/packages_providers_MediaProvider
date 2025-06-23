@@ -240,7 +240,7 @@ class FeatureManager(
                 mapOfDeferredWithTimeout<PrefetchResultKey, PrefetchDataService>(
                     inputMap = prefetchRequestMap,
                     input = prefetchDataService,
-                    timeoutMillis = 250L,
+                    timeoutMillis = 350L,
                     backgroundScope = scope,
                     dispatcher = dispatcher,
                 )
