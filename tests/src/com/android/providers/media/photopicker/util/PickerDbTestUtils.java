@@ -80,6 +80,21 @@ public class PickerDbTestUtils {
     public static final int RES_ID1 = 1234;
     public static final int RES_ID2 = 1235;
 
+    public static final String[] MEDIA_PROJECTION = new String[] {
+            CloudMediaProviderContract.MediaColumns.ID,
+            CloudMediaProviderContract.MediaColumns.MEDIA_STORE_URI,
+            CloudMediaProviderContract.MediaColumns.DATE_TAKEN_MILLIS,
+            CloudMediaProviderContract.MediaColumns.SYNC_GENERATION,
+            CloudMediaProviderContract.MediaColumns.SIZE_BYTES,
+            CloudMediaProviderContract.MediaColumns.MIME_TYPE,
+            CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION,
+            CloudMediaProviderContract.MediaColumns.DURATION_MILLIS,
+            CloudMediaProviderContract.MediaColumns.IS_FAVORITE,
+            CloudMediaProviderContract.MediaColumns.HEIGHT,
+            CloudMediaProviderContract.MediaColumns.WIDTH,
+            CloudMediaProviderContract.MediaColumns.ORIENTATION
+    };
+
     public static Cursor queryMediaAll(PickerDbFacade mFacade) {
         return mFacade.queryMediaForUi(
                 new PickerDbFacade.QueryFilterBuilder(1000).build());
@@ -179,21 +194,6 @@ public class PickerDbTestUtils {
     public static Cursor getMediaCursor(String id, long dateTakenMs, long generationModified,
             String mediaStoreUri, long sizeBytes, String mimeType, int standardMimeTypeExtension,
             boolean isFavorite) {
-        String[] projectionKey = new String[]{
-                CloudMediaProviderContract.MediaColumns.ID,
-                CloudMediaProviderContract.MediaColumns.MEDIA_STORE_URI,
-                CloudMediaProviderContract.MediaColumns.DATE_TAKEN_MILLIS,
-                CloudMediaProviderContract.MediaColumns.SYNC_GENERATION,
-                CloudMediaProviderContract.MediaColumns.SIZE_BYTES,
-                CloudMediaProviderContract.MediaColumns.MIME_TYPE,
-                CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION,
-                CloudMediaProviderContract.MediaColumns.DURATION_MILLIS,
-                CloudMediaProviderContract.MediaColumns.IS_FAVORITE,
-                CloudMediaProviderContract.MediaColumns.HEIGHT,
-                CloudMediaProviderContract.MediaColumns.WIDTH,
-                CloudMediaProviderContract.MediaColumns.ORIENTATION,
-        };
-
         String[] projectionValue = new String[]{
                 id,
                 mediaStoreUri,
@@ -209,7 +209,7 @@ public class PickerDbTestUtils {
                 String.valueOf(ORIENTATION),
         };
 
-        MatrixCursor c = new MatrixCursor(projectionKey);
+        MatrixCursor c = new MatrixCursor(MEDIA_PROJECTION);
         c.addRow(projectionValue);
         return c;
     }
