@@ -153,7 +153,7 @@ public class MediaQuery {
         Objects.requireNonNull(appContext);
         if (callingPackageUid == -1) {
             throw new IllegalArgumentException("Calling package uid in"
-                    + "ACTION_USER_SELECT_IMAGES_FOR_APP mode should not be -1. Invalid UID");
+                    + " ACTION_USER_SELECT_IMAGES_FOR_APP mode should not be -1. Invalid UID");
         }
 
         int userId = uidToUserId(callingPackageUid);

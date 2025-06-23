@@ -201,7 +201,9 @@ public class PickerUriResolverV2 {
             case PICKER_INTERNAL_MEDIA_SETS:
                 return PickerDataLayerV2.queryMediaSets(requireNonNull(queryArgs));
             case PICKER_INTERNAL_MEDIA_SET_CONTENTS:
-                return PickerDataLayerV2.queryMediaInMediaSet(requireNonNull(queryArgs));
+                return PickerDataLayerV2.queryMediaInMediaSet(
+                        appContext,
+                        requireNonNull(queryArgs));
             case PICKER_INTERNAL_ITEMS_PER_MONTH:
                 return PickerDataLayerV2.queryItemsPerMonth(appContext, requireNonNull(queryArgs));
             case PICKER_INTERNAL_MEDIA_PAGE_KEY:
