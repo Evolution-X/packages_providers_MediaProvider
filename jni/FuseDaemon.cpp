@@ -2816,8 +2816,10 @@ std::string FuseDaemon::ReadBackedUpDataFromLevelDb(const std::string& filePath)
     fuse->level_db_mutex.unlock();
 
     if (status.IsNotFound()) {
+        data = "";
         LOG(VERBOSE) << "Key is not found in leveldb: " << filePath << " " << status.ToString();
     } else if (!status.ok()) {
+        data = "";
         LOG(WARNING) << "Failure in leveldb read for key: " << filePath << " "
                      << status.ToString();
     }
@@ -2839,8 +2841,10 @@ std::string FuseDaemon::ReadOwnership(const std::string& key) {
     fuse->level_db_mutex.unlock();
 
     if (status.IsNotFound()) {
+        data = "";
         LOG(VERBOSE) << "Key is not found in leveldb: " << key << " " << status.ToString();
     } else if (!status.ok()) {
+        data = "";
         LOG(WARNING) << "Failure in leveldb read for key: " << key << " " << status.ToString();
     }
 
