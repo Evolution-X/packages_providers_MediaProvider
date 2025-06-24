@@ -5484,6 +5484,9 @@ public final class MediaStore {
      * substantial changes, and that data should be rescanned.
      * <p>
      * No other assumptions should be made about the meaning of the version.
+     * It can return null if external primary volume is not mounted. Apps should
+     * check for volume to be present in {@link #getExternalVolumeNames(Context)}
+     * before using this API.
      * <p>
      * This method returns the version for
      * {@link MediaStore#VOLUME_EXTERNAL_PRIMARY}; to obtain a version for a
@@ -5501,6 +5504,9 @@ public final class MediaStore {
      * substantial changes, and that data should be rescanned.
      * <p>
      * No other assumptions should be made about the meaning of the version.
+     * It can return null if requested volume is not mounted. Apps should check
+     * for volume to be present in {@link #getExternalVolumeNames(Context)}
+     * before using this API.
      *
      * @param volumeName specific volume to obtain an opaque version string for.
      *            Must be one of the values returned from
