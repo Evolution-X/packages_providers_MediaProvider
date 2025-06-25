@@ -11105,7 +11105,7 @@ public class MediaProvider extends ContentProvider {
             throws IOException {
         // Query levelDb only for external_primary storage paths
         // TODO: b/411419451 - Remove check on path when Stable Uris rolled out for all volume paths
-        if (shouldQueryLevelDbForFileAttributes() && path.contains("/storage/emulated/")) {
+        if (shouldQueryLevelDbForFileAttributes() && path.startsWith("/storage/emulated/")) {
             try {
                 Trace.beginSection("MP.queryFileAttrsFromLevelDb");
                 FuseDaemon daemon = getFuseDaemonForFile(new File(path), mVolumeCache);

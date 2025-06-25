@@ -278,6 +278,7 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
 
     size_t prev = 0, pos = 0;
     std::string delimiter = "::";
+    const int UNSPECIFIED_VALUE = -10;
 
     auto deserialize_bool = [&](size_t& prev, size_t& pos) -> bool {
         pos = value.find(delimiter, prev);
@@ -288,14 +289,22 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
 
     auto deserialize_int = [&](size_t& prev, size_t& pos) -> int {
         pos = value.find(delimiter, prev);
-        int result = std::atoi(value.substr(prev, pos - prev).c_str());
+        char* endptr;
+        int result = std::strtol(value.substr(prev, pos - prev).c_str(), &endptr, /* base */ 10);
+        if (*endptr != '\0') {
+            return UNSPECIFIED_VALUE;
+        }
         prev = pos + delimiter.length();
         return result;
     };
 
     auto deserialize_long = [&](size_t& prev, size_t& pos) -> int {
         pos = value.find(delimiter, prev);
-        long result = std::atol(value.substr(prev, pos - prev).c_str());
+        char* endptr;
+        long result = std::strtol(value.substr(prev, pos - prev).c_str(), &endptr, /* base */ 10);
+        if (*endptr != '\0') {
+            return UNSPECIFIED_VALUE;
+        }
         prev = pos + delimiter.length();
         return result;
     };
@@ -307,7 +316,7 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     }
 
     long row_id = deserialize_long(prev, pos);
-    if (row_id == -1) {
+    if (row_id == UNSPECIFIED_VALUE) {
         LOG(DEBUG) << "Error deserializing row id for path {" << path << "} from backed up data";
         return nullptr;
     }
@@ -317,37 +326,47 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     bool is_trashed = deserialize_bool(prev, pos);
 
     int media_type = deserialize_int(prev, pos);
-    if (media_type == -1) {
+    if (media_type == UNSPECIFIED_VALUE) {
         LOG(DEBUG) << "Error deserializing media type for path {" << path << "} from backed up data";
         return nullptr;
     }
 
     int user_id = deserialize_int(prev, pos);
-    if (user_id == -1) {
+    if (user_id == UNSPECIFIED_VALUE) {
         LOG(DEBUG) << "Error deserializing user id for path {" << path << "} from backed up data";
         return nullptr;
     }
 
     pos = value.find(delimiter, prev);
     std::string key = value.substr(prev, pos - prev);
-    int owner_pkg_id = std::atoi(key.c_str());
-
-    if (owner_pkg_id == -1) {
-        LOG(DEBUG) << "Error deserializing owner package id for path {" << path
-                   << "} from backed up data";
+    if (key.empty()) {
+        LOG(DEBUG) << "Error deserializing owner package info for path {" << path << "} from "
+                   << "backed up data";
         return nullptr;
     }
 
-    std::string owner_pkg_identifier = daemon->ReadOwnership(key);
-    if (owner_pkg_identifier.empty()) {
-        LOG(DEBUG) << "No ownership information found for owner id " << owner_pkg_id;
+    char* endptr;
+    int owner_pkg_id = std::strtol(value.substr(prev, pos - prev).c_str(), &endptr, /* base */ 10);
+    if (*endptr != '\0') {
+        LOG(DEBUG) << "Error deserializing owner package id for path {" << path << "} from "
+                   << "backed up data";
+        owner_pkg_id = UNSPECIFIED_VALUE;
         return nullptr;
     }
-    std::string owner_pkg_name =
-            owner_pkg_identifier.substr(0, owner_pkg_identifier.find(delimiter));
-    if (owner_pkg_name.empty()) {
-        LOG(DEBUG) << "No owner package name found for owner id " << owner_pkg_id;
-        return nullptr;
+
+    std::string owner_pkg_name = "null";
+
+    if (owner_pkg_id != -1) {
+        std::string owner_pkg_identifier = daemon->ReadOwnership(key);
+        if (owner_pkg_identifier.empty()) {
+            LOG(DEBUG) << "No ownership information found for " << key;
+            return nullptr;
+        }
+        owner_pkg_name = owner_pkg_identifier.substr(0, owner_pkg_identifier.find(delimiter));
+        if (owner_pkg_name.empty()) {
+            LOG(DEBUG) << "No owner package name found for owner id " << key;
+            return nullptr;
+        }
     }
 
     return env->NewObject(gFileAccessAttributesClass, gFileAccessAttributesCtor, row_id, media_type,
