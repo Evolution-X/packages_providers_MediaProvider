@@ -175,7 +175,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
     static final String DATA_MEDIA_XATTR_DIRECTORY_PATH = "/data/media/0";
 
     static final String INTERNAL_DATABASE_NAME = "internal.db";
-    static final String EXTERNAL_DATABASE_NAME = "external.db";
+    public static final String EXTERNAL_DATABASE_NAME = "external.db";
 
     /**
      * Raw SQL clause that can be used to obtain the current generation, which

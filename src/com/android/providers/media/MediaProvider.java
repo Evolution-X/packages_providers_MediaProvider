@@ -1690,7 +1690,10 @@ public class MediaProvider extends ContentProvider {
                 PackageManager.DONT_KILL_APP);
     }
 
-    Optional<DatabaseHelper> getDatabaseHelper(String dbName) {
+    /**
+     * Returns DatabaseHelper object
+     */
+    public Optional<DatabaseHelper> getDatabaseHelper(String dbName) {
         if (dbName.equalsIgnoreCase(INTERNAL_DATABASE_NAME)) {
             return Optional.of(mInternalDatabase);
         } else if (dbName.equalsIgnoreCase(EXTERNAL_DATABASE_NAME)) {
