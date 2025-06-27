@@ -318,8 +318,13 @@ public final class BackupExecutor {
      * Removes entry for given file path from Backup.
      */
     public void deleteBackupForPath(String path) {
-        if (isBackupAndRestoreSupported(mContext) && path != null && mLevelDBInstance != null) {
-            mLevelDBInstance.delete(path);
+        if (isBackupAndRestoreSupported(mContext) && path != null) {
+            mLevelDBInstance = LevelDBManager.getInstance(getBackupFilePath());
+            try {
+                mLevelDBInstance.delete(path);
+            } catch (Exception e) {
+                Log.e(TAG,  "Failure in path delete from backup", e);
+            }
         }
     }
 }
