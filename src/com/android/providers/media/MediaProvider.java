@@ -494,7 +494,7 @@ public class MediaProvider extends ContentProvider {
      */
     private static final long POLLING_TIME_IN_MILLIS = 100;
 
-    private static final long TIMEOUT_MILLIS = 10000;
+    private static final long TIMEOUT_MILLIS = 30_000;
     private static final long POLL_INTERVAL_MILLIS = 100;
     static final String WORK_INFO_STATE = "work_info_state";
     static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
