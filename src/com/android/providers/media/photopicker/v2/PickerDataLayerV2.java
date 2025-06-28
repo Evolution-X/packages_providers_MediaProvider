@@ -24,6 +24,7 @@ import static com.android.providers.media.MediaGrants.OWNER_PACKAGE_NAME_COLUMN;
 import static com.android.providers.media.MediaGrants.PACKAGE_USER_ID_COLUMN;
 import static com.android.providers.media.MediaProvider.isOwnedPhotosEnabled;
 import static com.android.providers.media.PickerUriResolver.getAlbumUri;
+import static com.android.providers.media.WorkManagerInitializer.getWorkManager;
 import static com.android.providers.media.photopicker.PickerSyncController.getPackageNameFromUid;
 import static com.android.providers.media.photopicker.PickerSyncController.uidToUserId;
 import static com.android.providers.media.photopicker.data.PickerDbFacade.KEY_LOCAL_ID;
@@ -31,7 +32,6 @@ import static com.android.providers.media.photopicker.sync.PickerSyncManager.IMM
 import static com.android.providers.media.photopicker.sync.PickerSyncManager.IMMEDIATE_LOCAL_SYNC_WORK_NAME;
 import static com.android.providers.media.photopicker.sync.PickerSyncManager.SYNC_CLOUD_ONLY;
 import static com.android.providers.media.photopicker.sync.PickerSyncManager.SYNC_LOCAL_ONLY;
-import static com.android.providers.media.WorkManagerInitializer.getWorkManager;
 import static com.android.providers.media.photopicker.v2.SearchSuggestionsProvider.getDefaultSuggestions;
 import static com.android.providers.media.photopicker.v2.SearchSuggestionsProvider.getSuggestionsFromCloudProvider;
 import static com.android.providers.media.photopicker.v2.SearchSuggestionsProvider.getSuggestionsFromLocalProvider;
@@ -796,20 +796,20 @@ public class PickerDataLayerV2 {
      * Returns a cursor with the cached content of a media set in response
      * @param queryArgs The arguments to filter and fetch media set content
      */
-    public static Cursor queryMediaInMediaSet(@NonNull Bundle queryArgs) {
+    public static Cursor queryMediaInMediaSet(
+            @NonNull Context appContext,
+            @NonNull Bundle queryArgs
+    ) {
 
         requireNonNull(queryArgs);
 
         MediaInMediaSetSyncRequestParams requestParams =
                 new MediaInMediaSetSyncRequestParams(queryArgs);
         MediaInMediaSetsQuery query = new MediaInMediaSetsQuery(
-                queryArgs, requestParams.getMediaSetPickerId()
+                appContext,
+                queryArgs,
+                requestParams.getMediaSetPickerId()
         );
-
-        if (MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP.equals(query.getIntentAction())) {
-            throw new RuntimeException("Search feature cannot be enabled with PickerChoice. "
-                    + "Can't query MediaSet content");
-        }
 
         PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
         final Set<String> providers = new HashSet<>(query.getProviders());
@@ -1082,7 +1082,6 @@ public class PickerDataLayerV2 {
     }
 
     /**
-     * @param appContext The application context.
      * @param localAuthority The effective local authority that we need to consider for this
      *                       transaction. If the local items should not be queried but the local
      *                       authority has some value, the effective local authority would be null.

@@ -109,7 +109,7 @@ val HIGHLIGHT_GRID_CONTENT_PADDING = PaddingValues(start = 16.dp, end = 16.dp, b
 val MEASUREMENT_HIGHLIGHT_GRID_CELL_ARRANGEMENT = 8.dp
 const val HIGHLIGHT_GRID_CELL_COUNT = 10
 const val HIGHLIGHT_GRID_ROW_COUNT = 1
-const val HIGHLIGHT_SEARCH_DURATION_MS = 3000L
+const val HIGHLIGHT_SEARCH_DURATION_MS = 6000L
 
 val HIGHLIGHT_QUERY_PLACEHOLDER_HEIGHT = 30.dp
 val HIGHLIGHT_QUERY_PLACEHOLDER_WIDTH = 150.dp
@@ -151,6 +151,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
             )
         }
     }
+    val searchViewModel: SearchViewModel = obtainViewModel(isActivityScoped = true)
 
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
     val selectionLimitExceededMessage =
@@ -270,6 +271,10 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
             RecentsLabel()
         }
     }
+
+    LaunchedEffect(Unit) {
+        searchViewModel.providerChangedEvent.collect { showHighlightSection = true }
+    }
 }
 
 /**
@@ -343,56 +348,52 @@ fun HighlightSectionContent(
     }
 
     LaunchedEffect(highlightMediaItems.loadState.refresh) {
-        if (highlightSectionState == HighlightSectionState.LOADING) {
-            val refreshLoadState = highlightMediaItems.loadState.refresh
-            val itemsCount = highlightMediaItems.itemCount
-            withContext(dispatcher) {
-                if (
-                    itemsCount == 0 &&
-                        refreshLoadState is LoadState.Loading &&
-                        highlightSectionState == HighlightSectionState.LOADING
-                ) {
-                    delay(HIGHLIGHT_SEARCH_DURATION_MS)
+        val refreshLoadState = highlightMediaItems.loadState.refresh
+        val itemsCount = highlightMediaItems.itemCount
+        withContext(dispatcher) {
+            if (
+                itemsCount == 0 &&
+                    refreshLoadState is LoadState.Loading &&
+                    highlightSectionState == HighlightSectionState.LOADING
+            ) {
+                delay(HIGHLIGHT_SEARCH_DURATION_MS)
+            }
+            when {
+                itemsCount == 0 &&
+                    (refreshLoadState is LoadState.Loading ||
+                        refreshLoadState is LoadState.Error) -> {
+                    highlightSectionState = HighlightSectionState.TIMEOUT
+                    events.dispatch(
+                        Event.LogPhotopickerUIEvent(
+                            FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                            configuration.sessionId,
+                            configuration.callingPackageUid ?: -1,
+                            Telemetry.UiEvent.UI_LOADED_HSR_TIMEOUT,
+                        )
+                    )
                 }
-                when {
-                    itemsCount == 0 &&
-                        (refreshLoadState is LoadState.Loading ||
-                            refreshLoadState is LoadState.Error) -> {
-                        highlightSectionState = HighlightSectionState.TIMEOUT
-                        events.dispatch(
-                            Event.LogPhotopickerUIEvent(
-                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
-                                configuration.sessionId,
-                                configuration.callingPackageUid ?: -1,
-                                Telemetry.UiEvent.UI_LOADED_HSR_TIMEOUT,
-                            )
+                itemsCount == 0 && refreshLoadState is LoadState.NotLoading -> {
+                    highlightSectionState = HighlightSectionState.EMPTY
+                    events.dispatch(
+                        Event.LogPhotopickerUIEvent(
+                            FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                            configuration.sessionId,
+                            configuration.callingPackageUid ?: -1,
+                            Telemetry.UiEvent.UI_LOADED_EMPTY_STATE,
                         )
-                    }
-
-                    itemsCount == 0 && refreshLoadState is LoadState.NotLoading -> {
-                        highlightSectionState = HighlightSectionState.EMPTY
-                        events.dispatch(
-                            Event.LogPhotopickerUIEvent(
-                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
-                                configuration.sessionId,
-                                configuration.callingPackageUid ?: -1,
-                                Telemetry.UiEvent.UI_LOADED_EMPTY_STATE,
-                            )
+                    )
+                    onEmptyResults()
+                }
+                else -> {
+                    highlightSectionState = HighlightSectionState.RESULTS_AVAILABLE
+                    events.dispatch(
+                        Event.LogPhotopickerUIEvent(
+                            FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
+                            configuration.sessionId,
+                            configuration.callingPackageUid ?: -1,
+                            Telemetry.UiEvent.UI_LOADED_HSR_RESULTS,
                         )
-                        onEmptyResults()
-                    }
-
-                    else -> {
-                        highlightSectionState = HighlightSectionState.RESULTS_AVAILABLE
-                        events.dispatch(
-                            Event.LogPhotopickerUIEvent(
-                                FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
-                                configuration.sessionId,
-                                configuration.callingPackageUid ?: -1,
-                                Telemetry.UiEvent.UI_LOADED_HSR_RESULTS,
-                            )
-                        )
-                    }
+                    )
                 }
             }
         }

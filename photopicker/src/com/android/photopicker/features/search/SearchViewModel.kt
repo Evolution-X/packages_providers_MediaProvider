@@ -33,6 +33,7 @@ import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.selection.SelectionModifiedResult
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.Media
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.extensions.insertMonthSeparators
 import com.android.photopicker.extensions.toMediaGridItemBaseFromMedia
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
@@ -133,6 +134,12 @@ constructor(
      * This `StateFlow` emits updates whenever the search enabled state of a profile changes.
      */
     val userSearchStateInfo: StateFlow<UserSearchStateInfo> = searchDataService.userSearchStateInfo
+
+    /**
+     * Represents the list of available media providers. This state is used to recompose Highlight
+     * Media Results grid whenever the list of available providers changes.
+     */
+    val providerChangedEvent: StateFlow<List<Provider>> = dataService.availableProviders
 
     private val suggestionCache = SearchSuggestionCache()
 

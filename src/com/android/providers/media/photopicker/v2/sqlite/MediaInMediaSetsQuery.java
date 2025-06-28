@@ -16,6 +16,10 @@
 
 package com.android.providers.media.photopicker.v2.sqlite;
 
+import static com.android.providers.media.photopicker.PickerSyncController.getPackageNameFromUid;
+
+import android.content.Context;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 
@@ -38,21 +42,38 @@ public class MediaInMediaSetsQuery {
     @NonNull
     private final List<String> mProviders;
     protected final int mPageSize;
+    private final int mCallingPackageUid;
+    @NonNull
+    private final Context mAppContext;
     @NonNull
     final MediaInMediaSetsLocalSubQuery mLocalMediaSubQuery;
     @NonNull
     final MediaInMediaSetsCloudSubQuery mCloudMediaSubquery;
+    @Nullable
+    private String[] mCallingPackageNames;
 
 
-    public MediaInMediaSetsQuery(Bundle queryArgs, @NonNull Long mediaPickerSetId) {
+    public MediaInMediaSetsQuery(
+            @NonNull Context appContext,
+            Bundle queryArgs,
+            @NonNull Long mediaPickerSetId) {
         Objects.requireNonNull(mediaPickerSetId);
         mIntentAction = queryArgs.getString("intent_action");
         mProviders = new ArrayList<>(
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
         mPageSize = queryArgs.getInt("page_size", Integer.MAX_VALUE);
+        mAppContext = appContext;
 
-        mLocalMediaSubQuery = new MediaInMediaSetsLocalSubQuery(queryArgs, mediaPickerSetId);
-        mCloudMediaSubquery = new MediaInMediaSetsCloudSubQuery(queryArgs, mediaPickerSetId);
+        mLocalMediaSubQuery = new MediaInMediaSetsLocalSubQuery(
+                queryArgs,
+                mediaPickerSetId);
+        mCloudMediaSubquery = new MediaInMediaSetsCloudSubQuery(
+                queryArgs,
+                mediaPickerSetId);
+        mCallingPackageUid =  queryArgs.getInt(Intent.EXTRA_UID, -1);
+        if (mCallingPackageUid != -1) {
+            mCallingPackageNames = getPackageNameFromUid(appContext, mCallingPackageUid);
+        }
     }
 
     /**
@@ -74,7 +95,9 @@ public class MediaInMediaSetsQuery {
                 localAuthority,
                 cloudAuthority,
                 mIntentAction,
-                PickerSQLConstants.Table.MEDIA
+                PickerSQLConstants.Table.MEDIA,
+                mCallingPackageUid,
+                mCallingPackageNames
         );
 
         final String localMediaRawQuery = getSubQuery(
@@ -110,7 +133,12 @@ public class MediaInMediaSetsQuery {
         final SelectSQLiteQueryBuilder subQueryBuilder =
                 new SelectSQLiteQueryBuilder(database);
         subQueryBuilder
-                .setTables(mediaInMediaSetSubQuery.getTableWithRequiredJoins())
+                .setTables(mediaInMediaSetSubQuery.getTableWithRequiredJoins(
+                        PickerSQLConstants.Table.MEDIA.name(),
+                        mAppContext,
+                        mCallingPackageUid,
+                        mIntentAction
+                ))
                 .setProjection(mediaProjection.getAll());
         mediaInMediaSetSubQuery.addWhereClause(
                 subQueryBuilder,

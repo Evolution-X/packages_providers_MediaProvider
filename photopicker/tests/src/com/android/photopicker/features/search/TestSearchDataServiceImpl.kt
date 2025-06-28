@@ -39,6 +39,10 @@ class TestSearchDataServiceImpl() : SearchDataService {
     var mediaSetSize: Int = FakeInMemoryMediaPagingSource.DEFAULT_SIZE
     var mediaList: List<Media>? = null
 
+    // Fetch the album media again
+    var mediaPagingSource: PagingSource<MediaPageKey, Media> =
+        FakeInMemoryMediaPagingSource(mediaSetSize)
+
     override val userSearchStateInfo: StateFlow<UserSearchStateInfo> =
         MutableStateFlow(UserSearchStateInfo(listOf("test_provider")))
 
@@ -65,15 +69,27 @@ class TestSearchDataServiceImpl() : SearchDataService {
         suggestion: SearchSuggestion,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize)
+        if (mediaPagingSource.invalid) {
+            mediaPagingSource = FakeInMemoryMediaPagingSource(mediaSetSize)
+        }
+        mediaPagingSource =
+            mediaList?.let { FakeInMemoryMediaPagingSource(it) } ?: mediaPagingSource
+        return mediaPagingSource
     }
 
     override fun getSearchResults(
         searchText: String,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize)
+        if (mediaPagingSource.invalid) {
+            mediaPagingSource = FakeInMemoryMediaPagingSource(mediaSetSize)
+        }
+        mediaPagingSource =
+            mediaList?.let { FakeInMemoryMediaPagingSource(it) } ?: mediaPagingSource
+        return mediaPagingSource
+    }
+
+    fun invalidateFakeInCache() {
+        mediaPagingSource.invalidate()
     }
 }

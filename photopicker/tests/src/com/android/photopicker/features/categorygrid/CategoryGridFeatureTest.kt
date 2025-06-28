@@ -1380,7 +1380,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = testCategoryDisplayName,
-                    categoryType = CategoryType.USER_ABLUMS,
+                    categoryType = CategoryType.USER_ALBUMS,
                     icons = emptyList(),
                     isLeafCategory = true,
                 )
