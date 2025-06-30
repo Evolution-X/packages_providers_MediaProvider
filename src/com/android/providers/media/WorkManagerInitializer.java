@@ -28,7 +28,7 @@ import com.android.providers.media.flags.Flags;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -40,7 +40,8 @@ public class WorkManagerInitializer {
     // requests grows, they should not block other work requests.
     private static final int WORK_MANAGER_THREAD_POOL_SIZE = 15;
 
-    private static final int CORE_POOL_SIZE = 4;
+    private static final int POOL_SIZE = 30;
+    private static final int QUEUE_SIZE = 50;
     private static final long KEEP_ALIVE_TIME_SECONDS = 60;
     @Nullable
     private static volatile Executor sWorkManagerExecutor;
@@ -85,9 +86,8 @@ public class WorkManagerInitializer {
     }
 
     /**
-     * This thread pool maintains a fixed number of core threads, defined by {@code CORE_POOL_SIZE},
-     * which are always kept alive. When additional tasks arrive and all core threads are busy, the
-     * pool will create new threads to handle the load.
+     * This thread pool can spawn a fixed number of threads, defined by {@code POOL_SIZE}. These
+     * threads are destroyed if the threads are idle for more than {@code KEEP_ALIVE_TIME_SECONDS}.
      * <p>
      * This is different from previously used fixed thread pool which retained all threads
      * indefinitely, even when they are idle. This resulted in unnecessary resource retention.
@@ -97,8 +97,10 @@ public class WorkManagerInitializer {
      * @return a {@link Executor} optimized for scalability
      */
     private static Executor getCustomThreadPoolExecutor() {
-        return new ThreadPoolExecutor(CORE_POOL_SIZE, Integer.MAX_VALUE,
-                KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS,
-                new SynchronousQueue<Runnable>());
+        ThreadPoolExecutor executor = new ThreadPoolExecutor(/* corePoolSize */ POOL_SIZE,
+                /* maxPoolSize */ POOL_SIZE, KEEP_ALIVE_TIME_SECONDS, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(QUEUE_SIZE), new ThreadPoolExecutor.AbortPolicy());
+        executor.allowCoreThreadTimeOut(true);
+        return  executor;
     }
 }
