@@ -111,11 +111,9 @@ import com.android.photopicker.core.components.MediaGridItem.Companion.defaultBu
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.embedded.LocalEmbeddedState
-import com.android.photopicker.core.glide.ParcelableGlideLoadable
 import com.android.photopicker.core.glide.Resolution
 import com.android.photopicker.core.glide.loadMedia
 import com.android.photopicker.core.theme.CustomAccentColorScheme
-import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.Group.Album
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.circleBackground
@@ -124,6 +122,7 @@ import com.android.photopicker.extensions.itemIndexAtPosition
 import com.android.photopicker.extensions.toMediaGridItemFromAlbum
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
 import com.android.photopicker.extensions.transferScrollableTouchesToHostInEmbedded
+import com.android.photopicker.features.categorygrid.categoryIcon.IconGrid
 import com.android.photopicker.util.LocalLocalizationHelper
 import com.android.photopicker.util.applyChoice
 import com.android.photopicker.util.applyWhen
@@ -168,6 +167,11 @@ private val MEASUREMENT_SELECTED_ICON_OFFSET = 8.dp
  * highlighted item
  */
 private val MEASUREMENT_SELECTED_ICON_HIGHLIGHT_ITEM_OFFSET = 4.dp
+
+/**
+ * The offset to apply to the badge icon to shift it over the corner of the image for a badged item
+ */
+private val MEASUREMENT_BADGE_ICON_OFFSET = 8.dp
 
 /** Border width for the selected icon */
 private val MEASUREMENT_SELECTED_ICON_BORDER = 2.dp
@@ -1305,7 +1309,8 @@ private fun defaultBuildCategoryItem(
                 Modifier.fillMaxWidth()
                     .clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS))
                     .aspectRatio(1f)
-            IconGrid(icons, modifier = modifier, categoryType)
+            val badgeIconModifier = Modifier.padding(MEASUREMENT_BADGE_ICON_OFFSET)
+            IconGrid(icons, modifier = modifier, categoryType, badge, badgeIconModifier)
             Spacer(Modifier.size(MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE))
             // Category title shown below the category grid.
             Text(
@@ -1317,85 +1322,6 @@ private fun defaultBuildCategoryItem(
             )
         }
     }
-}
-
-@Composable
-fun IconGrid(
-    icons: List<ParcelableGlideLoadable>,
-    modifier: Modifier,
-    categoryType: CategoryType,
-    maxIcon: Int = 4,
-    iconPerRow: Int = 2,
-) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Pad the list to ensure we required icons per row
-            val paddedIcons = (icons + List(maxIcon) { null }).take(maxIcon)
-            val iconsInRow = paddedIcons.chunked(iconPerRow)
-
-            val clipShape =
-                when (categoryType) {
-                    CategoryType.PEOPLE_AND_PETS,
-                    CategoryType.APP_FOLDERS -> {
-                        CircleShape
-                    }
-                    else -> {
-                        RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS)
-                    }
-                }
-
-            val iconGridModifier =
-                Modifier.fillMaxSize()
-                    .size(48.dp)
-                    .clip(clipShape)
-                    .background(MaterialTheme.colorScheme.surface)
-
-            iconsInRow.forEachIndexed { rowIndex, rowItem ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    rowItem.forEachIndexed { colIndex, icon ->
-                        Box(modifier = Modifier.weight(1f).aspectRatio(1f)) {
-                            if (icons.isNotEmpty() && icon is ParcelableGlideLoadable) {
-                                CategoryIcon(icon, iconGridModifier)
-                            } else {
-                                if (
-                                    icons.isEmpty() &&
-                                        !(rowIndex == iconsInRow.lastIndex &&
-                                            colIndex == rowItem.lastIndex)
-                                ) {
-                                    CategoryIconPlaceholder(iconGridModifier)
-                                } else {
-                                    CategoryIconPlaceholder(iconGridModifier, false)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CategoryIconPlaceholder(modifier: Modifier, showPlaceholder: Boolean = true) {
-    Box(
-        modifier =
-            when (showPlaceholder) {
-                true -> modifier
-                false -> Modifier
-            }
-    )
-}
-
-@Composable
-fun CategoryIcon(icon: ParcelableGlideLoadable, modifier: Modifier) {
-    loadMedia(media = icon, resolution = Resolution.THUMBNAIL, modifier = modifier)
 }
 
 /**

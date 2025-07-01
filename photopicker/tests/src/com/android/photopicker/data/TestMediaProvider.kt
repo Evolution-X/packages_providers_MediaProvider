@@ -27,6 +27,8 @@ import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.Icon.Companion.invoke
 import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -163,6 +165,7 @@ fun createCategory(type: CategoryType, authority: String): Group.Category {
         categoryType = type,
         icons = listOf(GlideIcon(Uri.parse("content://test_authority/id"), MediaSource.LOCAL)),
         isLeafCategory = true,
+        badge = Icon(Uri.EMPTY, MediaSource.LOCAL),
     )
 }
 

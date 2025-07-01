@@ -34,6 +34,7 @@ import com.android.photopicker.data.MediaProviderClient
 import com.android.photopicker.data.TestMediaProvider
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.GroupPageKey
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -538,6 +539,8 @@ class MediaProviderClientTest {
     @Test
     fun testFetchCategories() = runTest {
         val mediaProviderClient = MediaProviderClient()
+        val icon = Icon(Uri.EMPTY, MediaSource.LOCAL)
+        val providerToIconMap = testContentProvider.providers.associateWith { provider -> icon }
 
         val categoriesLoadResult: LoadResult<GroupPageKey, Group> =
             mediaProviderClient.fetchCategoriesAndAlbums(
@@ -552,6 +555,7 @@ class MediaProviderClientTest {
                         sessionId = sessionId,
                     ),
                 CancellationSignal(),
+                providerToIconMap,
             )
 
         assertThat(categoriesLoadResult is LoadResult.Page).isTrue()

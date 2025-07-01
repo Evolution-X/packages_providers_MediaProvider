@@ -35,10 +35,16 @@ import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORIT
 import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_VIDEOS
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
@@ -46,10 +52,12 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.unit.dp
 import androidx.test.filters.SdkSuppress
 import com.android.photopicker.R
 import com.android.photopicker.core.ActivityModule
@@ -72,6 +80,7 @@ import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.paging.FakeInMemoryAlbumPagingSource
@@ -80,6 +89,7 @@ import com.android.photopicker.extensions.navigateToAlbumMediaGridForCategories
 import com.android.photopicker.extensions.navigateToCategoryGrid
 import com.android.photopicker.extensions.navigateToMediaSetContentGrid
 import com.android.photopicker.features.PhotopickerFeatureBaseTest
+import com.android.photopicker.features.categorygrid.categoryIcon.IconGrid
 import com.android.photopicker.features.categorygrid.data.CategoryDataService
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
@@ -172,6 +182,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var categoryDataService: CategoryDataService
 
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
+
+    private val BADGE_ICON = Icon(Icons.Outlined.FolderCopy)
 
     @Before
     fun setup() {
@@ -350,6 +362,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                                 categoryType = CategoryType.PEOPLE_AND_PETS,
                                 icons = emptyList(),
                                 isLeafCategory = true,
+                                badge = null,
                             )
                         )
                     }
@@ -433,6 +446,50 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
             allAlbumNodes[0].assertIsFocused()
             allAlbumNodes[1].assertIsNotFocused()
             allAlbumNodes[2].assertIsNotFocused()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testIconGridHasBadgeThenBadgeIsDisplayed() =
+        testScope.runTest {
+            val badgeTestTag = "category_badge_overlay_icon"
+
+            composeTestRule.setContent {
+                IconGrid(
+                    icons = emptyList(),
+                    modifier = Modifier.size(100.dp),
+                    categoryType = CategoryType.DEVICE_FOLDERS,
+                    badgeIcon = BADGE_ICON,
+                    // Pass the test tag via the modifier parameter
+                    badgeIconModifier = Modifier.testTag(badgeTestTag),
+                )
+            }
+
+            advanceTimeBy(100)
+
+            composeTestRule.onNodeWithTag(badgeTestTag).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testIconGridHasNullBadgeThenBadgeIsNotDisplayed() =
+        testScope.runTest {
+            val badgeTestTag = "category_badge_overlay_icon"
+
+            composeTestRule.setContent {
+                IconGrid(
+                    icons = emptyList(),
+                    modifier = Modifier.size(100.dp),
+                    categoryType = CategoryType.DEVICE_FOLDERS,
+                    badgeIcon = null,
+                    // Pass the test tag via the modifier parameter
+                    badgeIconModifier = Modifier.testTag(badgeTestTag),
+                )
+            }
+
+            advanceTimeBy(100)
+
+            composeTestRule.onNodeWithTag(badgeTestTag).assertIsNotDisplayed()
         }
 
     @Test
@@ -852,6 +909,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.PEOPLE_AND_PETS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 
@@ -936,6 +994,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.PEOPLE_AND_PETS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 
@@ -1026,6 +1085,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.PEOPLE_AND_PETS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 
@@ -1127,6 +1187,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.PEOPLE_AND_PETS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 
@@ -1221,6 +1282,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.PEOPLE_AND_PETS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 
@@ -1304,6 +1366,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.PEOPLE_AND_PETS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 
@@ -1383,6 +1446,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.USER_ALBUMS,
                     icons = emptyList(),
                     isLeafCategory = true,
+                    badge = null,
                 )
             )
 

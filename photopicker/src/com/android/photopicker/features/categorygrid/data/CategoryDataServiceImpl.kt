@@ -31,6 +31,7 @@ import com.android.photopicker.data.MediaProviderClient
 import com.android.photopicker.data.NotificationService
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.GroupPageKey
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
@@ -292,6 +293,7 @@ class CategoryDataServiceImpl(
                 else -> {
                     val availableProviders: List<Provider> = dataService.availableProviders.value
                     val contentResolver: ContentResolver = dataService.activeContentResolver.value
+                    val providerToIconMap: Map<Provider, Icon> = dataService.getProviderToIconMap()
                     val pagingSource =
                         CategoryAndAlbumPagingSource(
                             contentResolver = contentResolver,
@@ -302,6 +304,7 @@ class CategoryDataServiceImpl(
                             configuration = config.value,
                             events = events,
                             cancellationSignal = cancellationSignal,
+                            providerToIconMap = providerToIconMap,
                         )
                     // Ensure that cancellation get propagated to the data source when the paging
                     // source is invalidated.

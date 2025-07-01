@@ -19,8 +19,17 @@ package com.android.photopicker.data.model
 import android.net.Uri
 import android.os.Parcel
 import android.os.Parcelable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.android.photopicker.core.glide.GlideLoadable
 import com.android.photopicker.core.glide.ParcelableGlideLoadable
@@ -84,10 +93,7 @@ data class GlideIcon(val uri: Uri, val mediaSource: MediaSource) : Icon(), Parce
     }
 }
 
-/**
- * An icon that is represented by an in-memory [ImageVector]. Since [ImageVector] is not parcelable,
- * this class relies on a static map to serialize and deserialize the object by name.
- */
+/** An icon that is represented by a static material3 [ImageVector]. */
 data class VectorIcon(val imageVector: ImageVector) : Icon() {
 
     override fun describeContents(): Int {
@@ -111,5 +117,33 @@ data class VectorIcon(val imageVector: ImageVector) : Icon() {
         override fun newArray(size: Int): Array<VectorIcon?> {
             return arrayOfNulls(size)
         }
+    }
+}
+
+/**
+ * A composable for a badge with a circular background and a centered [VectorIcon]
+ *
+ * @param icon The [VectorIcon] for the badge.
+ * @param boxModifier The modifier to be applied to the outer box.
+ * @param iconModifier The modifier to be applied to the centered icon.
+ */
+@Composable
+fun VectorIconBadge(
+    icon: VectorIcon,
+    boxModifier: Modifier,
+    iconModifier: Modifier,
+    contentDescription: String? = null,
+) {
+    Box(
+        modifier =
+            boxModifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerLow),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon.imageVector,
+            contentDescription = contentDescription,
+            modifier = iconModifier,
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }

@@ -83,6 +83,7 @@ class MediaSetsPagingSourceTest {
             categoryType = CategoryType.DEVICE_FOLDERS,
             icons = ArrayList(),
             isLeafCategory = false,
+            badge = null,
         )
 
     @Mock private lateinit var mockMediaProviderClient: MediaProviderClient

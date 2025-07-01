@@ -19,6 +19,7 @@ package com.android.photopicker.features.navigationbar
 import android.provider.MediaStore
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,7 +27,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ButtonDefaults
@@ -40,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -54,11 +58,17 @@ import com.android.photopicker.core.embedded.LocalEmbeddedState
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.features.Location
 import com.android.photopicker.core.features.LocationParams
+import com.android.photopicker.core.glide.Resolution
+import com.android.photopicker.core.glide.loadMedia
 import com.android.photopicker.core.hideWhenState
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations
 import com.android.photopicker.core.theme.CustomAccentColorScheme
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.VectorIcon
+import com.android.photopicker.data.model.VectorIconBadge
 import com.android.photopicker.extensions.navigateToAlbumGrid
 import com.android.photopicker.extensions.navigateToCategoryGrid
 import com.android.photopicker.extensions.navigateToMediaSetGrid
@@ -86,6 +96,12 @@ private val MEASUREMENT_BOT_PADDING = 24.dp
 /* Minimum height for the NavigationBar */
 private val MEASUREMENT_MIN_HEIGHT = 48.dp
 
+/* Navigation bar badge icon measurements */
+private val MEASUREMENT_BADGE_ICON_SIZE = 32.dp
+private val MEASUREMENT_BADGE_VECTOR_ICON_SIZE = 20.dp
+
+private val MODIFIER_BADGE_ICON = Modifier.size(MEASUREMENT_BADGE_ICON_SIZE)
+
 /**
  * Top of the NavigationBar feature.
  *
@@ -101,7 +117,11 @@ private val MEASUREMENT_MIN_HEIGHT = 48.dp
  * Additionally, the composable also calls for the [PROFILE_SELECTOR] and [OVERFLOW_MENU] locations.
  */
 @Composable
-fun NavigationBar(modifier: Modifier = Modifier, params: LocationParams) {
+fun NavigationBar(
+    modifier: Modifier = Modifier,
+    params: LocationParams,
+    badgeIconModifier: Modifier = MODIFIER_BADGE_ICON,
+) {
 
     val navController = LocalNavController.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -130,16 +150,16 @@ fun NavigationBar(modifier: Modifier = Modifier, params: LocationParams) {
                 if (featureManager.isFeatureEnabled(AlbumGridFeature::class.java)) {
                     NavigationBarForAlbum(modifier)
                 } else {
-                    NavigationBarForGroup(modifier)
+                    NavigationBarForGroup(modifier, badgeIconModifier)
                 }
             }
 
             currentRoute == PhotopickerDestinations.MEDIA_SET_GRID.route -> {
-                NavigationBarForGroup(modifier)
+                NavigationBarForGroup(modifier, badgeIconModifier)
             }
 
             currentRoute == PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route -> {
-                NavigationBarForGroup(modifier)
+                NavigationBarForGroup(modifier, badgeIconModifier)
             }
 
             // When search feature is enabled then display search bar along with profile selector,
@@ -323,7 +343,7 @@ private fun NavigationBarForAlbum(modifier: Modifier) {
  * @param modifier Modifier used to configure the layout of the navigation bar.
  */
 @Composable
-private fun NavigationBarForGroup(modifier: Modifier) {
+private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifier = Modifier) {
     val navController = LocalNavController.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     Row(modifier = modifier.fillMaxWidth()) {
@@ -380,6 +400,8 @@ private fun NavigationBarForGroup(modifier: Modifier) {
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
+                    group.badge?.let { NavigationBarBadgeIcon(it, badgeIconModifier) }
+                    Spacer(modifier = Modifier.width(MEASUREMENT_SPACER_SIZE))
                     Text(
                         text = group.displayName ?: "",
                         overflow = TextOverflow.Ellipsis,
@@ -433,6 +455,30 @@ private fun NavigationBarForGroup(modifier: Modifier) {
                 Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
             }
         }
+    }
+}
+
+/**
+ * A composable that displays a badge icon, typically used in the navigation bar next to a title.
+ *
+ * This badge can render either a [GlideIcon] or a [VectorIcon].
+ *
+ * @param icon The [Icon] to display in the badge.
+ */
+@Composable
+private fun NavigationBarBadgeIcon(icon: Icon, modifier: Modifier = Modifier) {
+    when (icon) {
+        is GlideIcon ->
+            loadMedia(media = icon, resolution = Resolution.THUMBNAIL, modifier = modifier)
+        is VectorIcon ->
+            VectorIconBadge(
+                icon = icon,
+                boxModifier =
+                    modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                iconModifier = Modifier.size(MEASUREMENT_BADGE_VECTOR_ICON_SIZE),
+            )
     }
 }
 

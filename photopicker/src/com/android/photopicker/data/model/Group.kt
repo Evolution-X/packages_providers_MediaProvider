@@ -156,6 +156,7 @@ sealed interface Group : Parcelable {
         val categoryType: CategoryType,
         val icons: List<ParcelableGlideLoadable>,
         val isLeafCategory: Boolean,
+        val badge: Icon?,
     ) : Group {
 
         override fun describeContents(): Int {
@@ -171,6 +172,7 @@ sealed interface Group : Parcelable {
             out.writeString(categoryType.name)
             out.writeParcelableList(icons, /* flags */ 0)
             out.writeBoolean(isLeafCategory)
+            out.writeParcelable(badge, 0)
         }
 
         companion object CREATOR : Parcelable.Creator<Category> {
@@ -194,6 +196,7 @@ sealed interface Group : Parcelable {
                             )
                         },
                     isLeafCategory = parcel.readBoolean(),
+                    badge = parcel.readParcelable(Icon::class.java.classLoader),
                 )
             }
 
