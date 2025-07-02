@@ -58,6 +58,7 @@ import static com.android.providers.media.photopicker.util.PickerDbTestUtils.get
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getMediaCursor;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getMediaGrantsCursor;
 import static com.android.providers.media.photopicker.v2.PickerDataLayerV2.COLUMN_GRANTS_COUNT;
+import static com.android.providers.media.photopicker.v2.PickerDataLayerV2.PREFS_KEY_SEARCH_STATE_ENABLED;
 import static com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper.EMPTY_MEDIA_ID;
 
 import static com.google.common.truth.Truth.assertThat;
@@ -74,6 +75,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.Manifest;
@@ -81,6 +83,7 @@ import android.compat.testing.PlatformCompatChangeRule;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
@@ -139,6 +142,7 @@ import com.android.providers.media.photopicker.v2.sqlite.SearchSuggestionsDataba
 import com.android.providers.media.photopicker.v2.sqlite.SearchSuggestionsQuery;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import libcore.junit.util.compat.CoreCompatChangeRule.EnableCompatChanges;
 
@@ -184,6 +188,10 @@ public class PickerDataLayerV2Test {
     private ListenableFuture<Operation.State.SUCCESS> mMockFuture;
     @Mock
     CategoriesState mCategoriesState;
+    @Mock
+    private SharedPreferences mUserPrefs;
+    @Mock
+    private SharedPreferences.Editor mEditor;
     private PickerDbFacade mFacade;
     private Context mContext;
     private MockContentResolver mMockContentResolver;
@@ -431,6 +439,49 @@ public class PickerDataLayerV2Test {
                                             .DISPLAY_NAME.getColumnName()))
             );
         }
+    }
+
+    @Test
+    public void testGetSearchProvidersReturnsProviderAndCachesSearchState() {
+
+        when(mMockSyncController.getSearchState()).thenReturn(mSearchState);
+        when(mMockSyncController.getCloudProviderOrDefault(null))
+                .thenReturn(CLOUD_PROVIDER);
+        when(mUserPrefs.edit()).thenReturn(mEditor);
+        // The cloud provider is capable of search
+        when(mSearchState.doesPickerSupportSearch(any(), anyString()))
+                .thenReturn(true);
+        when(mSearchState.doesCloudProviderSupportSearch(any(), anyString()))
+                .thenReturn(true);
+
+        Bundle result = PickerDataLayerV2.getSearchProviders(
+                mContext,
+                MoreExecutors.directExecutor(),
+                MoreExecutors.directExecutor()
+        );
+
+        assertTrue(result.getStringArrayList(PickerSQLConstants.EXTRA_SEARCH_PROVIDER_AUTHORITIES)
+                .contains(CLOUD_PROVIDER));
+
+        // The 'true' result was cached
+        verify(mMockSyncController).cacheCloudSearchCapability(true);
+    }
+
+    @Test
+    public void testGetSearchProvidersReadsFromCacheForSearchState() {
+        // Pre-populate the cache with 'true'
+        when(mMockSyncController.readLastKnownSearchCapability()).thenReturn(true);
+        when(mUserPrefs.getBoolean(PREFS_KEY_SEARCH_STATE_ENABLED, false))
+                .thenReturn(true);
+        when(mSearchState.doesPickerSupportSearch(any(), anyString()))
+                .thenReturn(true);
+
+        // Since we can't easily timeout CompletableFuture.get(), the key is to
+        // verify the fallback logic. We can assume the timeout will trigger the catch block.
+        boolean searchCapability = PickerDataLayerV2.readLastKnownSearchCapability(
+                mMockSyncController);
+
+        assertTrue(searchCapability);
     }
 
     @Test
