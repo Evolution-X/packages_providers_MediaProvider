@@ -15,7 +15,6 @@
  */
 
 #include "MediaProviderWrapper.h"
-#include "libfuse_jni/ReaddirHelper.h"
 
 #include <android-base/logging.h>
 #include <android-base/properties.h>
@@ -23,11 +22,12 @@
 #include <nativehelper/scoped_local_ref.h>
 #include <nativehelper/scoped_primitive_array.h>
 #include <nativehelper/scoped_utf_chars.h>
-
 #include <pthread.h>
 
 #include <mutex>
 #include <unordered_map>
+
+#include "libfuse_jni/ReaddirHelper.h"
 
 namespace mediaprovider {
 namespace fuse {
@@ -187,8 +187,12 @@ int renameInternal(JNIEnv* env, jobject media_provider_object, jmethodID mid_ren
 int validatePathIfUnicodeCheckEnabled(JNIEnv* env, jobject media_provider_object,
                                       jmethodID mid_unicode_check_enabled_, const string& path) {
     bool flagEnabled = env->CallBooleanMethod(media_provider_object, mid_unicode_check_enabled_);
-    if (flagEnabled && path != env->GetStringUTFChars(env->NewStringUTF(path.c_str()), nullptr)) {
-        return EPERM;
+    if (flagEnabled) {
+        ScopedLocalRef<jstring> j_path(env, env->NewStringUTF(path.c_str()));
+        ScopedUtfChars utf_chars_path(env, j_path.get());
+        if (path != utf_chars_path.c_str()) {
+            return EPERM;
+        }
     }
     return 0;
 }
