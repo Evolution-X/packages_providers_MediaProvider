@@ -51,6 +51,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
 import androidx.compose.ui.test.swipeDown
@@ -1339,6 +1340,14 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                     .setHighlightSearchMediaTextQuery(testQuery)
                     .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+            val callingPackageLabel = "TestPackage"
+            configurationManager
+                .get()
+                .setCaller(
+                    callingPackage = "com.android.test.package",
+                    callingPackageUid = 12345,
+                    callingPackageLabel = callingPackageLabel,
+                )
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
@@ -1365,6 +1374,34 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                     useUnmergedTree = true,
                 )
                 .assertIsDisplayed()
+            // Assert the info icon and tooltip display/dismiss behavior
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_hsr_tooltip_icon_description)
+                    )
+                )
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_hsr_tooltip_icon_description)
+                    )
+                )
+                .performClick()
+
+            val expectedTooltipText =
+                resources.getString(R.string.photopicker_hsr_tooltip_text, callingPackageLabel)
+            composeTestRule
+                .onNode(hasText(expectedTooltipText), useUnmergedTree = true)
+                .assertIsDisplayed()
+
+            composeTestRule.mainClock.advanceTimeBy(5000L)
+
+            composeTestRule
+                .onNode(hasText(expectedTooltipText), useUnmergedTree = true)
+                .assertIsNotDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_recents_label)),
@@ -1388,9 +1425,12 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         testScope.runTest {
             assumeTrue(SdkLevel.isAtLeastU())
 
-            val highlightAlbum = MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES
+            val highlightAlbum = HighlightAlbum.HIGHLIGHT_ALBUM_FAVORITES
+            val highlightAlbumId = MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES
             val info: EmbeddedPhotoPickerFeatureInfo =
-                EmbeddedPhotoPickerFeatureInfo.Builder().setHighlightAlbumId(highlightAlbum).build()
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightAlbumId(highlightAlbumId)
+                    .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
 
             val testDataService = dataService.get() as? TestDataServiceImpl
@@ -1448,11 +1488,23 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             advanceTimeBy(1000)
 
-            // Verify album name, Recents label and the SeeAll button are displayed
-            composeTestRule
-                .onNode(hasText(HighlightAlbum.HIGHLIGHT_ALBUM_FAVORITES.albumId))
-                .assertIsDisplayed()
+            // Verify album name, Recents label and the SeeAll button are displayed. Info icon
+            // is not displayed.
             val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasText(
+                        HighlightAlbum.getAlbumNameFromAlbum(getTestableContext(), highlightAlbum)
+                    )
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_hsr_tooltip_icon_description)
+                    )
+                )
+                .assertIsNotDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
