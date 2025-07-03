@@ -477,6 +477,9 @@ private fun HighlightMediaGrid(
     val state = rememberGridDragSelectState()
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
     val description = stringResource(R.string.photopicker_hsr_media_text)
+    val configuration = LocalPhotopickerConfiguration.current
+    val dragSelectionEnabled =
+        configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED && configuration.selectionLimit > 1
 
     val dateFormat =
         LocalLocalizationHelper.current.getLocalizedDateTimeFormatter(
@@ -490,7 +493,7 @@ private fun HighlightMediaGrid(
                 .height(MEASUREMENT_HIGHLIGHT_GRID_HEIGHT)
                 .semantics { contentDescription = description }
                 .applyWhen(
-                    LocalPhotopickerConfiguration.current.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
+                    dragSelectionEnabled,
                     {
                         onGridDragSelect(
                             config = LocalPhotopickerConfiguration.current,
@@ -522,7 +525,7 @@ private fun HighlightMediaGrid(
                     selectedPosition = selection.indexOf(highlightMediaItem.media),
                     onClick = { onGridItemSelection(highlightMediaItem) },
                     onLongPress = { onItemLongClick(highlightMediaItem) },
-                    dragSelectionEnabled = true,
+                    dragSelectionEnabled = dragSelectionEnabled,
                     dateFormat = dateFormat,
                     focusItem = null,
                 )
