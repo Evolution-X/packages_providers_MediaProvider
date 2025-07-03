@@ -23,8 +23,10 @@ import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group.Album
 import com.android.photopicker.data.model.Group.BaseAlbum
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
+import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.data.paging.FakeInMemoryAlbumPagingSource
 import com.android.photopicker.data.paging.FakeInMemoryMediaPagingSource
@@ -58,6 +60,12 @@ class TestDataServiceImpl() : DataService {
     val _availableProviders = MutableStateFlow<List<Provider>>(emptyList())
     override val availableProviders: StateFlow<List<Provider>> = _availableProviders
 
+    var _providerToIconMap: Map<Provider, Icon> = emptyMap()
+
+    override suspend fun getProviderToIconMap(): Map<Provider, Icon> {
+        return _providerToIconMap
+    }
+
     var allowedProviders: List<Provider> = emptyList()
 
     val collectionInfo: HashMap<Provider, CollectionInfo> = HashMap()
@@ -66,6 +74,7 @@ class TestDataServiceImpl() : DataService {
 
     fun setAvailableProviders(newProviders: List<Provider>) {
         _availableProviders.update { newProviders }
+        _providerToIconMap = newProviders.associateWith { Icon(Uri.EMPTY, MediaSource.LOCAL) }
     }
 
     override val activeContentResolver: StateFlow<ContentResolver>
