@@ -7459,7 +7459,7 @@ public class MediaProvider extends ContentProvider {
     @VisibleForTesting
     protected void verifyCallerHasManageExternalStoragePermission() {
         if (!isCallingPackageManager()) {
-            throw new IllegalArgumentException("File restoring operations requires the "
+            throw new SecurityException("File restoring operations requires the "
                     + "MANAGE_EXTERNAL_STORAGE permission for the calling package");
         }
     }
