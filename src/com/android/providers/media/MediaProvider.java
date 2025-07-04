@@ -169,6 +169,7 @@ import static com.android.providers.media.util.FileUtils.isDownload;
 import static com.android.providers.media.util.FileUtils.isExternalMediaDirectory;
 import static com.android.providers.media.util.FileUtils.isObbOrChildRelativePath;
 import static com.android.providers.media.util.FileUtils.sanitizePath;
+import static com.android.providers.media.util.FileUtils.shouldBeVisible;
 import static com.android.providers.media.util.FileUtils.toFuseFile;
 import static com.android.providers.media.util.Logging.LOGV;
 import static com.android.providers.media.util.Logging.TAG;
@@ -10531,6 +10532,9 @@ public class MediaProvider extends ContentProvider {
                 // If we are on a FUSE thread, we don't need to invalidate,
                 // (and *must* not, otherwise we'd crash) because the invalidation
                 // is already reflected in the lower filesystem
+                return;
+            } else if (shouldBeVisible(path)) {
+                Log.w(TAG, "Don't delete fuse dentry cache for volume root path " + path);
                 return;
             } else {
                 daemon.invalidateFuseDentryCache(path);
