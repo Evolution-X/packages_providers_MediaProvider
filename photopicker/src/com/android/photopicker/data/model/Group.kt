@@ -246,7 +246,7 @@ sealed interface Group : Parcelable {
                     displayName = parcel.readString(),
                     icon =
                         parcel.readParcelable(ParcelableGlideLoadable::class.java.classLoader)
-                            ?: Icon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
+                            ?: GlideIcon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
                 )
             }
 

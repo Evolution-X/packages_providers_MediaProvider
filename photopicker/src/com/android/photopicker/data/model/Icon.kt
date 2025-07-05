@@ -19,17 +19,32 @@ package com.android.photopicker.data.model
 import android.net.Uri
 import android.os.Parcel
 import android.os.Parcelable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.android.photopicker.core.glide.GlideLoadable
 import com.android.photopicker.core.glide.ParcelableGlideLoadable
 import com.android.photopicker.core.glide.Resolution
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.signature.ObjectKey
 
+sealed class Icon() : Parcelable {
+    companion object {
+        operator fun invoke(uri: Uri, mediaSource: MediaSource): GlideIcon {
+            return GlideIcon(uri, mediaSource)
+        }
+
+        operator fun invoke(imageVector: ImageVector): VectorIcon {
+            return VectorIcon(imageVector)
+        }
+    }
+}
+
 /**
  * An icon is a simple object which points to a media resource can be loaded by [Glide] because it
  * implements the [GlideLoadable] interface.
  */
-data class Icon(val uri: Uri, val mediaSource: MediaSource) : ParcelableGlideLoadable {
+data class GlideIcon(val uri: Uri, val mediaSource: MediaSource) : Icon(), ParcelableGlideLoadable {
     override fun getSignature(resolution: Resolution): ObjectKey {
         return ObjectKey("${uri}_$resolution")
     }
@@ -54,16 +69,46 @@ data class Icon(val uri: Uri, val mediaSource: MediaSource) : ParcelableGlideLoa
         out.writeString(mediaSource.name)
     }
 
-    companion object CREATOR : Parcelable.Creator<Icon> {
+    companion object CREATOR : Parcelable.Creator<GlideIcon> {
 
-        override fun createFromParcel(parcel: Parcel): Icon {
-            return Icon(
+        override fun createFromParcel(parcel: Parcel): GlideIcon {
+            return GlideIcon(
                 uri = Uri.parse(parcel.readString() ?: ""),
                 mediaSource = MediaSource.valueOf(parcel.readString() ?: "LOCAL"),
             )
         }
 
-        override fun newArray(size: Int): Array<Icon?> {
+        override fun newArray(size: Int): Array<GlideIcon?> {
+            return arrayOfNulls(size)
+        }
+    }
+}
+
+/**
+ * An icon that is represented by an in-memory [ImageVector]. Since [ImageVector] is not parcelable,
+ * this class relies on a static map to serialize and deserialize the object by name.
+ */
+data class VectorIcon(val imageVector: ImageVector) : Icon() {
+
+    override fun describeContents(): Int {
+        return 0
+    }
+
+    override fun writeToParcel(out: Parcel, flags: Int) {
+        out.writeString(imageVector.name)
+    }
+
+    companion object CREATOR : Parcelable.Creator<VectorIcon> {
+
+        override fun createFromParcel(parcel: Parcel): VectorIcon? {
+            val imageName = parcel.readString()
+            return when (imageName) {
+                Icons.Outlined.FolderCopy.name -> VectorIcon(Icons.Outlined.FolderCopy)
+                else -> return null
+            }
+        }
+
+        override fun newArray(size: Int): Array<VectorIcon?> {
             return arrayOfNulls(size)
         }
     }

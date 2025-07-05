@@ -21,8 +21,8 @@ import android.os.Parcel
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.android.photopicker.data.model.CategoryType
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
-import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.MediaSource
 import com.google.common.truth.Truth.assertWithMessage
 import org.junit.Test
@@ -78,7 +78,7 @@ class GroupTest {
                 categoryType = CategoryType.PEOPLE_AND_PETS,
                 icons =
                     listOf(
-                        Icon(
+                        GlideIcon(
                             uri =
                                 Uri.EMPTY.buildUpon()
                                     .apply {
@@ -89,7 +89,7 @@ class GroupTest {
                                     .build(),
                             mediaSource = MediaSource.LOCAL,
                         ),
-                        Icon(
+                        GlideIcon(
                             uri =
                                 Uri.EMPTY.buildUpon()
                                     .apply {
@@ -127,7 +127,7 @@ class GroupTest {
                 authority = "authority",
                 displayName = "media set name",
                 icon =
-                    Icon(
+                    GlideIcon(
                         uri =
                             Uri.EMPTY.buildUpon()
                                 .apply {

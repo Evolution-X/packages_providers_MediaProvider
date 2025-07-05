@@ -70,8 +70,8 @@ import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.model.CategoryType
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
-import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.paging.FakeInMemoryAlbumPagingSource
@@ -838,7 +838,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = testMediaSetname,
-                    icon = Icon(Uri.parse(""), MediaSource.LOCAL),
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
                 )
             )
 
@@ -922,7 +922,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = testMediaSetname,
-                    icon = Icon(Uri.parse(""), MediaSource.LOCAL),
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
                 )
             )
 
@@ -1012,7 +1012,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = testMediaSetname,
-                    icon = Icon(Uri.parse(""), MediaSource.LOCAL),
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
                 )
             )
 
@@ -1113,7 +1113,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = testMediaSetname,
-                    icon = Icon(Uri.parse(""), MediaSource.LOCAL),
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
                 )
             )
 
@@ -1207,7 +1207,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = testMediaSetname,
-                    icon = Icon(Uri.parse(""), MediaSource.LOCAL),
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
                 )
             )
 
@@ -1550,7 +1550,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     pickerId = 1234L,
                     authority = "a",
                     displayName = "Media Set",
-                    icon = Icon(Uri.parse(""), MediaSource.LOCAL),
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
                 )
 
             // Update configuration to support multi-select. Use a high limit to avoid capping.

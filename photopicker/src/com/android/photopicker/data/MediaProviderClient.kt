@@ -29,9 +29,9 @@ import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.data.MediaProviderClient.Companion.SEARCH_REQUEST_INIT_CALL_METHOD
 import com.android.photopicker.data.model.CollectionInfo
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.GroupPageKey
-import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.KeyToCategoryType
 import com.android.photopicker.data.model.Media
@@ -1494,8 +1494,8 @@ open class MediaProviderClient {
                     val groupType = getString(getColumnIndexOrThrow(GroupResponse.MEDIA_GROUP.key))
                     when (groupType) {
                         GroupType.CATEGORY.name -> {
-                            val icons: List<Icon> =
-                                listOf<Icon?>(
+                            val icons: List<GlideIcon> =
+                                listOf<GlideIcon?>(
                                         this.getIcon(
                                             authorityToSourceMap,
                                             GroupResponse.UNWRAPPED_COVER_URI.key,
@@ -1623,7 +1623,7 @@ open class MediaProviderClient {
                                 this.getIcon(
                                     authorityToSourceMap,
                                     GroupResponse.UNWRAPPED_COVER_URI.key,
-                                ) ?: Icon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
+                                ) ?: GlideIcon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
                         )
                     )
                 } catch (e: Exception) {
@@ -1635,11 +1635,14 @@ open class MediaProviderClient {
         return result
     }
 
-    /** Creates an [Icon] object from the current [Cursor] row. If an error occurs, returns null. */
+    /**
+     * Creates an [GlideIcon] object from the current [Cursor] row. If an error occurs, returns
+     * null.
+     */
     private fun Cursor.getIcon(
         authorityToSourceMap: Map<String, MediaSource>,
         columnName: String,
-    ): Icon? {
+    ): GlideIcon? {
         var unwrappedUriString: String? = null
 
         try {
@@ -1652,7 +1655,7 @@ open class MediaProviderClient {
             val unwrappedUri: Uri = Uri.parse(unwrappedUriString)
             val authority: String? = unwrappedUri.getAuthority()
             val mediaSource: MediaSource = authorityToSourceMap[authority] ?: MediaSource.LOCAL
-            val icon = Icon(unwrappedUri, mediaSource)
+            val icon = GlideIcon(unwrappedUri, mediaSource)
             icon
         }
     }

@@ -17,7 +17,7 @@
 package com.android.photopicker.features.search
 
 import android.net.Uri
-import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.features.search.SearchViewModel.Companion.ZERO_STATE_SEARCH_QUERY
 import com.android.photopicker.features.search.model.SearchSuggestion
@@ -150,7 +150,7 @@ class SearchSuggestionCacheTest {
                 authority = "cloud.authority",
                 displayText = null,
                 type = SearchSuggestionType.FACE,
-                icon = Icon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
+                icon = GlideIcon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
             )
 
         // Try to add history suggestion to cache

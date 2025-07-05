@@ -19,7 +19,7 @@ package com.android.photopicker.data
 import android.net.Uri
 import android.os.CancellationSignal
 import androidx.paging.PagingSource
-import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
@@ -59,7 +59,7 @@ class TestSearchDataServiceImpl() : SearchDataService {
                 "authority",
                 "Emma",
                 SearchSuggestionType.FACE,
-                Icon(Uri.parse("xyz"), MediaSource.LOCAL),
+                GlideIcon(Uri.parse("xyz"), MediaSource.LOCAL),
             ),
             SearchSuggestion(null, "authority", "paris", SearchSuggestionType.HISTORY, null),
         )
