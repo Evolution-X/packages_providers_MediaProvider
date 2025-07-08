@@ -1191,6 +1191,9 @@ public class MediaProvider extends ContentProvider {
             mTranscodeHelper.deleteCachedTranscodeFile(deletedRow.getId());
             mPhotoPickerTranscodeHelper.deleteCachedTranscodedFile(
                     PickerSyncController.LOCAL_PICKER_PROVIDER_AUTHORITY, deletedRow.getId());
+            if (Flags.queryLeveldbForFileAttributes()) {
+                mDatabaseBackupAndRecovery.markBackupAsDirty(helper, deletedRow);
+            }
 
             helper.postBackground(() -> {
                 // Item no longer exists, so revoke all access to it
