@@ -311,10 +311,11 @@ public class PickerDataLayerV2 {
 
     /**
      * Returns a cursor with cached media sets in response
+     *
      * @param queryArgs The arguments to filter and fetch media sets
      */
     @NonNull
-    public static Cursor queryMediaSets(@NonNull Bundle queryArgs) {
+    public static Cursor queryMediaSets(Context appContext, @NonNull Bundle queryArgs) {
         requireNonNull(queryArgs);
 
         MediaSetsSyncRequestParams requestParams = new MediaSetsSyncRequestParams(queryArgs);
@@ -335,7 +336,7 @@ public class PickerDataLayerV2 {
                 syncController.getDbFacade().getDatabase(),
                 requestParams);
         final Cursor result = MediaGroupCursorUtils
-                .getMediaGroupCursorForMediaSets(mediaSetsCursor);
+                .getMediaGroupCursorForMediaSets(appContext, mediaSetsCursor);
 
         Log.i(TAG, "Returning " + (result == null ? null : result.getCount()) + " media sets.");
         return result;

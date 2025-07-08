@@ -57,6 +57,8 @@ private constructor(
                             authority = "a",
                             displayName = TEST_MEDIASET_NAME_PREFIX + "$i",
                             icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                            badge = null,
+                            parentCategoryType = "parent_category_type",
                         )
                     )
                 }

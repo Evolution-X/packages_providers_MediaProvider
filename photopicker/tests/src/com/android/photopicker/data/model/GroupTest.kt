@@ -158,6 +158,8 @@ class GroupTest(private val testName: String, private val badgeIcon: Icon?) {
                                 .build(),
                         mediaSource = MediaSource.LOCAL,
                     ),
+                badge = badgeIcon,
+                parentCategoryType = "parent_category_type",
             )
 
         val parcel = Parcel.obtain()

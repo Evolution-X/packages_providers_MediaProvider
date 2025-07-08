@@ -351,6 +351,7 @@ class CategoryDataServiceImpl(
 
                 val availableProviders: List<Provider> = dataService.availableProviders.value
                 val contentResolver: ContentResolver = dataService.activeContentResolver.value
+                val providerToIconMap: Map<Provider, Icon> = dataService.getProviderToIconMap()
                 val pagingSource =
                     MediaSetsPagingSource(
                         contentResolver = contentResolver,
@@ -361,6 +362,7 @@ class CategoryDataServiceImpl(
                         configuration = config.value,
                         events = events,
                         cancellationSignal = cancellationSignal,
+                        providerToIconMap = providerToIconMap,
                     )
                 // Ensure that cancellation get propagated to the data source when the paging source
                 // is invalidated.

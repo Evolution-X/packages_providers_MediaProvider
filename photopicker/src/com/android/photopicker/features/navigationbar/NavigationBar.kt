@@ -21,11 +21,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,6 +51,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.android.photopicker.R
 import com.android.photopicker.core.StateSelector
@@ -58,12 +61,14 @@ import com.android.photopicker.core.embedded.LocalEmbeddedState
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.features.Location
 import com.android.photopicker.core.features.LocationParams
+import com.android.photopicker.core.glide.ParcelableGlideLoadable
 import com.android.photopicker.core.glide.Resolution
 import com.android.photopicker.core.glide.loadMedia
 import com.android.photopicker.core.hideWhenState
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations
 import com.android.photopicker.core.theme.CustomAccentColorScheme
+import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Icon
@@ -99,6 +104,9 @@ private val MEASUREMENT_MIN_HEIGHT = 48.dp
 /* Navigation bar badge icon measurements */
 private val MEASUREMENT_BADGE_ICON_SIZE = 32.dp
 private val MEASUREMENT_BADGE_VECTOR_ICON_SIZE = 20.dp
+private val MEASUREMENT_BADGE_NEGATIVE_OFFSET = 4.dp
+private val MEASUREMENT_OVERLAPPING_BADGES_BOX_SIZE =
+    MEASUREMENT_BADGE_ICON_SIZE + MEASUREMENT_BADGE_ICON_SIZE - MEASUREMENT_BADGE_NEGATIVE_OFFSET
 
 private val MODIFIER_BADGE_ICON = Modifier.size(MEASUREMENT_BADGE_ICON_SIZE)
 
@@ -428,6 +436,20 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
+
+                    group.badge?.let {
+                        when (group.parentCategoryType) {
+                            CategoryType.PEOPLE_AND_PETS.key ->
+                                NavigationBarOverlappingBadgeIcon(
+                                    badgeIcon = it,
+                                    coverIcon = group.icon,
+                                    badgeIconModifier,
+                                )
+                            else -> NavigationBarBadgeIcon(it, badgeIconModifier)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(MEASUREMENT_SPACER_SIZE))
                     Text(
                         text = group.displayName ?: "",
                         overflow = TextOverflow.Ellipsis,
@@ -479,6 +501,53 @@ private fun NavigationBarBadgeIcon(icon: Icon, modifier: Modifier = Modifier) {
                         .background(MaterialTheme.colorScheme.surfaceContainerLow),
                 iconModifier = Modifier.size(MEASUREMENT_BADGE_VECTOR_ICON_SIZE),
             )
+    }
+}
+
+/**
+ * A composable that displays overlapping badge icons, typically used in the navigation bar next to
+ * a title.
+ *
+ * This badge icon can either be a [GlideIcon] or a [VectorIcon]. The cover icon can only be a
+ * [ParcelableGlideLoadable] icon.
+ *
+ * @param badgeIcon The [Icon] to display in the badge.
+ * @param coverIcon The overlapping [ParcelableGlideLoadable] icon to display in the badge.
+ * @param modifier The modifier to be applied to the icons.
+ */
+@Composable
+private fun NavigationBarOverlappingBadgeIcon(
+    badgeIcon: Icon,
+    coverIcon: ParcelableGlideLoadable,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = Modifier.width(MEASUREMENT_OVERLAPPING_BADGES_BOX_SIZE),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        when (badgeIcon) {
+            is GlideIcon ->
+                loadMedia(media = badgeIcon, resolution = Resolution.THUMBNAIL, modifier = modifier)
+
+            is VectorIcon ->
+                VectorIconBadge(
+                    icon = badgeIcon,
+                    boxModifier =
+                        modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                    iconModifier = Modifier.size(MEASUREMENT_BADGE_VECTOR_ICON_SIZE),
+                )
+        }
+        loadMedia(
+            media = coverIcon,
+            resolution = Resolution.THUMBNAIL,
+            modifier =
+                modifier
+                    .offset(x = MEASUREMENT_BADGE_ICON_SIZE - MEASUREMENT_BADGE_NEGATIVE_OFFSET)
+                    .zIndex(1f)
+                    .clip(CircleShape),
+        )
     }
 }
 

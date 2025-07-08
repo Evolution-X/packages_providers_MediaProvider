@@ -26,6 +26,7 @@ import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.paging.PagingSource.LoadResult
 import com.android.modules.utils.build.SdkLevel
@@ -230,6 +231,7 @@ open class MediaProviderClient {
         ADDITIONAL_UNWRAPPED_COVER_URI_3("additional_cover_uri_3"),
         CATEGORY_TYPE("category_type"),
         IS_LEAF_CATEGORY("is_leaf_category"),
+        BADGE_ICON_URI("badge_icon_uri"),
     }
 
     enum class GroupType() {
@@ -734,6 +736,7 @@ open class MediaProviderClient {
         parentCategory: Group.Category,
         config: PhotopickerConfiguration,
         cancellationSignal: CancellationSignal?,
+        providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group.MediaSet> {
         val input: Bundle =
             bundleOf(
@@ -751,7 +754,12 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMediaSets(availableProviders),
+                            data =
+                                cursor.getListOfMediaSets(
+                                    availableProviders,
+                                    providerToIconMap,
+                                    parentCategory.categoryType.key,
+                                ),
                             prevKey = cursor.getPrevGroupPageKey(),
                             nextKey = cursor.getNextGroupPageKey(),
                         )
@@ -1615,28 +1623,45 @@ open class MediaProviderClient {
 
     /** Creates a list of [Group.MediaSet]-s from the given [Cursor]. */
     private fun Cursor.getListOfMediaSets(
-        availableProviders: List<Provider>
+        availableProviders: List<Provider>,
+        providerToIconMap: Map<Provider, Icon>,
+        parentCategoryType: String,
     ): List<Group.MediaSet> {
         val result: MutableList<Group.MediaSet> = mutableListOf<Group.MediaSet>()
         val authorityToSourceMap: Map<String, MediaSource> =
             availableProviders.associate { provider -> provider.authority to provider.mediaSource }
+        val authorityToProviderMap: Map<String, Provider> =
+            availableProviders.associateBy { provider -> provider.authority }
 
         if (this.moveToFirst()) {
             do {
                 try {
+                    val authority = getString(getColumnIndexOrThrow(GroupResponse.AUTHORITY.key))
+                    val badgeUri =
+                        getString(getColumnIndexOrThrow(GroupResponse.BADGE_ICON_URI.key))?.toUri()
                     result.add(
                         Group.MediaSet(
                             id = getString(getColumnIndexOrThrow(GroupResponse.GROUP_ID.key)),
                             pickerId = getLong(getColumnIndexOrThrow(GroupResponse.PICKER_ID.key)),
-                            authority =
-                                getString(getColumnIndexOrThrow(GroupResponse.AUTHORITY.key)),
+                            authority = authority,
                             displayName =
                                 getString(getColumnIndexOrThrow(GroupResponse.DISPLAY_NAME.key)),
                             icon =
                                 this.getIcon(
                                     authorityToSourceMap,
                                     GroupResponse.UNWRAPPED_COVER_URI.key,
-                                ) ?: GlideIcon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
+                                )
+                                    ?: GlideIcon(
+                                        uri = Uri.parse(""),
+                                        mediaSource = MediaSource.LOCAL,
+                                    ),
+                            badge =
+                                getMediaSetBadge(
+                                    badgeUri,
+                                    authorityToProviderMap.getOrDefault(authority, null),
+                                    providerToIconMap,
+                                ),
+                            parentCategoryType = parentCategoryType,
                         )
                     )
                 } catch (e: Exception) {
@@ -1756,5 +1781,16 @@ open class MediaProviderClient {
             CategoryType.APP_FOLDERS -> null
             else -> providerToIconMap.getOrDefault(provider, null)
         }
+    }
+
+    private fun getMediaSetBadge(
+        badgeUri: Uri?,
+        provider: Provider?,
+        providerToIconMap: Map<Provider, Icon>,
+    ): Icon? {
+        badgeUri?.let {
+            return Icon(it, MediaSource.LOCAL)
+        }
+        return providerToIconMap.getOrDefault(provider, null)
     }
 }

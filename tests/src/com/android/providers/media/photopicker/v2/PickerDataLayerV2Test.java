@@ -16,6 +16,7 @@
 
 package com.android.providers.media.photopicker.v2;
 
+import static android.provider.MediaStore.MY_USER_ID;
 import static android.provider.MediaStore.PER_USER_RANGE;
 
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.ALBUM_ID;
@@ -42,7 +43,9 @@ import static com.android.providers.media.photopicker.util.PickerDbTestUtils.LOC
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.LOCAL_PROVIDER;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.MP4_VIDEO_MIME_TYPE;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.ORIENTATION;
+import static com.android.providers.media.photopicker.util.PickerDbTestUtils.PACKAGE_NAME1;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.PNG_IMAGE_MIME_TYPE;
+import static com.android.providers.media.photopicker.util.PickerDbTestUtils.RES_ID1;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.STANDARD_MIME_TYPE_EXTENSION;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.TEST_DIFFERENT_PACKAGE_NAME;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.TEST_PACKAGE_NAME;
@@ -66,6 +69,7 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
@@ -165,6 +169,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -1404,16 +1409,25 @@ public class PickerDataLayerV2Test {
     }
 
     @Test
-    public void testQueryMediaSets() throws RequestObsoleteException {
+    public void testQueryMediaSets()
+            throws RequestObsoleteException, PackageManager.NameNotFoundException {
         List<String> mimeTypes = new ArrayList<>();
         mimeTypes.add("image/*");
-        String mediaSetId1 = "mediaSetId1";
+        String mediaSetId1 = CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS + ":"
+                + PACKAGE_NAME1;
         String mediaSetId2 = "mediaSetId2";
         String displayName1 = "displayName1";
         String displayName2 = "displayName2";
         String coverId1 = "56";
         String coverId2 = "76";
         String categoryId = "id";
+
+        doReturn(mMockPackageManager)
+                .when(mMockContext).getPackageManager();
+        ApplicationInfo applicationInfo = new ApplicationInfo();
+        applicationInfo.icon = RES_ID1;
+        doReturn(applicationInfo).when(mMockPackageManager).getApplicationInfo(PACKAGE_NAME1, 0);
+
 
         String[] columns = new String[]{
                 CloudMediaProviderContract.MediaSetColumns.ID,
@@ -1440,7 +1454,7 @@ public class PickerDataLayerV2Test {
         extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_ID, categoryId);
         extras.putStringArrayList("providers", new ArrayList<>(List.of(SearchProvider.AUTHORITY)));
 
-        try (Cursor mediaSets = PickerDataLayerV2.queryMediaSets(extras)) {
+        try (Cursor mediaSets = PickerDataLayerV2.queryMediaSets(mMockContext, extras)) {
             assertNotNull(mediaSets);
             assertEquals(2, mediaSets.getCount());
 
@@ -1450,12 +1464,21 @@ public class PickerDataLayerV2Test {
                 assertEquals(mediaSetId1, retrievedMediaSetId1);
                 String retrievedDisplayName1 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
                         PickerSQLConstants.MediaGroupResponseColumns.DISPLAY_NAME.getColumnName()));
-                assertEquals(retrievedDisplayName1, displayName1);
+                assertEquals(displayName1, retrievedDisplayName1);
                 String retrievedUri1 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
                         PickerSQLConstants.MediaGroupResponseColumns.UNWRAPPED_COVER_URI
                                 .getColumnName()
                 ));
                 assertTrue(retrievedUri1.contains(coverId1));
+                String retrievedBadgeUri1 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
+                        PickerSQLConstants.MediaGroupResponseColumns.BADGE_ICON_URI
+                                .getColumnName()
+                ));
+                String expectedBadgeUri = String.format(
+                        Locale.ROOT,
+                        "android.resource://%s@%s/%s",
+                        MY_USER_ID, PACKAGE_NAME1, RES_ID1);
+                assertEquals(expectedBadgeUri, retrievedBadgeUri1);
 
                 mediaSets.moveToNext();
                 String retrievedMediaSetId2 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
@@ -1463,13 +1486,17 @@ public class PickerDataLayerV2Test {
                 assertEquals(mediaSetId2, retrievedMediaSetId2);
                 String retrievedDisplayName2 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
                         PickerSQLConstants.MediaGroupResponseColumns.DISPLAY_NAME.getColumnName()));
-                assertEquals(retrievedDisplayName2, displayName2);
+                assertEquals(displayName2, retrievedDisplayName2);
                 String retrievedUri2 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
                         PickerSQLConstants.MediaGroupResponseColumns.UNWRAPPED_COVER_URI
                                 .getColumnName()
                 ));
                 assertTrue(retrievedUri2.contains(coverId2));
-
+                String retrievedBadgeUri2 = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
+                        PickerSQLConstants.MediaGroupResponseColumns.BADGE_ICON_URI
+                                .getColumnName()
+                ));
+                assertNull(retrievedBadgeUri2);
             }
         }
     }

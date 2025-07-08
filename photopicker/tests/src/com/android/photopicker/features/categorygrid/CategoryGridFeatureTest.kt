@@ -49,10 +49,12 @@ import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
@@ -68,6 +70,7 @@ import com.android.photopicker.core.ConcurrencyModule
 import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
 import com.android.photopicker.core.ViewModelModule
+import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.configuration.ConfigurationManager
 import com.android.photopicker.core.configuration.TestPhotopickerConfiguration
 import com.android.photopicker.core.events.Events
@@ -184,6 +187,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
 
     private val BADGE_ICON = Icon(Icons.Outlined.FolderCopy)
+    private val BADGE_TEST_TAG = "badge_overlay_icon"
+    private val MEDIA_SET_NAME = "My Folder"
 
     @Before
     fun setup() {
@@ -452,8 +457,6 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testIconGridHasBadgeThenBadgeIsDisplayed() =
         testScope.runTest {
-            val badgeTestTag = "category_badge_overlay_icon"
-
             composeTestRule.setContent {
                 IconGrid(
                     icons = emptyList(),
@@ -461,21 +464,19 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.DEVICE_FOLDERS,
                     badgeIcon = BADGE_ICON,
                     // Pass the test tag via the modifier parameter
-                    badgeIconModifier = Modifier.testTag(badgeTestTag),
+                    badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
                 )
             }
 
             advanceTimeBy(100)
 
-            composeTestRule.onNodeWithTag(badgeTestTag).assertIsDisplayed()
+            composeTestRule.onNodeWithTag(BADGE_TEST_TAG).assertIsDisplayed()
         }
 
     @Test
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testIconGridHasNullBadgeThenBadgeIsNotDisplayed() =
         testScope.runTest {
-            val badgeTestTag = "category_badge_overlay_icon"
-
             composeTestRule.setContent {
                 IconGrid(
                     icons = emptyList(),
@@ -483,13 +484,13 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     categoryType = CategoryType.DEVICE_FOLDERS,
                     badgeIcon = null,
                     // Pass the test tag via the modifier parameter
-                    badgeIconModifier = Modifier.testTag(badgeTestTag),
+                    badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
                 )
             }
 
             advanceTimeBy(100)
 
-            composeTestRule.onNodeWithTag(badgeTestTag).assertIsNotDisplayed()
+            composeTestRule.onNodeWithTag(BADGE_TEST_TAG).assertIsNotDisplayed()
         }
 
     @Test
@@ -896,6 +897,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     authority = "a",
                     displayName = testMediaSetname,
                     icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
                 )
             )
 
@@ -981,6 +984,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     authority = "a",
                     displayName = testMediaSetname,
                     icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
                 )
             )
 
@@ -1072,6 +1077,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     authority = "a",
                     displayName = testMediaSetname,
                     icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
                 )
             )
 
@@ -1174,6 +1181,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     authority = "a",
                     displayName = testMediaSetname,
                     icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
                 )
             )
 
@@ -1269,6 +1278,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     authority = "a",
                     displayName = testMediaSetname,
                     icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
                 )
             )
 
@@ -1615,6 +1626,8 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                     authority = "a",
                     displayName = "Media Set",
                     icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
                 )
 
             // Update configuration to support multi-select. Use a high limit to avoid capping.
@@ -1693,4 +1706,86 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                 .that(selection.size())
                 .isEqualTo(columns)
         }
+
+    @Test
+    fun testMediaSetHasBadgeThenBadgeIsDisplayed() {
+        val mediaSetWithBadge =
+            Group.MediaSet(
+                id = "1",
+                pickerId = 1L,
+                authority = "a",
+                displayName = MEDIA_SET_NAME,
+                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
+                badge = GlideIcon(Uri.EMPTY, MediaSource.REMOTE),
+                parentCategoryType = CategoryType.APP_FOLDERS.key,
+            )
+        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithBadge)
+
+        composeTestRule.setContent {
+            mediaSetContentFactory(
+                item = gridItem,
+                onClick = {},
+                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
+            )
+        }
+
+        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
+        composeTestRule.onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun testMediaSetHasNullBadgeThenBadgeIsNotDisplayed() {
+        val mediaSetWithoutBadge =
+            Group.MediaSet(
+                id = "2",
+                pickerId = 2L,
+                authority = "a",
+                displayName = MEDIA_SET_NAME,
+                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
+                badge = null,
+                parentCategoryType = CategoryType.APP_FOLDERS.key,
+            )
+        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithoutBadge)
+
+        composeTestRule.setContent {
+            mediaSetContentFactory(
+                item = gridItem,
+                onClick = {},
+                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
+            )
+        }
+
+        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
+        composeTestRule
+            .onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun testMediaSetIsFromUserAlbumsCategoryThenBadgeIsNotDisplayed() {
+        val mediaSetWithoutBadge =
+            Group.MediaSet(
+                id = "2",
+                pickerId = 2L,
+                authority = "a",
+                displayName = MEDIA_SET_NAME,
+                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
+                badge = GlideIcon(Uri.EMPTY, MediaSource.REMOTE),
+                parentCategoryType = CategoryType.USER_ALBUMS.key,
+            )
+        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithoutBadge)
+
+        composeTestRule.setContent {
+            mediaSetContentFactory(
+                item = gridItem,
+                onClick = {},
+                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
+            )
+        }
+
+        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
+        composeTestRule
+            .onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
 }

@@ -176,6 +176,8 @@ fun createMediaSet(mediaSetId: String): Group.MediaSet {
         authority = DEFAULT_PROVIDERS[0].authority,
         displayName = mediaSetId,
         icon = GlideIcon(Uri.parse("content://test_authority/$mediaSetId"), MediaSource.LOCAL),
+        badge = Icon(Uri.EMPTY, MediaSource.LOCAL),
+        parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
     )
 }
 
@@ -589,6 +591,7 @@ class TestMediaProvider(
                     MediaProviderClient.GroupResponse.DISPLAY_NAME.key,
                     MediaProviderClient.GroupResponse.AUTHORITY.key,
                     MediaProviderClient.GroupResponse.UNWRAPPED_COVER_URI.key,
+                    MediaProviderClient.GroupResponse.BADGE_ICON_URI.key,
                 )
             )
         mediaSets.forEach {
@@ -599,6 +602,7 @@ class TestMediaProvider(
                     it.displayName,
                     it.authority,
                     it.icon.getLoadableUri().toString(),
+                    Uri.EMPTY,
                 )
             )
         }

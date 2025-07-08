@@ -572,6 +572,8 @@ class MediaProviderClientTest {
     @Test
     fun testFetchMediaSets() = runTest {
         val mediaProviderClient = MediaProviderClient()
+        val icon = Icon(Uri.EMPTY, MediaSource.LOCAL)
+        val providerToIconMap = testContentProvider.providers.associateWith { provider -> icon }
 
         val mediaSetsLoadResult: LoadResult<GroupPageKey, Group.MediaSet> =
             mediaProviderClient.fetchMediaSets(
@@ -586,6 +588,7 @@ class MediaProviderClientTest {
                         sessionId = sessionId,
                     ),
                 cancellationSignal = CancellationSignal(),
+                providerToIconMap = providerToIconMap,
             )
 
         assertThat(mediaSetsLoadResult is LoadResult.Page).isTrue()

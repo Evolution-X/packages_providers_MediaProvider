@@ -284,25 +284,16 @@ fun mediaGrid(
             dateFormat: DateFormat,
         ) -> Unit =
         { item, isSelected, onClick, onLongPress, dateFormat ->
-            when (item) {
-                is MediaGridItem.MediaItem ->
-                    defaultBuildMediaItem(
-                        item = item,
-                        isSelected = isSelected,
-                        selectedPosition = selection.indexOf(item.media),
-                        onClick = onClick,
-                        onLongPress = onLongPress,
-                        dragSelectionEnabled = false,
-                        dateFormat = dateFormat,
-                        focusItem = focusItem,
-                    )
-
-                is MediaGridItem.AlbumItem -> defaultBuildAlbumItem(item, onClick, focusItem)
-                is MediaGridItem.CategoryItem -> defaultBuildCategoryItem(item, onClick, focusItem)
-                is MediaGridItem.PersonMediaSetItem -> defaultBuildPersonMediaSetItem(item, onClick)
-                is MediaGridItem.MediaSetItem -> defaultBuildMediaSetItem(item, onClick)
-                else -> {}
-            }
+            defaultContentItemFactory(
+                item = item,
+                isSelected = isSelected,
+                onClick = onClick,
+                onLongPress = onLongPress,
+                dragSelectionEnabled = false,
+                dateFormat = dateFormat,
+                focusItem = focusItem,
+                selection = selection,
+            )
         },
     contentSeparatorFactory: @Composable (item: MediaGridItem.SeparatorItem) -> Unit = { item ->
         defaultBuildSeparator(item)
@@ -420,25 +411,16 @@ fun mediaGrid(
             dateFormat: DateFormat,
         ) -> Unit =
         { item, isSelected, onClick, onLongPress, dateFormat ->
-            when (item) {
-                is MediaGridItem.MediaItem ->
-                    defaultBuildMediaItem(
-                        item = item,
-                        isSelected = isSelected,
-                        selectedPosition = selection.indexOf(item.media),
-                        onClick = onClick,
-                        onLongPress = {}, // Explicitly no-op for this overload
-                        dragSelectionEnabled = dragSelectionEnabled,
-                        dateFormat = dateFormat,
-                        focusItem = focusItem,
-                    )
-
-                is MediaGridItem.AlbumItem -> defaultBuildAlbumItem(item, onClick, focusItem)
-                is MediaGridItem.CategoryItem -> defaultBuildCategoryItem(item, onClick, focusItem)
-                is MediaGridItem.PersonMediaSetItem -> defaultBuildPersonMediaSetItem(item, onClick)
-                is MediaGridItem.MediaSetItem -> defaultBuildMediaSetItem(item, onClick)
-                else -> {}
-            }
+            defaultContentItemFactory(
+                item = item,
+                isSelected = isSelected,
+                onClick = onClick,
+                onLongPress = {}, // Explicitly no-op for this overload
+                dragSelectionEnabled = dragSelectionEnabled,
+                dateFormat = dateFormat,
+                focusItem = focusItem,
+                selection = selection,
+            )
         },
     contentSeparatorFactory: @Composable (item: MediaGridItem.SeparatorItem) -> Unit = { item ->
         defaultBuildSeparator(item)
@@ -752,6 +734,37 @@ private fun mediaGrid(
                 wasPreviouslyExpanded.value = isExpanded.value
             }
         }
+    }
+}
+
+@Composable
+private fun defaultContentItemFactory(
+    item: MediaGridItem,
+    isSelected: Boolean,
+    onClick: ((item: MediaGridItem) -> Unit)?,
+    onLongPress: ((item: MediaGridItem) -> Unit)?,
+    dragSelectionEnabled: Boolean = false,
+    dateFormat: DateFormat,
+    focusItem: MediaGridItem? = null,
+    selection: Set<Media>,
+) {
+    when (item) {
+        is MediaGridItem.MediaItem ->
+            defaultBuildMediaItem(
+                item = item,
+                isSelected = isSelected,
+                selectedPosition = selection.indexOf(item.media),
+                onClick = onClick,
+                onLongPress = onLongPress,
+                dragSelectionEnabled = dragSelectionEnabled,
+                dateFormat = dateFormat,
+                focusItem = focusItem,
+            )
+
+        is MediaGridItem.AlbumItem -> defaultBuildAlbumItem(item, onClick, focusItem)
+        is MediaGridItem.CategoryItem -> defaultBuildCategoryItem(item, onClick, focusItem)
+        is MediaGridItem.PersonMediaSetItem -> defaultBuildPersonMediaSetItem(item, onClick)
+        else -> {}
     }
 }
 
@@ -1109,7 +1122,7 @@ private fun SelectedIconOverlay(
  * GridCell, and provides a text title for it just below the thumbnail.
  */
 @Composable
-fun defaultBuildAlbumItem(
+private fun defaultBuildAlbumItem(
     item: MediaGridItem,
     onClick: ((item: MediaGridItem) -> Unit)?,
     focusItem: MediaGridItem? = null,
@@ -1192,7 +1205,7 @@ fun defaultBuildAlbumItem(
 
 /** Default [MediaGridItem.PersonMediaSetItem] builder that loads People and pets mediaset. */
 @Composable
-private fun defaultBuildPersonMediaSetItem(
+fun defaultBuildPersonMediaSetItem(
     item: MediaGridItem.PersonMediaSetItem,
     onClick: ((item: MediaGridItem) -> Unit)?,
 ) {
@@ -1223,45 +1236,6 @@ private fun defaultBuildPersonMediaSetItem(
                     )
                 }
             }
-        }
-    }
-}
-
-/** Default [MediaGridItem.MediaSetItem] builder that loads mediaset. */
-@Composable
-private fun defaultBuildMediaSetItem(
-    item: MediaGridItem.MediaSetItem,
-    onClick: ((item: MediaGridItem) -> Unit)?,
-) {
-    Column(
-        // Apply semantics for the click handlers
-        Modifier.semantics(mergeDescendants = true) {
-                contentDescription = item.mediaSet.displayName ?: ""
-                onClick(
-                    action = {
-                        onClick?.invoke(item)
-                        /* eventHandled= */ true
-                    }
-                )
-            }
-            .pointerInput(Unit) { detectTapGestures(onTap = { onClick?.invoke(item) }) }
-            .padding(bottom = MEASUREMENT_DEFAULT_ALBUM_BOTTOM_PADDING)
-    ) {
-        with(item.mediaSet) {
-            val modifier =
-                Modifier.fillMaxWidth()
-                    .clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS_FOR_ALBUMS))
-                    .aspectRatio(1f)
-            loadMedia(media = icon, resolution = Resolution.THUMBNAIL, modifier = modifier)
-            Spacer(Modifier.size(MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE))
-            // Media set title shown on the media set grid.
-            Text(
-                text = displayName ?: "",
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
         }
     }
 }
