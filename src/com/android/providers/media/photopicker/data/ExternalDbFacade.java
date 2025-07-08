@@ -50,6 +50,7 @@ import android.content.pm.LauncherApps;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.MatrixCursor;
 import android.database.MergeCursor;
 import android.database.sqlite.SQLiteConstraintException;
@@ -1082,10 +1083,50 @@ public class ExternalDbFacade {
                 /* sortOrder */ INT_DEFAULT, mimeTypes));
 
         if (MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.equals(categoryType)) {
-            return cursor;
+            return createDeviceMediaSetCursor(cursor);
         }
 
         return createAppsMediaSetsCursor(cursor);
+    }
+
+    private Cursor createDeviceMediaSetCursor(@NonNull Cursor cursor) {
+        final MatrixCursor mediaSetCursor = new MatrixCursor(cursor.getColumnNames());
+        final Bundle extras = cursor.getExtras();
+        if (extras != null) {
+            mediaSetCursor.setExtras(extras);
+        }
+
+        if (!cursor.moveToFirst()) {
+            return mediaSetCursor; // Return empty cursor if source is empty
+        }
+
+        final String[] columnNames = cursor.getColumnNames();
+
+        do {
+            try {
+                final ContentValues values = new ContentValues();
+                DatabaseUtils.cursorRowToContentValues(cursor, values);
+
+                String displayName = values.getAsString(MediaSetColumns.DISPLAY_NAME);
+                if (displayName == null || displayName.isEmpty()) {
+                    values.put(MediaSetColumns.DISPLAY_NAME,
+                            mContext.getResources().getString(R.string.storage_description));
+                }
+
+                final Object[] newRow = new Object[columnNames.length];
+                for (int i = 0; i < columnNames.length; i++) {
+                    newRow[i] = values.get(columnNames[i]);
+                }
+                mediaSetCursor.addRow(newRow);
+
+            } catch (RuntimeException exception) {
+                Log.e(TAG,
+                        "Failed to process a media set item for device folder category. "
+                                + "Skipping.", exception);
+            }
+        } while (cursor.moveToNext());
+
+        return mediaSetCursor;
     }
 
     @NonNull

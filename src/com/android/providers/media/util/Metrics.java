@@ -45,6 +45,8 @@ import static com.android.providers.media.scan.MediaScanner.REASON_IDLE;
 import static com.android.providers.media.scan.MediaScanner.REASON_MOUNTED;
 import static com.android.providers.media.scan.MediaScanner.REASON_UNKNOWN;
 
+import android.content.ContentProviderClient;
+import android.content.Context;
 import android.net.Uri;
 import android.provider.MediaStore;
 
@@ -53,6 +55,7 @@ import androidx.annotation.NonNull;
 
 import com.android.providers.media.MediaProvider;
 import com.android.providers.media.MediaProviderStatsLog;
+import com.android.providers.media.metrics.DeviceStorageStateMetricsCollector;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -383,6 +386,20 @@ public class Metrics {
             String volumeName, int packageUid, long opExecutionTime) {
         logMediaProviderOp(translateCreateRequestOpEnum(opType), uriType, volumeName,
                 packageUid, opExecutionTime);
+    }
+
+    /**
+     * Schedule a periodic weekly job to collect and log device storage state metrics from
+     * MediaReceiver on ACTION_BOOT_COMPLETED
+     */
+    public static void scheduleDeviceStorageStateLoggingJob(@NonNull Context context) {
+        try (ContentProviderClient cpc = context.getContentResolver()
+                .acquireContentProviderClient(MediaStore.AUTHORITY)) {
+            if (cpc != null) {
+                MediaProvider mediaProvider = (MediaProvider) cpc.getLocalContentProvider();
+                DeviceStorageStateMetricsCollector.schedulePeriodicWork(context, mediaProvider);
+            }
+        }
     }
 
 }

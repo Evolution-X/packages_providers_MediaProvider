@@ -69,6 +69,7 @@ import androidx.test.runner.AndroidJUnit4;
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.IsolatedContext;
 import com.android.providers.media.ProjectionHelper;
+import com.android.providers.media.R;
 import com.android.providers.media.TestConfigStore;
 import com.android.providers.media.TestDatabaseBackupAndRecovery;
 import com.android.providers.media.VolumeCache;
@@ -2188,6 +2189,68 @@ public class ExternalDbFacadeTest {
                                 cursor,
                                 CloudMediaProviderContract.MediaSetColumns.MEDIA_COVER_ID))
                         .isEqualTo(String.valueOf(ID3));
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_bucketDisplayNameIsNull_displayNameSetToLocalStorage() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Media with null bucket display name
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.BUCKET_ID, ID4);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "/");
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with non-null bucket display name
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.BUCKET_ID, ID5);
+            contentValues.put(MediaColumns.BUCKET_DISPLAY_NAME, FOLDER_NAME1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID5), DATE_TAKEN_MS1, 1);
+                assertWithMessage("Unexpected display name for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME))
+                        .isEqualTo(FOLDER_NAME1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID4), DATE_TAKEN_MS1, 1);
+                String expectedDisplayName = sIsolatedContext.getResources().getString(
+                        R.string.storage_description);
+                assertWithMessage("Unexpected display name for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME))
+                        .isEqualTo(expectedDisplayName);
             }
         }
     }
