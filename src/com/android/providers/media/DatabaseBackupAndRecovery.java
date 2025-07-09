@@ -804,7 +804,10 @@ public class DatabaseBackupAndRecovery {
         }
     }
 
-    private void markBackupAsDirty(DatabaseHelper databaseHelper, FileRow updatedRow) {
+    /**
+     * Mark leveldb backup row as dirty on any update to the filepath row.
+     */
+    public void markBackupAsDirty(DatabaseHelper databaseHelper, FileRow updatedRow) {
         if (!isBackupUpdateAllowed(databaseHelper, updatedRow.getVolumeName())) {
             return;
         }
