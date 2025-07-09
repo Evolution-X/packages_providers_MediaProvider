@@ -338,6 +338,33 @@ JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_movePages(
     return doc->MovePages(pageIndices_native, destinationIndex);
 }
 
+JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_deletePages(
+        JNIEnv* env, jobject jPdfDocument, jintArray jPageIndices) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    Document* doc = convert::GetPdfDocPtr(env, jPdfDocument);
+
+    vector<int> pageIndices_native = convert::ToNativeIntegerVector(env, jPageIndices);
+
+    bool success = doc->DeletePages(pageIndices_native);
+
+    if (success) {
+        int newNumPages = doc->NumPages();
+
+        // Reference to PdfDocumentProxy class
+        jclass pdfDocClass = env->GetObjectClass(jPdfDocument);
+
+        jfieldID numPagesField = env->GetFieldID(pdfDocClass, "mNumPages", "I");
+
+        // Update the mNumPages field
+        env->SetIntField(jPdfDocument, numPagesField, newNumPages);
+
+        // Delete the local reference to PdfDocumentProxy class
+        env->DeleteLocalRef(pdfDocClass);
+    }
+
+    return success;
+}
+
 JNIEXPORT jobject JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormWidgetInfo__III(
         JNIEnv* env, jobject jPdfDocument, jint pageNum, jint x, jint y) {
     std::unique_lock<std::mutex> lock(mutex_);

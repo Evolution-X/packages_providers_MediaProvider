@@ -93,6 +93,9 @@ JNIEXPORT jint JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormType(JN
 JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_movePages(
         JNIEnv* env, jobject jPdfDocument, jintArray jPageIndices, jint destinationIndex);
 
+JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_deletePages(
+        JNIEnv* env, jobject jPdfDocument, jintArray jPageIndices);
+
 JNIEXPORT jobject JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormWidgetInfo__III(
         JNIEnv* env, jobject jPdfDocument, jint pageNum, jint x, jint y);
 
