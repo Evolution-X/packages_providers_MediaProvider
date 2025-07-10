@@ -30,9 +30,9 @@ import static com.android.providers.media.MediaProviderStatsLog.MEDIA_PROVIDER_V
 import static com.android.providers.media.MediaProviderStatsLog.MEDIA_PROVIDER_VOLUME_RECOVERY_REPORTED__VOLUME__EXTERNAL_PRIMARY;
 import static com.android.providers.media.MediaProviderStatsLog.MEDIA_PROVIDER_VOLUME_RECOVERY_REPORTED__VOLUME__INTERNAL;
 import static com.android.providers.media.MediaProviderStatsLog.MEDIA_PROVIDER_VOLUME_RECOVERY_REPORTED__VOLUME__PUBLIC;
-import static com.android.providers.media.util.Logging.TAG;
 import static com.android.providers.media.flags.Flags.enableStableUrisForExternalPrimaryVolume;
 import static com.android.providers.media.flags.Flags.enableStableUrisForPublicVolume;
+import static com.android.providers.media.util.Logging.TAG;
 
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -56,6 +56,7 @@ import androidx.annotation.NonNull;
 import com.android.providers.media.dao.FileRow;
 import com.android.providers.media.fuse.FuseDaemon;
 import com.android.providers.media.stableuris.dao.BackupIdRow;
+import com.android.providers.media.util.Logging;
 import com.android.providers.media.util.StringUtils;
 
 import com.google.common.base.Strings;
@@ -1257,8 +1258,8 @@ public class DatabaseBackupAndRecovery {
                                 newPath)) {
                             // If file path has changed, update leveldb backup to delete old path.
                             deleteFromDbBackup(helper, oldRow);
-                            Log.v(TAG, "Deleted backup of old file path: "
-                                    + oldRow.getPath());
+                            Logging.logIfLoggable(TAG, "Deleted backup of old file path: "
+                                    + oldRow.getPath(), Log.DEBUG, /* logOnlyIfDebuggable */ true);
                         }
                     }
                 } catch (Exception e) {

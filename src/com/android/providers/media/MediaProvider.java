@@ -8813,7 +8813,9 @@ public class MediaProvider extends ContentProvider {
                     } catch (NumberFormatException e) {
                     }
 
-                    Log.v(TAG, "Deleting stale thumbnail " + thumbFile);
+                    Logging.logIfLoggable(TAG, "Deleting stale thumbnail " + thumbFile,
+                            Log.VERBOSE, /* logOnlyIfDebuggable */ true);
+
                     deleteAndInvalidate(thumbFile);
                     prunedCount++;
                 }
@@ -9384,7 +9386,9 @@ public class MediaProvider extends ContentProvider {
                     }
                 }
 
-                Log.d(TAG, "Moving " + beforePath + " to " + afterPath);
+
+                Logging.logIfLoggable(TAG, "Moving " + beforePath + " to " + afterPath,
+                        Log.DEBUG, /* logOnlyIfDebuggable */true);
                 try {
                     Os.rename(beforePath, afterPath);
                     invalidateFuseDentry(beforePath);
@@ -10475,11 +10479,15 @@ public class MediaProvider extends ContentProvider {
     private ParcelFileDescriptor openWithFuse(String filePath, int uid, int mediaCapabilitiesUid,
             int modeBits, boolean shouldRedact, boolean shouldTranscode, int transcodeReason)
             throws FileNotFoundException {
-        Log.d(TAG, "Open with FUSE. FilePath: " + filePath
+
+        String logMessage = "Open with FUSE"
+                + Logging.messageOrEmptyIfNotDebuggable(". FilePath: " + filePath)
                 + ". Uid: " + uid
                 + ". Media Capabilities Uid: " + mediaCapabilitiesUid
                 + ". ShouldRedact: " + shouldRedact
-                + ". ShouldTranscode: " + shouldTranscode);
+                + ". ShouldTranscode: " + shouldTranscode;
+        Logging.logIfLoggable(TAG, logMessage, Log.DEBUG, /* logOnlyIfDebuggable */ false);
+
 
         int tid = android.os.Process.myTid();
         synchronized (mPendingOpenInfo) {
