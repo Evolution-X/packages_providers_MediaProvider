@@ -7872,13 +7872,10 @@ public class MediaProvider extends ContentProvider {
         final CallingIdentity token = clearCallingIdentity();
         final String authority = documentUri.getAuthority();
 
-        try {
-            if (!authority.equals(MediaDocumentsProvider.AUTHORITY)
-                    && !authority.equals(DocumentsContract.EXTERNAL_STORAGE_PROVIDER_AUTHORITY)) {
-                throw new IllegalArgumentException("Provider for this Uri is not supported.");
-            }
-        } finally {
+        if (!authority.equals(MediaDocumentsProvider.AUTHORITY)
+                && !authority.equals(DocumentsContract.EXTERNAL_STORAGE_PROVIDER_AUTHORITY)) {
             restoreCallingIdentity(token);
+            throw new IllegalArgumentException("Provider for this Uri is not supported.");
         }
 
         try (ContentProviderClient client = getContext().getContentResolver()
