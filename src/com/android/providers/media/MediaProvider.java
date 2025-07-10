@@ -2739,8 +2739,8 @@ public class MediaProvider extends ContentProvider {
         final String[] segments = path.split("/");
         if (segments.length != 11) {
             Log.e(TAG, "Picker file open failed. Unexpected segments: " + path);
-            return new FileOpenResult(OsConstants.ENOENT /* status */, uid, /* transformsUid */ 0,
-                    new long[0]);
+            return new FileOpenResult(
+                    OsConstants.ENOENT /* status */, uid, /* transformsUid */ 0, new long[0]);
         }
 
         // ['', 'storage', 'emulated', '0', 'transforms', 'synthetic',
@@ -2769,21 +2769,35 @@ public class MediaProvider extends ContentProvider {
             }
         } else {
             final Uri uri = getMediaUri(authority).buildUpon().appendPath(mediaId).build();
-            IBinder binder = getContext().getContentResolver()
-                    .call(uri, METHOD_GET_ASYNC_CONTENT_PROVIDER, null, null)
-                    .getBinder(EXTRA_ASYNC_CONTENT_PROVIDER);
-            if (binder == null) {
-                Log.e(TAG, "Picker file open failed. No cloud media provider found.");
+            ContentProviderClient client =
+                    getContext().getContentResolver().acquireUnstableContentProviderClient(uri);
+            if (client == null) {
+                Log.e(TAG, "Picker file open failed. Failed to acquire cloud provider.");
                 return FileOpenResult.createError(OsConstants.ENOENT, uid);
             }
-            IAsyncContentProvider iAsyncProvider = IAsyncContentProvider.Stub.asInterface(binder);
-            AsyncContentProvider asyncContentProvider = new AsyncContentProvider(iAsyncProvider);
+
             try {
+                IBinder binder =
+                        client.call(METHOD_GET_ASYNC_CONTENT_PROVIDER, null, null)
+                                .getBinder(EXTRA_ASYNC_CONTENT_PROVIDER);
+
+                if (binder == null) {
+                    Log.e(TAG, "Picker file open failed. No async provider found.");
+                    return FileOpenResult.createError(OsConstants.ENOENT, uid);
+                }
+
+                IAsyncContentProvider iAsyncProvider =
+                        IAsyncContentProvider.Stub.asInterface(binder);
+                AsyncContentProvider asyncContentProvider =
+                        new AsyncContentProvider(iAsyncProvider);
+
                 pfd = asyncContentProvider.openMedia(uri, "r");
             } catch (FileNotFoundException | ExecutionException | InterruptedException
                      | TimeoutException | RemoteException e) {
                 Log.e(TAG, "Picker file open failed. Failed to open URI: " + uri, e);
                 return FileOpenResult.createError(OsConstants.ENOENT, uid);
+            } finally {
+                client.close();
             }
         }
 
@@ -7872,13 +7886,10 @@ public class MediaProvider extends ContentProvider {
         final CallingIdentity token = clearCallingIdentity();
         final String authority = documentUri.getAuthority();
 
-        try {
-            if (!authority.equals(MediaDocumentsProvider.AUTHORITY)
-                    && !authority.equals(DocumentsContract.EXTERNAL_STORAGE_PROVIDER_AUTHORITY)) {
-                throw new IllegalArgumentException("Provider for this Uri is not supported.");
-            }
-        } finally {
+        if (!authority.equals(MediaDocumentsProvider.AUTHORITY)
+                && !authority.equals(DocumentsContract.EXTERNAL_STORAGE_PROVIDER_AUTHORITY)) {
             restoreCallingIdentity(token);
+            throw new IllegalArgumentException("Provider for this Uri is not supported.");
         }
 
         try (ContentProviderClient client = getContext().getContentResolver()
@@ -8816,7 +8827,9 @@ public class MediaProvider extends ContentProvider {
                     } catch (NumberFormatException e) {
                     }
 
-                    Log.v(TAG, "Deleting stale thumbnail " + thumbFile);
+                    Logging.logIfLoggable(TAG, "Deleting stale thumbnail " + thumbFile,
+                            Log.VERBOSE, /* logOnlyIfDebuggable */ true);
+
                     deleteAndInvalidate(thumbFile);
                     prunedCount++;
                 }
@@ -9387,7 +9400,9 @@ public class MediaProvider extends ContentProvider {
                     }
                 }
 
-                Log.d(TAG, "Moving " + beforePath + " to " + afterPath);
+
+                Logging.logIfLoggable(TAG, "Moving " + beforePath + " to " + afterPath,
+                        Log.DEBUG, /* logOnlyIfDebuggable */true);
                 try {
                     Os.rename(beforePath, afterPath);
                     invalidateFuseDentry(beforePath);
@@ -10478,11 +10493,15 @@ public class MediaProvider extends ContentProvider {
     private ParcelFileDescriptor openWithFuse(String filePath, int uid, int mediaCapabilitiesUid,
             int modeBits, boolean shouldRedact, boolean shouldTranscode, int transcodeReason)
             throws FileNotFoundException {
-        Log.d(TAG, "Open with FUSE. FilePath: " + filePath
+
+        String logMessage = "Open with FUSE"
+                + Logging.messageOrEmptyIfNotDebuggable(". FilePath: " + filePath)
                 + ". Uid: " + uid
                 + ". Media Capabilities Uid: " + mediaCapabilitiesUid
                 + ". ShouldRedact: " + shouldRedact
-                + ". ShouldTranscode: " + shouldTranscode);
+                + ". ShouldTranscode: " + shouldTranscode;
+        Logging.logIfLoggable(TAG, logMessage, Log.DEBUG, /* logOnlyIfDebuggable */ false);
+
 
         int tid = android.os.Process.myTid();
         synchronized (mPendingOpenInfo) {
