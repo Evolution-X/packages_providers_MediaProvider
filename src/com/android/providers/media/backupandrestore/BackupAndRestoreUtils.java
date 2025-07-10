@@ -16,6 +16,8 @@
 
 package com.android.providers.media.backupandrestore;
 
+import static com.android.providers.media.backupandrestore.BackupExecutor.getBackupFilePath;
+import static com.android.providers.media.backupandrestore.RestoreExecutor.getRestoredFilePath;
 import static com.android.providers.media.flags.Flags.enableBackupAndRestore;
 import static com.android.providers.media.flags.Flags.enableVersioningForBackupAndRestore;
 
@@ -26,6 +28,7 @@ import android.provider.MediaStore;
 import android.util.Log;
 
 import com.android.modules.utils.build.SdkLevel;
+import com.android.providers.media.leveldb.LevelDBManager;
 import com.android.providers.media.util.FileUtils;
 
 import com.google.common.collect.HashBiMap;
@@ -318,6 +321,10 @@ public final class BackupAndRestoreUtils {
         File filesDir = context.getFilesDir();
         File backupDir = new File(filesDir, BACKUP_DIRECTORY_NAME);
 
+        if (LevelDBManager.isLevelDbPresentForPath(getBackupFilePath(context))) {
+            LevelDBManager.delete(getBackupFilePath(context));
+        }
+
         if (backupDir.exists() && backupDir.isDirectory()) {
             FileUtils.deleteContents(backupDir);
             backupDir.delete();
@@ -332,6 +339,10 @@ public final class BackupAndRestoreUtils {
     static void deleteRestoreDirectory(@NonNull Context context) {
         File filesDir = context.getFilesDir();
         File restoreDir = new File(filesDir, RESTORE_DIRECTORY_NAME);
+
+        if (LevelDBManager.isLevelDbPresentForPath(getRestoredFilePath(context))) {
+            LevelDBManager.delete(getRestoredFilePath(context));
+        }
 
         if (restoreDir.exists() && restoreDir.isDirectory()) {
             FileUtils.deleteContents(restoreDir);
