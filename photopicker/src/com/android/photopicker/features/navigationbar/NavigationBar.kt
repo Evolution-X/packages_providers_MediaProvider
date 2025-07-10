@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ButtonDefaults
@@ -72,6 +71,9 @@ import com.android.photopicker.features.search.SearchFeature
 /* Navigation bar button measurements */
 private val MEASUREMENT_ICON_BUTTON_WIDTH = 48.dp
 private val MEASUREMENT_ICON_BUTTON_OUTSIDE_PADDING = 4.dp
+
+/* Profile selector icon and dropdown width */
+private val MEASUREMENT_PROFILE_SELECTOR_WIDTH = 72.dp
 
 /* Distance between two navigation buttons */
 private val MEASUREMENT_SPACER_SIZE = 8.dp
@@ -178,12 +180,7 @@ fun NavigationBarButton(
 
     FilledTonalButton(
         onClick = onClick,
-        modifier =
-            if (categoryGridFeatureEnabled) {
-                modifier.widthIn(min = 120.dp, max = 120.dp)
-            } else {
-                modifier
-            },
+        modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         contentPadding = ButtonDefaults.TextButtonContentPadding,
         colors =
@@ -248,12 +245,7 @@ private fun NavigationBarButtons(modifier: Modifier) {
             LocalFeatureManager.current.composeLocation(
                 Location.NAVIGATION_BAR_NAV_BUTTON,
                 maxSlots = 2,
-                modifier =
-                    if (showButtonIcon) {
-                        Modifier.weight(1f)
-                    } else {
-                        Modifier // No modifier needed when search not enabled
-                    },
+                modifier = Modifier.weight(1f), // Navigation Buttons with equal width
                 params = LocationParams.WithNavButtonIcon { showButtonIcon },
             )
         }
@@ -470,7 +462,7 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
             featureManager.composeLocation(
                 Location.PROFILE_SELECTOR,
                 maxSlots = 1,
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier.padding(start = 8.dp).width(MEASUREMENT_PROFILE_SELECTOR_WIDTH),
             )
             val overFlowMenuEnabled =
                 remember(featureManager) {
@@ -509,18 +501,21 @@ private fun BasicNavigationBar(modifier: Modifier) {
         remember(featureManager) {
             featureManager.isFeatureEnabled(OverflowMenuFeature::class.java)
         }
-    Row(modifier = modifier.fillMaxWidth()) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
         if (profileSelectorEnabled) {
             featureManager.composeLocation(
                 Location.PROFILE_SELECTOR,
                 maxSlots = 1,
-                modifier = Modifier.padding(start = 8.dp).weight(1f),
+                modifier = Modifier.padding(start = 8.dp).width(MEASUREMENT_PROFILE_SELECTOR_WIDTH),
             )
         } else {
             Spacer(
-                Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH)
+                Modifier.width(MEASUREMENT_PROFILE_SELECTOR_WIDTH)
                     .padding(start = MEASUREMENT_ICON_BUTTON_OUTSIDE_PADDING)
-                    .weight(1f)
             )
         }
         hideWhenState(
@@ -531,17 +526,15 @@ private fun BasicNavigationBar(modifier: Modifier) {
                     override val exit = shrinkVertically(animationSpec = standardDecelerate(100))
                 }
         ) {
-            NavigationBarButtons(Modifier)
+            NavigationBarButtons(Modifier.weight(1f))
         }
-        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.End) {
-            if (overFlowMenuEnabled) {
-                featureManager.composeLocation(
-                    Location.OVERFLOW_MENU,
-                    modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
-                )
-            } else {
-                Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
-            }
+        if (overFlowMenuEnabled) {
+            featureManager.composeLocation(
+                Location.OVERFLOW_MENU,
+                modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+            )
+        } else {
+            Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
         }
     }
 }
