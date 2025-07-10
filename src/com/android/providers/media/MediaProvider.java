@@ -2739,8 +2739,8 @@ public class MediaProvider extends ContentProvider {
         final String[] segments = path.split("/");
         if (segments.length != 11) {
             Log.e(TAG, "Picker file open failed. Unexpected segments: " + path);
-            return new FileOpenResult(OsConstants.ENOENT /* status */, uid, /* transformsUid */ 0,
-                    new long[0]);
+            return new FileOpenResult(
+                    OsConstants.ENOENT /* status */, uid, /* transformsUid */ 0, new long[0]);
         }
 
         // ['', 'storage', 'emulated', '0', 'transforms', 'synthetic',
@@ -2769,21 +2769,35 @@ public class MediaProvider extends ContentProvider {
             }
         } else {
             final Uri uri = getMediaUri(authority).buildUpon().appendPath(mediaId).build();
-            IBinder binder = getContext().getContentResolver()
-                    .call(uri, METHOD_GET_ASYNC_CONTENT_PROVIDER, null, null)
-                    .getBinder(EXTRA_ASYNC_CONTENT_PROVIDER);
-            if (binder == null) {
-                Log.e(TAG, "Picker file open failed. No cloud media provider found.");
+            ContentProviderClient client =
+                    getContext().getContentResolver().acquireUnstableContentProviderClient(uri);
+            if (client == null) {
+                Log.e(TAG, "Picker file open failed. Failed to acquire cloud provider.");
                 return FileOpenResult.createError(OsConstants.ENOENT, uid);
             }
-            IAsyncContentProvider iAsyncProvider = IAsyncContentProvider.Stub.asInterface(binder);
-            AsyncContentProvider asyncContentProvider = new AsyncContentProvider(iAsyncProvider);
+
             try {
+                IBinder binder =
+                        client.call(METHOD_GET_ASYNC_CONTENT_PROVIDER, null, null)
+                                .getBinder(EXTRA_ASYNC_CONTENT_PROVIDER);
+
+                if (binder == null) {
+                    Log.e(TAG, "Picker file open failed. No async provider found.");
+                    return FileOpenResult.createError(OsConstants.ENOENT, uid);
+                }
+
+                IAsyncContentProvider iAsyncProvider =
+                        IAsyncContentProvider.Stub.asInterface(binder);
+                AsyncContentProvider asyncContentProvider =
+                        new AsyncContentProvider(iAsyncProvider);
+
                 pfd = asyncContentProvider.openMedia(uri, "r");
             } catch (FileNotFoundException | ExecutionException | InterruptedException
                      | TimeoutException | RemoteException e) {
                 Log.e(TAG, "Picker file open failed. Failed to open URI: " + uri, e);
                 return FileOpenResult.createError(OsConstants.ENOENT, uid);
+            } finally {
+                client.close();
             }
         }
 
