@@ -238,7 +238,8 @@ constructor(
                             )
                         }
                         searchDataService.getSearchResults(
-                            suggestion = currentSearchState.suggestion
+                            SEARCH_RESULT_GRID_PAGE_SIZE,
+                            suggestion = currentSearchState.suggestion,
                         )
                     }
                     is SearchState.Active.QuerySearch -> {
@@ -251,7 +252,10 @@ constructor(
                                 )
                             )
                         }
-                        searchDataService.getSearchResults(searchText = currentSearchState.query)
+                        searchDataService.getSearchResults(
+                            SEARCH_RESULT_GRID_PAGE_SIZE,
+                            searchText = currentSearchState.query,
+                        )
                     }
                     is SearchState.Inactive -> {
                         throw IllegalStateException("Cannot create Pager in inactive search state.")
@@ -282,7 +286,10 @@ constructor(
                     maxSize = SEARCH_RESULT_GRID_MAX_ITEMS_IN_MEMORY,
                 )
             ) {
-                searchDataService.getSearchResults(searchText = searchQuery)
+                searchDataService.getSearchResults(
+                    HIGHLIGHT_SEARCH_RESULTS_GRID_PAGE_SIZE,
+                    searchText = searchQuery,
+                )
             }
         return pagerForSearchResult.flow
             .toMediaGridItemBaseFromMedia()

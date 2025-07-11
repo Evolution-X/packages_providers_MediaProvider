@@ -66,6 +66,7 @@ class TestSearchDataServiceImpl() : SearchDataService {
     }
 
     override fun getSearchResults(
+        regularPageSize: Int,
         suggestion: SearchSuggestion,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
@@ -78,6 +79,7 @@ class TestSearchDataServiceImpl() : SearchDataService {
     }
 
     override fun getSearchResults(
+        regularPageSize: Int,
         searchText: String,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {

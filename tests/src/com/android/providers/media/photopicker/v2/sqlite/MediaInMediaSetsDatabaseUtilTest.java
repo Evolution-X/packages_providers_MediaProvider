@@ -145,7 +145,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -194,7 +195,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 .isEqualTo(3);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -250,7 +252,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 .isEqualTo(3);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -312,7 +315,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -372,7 +376,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 .isEqualTo(3);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 2);
+        extras.putInt("current_page_size", 2);
+        extras.putInt("next_page_size", 2);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -440,7 +445,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -501,7 +507,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -555,7 +562,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
                 1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -663,7 +671,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
 
         // Retrieved cursor for mediaSetPickerId should be empty
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -674,9 +683,10 @@ public class MediaInMediaSetsDatabaseUtilTest {
         assertNotNull(mediaCursor);
         assertEquals(/*expected*/0, /*actual*/ mediaCursor.getCount());
 
-        // Retrieved cursor for secondmediaSetPickerId should be non-empty
+        // Retrieved cursor for second mediaSetPickerId should be non-empty
         Bundle secondExtras = new Bundle();
-        secondExtras.putInt("page_size", 100);
+        secondExtras.putInt("current_page_size", 100);
+        secondExtras.putInt("next_page_size", 100);
         secondExtras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         secondExtras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
@@ -732,7 +742,8 @@ public class MediaInMediaSetsDatabaseUtilTest {
         assertInsertGrantsOperation(mFacade, getMediaGrantsCursor(LOCAL_ID_2), /* writeCount */1);
 
         Bundle extras = new Bundle();
-        extras.putInt("page_size", 100);
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
         extras.putStringArrayList("providers",
                 new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
         extras.putString("intent_action", MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP);

@@ -41,10 +41,11 @@ public class MediaInMediaSetsQuery {
     private final String mIntentAction;
     @NonNull
     private final List<String> mProviders;
-    protected final int mPageSize;
     private final int mCallingPackageUid;
     @NonNull
     private final Context mAppContext;
+    protected final int mCurrentPageSize;
+    protected final int mNextPageSize;
     @NonNull
     final MediaInMediaSetsLocalSubQuery mLocalMediaSubQuery;
     @NonNull
@@ -61,7 +62,8 @@ public class MediaInMediaSetsQuery {
         mIntentAction = queryArgs.getString("intent_action");
         mProviders = new ArrayList<>(
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
-        mPageSize = queryArgs.getInt("page_size", Integer.MAX_VALUE);
+        mCurrentPageSize = queryArgs.getInt("current_page_size", Integer.MAX_VALUE);
+        mNextPageSize = queryArgs.getInt("next_page_size", Integer.MAX_VALUE);
         mAppContext = appContext;
 
         mLocalMediaSubQuery = new MediaInMediaSetsLocalSubQuery(
@@ -160,7 +162,11 @@ public class MediaInMediaSetsQuery {
         return mProviders;
     }
 
-    public int getPageSize() {
-        return mPageSize;
+    public int getCurrentPageSize() {
+        return mCurrentPageSize;
+    }
+
+    public int getNextPageSize() {
+        return mNextPageSize;
     }
 }

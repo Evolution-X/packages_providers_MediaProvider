@@ -35,7 +35,8 @@ public class SearchMediaQuery {
     private final String mIntentAction;
     @NonNull
     private final List<String> mProviders;
-    protected final int mPageSize;
+    protected final int mCurrentPageSize;
+    protected final int mNextPageSize;
     @NonNull
     final SearchLocalMediaSubQuery mLocalMediaSubQuery;
     @NonNull
@@ -45,7 +46,8 @@ public class SearchMediaQuery {
         mIntentAction = queryArgs.getString("intent_action");
         mProviders = new ArrayList<>(
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
-        mPageSize = queryArgs.getInt("page_size", Integer.MAX_VALUE);
+        mCurrentPageSize = queryArgs.getInt("current_page_size", Integer.MAX_VALUE);
+        mNextPageSize = queryArgs.getInt("next_page_size", Integer.MAX_VALUE);
 
         mLocalMediaSubQuery = new SearchLocalMediaSubQuery(queryArgs, searchRequestID);
         mCloudMediaSubquery = new SearchCloudMediaSubquery(queryArgs, searchRequestID);
@@ -128,7 +130,10 @@ public class SearchMediaQuery {
         return mProviders;
     }
 
-    public int getPageSize() {
-        return mPageSize;
+    public int getCurrentPageSize() {
+        return mCurrentPageSize;
+    }
+    public int getNextPageSize() {
+        return mNextPageSize;
     }
 }
