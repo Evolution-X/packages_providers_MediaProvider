@@ -61,9 +61,14 @@ interface DataService {
 
     /**
      * @param album This method creates and returns a paging source for media of the given album.
+     * @param regularPageSize The number of album media items to include in one page or in
+     *   subsequent batches
      * @return an instance of [PagingSource].
      */
-    fun albumMediaPagingSource(album: BaseAlbum): PagingSource<MediaPageKey, Media>
+    fun albumMediaPagingSource(
+        album: BaseAlbum,
+        regularPageSize: Int,
+    ): PagingSource<MediaPageKey, Media>
 
     /** @return an instance of [PagingSource]. */
     fun albumPagingSource(): PagingSource<MediaPageKey, Album>
@@ -76,10 +81,15 @@ interface DataService {
      */
     fun cloudMediaProviderDetails(authority: String): StateFlow<CloudMediaProviderDetails?>
 
-    /** @return a new instance of [PagingSource]. */
-    fun mediaPagingSource(): PagingSource<MediaPageKey, Media>
+    /**
+     * @param regularPageSize The number of media items to include in one page or in subsequent
+     *   batches
+     * @return a new instance of [PagingSource].
+     */
+    fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media>
 
     /**
+     * @param regularPageSize The number of items to include in one page or in subsequent batches
      * @param currentSelection set of items that have been selected by the user in the current
      *   session.
      * @param currentDeselection set of items that are pre-granted and have been de-selected by the
@@ -87,6 +97,7 @@ interface DataService {
      * @return a new instance of [PagingSource].
      */
     fun previewMediaPagingSource(
+        regularPageSize: Int,
         currentSelection: Set<Media>,
         currentDeselection: Set<Media>,
     ): PagingSource<MediaPageKey, Media>

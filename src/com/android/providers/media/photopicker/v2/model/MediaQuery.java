@@ -67,7 +67,8 @@ public class MediaQuery {
     // given mime types.
     @Nullable
     protected List<String> mMimeTypes;
-    protected int mPageSize;
+    protected int mCurrentPageSize;
+    protected int mNextPageSize;
     // If this is true, only fetch the rows from Picker Database where the IS_VISIBLE flag is on.
     protected boolean mShouldDedupe;
     protected boolean mShouldPopulateItemsBeforeCount;
@@ -75,7 +76,8 @@ public class MediaQuery {
     public MediaQuery(Bundle queryArgs) {
         mPickerId = queryArgs.getLong("picker_id", Long.MAX_VALUE);
         mDateTakenMs = queryArgs.getLong("date_taken_millis", Long.MAX_VALUE);
-        mPageSize = queryArgs.getInt("page_size", Integer.MAX_VALUE);
+        mCurrentPageSize = queryArgs.getInt("current_page_size", Integer.MAX_VALUE);
+        mNextPageSize = queryArgs.getInt("next_page_size", Integer.MAX_VALUE);
         mIntentAction = queryArgs.getString("intent_action");
 
         // Make deep copies of the arrays to avoid leaking changes made to the arrays.
@@ -94,8 +96,13 @@ public class MediaQuery {
     }
 
     @NonNull
-    public Integer getPageSize() {
-        return mPageSize;
+    public Integer getCurrentPageSize() {
+        return mCurrentPageSize;
+    }
+
+    @NonNull
+    public Integer getNextPageSize() {
+        return mNextPageSize;
     }
 
     @NonNull

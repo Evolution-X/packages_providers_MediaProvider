@@ -42,7 +42,7 @@ public class FavoritesMediaQuery extends MediaQuery {
             int pageSize) {
         super(queryArgs);
 
-        mPageSize = pageSize;
+        mCurrentPageSize = pageSize;
     }
 
     public FavoritesMediaQuery(@NonNull Bundle queryArgs) {

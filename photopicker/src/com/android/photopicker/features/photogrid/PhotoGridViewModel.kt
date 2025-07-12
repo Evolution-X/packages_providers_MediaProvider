@@ -97,7 +97,7 @@ constructor(
         Pager(
             PagingConfig(pageSize = PHOTO_GRID_PAGE_SIZE, maxSize = PHOTO_GRID_MAX_ITEMS_IN_MEMORY)
         ) {
-            dataService.mediaPagingSource()
+            dataService.mediaPagingSource(PHOTO_GRID_PAGE_SIZE)
         }
 
     /**
@@ -125,7 +125,7 @@ constructor(
                 TAG,
                 "Media grid data flow is already initialized with the correct recents " +
                     "cell count: " +
-                    recentsCellCount
+                    recentsCellCount,
             )
             _data!!
         } else {
@@ -133,7 +133,7 @@ constructor(
                 TAG,
                 "Media grid data flow is not initialized with the correct recents " +
                     "cell count" +
-                    recentsCellCount
+                    recentsCellCount,
             )
             _recentsCellCount = recentsCellCount
             val data: Flow<PagingData<MediaGridItem>> =
@@ -171,16 +171,13 @@ constructor(
      * in the viewModelScope to ensure they aren't canceled if the user navigates away from the
      * PhotoGrid composable.
      */
-    fun handleGridItemSelection(
-        item: Media,
-        selectionLimitExceededMessage: String,
-    ) {
+    fun handleGridItemSelection(item: Media, selectionLimitExceededMessage: String) {
         // Update the selectable values in the received media object.
         val updatedMediaItem =
             Media.withSelectable(
                 item, /* selectionSource */
                 Telemetry.MediaLocation.MAIN_GRID, /* album */
-                null
+                null,
             )
         scope.launch {
             val result = selection.toggle(updatedMediaItem)

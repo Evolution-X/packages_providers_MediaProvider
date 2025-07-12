@@ -78,6 +78,9 @@ import org.mockito.Mockito.verify
 class DataServiceImplTest {
 
     companion object {
+        const val DEFAULT_PHOTO_GRID_PAGE_SIZE = 50
+        const val DEFAULT_ALBUM_GRID_PAGE_SIZE = 50
+
         private fun createUserHandle(userId: Int = 0): UserHandle {
             val parcel = Parcel.obtain()
             parcel.writeInt(userId)
@@ -614,7 +617,7 @@ class DataServiceImplTest {
         assertThat(emissions.count()).isEqualTo(1)
 
         val firstMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.mediaPagingSource()
+            dataService.mediaPagingSource(DEFAULT_PHOTO_GRID_PAGE_SIZE)
         assertThat(firstMediaPagingSource.invalid).isFalse()
 
         // The active user changes
@@ -649,7 +652,7 @@ class DataServiceImplTest {
 
         // Check that the new MediaPagingSource instance is still valid.
         val secondMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.mediaPagingSource()
+            dataService.mediaPagingSource(DEFAULT_PHOTO_GRID_PAGE_SIZE)
         assertThat(secondMediaPagingSource.invalid).isFalse()
     }
 
@@ -763,7 +766,7 @@ class DataServiceImplTest {
             )
 
         val firstAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
 
         // Check the album media paging source is valid
         assertThat(firstAlbumMediaPagingSource.invalid).isFalse()
@@ -774,7 +777,7 @@ class DataServiceImplTest {
 
         // Fetch the album media again
         val secondAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
 
         // Check the previous album media source was reused because it was not marked as invalid.
         assertThat(secondAlbumMediaPagingSource.invalid).isFalse()
@@ -790,7 +793,7 @@ class DataServiceImplTest {
 
         // Fetch the album media again
         val thirdAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
 
         // Check the previous album media source was not reused because it was invalidated.
         assertThat(secondAlbumMediaPagingSource.invalid).isTrue()
@@ -848,7 +851,7 @@ class DataServiceImplTest {
             )
 
         val firstAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
 
         // Check the album media paging source is valid
         assertThat(firstAlbumMediaPagingSource.invalid).isFalse()
@@ -885,7 +888,7 @@ class DataServiceImplTest {
 
         // Fetch the album media again
         val secondAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
 
         // Check that previous album media source was marked as invalid.
         assertThat(firstAlbumMediaPagingSource.invalid).isTrue()
@@ -925,7 +928,7 @@ class DataServiceImplTest {
         advanceTimeBy(100)
 
         val firstMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.mediaPagingSource()
+            dataService.mediaPagingSource(DEFAULT_PHOTO_GRID_PAGE_SIZE)
         assertThat(firstMediaPagingSource.invalid).isFalse()
 
         // Check that a cache refresh request was received
@@ -941,7 +944,7 @@ class DataServiceImplTest {
 
         // Check that the a new PagingSource instance was created which is still valid
         val secondMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.mediaPagingSource()
+            dataService.mediaPagingSource(DEFAULT_PHOTO_GRID_PAGE_SIZE)
         assertThat(secondMediaPagingSource).isNotEqualTo(firstMediaPagingSource)
         assertThat(secondMediaPagingSource.invalid).isFalse()
 
@@ -988,7 +991,7 @@ class DataServiceImplTest {
             )
 
         val firstAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
 
         // Check the album media paging source is valid
         assertThat(firstAlbumMediaPagingSource.invalid).isFalse()
@@ -1015,7 +1018,7 @@ class DataServiceImplTest {
 
         // Check that the a new PagingSource instance was created which is still valid
         val secondAlbumMediaPagingSource: PagingSource<MediaPageKey, Media> =
-            dataService.albumMediaPagingSource(album)
+            dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
         assertThat(secondAlbumMediaPagingSource).isNotEqualTo(firstAlbumMediaPagingSource)
         assertThat(secondAlbumMediaPagingSource.invalid).isFalse()
 

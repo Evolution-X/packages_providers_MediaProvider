@@ -114,7 +114,7 @@ constructor(
                 )
             ) {
                 // pagingSource
-                dataService.albumMediaPagingSource(album)
+                dataService.albumMediaPagingSource(album, CATEGORY_GRID_PAGE_SIZE)
             }
 
         /** Export the data from the pager and prepare it for use in the [AlbumMediaGrid] */
@@ -151,7 +151,7 @@ constructor(
                 )
             ) {
                 // pagingSource
-                dataService.albumMediaPagingSource(album)
+                dataService.albumMediaPagingSource(album, CATEGORY_GRID_HIGHLIGHT_PAGE_SIZE)
             }
 
         /** Export the data from the pager and prepare it for use in the [AlbumMediaGrid] */
@@ -210,7 +210,7 @@ constructor(
                     maxSize = CATEGORY_GRID_MAX_ITEMS_IN_MEMORY,
                 )
             ) {
-                categoryDataService.getMediaSetContents(mediaset)
+                categoryDataService.getMediaSetContents(mediaset, CATEGORY_GRID_PAGE_SIZE)
             }
 
         return pagerForMediaSetContents.flow
