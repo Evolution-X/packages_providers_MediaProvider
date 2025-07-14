@@ -17,6 +17,7 @@
 package com.android.providers.media.photopicker.util;
 
 import static android.provider.CloudMediaProviderContract.SEARCH_SUGGESTION_ALBUM;
+import static android.provider.MediaStore.MY_USER_ID;
 
 import static com.android.providers.media.util.MimeUtils.getExtensionFromMimeType;
 
@@ -368,8 +369,8 @@ public class PickerDbTestUtils {
 
         String[] coverIds = new String[] {LOCAL_ID_1, LOCAL_ID_2};
         if (CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS.equals(categoryType)) {
-            coverIds[0] = getDrawableMediaId(PACKAGE_NAME1, RES_ID1, USER_ID);
-            coverIds[1] = getDrawableMediaId(PACKAGE_NAME2, RES_ID2, USER_ID);
+            coverIds[0] = getDrawableMediaId(PACKAGE_NAME1, RES_ID1);
+            coverIds[1] = getDrawableMediaId(PACKAGE_NAME2, RES_ID2);
         } else if (CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_PEOPLE_AND_PETS.equals(
                 categoryType)
                 || CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_USER_ALBUMS.equals(
@@ -434,15 +435,14 @@ public class PickerDbTestUtils {
      *
      * @param packageName The application's package name.
      * @param resId The integer resource ID.
-     * @param userId The user ID that the resource belongs
      * @return The resource URI string.
      */
-    public static String getAndroidResourceUriString(String packageName, int resId, int userId) {
+    public static String getAndroidResourceUriString(String packageName, int resId) {
         return String.format(
                 Locale.ROOT,
                 "%s://%s@%s/%s",
                 ContentResolver.SCHEME_ANDROID_RESOURCE,
-                userId,
+                MY_USER_ID,
                 packageName,
                 resId);
     }
@@ -452,16 +452,14 @@ public class PickerDbTestUtils {
      *
      * @param packageName The application's package name.
      * @param resId The integer resource ID.
-     * @param userId The user ID that the resource belongs
      * @return The media ID.
      */
-    public static String getDrawableMediaId(String packageName, int resId, int userId) {
+    public static String getDrawableMediaId(String packageName, int resId) {
         return String.format(
                 Locale.ROOT,
-                "%s/%s/%s",
+                "%s/%s",
                 packageName,
-                resId,
-                userId);
+                resId);
     }
 
     /**
