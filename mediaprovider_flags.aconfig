@@ -415,3 +415,12 @@ flag {
     is_fixed_read_only: true
     bug: "432208806"
 }
+
+flag {
+    name: "enable_sd_card_category"
+    namespace: "mediaprovider"
+    description: "Enables displaying of media in sd card in a separate collection in photpicker"
+    is_fixed_read_only: true
+    is_exported: false
+    bug: "431958913"
+}
