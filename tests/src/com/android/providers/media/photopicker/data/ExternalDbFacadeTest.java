@@ -138,6 +138,7 @@ public class ExternalDbFacadeTest {
     private static final String APP_LABEL = "mock_app";
     private static final int RES_ID = 123456;
     private static final String FOLDER_NAME1 = "Folder1";
+    private static final String SD_CARD_VOLUME_NAME = "sd_card_volume";
 
     private static IsolatedContext sIsolatedContext;
 
@@ -179,6 +180,8 @@ public class ExternalDbFacadeTest {
         when(mockLauncherApps.getActivityList(null, sIsolatedContext.getUser()))
                 .thenReturn(activityList);
         sIsolatedContext.stubApplicationInfoCalls(packageNameToAppInfoMap);
+
+        sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(false);
     }
 
     private LauncherActivityInfo getMockLauncherActivityInfoFor(String packageName,
@@ -1259,7 +1262,10 @@ public class ExternalDbFacadeTest {
                         /* count */ 1);
             }
 
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeTypes */ null)) {
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeTypes */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for categories")
                         .that(cursor.getCount()).isEqualTo(1);
@@ -1341,7 +1347,10 @@ public class ExternalDbFacadeTest {
                         .isEqualTo(1);
             }
 
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeType */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for categories")
                         .that(cursor.getCount())
@@ -1351,10 +1360,16 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    public void testQueryMediaCategories_returnsBothLocalCategories() {
+    public void testQueryMediaCategories_withSdCardDisabled_returnsAllLocalCategories() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
-                    mock(VolumeCache.class));
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
 
             initMediaCategories(helper);
 
@@ -1362,26 +1377,76 @@ public class ExternalDbFacadeTest {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES with for all media")
                         .that(cursor.getCount())
-                        .isEqualTo(3);
+                        .isEqualTo(4);
             }
 
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
+            // With sd card category disabled
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeType */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for categories")
                         .that(cursor.getCount())
                         .isEqualTo(2);
 
-                final List<String> expectedID = new ArrayList<>();
-                expectedID.add(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
-                expectedID.add(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS);
+                List<String> categoryIds = new ArrayList<>();
                 cursor.moveToFirst();
-                int index = 0;
                 do {
-                    assertWithMessage("Incorrect category id found in the cursor")
-                            .that(getCursorString(cursor,
-                                    CloudMediaProviderContract.MediaCategoryColumns.ID))
-                            .isEqualTo(expectedID.get(index++));
+                    categoryIds.add(getCursorString(cursor,
+                            CloudMediaProviderContract.MediaCategoryColumns.ID));
                 } while (cursor.moveToNext());
+
+                assertThat(categoryIds).containsExactly(
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaCategories_withSdCardEnabled_returnsAllLocalCategories() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            initMediaCategories(helper);
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES with for all media")
+                        .that(cursor.getCount())
+                        .isEqualTo(4);
+            }
+
+            // With sd card category enabled
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeType */ null,
+                    sTestConfigStore
+            )) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for categories")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+
+                List<String> categoryIds = new ArrayList<>();
+                cursor.moveToFirst();
+                do {
+                    categoryIds.add(getCursorString(cursor,
+                            CloudMediaProviderContract.MediaCategoryColumns.ID));
+                } while (cursor.moveToNext());
+
+                assertThat(categoryIds).containsExactly(
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS);
             }
         }
     }
@@ -1417,7 +1482,10 @@ public class ExternalDbFacadeTest {
                         .isEqualTo(3);
             }
 
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeType */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for categories")
                         .that(cursor.getCount())
@@ -1477,7 +1545,10 @@ public class ExternalDbFacadeTest {
                         .isEqualTo(3);
             }
 
-            try (Cursor cursor = facade.queryMediaCategories(/* mimeType */ null)) {
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeType */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for categories")
                         .that(cursor.getCount())
@@ -1502,6 +1573,78 @@ public class ExternalDbFacadeTest {
                         .that(getCursorString(cursor,
                                 CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2))
                         .isEqualTo(expectedCoverIdForPackage1);
+
+                assertWithMessage("Incorrect MEDIA_COVER_ID3 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID3))
+                        .isNull();
+
+                assertWithMessage("Incorrect MEDIA_COVER_ID4 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID4))
+                        .isNull();
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaCategories_sdCardCategory_coverIdsInOrder() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // First 2 media items belong to the same media set,
+            // with the second having the later date_taken value
+            // The last media item belong to different media set and
+            // has the same date_taken as the second media item, but has a higher _id
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.BUCKET_ID, ID4);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns._ID, ID3);
+            contentValues.put(MediaColumns.BUCKET_ID, ID5);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES with for all media")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = facade.queryMediaCategories(
+                    /* mimeType */ null,
+                    sTestConfigStore
+            )) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for categories")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertWithMessage("Incorrect MEDIA_COVER_ID1 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID1))
+                        .isEqualTo(String.valueOf(ID3));
+
+                assertWithMessage("Incorrect MEDIA_COVER_ID2 found, implying wrong order")
+                        .that(getCursorString(cursor,
+                                CloudMediaProviderContract.MediaCategoryColumns.MEDIA_COVER_ID2))
+                        .isEqualTo(String.valueOf(ID2));
 
                 assertWithMessage("Incorrect MEDIA_COVER_ID3 found, implying wrong order")
                         .that(getCursorString(cursor,
@@ -1542,7 +1685,7 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
-                    null)) {
+                    null, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of media sets on querying TABLE_FILES for "
                                 + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.")
@@ -1551,7 +1694,9 @@ public class ExternalDbFacadeTest {
             }
 
             try (Cursor cursor = facade.queryMediaSets(
-                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null)) {
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of media sets on querying TABLE_FILES for "
                                 + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
@@ -1597,7 +1742,7 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
-                    null)) {
+                    null, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of media sets on querying TABLE_FILES for "
                                 + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.")
@@ -1652,7 +1797,9 @@ public class ExternalDbFacadeTest {
             }
 
             try (Cursor cursor = facade.queryMediaSets(
-                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null)) {
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of media sets on querying TABLE_FILES for "
                                 + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
@@ -1668,6 +1815,133 @@ public class ExternalDbFacadeTest {
                 assertMediaSetColumns(cursor,
                         CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                         PACKAGE_NAME1, DATE_TAKEN_MS2, 2);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_mediaSetForCategoryTypeSdCard() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Add media to primary volume
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            // Add media to sd card volume
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            contentValues.put(MediaColumns.BUCKET_ID, ID2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD, null, -1, null,
+                    sTestConfigStore
+            )) {
+                assertThat(cursor.getCount()).isEqualTo(1);
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID2), DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_sdCardCategoryDisabled_deviceFoldersIncludesSdCard() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Add media to primary volume
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS2, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            // Add media to sd card volume
+            contentValues.put(DATE_TAKEN, DATE_TAKEN_MS1);
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            contentValues.put(MediaColumns.BUCKET_ID, ID2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
+                    null, sTestConfigStore)) {
+                assertThat(cursor.getCount()).isEqualTo(2);
+
+                // Media set containing media in external primary
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID1), DATE_TAKEN_MS2, 1);
+
+                // Media set containing media in sd card
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID2), DATE_TAKEN_MS1, 1);
+            }
+
+            // Also assert that Sd card category is not queryable with the flag disabled
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD, null, -1,
+                    null, sTestConfigStore)) {
+                assertThat(cursor.getCount()).isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_sdCardCategoryEnabled_deviceFoldersExcludeSdCard() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Add media to primary volume
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "");
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            // Add media to sd card volume
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            contentValues.put(MediaColumns.BUCKET_ID, ID2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
+                    null, sTestConfigStore)) {
+                assertThat(cursor.getCount()).isEqualTo(1);
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                        String.valueOf(ID1), DATE_TAKEN_MS1, 1);
             }
         }
     }
@@ -1693,7 +1967,7 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, null, -1,
-                    null)) {
+                    null, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of media sets on querying TABLE_FILES for "
                                 + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS.")
@@ -1702,7 +1976,9 @@ public class ExternalDbFacadeTest {
             }
 
             try (Cursor cursor = facade.queryMediaSets(
-                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null)) {
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, null, -1, null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage(
                         "Unexpected number of media sets on querying TABLE_FILES for "
                                 + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
@@ -1713,7 +1989,7 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                     VIDEO_MIME_TYPES_QUERY, -1,
-                    null)) {
+                    null, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with video mime type")
                         .that(cursor.getCount())
@@ -1723,7 +1999,7 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                     VIDEO_MIME_TYPES_QUERY, -1,
-                    null)) {
+                    null, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with video mime type")
                         .that(cursor.getCount())
@@ -1745,7 +2021,7 @@ public class ExternalDbFacadeTest {
             // Verify that media returned in descending order of date_taken, _id
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
-                    /* mimeType */ null, /* pageSize*/ 3, /* pageToken*/ null)) {
+                    /* mimeType */ null, /* pageSize*/ 3, /* pageToken*/ null, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2")
                         .that(cursor.getCount()).isEqualTo(3);
@@ -1770,7 +2046,7 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                     /* mimeType */ null, /* pageSize*/ 3,
-                    /* pageToken*/ DATE_TAKEN_MS4 + "|" + ID4)) {
+                    /* pageToken*/ DATE_TAKEN_MS4 + "|" + ID4, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
                         + "pageToken 'DATE_TAKEN_MS4|ID4'")
@@ -1807,7 +2083,7 @@ public class ExternalDbFacadeTest {
             // Verify that media returned in descending order of date_taken, _id
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
-                    /* mimeType */ null, /* pageSize*/ 2, /* pageToken*/ null)) {
+                    /* mimeType */ null, /* pageSize*/ 2, /* pageToken*/ null, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2")
                         .that(cursor.getCount()).isEqualTo(2);
@@ -1816,6 +2092,9 @@ public class ExternalDbFacadeTest {
                 assertMediaSetColumns(cursor,
                         CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                         PACKAGE_NAME5, DATE_TAKEN_MS5, 1);
+
+                // MediaSet for PACKAGE_NAME4 does not show up as it has is_downloaded=1, which
+                // implies it must be owned by the browser
 
                 cursor.moveToNext();
                 assertMediaSetColumns(cursor,
@@ -1826,13 +2105,13 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                     /* mimeType */ null, /* pageSize*/ 3,
-                    /* pageToken*/ DATE_TAKEN_MS3 + "|" + ID3)) {
+                    /* pageToken*/ DATE_TAKEN_MS3 + "|" + ID3, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
-                        + "pageToken 'DATE_TAKEN_MS4|ID4'")
+                        + "pageToken 'DATE_TAKEN_MS3|ID3'")
                         .that(cursor.getCount()).isEqualTo(2);
 
-                cursor.moveToNext();
+                cursor.moveToFirst();
                 assertMediaSetColumns(cursor,
                         CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                         PACKAGE_NAME2, DATE_TAKEN_MS2, 1);
@@ -1841,6 +2120,82 @@ public class ExternalDbFacadeTest {
                 assertMediaSetColumns(cursor,
                         CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                         PACKAGE_NAME1, DATE_TAKEN_MS1, 1);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_dateTakenPresentForSdCard_returnsCorrectSortOrder() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Insert 5 images with non-null date_taken and non_null bucket_id stored on sd card
+            Long[] dateTaken = new Long[]{
+                    DATE_TAKEN_MS1,
+                    DATE_TAKEN_MS2,
+                    DATE_TAKEN_MS3,
+                    DATE_TAKEN_MS4,
+                    DATE_TAKEN_MS5
+            };
+            Long[] bucketIds = new Long[]{ID1, ID2, ID3, ID4, ID5};
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            for (int i = 0; i < 5; ++i) {
+                contentValues.put(MediaColumns.DATE_TAKEN, dateTaken[i]);
+                contentValues.put(MediaColumns.BUCKET_ID, bucketIds[i]);
+                helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+            }
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            // Verify that media returned in descending order of date_taken, _id
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                    /* mimeType */ null, /* pageSize*/ 2, /* pageToken*/ null, sTestConfigStore)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_SD_CARD with pageSize 2")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID5), DATE_TAKEN_MS5, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID4), DATE_TAKEN_MS4, 1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                    /* mimeType */ null, /* pageSize*/ 3,
+                    /* pageToken*/ DATE_TAKEN_MS4 + "|" + ID4, sTestConfigStore)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_SD_CARD with pageSize 2 and "
+                        + "pageToken 'DATE_TAKEN_MS4|ID4'")
+                        .that(cursor.getCount()).isEqualTo(3);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID3), DATE_TAKEN_MS3, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID2), DATE_TAKEN_MS2, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID1), DATE_TAKEN_MS1, 1);
             }
         }
     }
@@ -1859,7 +2214,7 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, /* mimeType */
                     null,
-                    /* pageSize*/ 2, /* pageToken*/ null)) {
+                    /* pageSize*/ 2, /* pageToken*/ null, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
                         + "pageToken NULL")
@@ -1880,7 +2235,7 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, /* mimeType */
                     null,
-                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                    /* pageSize*/ 2, /* pageToken*/ pageToken, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
                         + "pageToken " + pageToken)
@@ -1901,7 +2256,7 @@ public class ExternalDbFacadeTest {
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS, /* mimeType */
                     null,
-                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                    /* pageSize*/ 2, /* pageToken*/ pageToken, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS with pageSize 2 and "
                         + "pageToken " + pageToken)
@@ -1923,7 +2278,7 @@ public class ExternalDbFacadeTest {
             // Verify that media sets returned in descending order of date_taken, _id
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, /* mimeType */ null,
-                    /* pageSize*/ 2, /* pageToken*/ null)) {
+                    /* pageSize*/ 2, /* pageToken*/ null, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
                         + "pageToken NULL")
@@ -1943,7 +2298,7 @@ public class ExternalDbFacadeTest {
             String pageToken = DATE_MODIFIED_MS2 * 1000 + "|" + ID4;
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, /* mimeType */ null,
-                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                    /* pageSize*/ 2, /* pageToken*/ pageToken, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
                         + "pageToken " + pageToken)
@@ -1963,7 +2318,94 @@ public class ExternalDbFacadeTest {
             pageToken = DATE_TAKEN_MS2 + "|" + ID2;
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS, /* mimeType */ null,
-                    /* pageSize*/ 2, /* pageToken*/ pageToken)) {
+                    /* pageSize*/ 2, /* pageToken*/ pageToken, sTestConfigStore)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
+                        + "pageToken " + pageToken)
+                        .that(cursor.getCount()).isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_dateTakenMissingForSdCard_returnsCorrectSortOrder() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Insert 5 images, 2 with non-null date_taken and 3 with null date_taken
+            // First 2 images belong to same media set with bucket_id = 1
+            // All the media items are stored on sd card volume
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            contentValues.remove(DATE_TAKEN);
+
+            Long[] dateModified =
+                    new Long[]{DATE_MODIFIED_MS1, DATE_MODIFIED_MS2, DATE_MODIFIED_MS3};
+            Long[] bucketIds = new Long[]{ID3, ID4, ID5};
+            for (int i = 0; i < 3; ++i) {
+                contentValues.put(MediaColumns.DATE_MODIFIED, dateModified[i]);
+                contentValues.put(MediaColumns.BUCKET_ID, bucketIds[i]);
+                helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+            }
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            // Verify that media sets returned in descending order of date_taken, _id
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD, /* mimeType */ null,
+                    /* pageSize*/ 2, /* pageToken*/ null, sTestConfigStore)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_SD_CARD with pageSize 2 and "
+                        + "pageToken NULL")
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID5), DATE_MODIFIED_MS3 * 1000, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID4), DATE_MODIFIED_MS2 * 1000, 1);
+            }
+
+            String pageToken = DATE_MODIFIED_MS2 * 1000 + "|" + ID4;
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD, /* mimeType */ null,
+                    /* pageSize*/ 2, /* pageToken*/ pageToken, sTestConfigStore)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
+                        + "pageToken " + pageToken)
+                        .that(cursor.getCount()).isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID3), DATE_MODIFIED_MS1 * 1000, 1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID1), DATE_TAKEN_MS2, 2);
+            }
+
+            pageToken = DATE_TAKEN_MS2 + "|" + ID2;
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD, /* mimeType */ null,
+                    /* pageSize*/ 2, /* pageToken*/ pageToken, sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS with pageSize 2 and "
                         + "pageToken " + pageToken)
@@ -2013,7 +2455,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
                         .that(cursor.getCount())
@@ -2067,7 +2511,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
                         .that(cursor.getCount())
@@ -2121,7 +2567,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
                         .that(cursor.getCount())
@@ -2173,7 +2621,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
                         .that(cursor.getCount())
@@ -2193,7 +2643,66 @@ public class ExternalDbFacadeTest {
     }
 
     @Test
-    public void testQueryMediaSets_bucketDisplayNameIsNull_displayNameSetToLocalStorage() {
+    public void testQueryMediaSets_sdCardMediaSet_coverIdIsIdOfLatestMedia() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Media with date_taken as DATE_TAKEN_MS1 and _id as ID1
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.BUCKET_ID, ID5);
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_modified as DATE_TAKEN_MS2 and _id as ID2
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns._ID, ID2);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with date_taken as DATE_TAKEN_MS2 and _id as ID3
+            contentValues.put(MediaColumns._ID, ID3);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(3);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_SD_CARD")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID5), DATE_TAKEN_MS2, 3);
+                assertWithMessage("Unexpected cover id for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.MEDIA_COVER_ID))
+                        .isEqualTo(String.valueOf(ID3));
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_nullBucketDisplayNameForDevice_displayNameSetToLocalStorage() {
         try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
             ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
                     mock(VolumeCache.class));
@@ -2223,7 +2732,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS")
                         .that(cursor.getCount())
@@ -2243,9 +2754,82 @@ public class ExternalDbFacadeTest {
                 assertMediaSetColumns(cursor,
                         CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                         String.valueOf(ID4), DATE_TAKEN_MS1, 1);
-                // TODO(b/429580294): Replace with string resource for finalized name.
+                // TODO(b/429580294): Replace the string resource with the finalized name.
                 String expectedDisplayName = sIsolatedContext.getResources().getString(
                         R.string.storage_description);
+                assertWithMessage("Unexpected display name for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME))
+                        .isEqualTo(expectedDisplayName);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_nullBucketDisplayNameForSdCard_displayNameSetToSDCard() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            // Media with null bucket display name
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            contentValues.put(MediaColumns._ID, ID1);
+            contentValues.put(MediaColumns.BUCKET_ID, ID4);
+            contentValues.put(MediaColumns.RELATIVE_PATH, "/");
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with non-null bucket display name
+            contentValues.put(MediaColumns._ID, ID2);
+            contentValues.put(MediaColumns.BUCKET_ID, ID5);
+            contentValues.put(MediaColumns.BUCKET_DISPLAY_NAME, FOLDER_NAME1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+            }
+
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_SD_CARD")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID5), DATE_TAKEN_MS1, 1);
+                assertWithMessage("Unexpected display name for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME))
+                        .isEqualTo(FOLDER_NAME1);
+
+                cursor.moveToNext();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                        String.valueOf(ID4), DATE_TAKEN_MS1, 1);
+                // TODO(b/429580294): Replace the string resource with the finalized name.
+                String expectedDisplayName = sIsolatedContext.getResources().getString(
+                        R.string.sd_card_album_display_name);
                 assertWithMessage("Unexpected display name for the media set")
                         .that(getCursorString(
                                 cursor,
@@ -2282,7 +2866,8 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore)) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
                         .that(cursor.getCount())
@@ -2318,7 +2903,8 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore)) {
                 assertWithMessage("Expected the cursor to be empty on querying for media set of "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
                         .that(cursor.getCount())
@@ -2347,7 +2933,8 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     /* mediaCategoryType */ "SOME_RANDOM_CATEGORY",
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore)) {
                 assertWithMessage("Expected the cursor to be empty on querying for media set of "
                         + "unrecognized category type")
                         .that(cursor.getCount())
@@ -2368,7 +2955,7 @@ public class ExternalDbFacadeTest {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for all media")
                         .that(cursor.getCount())
-                        .isEqualTo(3);
+                        .isEqualTo(4);
             }
 
             try (Cursor cursor = facade.queryMediaInMediaSet(
@@ -2376,7 +2963,7 @@ public class ExternalDbFacadeTest {
                             CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                             ALBUM_ID_DOWNLOADS),
                     /* mimeType */ null, /* pageSize*/ 10, /* pageToken*/ null,
-                    /* sortOrder */ 1)) {
+                    /* sortOrder */ 1, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for "
                                 + "downloads media set")
@@ -2398,7 +2985,7 @@ public class ExternalDbFacadeTest {
                             CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                             /* bucket id */ String.valueOf(ID4)),
                     new String[]{IMAGE_MIME_TYPE}, /* pageSize*/ 20, /* pageToken*/ null,
-                    /* sortOrder */ 1)) {
+                    /* sortOrder */ 1, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for "
                                 + "device folder media set")
@@ -2421,7 +3008,7 @@ public class ExternalDbFacadeTest {
                             CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
                             PACKAGE_NAME1),
                     /* mimeType */ null, /* pageSize*/ -1, /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1, sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for "
                                 + "app folder media set")
@@ -2431,6 +3018,109 @@ public class ExternalDbFacadeTest {
 
                 cursor.moveToFirst();
                 assertMediaColumns(facade, cursor, ID3, DATE_TAKEN_MS3);
+            }
+
+            try (Cursor cursor = facade.queryMediaInMediaSet(
+                    initMediaSetId(
+                            CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                            /* bucket id */ String.valueOf(ID5)),
+                    /*mimeTypes*/ null, /* pageSize*/ 20, /* pageToken*/ null,
+                    /* sortOrder */ 1, sTestConfigStore)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for "
+                                + "sd card folder media set")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+                assertCursorExtrasForMediaInMediaSet(
+                        cursor,
+                        EXTRA_PAGE_SIZE,
+                        EXTRA_PAGE_TOKEN,
+                        EXTRA_SORT_ORDER);
+
+                cursor.moveToFirst();
+                assertMediaColumns(facade, cursor, ID4, DATE_TAKEN_MS4);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaInMediaSet_withSdCardEnabled_correctVolumeIsRequired() {
+        VolumeCache mockVolumeCache = mock(VolumeCache.class);
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mockVolumeCache);
+
+            HashSet<String> volumes = new HashSet<>();
+            volumes.add(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            volumes.add(SD_CARD_VOLUME_NAME);
+            when(mockVolumeCache.getExternalVolumeNames()).thenReturn(volumes);
+
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+            contentValues.put(MediaColumns.BUCKET_ID, ID1);
+            helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for all media")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+            }
+
+            // Flag disabled
+            // Since the bucket_id are unique, the following query will work even though media with
+            // bucket_id=1 is on sd card volume.
+            try (Cursor cursor = facade.queryMediaInMediaSet(
+                    initMediaSetId(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                            String.valueOf(ID1)),
+                    /* mimeTypes */ null,
+                    /* pageSize*/ -1,
+                    /* pageToken*/ null,
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for "
+                                + "sd card folder media set")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaColumns(facade, cursor, ID1, DATE_TAKEN_MS1);
+            }
+
+            //Flag enabled
+            sTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
+            try (Cursor cursor = facade.queryMediaInMediaSet(
+                    initMediaSetId(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                            String.valueOf(ID1)),
+                    /* mimeTypes */ null,
+                    /* pageSize*/ -1,
+                    /* pageToken*/ null,
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for "
+                                + "sd card folder media set")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+
+            try (Cursor cursor = facade.queryMediaInMediaSet(
+                    initMediaSetId(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
+                            String.valueOf(ID1)),
+                    /* mimeTypes */ null,
+                    /* pageSize*/ -1,
+                    /* pageToken*/ null,
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLES_FILES for "
+                                + "sd card folder media set")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaColumns(facade, cursor, ID1, DATE_TAKEN_MS1);
             }
         }
     }
@@ -2464,7 +3154,8 @@ public class ExternalDbFacadeTest {
                     VIDEO_MIME_TYPES_QUERY,
                     /* pageSize*/ -1,
                     /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for media from "
                                 + "FOLDER1 media set with VIDEO mime type")
@@ -2478,7 +3169,8 @@ public class ExternalDbFacadeTest {
                     IMAGE_MIME_TYPES_QUERY,
                     /* pageSize*/ -1,
                     /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for media from "
                                 + "FOLDER1 media set with IMAGE mime type")
@@ -2492,7 +3184,8 @@ public class ExternalDbFacadeTest {
                     VIDEO_MIME_TYPES_QUERY,
                     /* pageSize*/ -1,
                     /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for media from "
                                 + "PACKAGE1 media set with VIDEO mime type")
@@ -2506,7 +3199,8 @@ public class ExternalDbFacadeTest {
                     IMAGE_MIME_TYPES_QUERY,
                     /* pageSize*/ -1,
                     /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for media from "
                                 + "PACKAGE1 media set with IMAGE mime type")
@@ -2533,7 +3227,8 @@ public class ExternalDbFacadeTest {
                     /* mimeTypes */ null,
                     /* pageSize*/ -1,
                     /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for media from "
                                 + "FOLDER1 media set.")
@@ -2572,7 +3267,8 @@ public class ExternalDbFacadeTest {
                     /* mimeTypes */ null,
                     /* pageSize*/ -1,
                     /* pageToken*/ null,
-                    /* sortOrder */ -1)) {
+                    /* sortOrder */ -1,
+                    sTestConfigStore)) {
                 assertWithMessage(
                         "Unexpected number of rows on querying TABLES_FILES for media from "
                                 + "FOLDER1 media set.")
@@ -2626,7 +3322,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
                         .that(cursor.getCount())
@@ -2669,7 +3367,9 @@ public class ExternalDbFacadeTest {
 
             try (Cursor cursor = facade.queryMediaSets(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
-                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null,
+                    sTestConfigStore
+            )) {
                 assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
                         + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
                         .that(cursor.getCount())
@@ -2733,6 +3433,7 @@ public class ExternalDbFacadeTest {
         contentValues1.put(MediaColumns._ID, ID1);
         contentValues1.put(MediaColumns.IS_DOWNLOAD, 1);
         contentValues1.put(MediaColumns.RELATIVE_PATH, "");
+        contentValues1.put(MediaColumns.VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
         helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues1));
 
         // Insert a user created media
@@ -2740,15 +3441,24 @@ public class ExternalDbFacadeTest {
         contentValues2.put(MediaColumns._ID, ID2);
         contentValues2.put(MediaColumns.BUCKET_ID, ID4);
         contentValues2.put(MediaColumns.RELATIVE_PATH, "");
+        contentValues2.put(MediaColumns.VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
         helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues2));
 
         // Insert an app created media
         ContentValues contentValues3 = getContentValues(DATE_TAKEN_MS3, GENERATION_MODIFIED3);
         contentValues3.put(MediaColumns._ID, ID3);
-        // use self package name, as it is guaranteed to be present
         contentValues3.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
         contentValues3.put(MediaColumns.RELATIVE_PATH, "");
+        contentValues3.put(MediaColumns.VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
         helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues3));
+
+        // Insert a media in sd card
+        ContentValues contentValues4 = getContentValues(DATE_TAKEN_MS4, GENERATION_MODIFIED1);
+        contentValues4.put(MediaColumns._ID, ID4);
+        contentValues4.put(MediaColumns.BUCKET_ID, ID5);
+        contentValues4.put(MediaColumns.RELATIVE_PATH, "");
+        contentValues4.put(MediaColumns.VOLUME_NAME, SD_CARD_VOLUME_NAME);
+        helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues4));
     }
 
     private boolean isEnglishLocale() {
@@ -2821,8 +3531,8 @@ public class ExternalDbFacadeTest {
         helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
     }
 
-    private String initMediaSetId(String mediaCategoryType, String id2) {
-        return mediaCategoryType + ":" + id2;
+    private String initMediaSetId(String mediaCategoryType, String id) {
+        return String.format(Locale.ROOT, "%s:%s", mediaCategoryType, id);
     }
 
     private ApplicationInfo createFakeAppInfo(String packageName, String appLabel, int resId) {
