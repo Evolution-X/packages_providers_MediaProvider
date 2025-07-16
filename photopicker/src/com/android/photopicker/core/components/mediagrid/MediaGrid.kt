@@ -573,6 +573,14 @@ private fun mediaGrid(
                 // too much navigates you away from the current screen, the user can change the zoom
                 // level in the first gesture, and then zoom to preview in a second gesture.
                 zoomCanPreview = currentColumns == pinchToZoomMinColumns
+
+                // When a Pinch gesture begins, ensure that it is not part of the header elements.
+                // If it is, then return true here to cancel the gesture immediately.
+                val headerElementCount =
+                    listOf(bannerContent, highlightMediaContent).count { it != null }
+                val pinchIndex =
+                    state.itemIndexAtPosition(event.offset)?.minus(headerElementCount) ?: 0
+                return@pinchToZoomHandler !(pinchIndex >= 0)
             }
             is PinchToZoomEvent.Changed -> {
                 zoom = (zoom * event.value).coerceIn(minZoomFactor, maxZoomFactor)
