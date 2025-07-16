@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -110,6 +111,7 @@ data class VectorIcon(val imageVector: ImageVector) : Icon() {
             val imageName = parcel.readString()
             return when (imageName) {
                 Icons.Outlined.FolderCopy.name -> VectorIcon(Icons.Outlined.FolderCopy)
+                Icons.Outlined.SdCard.name -> VectorIcon(Icons.Outlined.SdCard)
                 else -> return null
             }
         }

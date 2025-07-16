@@ -24,6 +24,7 @@ enum class CategoryType(val key: String) {
     USER_ALBUMS(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_USER_ALBUMS),
     DEVICE_FOLDERS(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS),
     APP_FOLDERS(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS),
+    SD_CARD(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD),
 }
 
 /** A map of all Key -> [CategoryType] available. */

@@ -393,6 +393,57 @@ public class MediaGroupCursorUtilsTest {
     }
 
     @Test
+    public void testGetMediaGroupCursorForCategories_forSdCardCategory_createsPickerUri() {
+        final String localAuthority = "local.authority";
+        Cursor categoryCursor = getMediaCategoriesCursor(
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD);
+
+        Cursor mediaGroupCursor = MediaGroupCursorUtils.getMediaGroupCursorForCategories(
+                categoryCursor,
+                localAuthority,
+                1L,
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD);
+        assertWithMessage("Expected media group cursor to non null")
+                .that(mediaGroupCursor).isNotNull();
+        assertWithMessage("Unexpected number of rows found in media group cursor")
+                .that(mediaGroupCursor.getCount()).isEqualTo(1);
+
+        mediaGroupCursor.moveToFirst();
+        assertWithMessage("Unexpected media group")
+                .that(MediaGroup.valueOf(
+                        mediaGroupCursor.getString(mediaGroupCursor.getColumnIndexOrThrow(
+                                PickerSQLConstants
+                                        .MediaGroupResponseColumns.MEDIA_GROUP.getColumnName()))))
+                .isEqualTo(MediaGroup.CATEGORY);
+
+        final List<String> mediaCoverIdColumns = List.of(
+                PickerSQLConstants.MediaGroupResponseColumns.UNWRAPPED_COVER_URI.getColumnName(),
+                PickerSQLConstants.MediaGroupResponseColumns
+                        .ADDITIONAL_UNWRAPPED_COVER_URI_1.getColumnName(),
+                PickerSQLConstants.MediaGroupResponseColumns
+                        .ADDITIONAL_UNWRAPPED_COVER_URI_2.getColumnName(),
+                PickerSQLConstants.MediaGroupResponseColumns
+                        .ADDITIONAL_UNWRAPPED_COVER_URI_3.getColumnName()
+        );
+
+        List<String> expectedUnwrappedCoverUris = Arrays.asList(
+                getPickerUriString(LOCAL_ID_1, localAuthority, MY_USER_ID),
+                getPickerUriString(LOCAL_ID_2, localAuthority, MY_USER_ID),
+                null,
+                null
+        );
+        List<String> actualUnwrappedCoverUris = new ArrayList<>();
+        for (String columnName : mediaCoverIdColumns) {
+            final String mediaCoverId = mediaGroupCursor.getString(
+                    mediaGroupCursor.getColumnIndexOrThrow(columnName));
+            actualUnwrappedCoverUris.add(mediaCoverId);
+        }
+        assertWithMessage("Unexpected list of unwrapped cover uris found")
+                .that(actualUnwrappedCoverUris)
+                .containsExactlyElementsIn(expectedUnwrappedCoverUris);
+    }
+
+    @Test
     public void testGetMediaGroupCursorForMediaSets_forNonAppCategory_returnsNullBadgeUri()
             throws PackageManager.NameNotFoundException {
         Cursor categoryCursor = getMediaSetsCursor(

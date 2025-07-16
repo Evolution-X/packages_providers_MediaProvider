@@ -30,6 +30,8 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.providers.media.MediaApplication;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -197,7 +199,8 @@ public class PickerUriResolverV2 {
                 return PickerDataLayerV2.queryCategoriesAndAlbums(
                         appContext,
                         requireNonNull(queryArgs),
-                        cancellationSignal);
+                        cancellationSignal,
+                        MediaApplication.getConfigStore());
             case PICKER_INTERNAL_MEDIA_SETS:
                 return PickerDataLayerV2.queryMediaSets(appContext, requireNonNull(queryArgs));
             case PICKER_INTERNAL_MEDIA_SET_CONTENTS:
