@@ -3152,6 +3152,11 @@ public class PickerDataLayerV2Test {
                     .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
                             .ITEMS_BEFORE_COUNT.getKey(), Integer.MIN_VALUE))
                     .isEqualTo(0);
+
+            assertWithMessage("Unexpected value of items after count in the media cursor.")
+                    .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
+                            .ITEMS_AFTER_COUNT.getKey(), Integer.MIN_VALUE))
+                    .isEqualTo(2);
         }
     }
 
@@ -3212,6 +3217,10 @@ public class PickerDataLayerV2Test {
                     .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
                             .ITEMS_BEFORE_COUNT.getKey(), Integer.MIN_VALUE))
                     .isEqualTo(3);
+            assertWithMessage("Unexpected value of items before count in the media cursor.")
+                    .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
+                            .ITEMS_AFTER_COUNT.getKey(), Integer.MIN_VALUE))
+                    .isEqualTo(0);
         }
     }
 
@@ -3276,6 +3285,11 @@ public class PickerDataLayerV2Test {
                     .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
                             .ITEMS_BEFORE_COUNT.getKey(), Integer.MIN_VALUE))
                     .isEqualTo(2);
+
+            assertWithMessage("Unexpected value of items after count in the media cursor.")
+                    .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
+                            .ITEMS_AFTER_COUNT.getKey(), Integer.MIN_VALUE))
+                    .isEqualTo(0);
         }
     }
 
@@ -3336,6 +3350,74 @@ public class PickerDataLayerV2Test {
                     .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
                             .ITEMS_BEFORE_COUNT.getKey(), Integer.MIN_VALUE))
                     .isEqualTo(2);
+            assertWithMessage("Unexpected value of items after count in the media cursor.")
+                    .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
+                            .ITEMS_AFTER_COUNT.getKey(), Integer.MIN_VALUE))
+                    .isEqualTo(1);
+        }
+    }
+
+    @Test
+    public void testPaginationLastPageWhenLastPageItemsLessThanPageSize() {
+        Cursor cursor1 = getLocalMediaCursor(LOCAL_ID, DATE_TAKEN_MS);
+        Cursor cursor2 = getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1);
+        Cursor cursor3 = getLocalMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS + 2);
+        Cursor cursor4 = getLocalMediaCursor(LOCAL_ID_3, DATE_TAKEN_MS + 3);
+        Cursor cursor5 = getLocalMediaCursor(LOCAL_ID_4, DATE_TAKEN_MS + 4);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor4, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor5, 1);
+
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        try (Cursor cr = PickerDataLayerV2.queryMedia(
+                mMockContext, getMediaQueryExtras(Long.MAX_VALUE,
+                        DATE_TAKEN_MS + 1,
+                        /* pageSize */ 3,
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(2);
+
+            cr.moveToFirst();
+            assertMediaCursor(cr, LOCAL_ID_1, LOCAL_PROVIDER, DATE_TAKEN_MS + 1,
+                    MP4_VIDEO_MIME_TYPE);
+
+            cr.moveToNext();
+            assertMediaCursor(cr, LOCAL_ID, LOCAL_PROVIDER, DATE_TAKEN_MS, MP4_VIDEO_MIME_TYPE);
+
+            assertWithMessage("Unexpected value of previous date taken in the media cursor.")
+                    .that(cr.getExtras().getLong(PickerSQLConstants.MediaResponseExtras
+                            .PREV_PAGE_DATE_TAKEN.getKey(), Long.MIN_VALUE))
+                    .isEqualTo(DATE_TAKEN_MS + 4);
+
+            assertWithMessage("Unexpected value of previous picker id in the media cursor.")
+                    .that(cr.getExtras().getLong(PickerSQLConstants.MediaResponseExtras
+                            .PREV_PAGE_ID.getKey(), Long.MIN_VALUE))
+                    .isEqualTo(5);
+
+            assertWithMessage("Unexpected value of next date taken in the media cursor.")
+                    .that(cr.getExtras().getLong(PickerSQLConstants.MediaResponseExtras
+                            .NEXT_PAGE_DATE_TAKEN.getKey(), Long.MIN_VALUE))
+                    .isEqualTo(Long.MIN_VALUE);
+
+            assertWithMessage("Unexpected value of next picker id in the media cursor.")
+                    .that(cr.getExtras().getLong(PickerSQLConstants.MediaResponseExtras
+                            .NEXT_PAGE_ID.getKey(), Long.MIN_VALUE))
+                    .isEqualTo(Long.MIN_VALUE);
+
+            assertWithMessage("Unexpected value of items before count in the media cursor.")
+                    .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
+                            .ITEMS_BEFORE_COUNT.getKey(), Integer.MIN_VALUE))
+                    .isEqualTo(3);
+            assertWithMessage("Unexpected value of items before count in the media cursor.")
+                    .that(cr.getExtras().getInt(PickerSQLConstants.MediaResponseExtras
+                            .ITEMS_AFTER_COUNT.getKey(), Integer.MIN_VALUE))
+                    .isEqualTo(0);
         }
     }
 
@@ -4242,6 +4324,8 @@ public class PickerDataLayerV2Test {
         extras.putInt("next_page_size", pageSize);
         extras.putStringArrayList("providers", new ArrayList<>(providers));
         extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+        extras.putBoolean("enable_items_before_count", true);
+        extras.putBoolean("enable_items_after_count", true);
         return extras;
     }
 

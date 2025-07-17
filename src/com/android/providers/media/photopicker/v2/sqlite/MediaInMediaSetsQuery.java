@@ -52,6 +52,8 @@ public class MediaInMediaSetsQuery {
     final MediaInMediaSetsCloudSubQuery mCloudMediaSubquery;
     @Nullable
     private String[] mCallingPackageNames;
+    private final boolean mShouldPopulateItemsBeforeCount;
+    private final boolean mShouldPopulateItemsAfterCount;
 
 
     public MediaInMediaSetsQuery(
@@ -64,6 +66,10 @@ public class MediaInMediaSetsQuery {
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
         mCurrentPageSize = queryArgs.getInt("current_page_size", Integer.MAX_VALUE);
         mNextPageSize = queryArgs.getInt("next_page_size", Integer.MAX_VALUE);
+        mShouldPopulateItemsBeforeCount = queryArgs.getBoolean(
+                "enable_items_before_count", false);
+        mShouldPopulateItemsAfterCount = queryArgs.getBoolean(
+                "enable_items_after_count", false);
         mAppContext = appContext;
 
         mLocalMediaSubQuery = new MediaInMediaSetsLocalSubQuery(
@@ -168,5 +174,15 @@ public class MediaInMediaSetsQuery {
 
     public int getNextPageSize() {
         return mNextPageSize;
+    }
+
+    /** Return if items before count should be included in the resultant query cursor extras*/
+    public boolean shouldPopulateItemsBeforeCount() {
+        return mShouldPopulateItemsBeforeCount;
+    }
+
+    /** Return if items after count should be included in the resultant query cursor extras*/
+    public boolean shouldPopulateItemsAfterCount() {
+        return mShouldPopulateItemsAfterCount;
     }
 }

@@ -125,6 +125,9 @@ class MediaPagingSourceTest {
                 contentResolver,
                 availableProviders,
                 testPhotopickerConfiguration,
+                shouldEnableItemsBeforeCount = true,
+                shouldEnableItemsAfterCount =
+                    testPhotopickerConfiguration.flags.PICKER_DATESCRUBBER_ENABLED,
             )
     }
 }

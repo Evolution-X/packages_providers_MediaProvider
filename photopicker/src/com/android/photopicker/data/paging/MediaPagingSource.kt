@@ -85,6 +85,9 @@ class MediaPagingSource(
                             contentResolver,
                             availableProviders,
                             configuration,
+                            shouldEnableItemsBeforeCount = true,
+                            shouldEnableItemsAfterCount =
+                                configuration.flags.PICKER_DATESCRUBBER_ENABLED,
                         )
                     }
                 } catch (e: Exception) {

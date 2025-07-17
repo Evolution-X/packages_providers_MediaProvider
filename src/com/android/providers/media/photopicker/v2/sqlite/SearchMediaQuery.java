@@ -41,6 +41,8 @@ public class SearchMediaQuery {
     final SearchLocalMediaSubQuery mLocalMediaSubQuery;
     @NonNull
     final SearchCloudMediaSubquery mCloudMediaSubquery;
+    private final boolean mShouldPopulateItemsBeforeCount;
+    private final boolean mShouldPopulateItemsAfterCount;
 
     public SearchMediaQuery(Bundle queryArgs, int searchRequestID) {
         mIntentAction = queryArgs.getString("intent_action");
@@ -48,6 +50,10 @@ public class SearchMediaQuery {
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
         mCurrentPageSize = queryArgs.getInt("current_page_size", Integer.MAX_VALUE);
         mNextPageSize = queryArgs.getInt("next_page_size", Integer.MAX_VALUE);
+        mShouldPopulateItemsBeforeCount = queryArgs.getBoolean(
+                "enable_items_before_count", false);
+        mShouldPopulateItemsAfterCount = queryArgs.getBoolean(
+                "enable_items_after_count", false);
 
         mLocalMediaSubQuery = new SearchLocalMediaSubQuery(queryArgs, searchRequestID);
         mCloudMediaSubquery = new SearchCloudMediaSubquery(queryArgs, searchRequestID);
@@ -135,5 +141,15 @@ public class SearchMediaQuery {
     }
     public int getNextPageSize() {
         return mNextPageSize;
+    }
+
+    /** Return if items before count should be included in the resultant query cursor extras*/
+    public boolean shouldPopulateItemsBeforeCount() {
+        return mShouldPopulateItemsBeforeCount;
+    }
+
+    /** Return if items after count should be included in the resultant query cursor extras*/
+    public boolean shouldPopulateItemsAfterCount() {
+        return mShouldPopulateItemsAfterCount;
     }
 }

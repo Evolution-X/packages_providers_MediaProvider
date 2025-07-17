@@ -81,6 +81,8 @@ open class MediaProviderClient {
         DATE_TAKEN("date_taken_millis"),
         CURRENT_PAGE_SIZE("current_page_size"),
         NEXT_PAGE_SIZE("next_page_size"),
+        ENABLE_ITEMS_BEFORE_COUNT("enable_items_before_count"),
+        ENABLE_ITEMS_AFTER_COUNT("enable_items_after_count"),
     }
 
     /** Contains all optional and mandatory keys required to make a Media page key query */
@@ -161,6 +163,7 @@ open class MediaProviderClient {
         NEXT_PAGE_ID("next_page_picker_id"),
         NEXT_PAGE_DATE_TAKEN("next_page_date_taken"),
         ITEMS_BEFORE_COUNT("items_before_count"),
+        ITEMS_AFTER_COUNT("items_after_count"),
     }
 
     /** Contains all optional and mandatory keys for data in the Media query response. */
@@ -287,6 +290,8 @@ open class MediaProviderClient {
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
+        shouldEnableItemsBeforeCount: Boolean = false,
+        shouldEnableItemsAfterCount: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
             bundleOf(
@@ -294,6 +299,8 @@ open class MediaProviderClient {
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
                 MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
                 MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                MediaQuery.ENABLE_ITEMS_BEFORE_COUNT.key to shouldEnableItemsBeforeCount,
+                MediaQuery.ENABLE_ITEMS_AFTER_COUNT.key to shouldEnableItemsAfterCount,
                 EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
@@ -319,6 +326,8 @@ open class MediaProviderClient {
                             nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
                                 cursor.getItemsBeforeCount() ?: LoadResult.Page.COUNT_UNDEFINED,
+                            itemsAfter =
+                                cursor.getItemsAfterCount() ?: LoadResult.Page.COUNT_UNDEFINED,
                         )
                     }
                         ?: throw IllegalStateException(
@@ -340,6 +349,7 @@ open class MediaProviderClient {
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
         cancellationSignal: CancellationSignal?,
+        shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
             bundleOf(
@@ -347,6 +357,8 @@ open class MediaProviderClient {
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
                 MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
                 MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                MediaQuery.ENABLE_ITEMS_BEFORE_COUNT.key to shouldEnableItemsBeforeAndAfterCounts,
+                MediaQuery.ENABLE_ITEMS_AFTER_COUNT.key to shouldEnableItemsBeforeAndAfterCounts,
                 EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
@@ -372,6 +384,8 @@ open class MediaProviderClient {
                             nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
                                 cursor.getItemsBeforeCount() ?: LoadResult.Page.COUNT_UNDEFINED,
+                            itemsAfter =
+                                cursor.getItemsAfterCount() ?: LoadResult.Page.COUNT_UNDEFINED,
                         )
                     }
                         ?: throw IllegalStateException(
@@ -494,6 +508,7 @@ open class MediaProviderClient {
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
+        shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
             bundleOf(
@@ -502,6 +517,8 @@ open class MediaProviderClient {
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
                 MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
                 MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                MediaQuery.ENABLE_ITEMS_BEFORE_COUNT.key to shouldEnableItemsBeforeAndAfterCounts,
+                MediaQuery.ENABLE_ITEMS_AFTER_COUNT.key to shouldEnableItemsBeforeAndAfterCounts,
                 EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
                         availableProviders.forEach { provider -> add(provider.authority) }
@@ -525,6 +542,10 @@ open class MediaProviderClient {
                             data = cursor.getListOfMedia(),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
+                            itemsBefore =
+                                cursor.getItemsBeforeCount() ?: LoadResult.Page.COUNT_UNDEFINED,
+                            itemsAfter =
+                                cursor.getItemsAfterCount() ?: LoadResult.Page.COUNT_UNDEFINED,
                         )
                     }
                         ?: throw IllegalStateException(
@@ -796,6 +817,7 @@ open class MediaProviderClient {
         parentMediaSet: Group.MediaSet,
         config: PhotopickerConfiguration,
         cancellationSignal: CancellationSignal?,
+        shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
             bundleOf(
@@ -803,6 +825,8 @@ open class MediaProviderClient {
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
                 MediaQuery.CURRENT_PAGE_SIZE.key to currentPageSize,
                 MediaQuery.NEXT_PAGE_SIZE.key to nextPageSize,
+                MediaQuery.ENABLE_ITEMS_BEFORE_COUNT.key to shouldEnableItemsBeforeAndAfterCounts,
+                MediaQuery.ENABLE_ITEMS_AFTER_COUNT.key to shouldEnableItemsBeforeAndAfterCounts,
                 EXTRA_PROVIDERS to arrayListOf(parentMediaSet.authority),
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 EXTRA_INTENT_ACTION to config.action,
@@ -819,6 +843,10 @@ open class MediaProviderClient {
                             data = cursor.getListOfMedia(),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
+                            itemsBefore =
+                                cursor.getItemsBeforeCount() ?: LoadResult.Page.COUNT_UNDEFINED,
+                            itemsAfter =
+                                cursor.getItemsAfterCount() ?: LoadResult.Page.COUNT_UNDEFINED,
                         )
                     }
                         ?: throw IllegalStateException(
@@ -1419,6 +1447,17 @@ open class MediaProviderClient {
         val itemsBeforeCount: Int =
             extras.getInt(MediaResponseExtras.ITEMS_BEFORE_COUNT.key, defaultValue)
         return if (defaultValue == itemsBeforeCount) null else itemsBeforeCount
+    }
+
+    /**
+     * Extracts the after items count from the given [Cursor]. In case the cursor does not contain
+     * this value, return null.
+     */
+    private fun Cursor.getItemsAfterCount(): Int? {
+        val defaultValue = -1
+        val itemsAfterCount: Int =
+            extras.getInt(MediaResponseExtras.ITEMS_AFTER_COUNT.key, defaultValue)
+        return if (defaultValue == itemsAfterCount) null else itemsAfterCount
     }
 
     /** Creates a list of [Group.Album]-s from the given [Cursor]. */
