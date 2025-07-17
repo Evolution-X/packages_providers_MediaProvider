@@ -253,6 +253,7 @@ private fun MediasetContentGrid(
                 ) {
                     true -> { // Drag-to-select enabled
                         mediaGrid(
+                            modifier = Modifier.fillMaxSize(),
                             items = items,
                             isExpandedScreen = isExpandedScreen,
                             selection = selection,

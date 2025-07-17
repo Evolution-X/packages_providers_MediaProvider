@@ -180,6 +180,7 @@ fun MediaSetGrid(
                         // navigate to the mediaset content for the mediaset that is selected by the
                         // user.
                         mediaGrid(
+                            modifier = Modifier.fillMaxSize(),
                             items = mediaSetItems,
                             onItemClick = { item ->
                                 if (item is MediaGridItem.PersonMediaSetItem) {

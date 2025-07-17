@@ -130,6 +130,7 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
         // Invoke the composable for Category Grid. OnClick uses the navController to navigate to
         // the category content for the category that is selected by the user.
         mediaGrid(
+            modifier = Modifier.fillMaxSize(),
             items = items,
             focusItem = previouslySelectedItem,
             onItemClick = { item ->
