@@ -156,7 +156,7 @@
     <string name="transcode_processing_error" msgid="8921643164508407874">"Медиафайлды өңдеуде қате пайда болды."</string>
     <string name="transcode_processing_success" msgid="447288876429730122">"Медиафайл сәтті өңделді."</string>
     <string name="transcode_processing_started" msgid="7789086308155361523">"Медиафайлды өңдеу басталды."</string>
-    <string name="transcode_processing" msgid="6753136468864077258">"Медиафайл өңделуде…"</string>
+    <string name="transcode_processing" msgid="6753136468864077258">"Медиафайл өңделіп жатыр…"</string>
     <string name="transcode_cancel" msgid="8555752601907598192">"Бас тарту"</string>
     <string name="transcode_wait" msgid="8909773149560697501">"Күту"</string>
     <string name="safety_protection_icon_label" msgid="6714354052747723623">"Қауіпсіздікті қорғау"</string>
