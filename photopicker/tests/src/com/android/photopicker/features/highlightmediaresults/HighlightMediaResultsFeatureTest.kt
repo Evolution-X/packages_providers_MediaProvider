@@ -52,6 +52,7 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.core.os.bundleOf
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.photopicker.R
@@ -1826,6 +1827,164 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     )
                 )
                 .assertCountEquals(1)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun testExpandedHighlightTypeForNonEmptySearchQuery() =
+        testScope.runTest {
+            val testQuery = "cats"
+            val bundle =
+                bundleOf(
+                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
+                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY to testQuery,
+                )
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS, bundle)
+                }
+            // The params need to be set in the intent itself because the view model uses the
+            // config manager itself when its init block is executed.
+            configurationManager.get().setIntent(intent)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalFeatureManager provides featureManager,
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            action(MediaStore.ACTION_PICK_IMAGES)
+                            intent(intent)
+                            selectionLimit(50)
+                        },
+                    LocalNavController provides createNavController(),
+                    LocalSelection provides selection,
+                    LocalEvents provides events,
+                    LocalLocalizationHelper provides LocalizationHelper(),
+                ) {
+                    PhotopickerTheme(
+                        isDarkTheme = false,
+                        config =
+                            TestPhotopickerConfiguration.build {
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(intent)
+                            },
+                    ) {
+                        PhotopickerMain(disruptiveDataNotification = flow { emit(0) })
+                    }
+                }
+            }
+
+            // Assert components of the search page that opens up: back button and the search
+            // query text is visible since the search text is set as the highlight query.
+            // Also assert on current destination. For search page, the underlying destination
+            // is the PhotoGrid itself with an expanded search bar.
+            val resources = getTestableContext().getResources()
+            val route = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the photo grid")
+                .that(route)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule.onNode(hasText(testQuery), useUnmergedTree = true).assertIsDisplayed()
+
+            // Assert back button navigates back to the photogrid
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .performClick()
+
+            val backRoute = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the photo grid")
+                .that(backRoute)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+            // Search bar with placeholder text
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
+    fun testExpandedHighlightTypeForEmptySearchQuery() =
+        testScope.runTest {
+            val testQuery = ""
+            val bundle =
+                bundleOf(
+                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
+                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY to testQuery,
+                )
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS, bundle)
+                }
+            // The params need to be set in the intent itself because the view model uses the
+            // config manager itself when its init block is executed.
+            configurationManager.get().setIntent(intent)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalFeatureManager provides featureManager,
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            action(MediaStore.ACTION_PICK_IMAGES)
+                            intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            selectionLimit(50)
+                        },
+                    LocalNavController provides createNavController(),
+                    LocalSelection provides selection,
+                    LocalEvents provides events,
+                    LocalLocalizationHelper provides LocalizationHelper(),
+                ) {
+                    PhotopickerTheme(
+                        isDarkTheme = false,
+                        config =
+                            TestPhotopickerConfiguration.build {
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ) {
+                        PhotopickerMain(disruptiveDataNotification = flow { emit(0) })
+                    }
+                }
+            }
+
+            val resources = getTestableContext().getResources()
+            // Assert that no back button is visible. There's no point on asserting on empty
+            // highlight string matcher.
+            // It will give a match. Assert on other picker components instead.
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            val backRoute = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the photo grid")
+                .that(backRoute)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+            // Search bar with placeholder text
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
         }
 
     @Composable
