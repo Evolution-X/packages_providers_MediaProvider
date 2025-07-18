@@ -41,10 +41,16 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,10 +63,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupPositionProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
@@ -76,6 +88,7 @@ import com.android.photopicker.core.components.defaultBuildSeparator
 import com.android.photopicker.core.components.onGridDragSelect
 import com.android.photopicker.core.components.rememberGridDragSelectState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.events.Telemetry
@@ -110,10 +123,17 @@ val MEASUREMENT_HIGHLIGHT_GRID_CELL_ARRANGEMENT = 8.dp
 const val HIGHLIGHT_GRID_CELL_COUNT = 10
 const val HIGHLIGHT_GRID_ROW_COUNT = 1
 const val HIGHLIGHT_SEARCH_DURATION_MS = 8000L
-
 val HIGHLIGHT_QUERY_PLACEHOLDER_HEIGHT = 30.dp
 val HIGHLIGHT_QUERY_PLACEHOLDER_WIDTH = 150.dp
 val HIGHLIGHT_QUERY_PLACEHOLDER_CORNER = 28.dp
+val HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE = 2.dp
+val TOOLTIP_CONTENT_HORIZONTAL_PADDING = 12.dp
+val TOOLTIP_CONTENT_VERTICAL_PADDING = 8.dp
+val TOOLTIP_ROUNDED_CORNERS_MEASURE = 20.dp
+val TOOLTIP_WIDTH = 250.dp
+val TOOLTIP_ANCHOR_SPACING_EMBEDDED = 14.dp
+val TOOLTIP_PLACEMENT_CORRECTION_OFFSET = 12.dp
+val MEASUREMENT_ZERO = 0.dp
 
 /**
  * A composable function which displays a media highlight section based on the given input highlight
@@ -160,7 +180,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
         visible = showHighlightSection,
         exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
     ) {
-        Column {
+        Column() {
             Box(modifier = modifier.animateContentSize()) {
                 when (highlightQuery) {
                     is HighlightQuery.Search -> {
@@ -179,6 +199,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                                 highlightQuery.searchQuery
                         HighlightSectionContent(
                             highlightQuery = highlightText,
+                            isSearchHighlight = true,
                             highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
                             onItemLongClick = onItemLongClick,
                             onClick = {
@@ -235,6 +256,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
 
                         HighlightSectionContent(
                             highlightQuery = highlightBaseAlbum.displayName,
+                            isSearchHighlight = false,
                             highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
                             onItemLongClick = onItemLongClick,
                             onClick = {
@@ -282,6 +304,8 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
  * query or an album.
  *
  * @param highlightQuery The input highlight text query to highlight
+ * @param isSearchHighlight A boolean indicating if the highlight is of type search or not in which
+ *   case it is an album highlight.
  * @param highlightMediaItems The items to be displayed in the grid as [LazyPagingItems]
  * @param onItemLongClick Callback triggered when a media item is long-pressed.
  * @param onClick Defines the onClick behaviour of the See All button.
@@ -293,6 +317,7 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
 @Composable
 fun HighlightSectionContent(
     highlightQuery: String,
+    isSearchHighlight: Boolean,
     highlightMediaItems: LazyPagingItems<MediaGridItem>,
     onItemLongClick: (item: MediaGridItem) -> Unit,
     onClick: () -> Unit,
@@ -336,7 +361,11 @@ fun HighlightSectionContent(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Show the highlight query and the "See All" button
-            HighlightQueryAndSeeAllButton(highlightText = highlightQuery, onClick = onClick)
+            HighlightQueryAndSeeAllButton(
+                highlightText = highlightQuery,
+                onClick = onClick,
+                isSearchHighlight = isSearchHighlight,
+            )
 
             // Show the horizontal highlight grid
             HighlightMediaGrid(
@@ -414,13 +443,23 @@ private fun RecentsLabel() {
 
 /**
  * Displays the highlight text which could either be the input search text query or the album name
- * along with the "See All" button in a horizontal row.
+ * along with the "See All" button in a horizontal row. In case of search highlight, an info icon
+ * button precedes the search highlight text which is an anchor for the tooltip describing the
+ * source of the highlight text to the user. This is not shown in case of album highlight which are
+ * typically predefined.
  *
  * @param highlightText The highlight text - could be the search text or the album name
  * @param onClick Defines the onClick behaviour of the See All button.
+ * @param isSearchHighlight A boolean indicating if the highlight is of type search or not in which
+ *   case it is an album highlight.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun HighlightQueryAndSeeAllButton(highlightText: String, onClick: () -> Unit) {
+private fun HighlightQueryAndSeeAllButton(
+    highlightText: String,
+    onClick: () -> Unit,
+    isSearchHighlight: Boolean,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(HIGHLIGHT_TEXT_LABELS_PADDING),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -429,12 +468,140 @@ private fun HighlightQueryAndSeeAllButton(highlightText: String, onClick: () -> 
         val scope = rememberCoroutineScope()
         val events = LocalEvents.current
         val configuration = LocalPhotopickerConfiguration.current
+        // We make the tooltip persistent to start with so as to control its behavior later
+        // when the info icon is clicked.
+        val tooltipState = rememberTooltipState(isPersistent = true)
 
-        Text(
-            text = highlightText,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        // Display the tooltip in case of search highlight only
+        if (isSearchHighlight) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val isEmbedded =
+                    LocalPhotopickerConfiguration.current.runtimeEnv ==
+                        PhotopickerRuntimeEnv.EMBEDDED
+                val spacingBetweenTooltipAndAnchor =
+                    if (isEmbedded) TOOLTIP_ANCHOR_SPACING_EMBEDDED else MEASUREMENT_ZERO
+                val spacingBetweenTooltipAndAnchorInPx =
+                    with(LocalDensity.current) { spacingBetweenTooltipAndAnchor.roundToPx() }
+                val toolTipCorrectionOffsetMeasure =
+                    if (isEmbedded) TOOLTIP_PLACEMENT_CORRECTION_OFFSET else MEASUREMENT_ZERO
+                val toolTipCorrectionOffsetMeasureInPx =
+                    with(LocalDensity.current) { toolTipCorrectionOffsetMeasure.roundToPx() }
+                TooltipBox(
+                    // This provider positions the tooltip preferring to place it above the anchor.
+                    // The implementation is exactly similar to the default implementation with
+                    // some adjustments made to set the tooltip and its caret properly for
+                    // embedded photopicker. For embedded picker:
+                    // The tooltip and its caret is slightly misplaced.
+                    // We use custom offset values for both the coordinates to render it correctly
+                    // so that it behaves similar to the regular photopicker. We only need the
+                    // x offset in case x goes outside the window bounds which happens to be the
+                    // case in embedded picker.
+                    // We adjust the tooltip-anchor spacing coordinate to make sure the tooltip
+                    // caret is always rendered above the anchor and not adjacent to it.
+                    positionProvider =
+                        remember {
+                            object : PopupPositionProvider {
+                                override fun calculatePosition(
+                                    anchorBounds: IntRect,
+                                    windowSize: IntSize,
+                                    layoutDirection: LayoutDirection,
+                                    popupContentSize: IntSize,
+                                ): IntOffset {
+
+                                    // Tooltip prefers to be center aligned horizontally.
+                                    var x =
+                                        anchorBounds.left +
+                                            (anchorBounds.width - popupContentSize.width) / 2
+
+                                    if (x < 0) {
+                                        // Make tooltip start aligned if colliding with the
+                                        // left side of the screen.
+                                        x = anchorBounds.left - toolTipCorrectionOffsetMeasureInPx
+                                    } else if (x + popupContentSize.width > windowSize.width) {
+                                        // Make tooltip end aligned if colliding with the
+                                        // right side of the screen
+                                        x = anchorBounds.right - popupContentSize.width
+                                    }
+
+                                    // Tooltip prefers to be above the anchor,
+                                    // but if this causes the tooltip to overlap with the anchor
+                                    // then we place it below the anchor
+                                    var y =
+                                        anchorBounds.top -
+                                            popupContentSize.height -
+                                            spacingBetweenTooltipAndAnchorInPx
+                                    if (y < 0) {
+                                        y = anchorBounds.bottom + spacingBetweenTooltipAndAnchorInPx
+                                    }
+                                    return IntOffset(x, y)
+                                }
+                            }
+                        },
+                    tooltip = {
+                        PlainTooltip(
+                            // This adds the caret(the small arrow pointing to the anchor button)
+                            // to the tooltip.
+                            caretSize = TooltipDefaults.caretSize,
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            shape = RoundedCornerShape(TOOLTIP_ROUNDED_CORNERS_MEASURE),
+                            modifier = Modifier.width(TOOLTIP_WIDTH),
+                            tonalElevation = HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE,
+                            shadowElevation = HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE,
+                        ) {
+                            // TODO Replace with the corresponding HSR string resource b/432446698
+                            val callingApplicationLabel: String =
+                                configuration.callingPackageLabel
+                                    ?: stringResource(
+                                        R.string.photopicker_privacy_explainer_generic_app_name
+                                    )
+                            Text(
+                                modifier =
+                                    Modifier.padding(
+                                        horizontal = TOOLTIP_CONTENT_HORIZONTAL_PADDING,
+                                        vertical = TOOLTIP_CONTENT_VERTICAL_PADDING,
+                                    ),
+                                text =
+                                    stringResource(
+                                        R.string.photopicker_hsr_tooltip_text,
+                                        callingApplicationLabel,
+                                    ),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                    },
+                    state = tooltipState,
+                ) {
+                    // This is the anchor for the tooltip.
+                    IconButton(
+                        onClick = {
+                            // The tooltip's show() and dismiss() have to be called in two separate
+                            // coroutines to prevent a deadlock. Tooltip's show() suspends
+                            // waiting for dismiss() to be called which never will trigger
+                            // if they are in the same coroutine.
+                            scope.launch { tooltipState.show() }
+                            scope.launch {
+                                // Show the tooltip for 5 seconds
+                                delay(5000L)
+                                tooltipState.dismiss()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription =
+                                stringResource(R.string.photopicker_hsr_tooltip_icon_description),
+                        )
+                    }
+                }
+                // Show the highlight text
+                HighlightText(highlightText = highlightText)
+            }
+        } else {
+            // Album highlight: just show the highlight text
+            HighlightText(highlightText = highlightText)
+        }
+
         TextButton(
             onClick = {
                 onClick()
@@ -457,6 +624,16 @@ private fun HighlightQueryAndSeeAllButton(highlightText: String, onClick: () -> 
             )
         }
     }
+}
+
+/** Displays the highlight text in both album and search highlight */
+@Composable
+private fun HighlightText(highlightText: String) {
+    Text(
+        text = highlightText,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
 }
 
 /**
