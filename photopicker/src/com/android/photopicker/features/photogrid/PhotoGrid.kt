@@ -483,7 +483,12 @@ fun PhotoGridNavButton(modifier: Modifier, params: LocationParams) {
                     )
                 }
             }
-            else -> Text(buttonText)
+            else ->
+                Text(
+                    buttonText,
+                    maxLines = 1, // Limit the text to a single line
+                    overflow = TextOverflow.Ellipsis,
+                )
         }
     }
 }
