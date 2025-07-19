@@ -137,7 +137,6 @@ private val FETCH_SUGGESTION_DEBOUNCE_DELAY = 50L // in milliseconds
 private val SUGGESTION_TITLE_PADDING =
     PaddingValues(start = 32.dp, end = 32.dp, top = 12.dp, bottom = 12.dp)
 private val MEASUREMENT_LARGE_PADDING = 16.dp
-private val MEASUREMENT_ITEM_GAP_PADDING = 12.dp
 private val MEASUREMENT_MEDIUM_PADDING = 8.dp
 private val MEASUREMENT_SMALL_PADDING = 4.dp
 private val MEASUREMENT_EXTRA_SMALL_PADDING = 2.dp
@@ -861,7 +860,7 @@ fun ShowFaceSuggestions(
     ) {
         Row(
             modifier = Modifier.padding(MEASUREMENT_LARGE_PADDING).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MEASUREMENT_ITEM_GAP_PADDING),
+            horizontalArrangement = Arrangement.SpaceAround,
         ) {
             list.take(SearchViewModel.FACE_SUGGESTION_MAX_LIMIT).forEach { suggestion ->
                 ShowSuggestionIcon(

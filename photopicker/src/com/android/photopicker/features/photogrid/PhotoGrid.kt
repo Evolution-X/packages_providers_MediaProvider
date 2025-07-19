@@ -315,6 +315,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     // LongPress + drag will start a drag-to-select action
                     true -> {
                         mediaGrid(
+                            modifier = Modifier.fillMaxSize(),
                             items = items,
                             isExpandedScreen = isExpandedScreen,
                             selection = selection,
@@ -482,7 +483,12 @@ fun PhotoGridNavButton(modifier: Modifier, params: LocationParams) {
                     )
                 }
             }
-            else -> Text(buttonText)
+            else ->
+                Text(
+                    buttonText,
+                    maxLines = 1, // Limit the text to a single line
+                    overflow = TextOverflow.Ellipsis,
+                )
         }
     }
 }

@@ -36,6 +36,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertAll
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -440,6 +441,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             .isEqualTo(false)
     }
 
+    @Test
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
@@ -454,6 +456,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
                     queryResultsHighlightQuery = HighlightQuery.Search(testQuery),
                 )
+            val callingPackageLabel = "TestPackage"
 
             composeTestRule.setContent {
                 CompositionLocalProvider(
@@ -462,11 +465,13 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                             highlightQueryResultsParams(highlightParams)
                             action(MediaStore.ACTION_PICK_IMAGES)
                             intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            callingPackageLabel(callingPackageLabel)
                             selectionLimit(50)
                         },
                     LocalNavController provides createNavController(),
                     LocalSelection provides selection,
                     LocalFeatureManager provides featureManager,
+                    LocalEvents provides events,
                     LocalLocalizationHelper provides LocalizationHelper(),
                 ) {
                     PhotopickerTheme(
@@ -476,6 +481,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                                 highlightQueryResultsParams(highlightParams)
                                 action(MediaStore.ACTION_PICK_IMAGES)
                                 intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                                selectionLimit(50)
                             },
                     ) {
                         // Calling just the Highlight composable to avoid any assertion conflicts
@@ -486,6 +492,11 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 }
             }
 
+            advanceTimeBy(3000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
             // Verify highlight query text label, Recents label and the SeeAll button are displayed
             val resources = getTestableContext().getResources()
             val highlightText =
@@ -493,6 +504,34 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule
                 .onNode(hasText(highlightText), useUnmergedTree = true)
                 .assertIsDisplayed()
+            // Assert the info icon and tooltip display/dismiss behavior
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_hsr_tooltip_icon_description)
+                    )
+                )
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_hsr_tooltip_icon_description)
+                    )
+                )
+                .performClick()
+
+            val expectedTooltipText =
+                resources.getString(R.string.photopicker_hsr_tooltip_text, callingPackageLabel)
+            composeTestRule
+                .onNode(hasText(expectedTooltipText), useUnmergedTree = true)
+                .assertIsDisplayed()
+
+            composeTestRule.mainClock.advanceTimeBy(5000L)
+
+            composeTestRule
+                .onNode(hasText(expectedTooltipText), useUnmergedTree = true)
+                .assertIsNotDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
@@ -755,13 +794,26 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             advanceTimeBy(1000)
             composeTestRule.waitForIdle()
-            advanceTimeBy(1000)
+            advanceTimeBy(2000)
 
-            // Verify album name, Recents label and the SeeAll button are displayed
-            composeTestRule
-                .onNode(hasText(highlightAlbum.albumId), useUnmergedTree = true)
-                .assertIsDisplayed()
+            // Verify album name, Recents label and the SeeAll button are displayed but the info
+            // icon is not displayed
             val resources = getTestableContext().getResources()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_hsr_tooltip_icon_description)
+                    )
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(
+                        HighlightAlbum.getAlbumNameFromAlbum(getTestableContext(), highlightAlbum)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
             composeTestRule
                 .onNode(
                     hasText(resources.getString(R.string.photopicker_hsr_see_all_button_label)),
@@ -897,7 +949,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Verify the UI elements
             composeTestRule
-                .onNode(hasText(highlightAlbum.albumId), useUnmergedTree = true)
+                .onNode(
+                    hasText(
+                        HighlightAlbum.getAlbumNameFromAlbum(getTestableContext(), highlightAlbum)
+                    ),
+                    useUnmergedTree = true,
+                )
                 .assertIsDisplayed()
             val resources = getTestableContext().getResources()
             composeTestRule
@@ -941,7 +998,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 )
                 .assertIsDisplayed()
             composeTestRule
-                .onNode(hasText(highlightAlbum.albumId), useUnmergedTree = true)
+                .onNode(
+                    hasText(
+                        HighlightAlbum.getAlbumNameFromAlbum(getTestableContext(), highlightAlbum)
+                    ),
+                    useUnmergedTree = true,
+                )
                 .assertIsDisplayed()
             composeTestRule
                 .onAllNodes(hasScrollAction(), useUnmergedTree = true)
