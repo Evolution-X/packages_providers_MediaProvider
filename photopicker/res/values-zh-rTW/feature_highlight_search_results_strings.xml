@@ -29,4 +29,8 @@
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"正在載入醒目顯示的媒體結果"</string>
     <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"醒目顯示的媒體結果"</string>
     <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"針對下列項目的建議："</string>
+    <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
+    <skip />
 </resources>
