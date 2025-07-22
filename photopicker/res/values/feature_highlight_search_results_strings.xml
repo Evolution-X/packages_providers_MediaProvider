@@ -43,4 +43,6 @@
     <string name="photopicker_hsr_tooltip_icon_description" translation_description="Text for describing the tooltip's anchor info icon">Info icon button describing the source for the media results in the highlight section</string>
     <!-- Tooltip text -->
     <string name="photopicker_hsr_tooltip_text" translation_description="The tooltip text describing the user that the source of the displayed highlight text is the app launching the photopicker. The name of the calling app is prepended to this string."><xliff:g id="app name" example="Google Maps">%1$s</xliff:g> provided the info for these suggestions but can\'t see the photos themselves unless you allow access</string>
+    <!-- A generic term to replace app name if callingPackageLabel can't be determined at runtime. -->
+    <string name="photopicker_hsr_generic_app_label" translation_description="A generic identifier of an application that is used in place of the name of the app if one is not defined or can not be fetched.">This app</string>
 </resources>

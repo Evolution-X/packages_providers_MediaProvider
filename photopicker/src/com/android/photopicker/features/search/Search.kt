@@ -860,7 +860,12 @@ fun ShowFaceSuggestions(
     ) {
         Row(
             modifier = Modifier.padding(MEASUREMENT_LARGE_PADDING).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
+            horizontalArrangement =
+                when {
+                    list.size == SearchViewModel.FACE_SUGGESTION_MAX_LIMIT ->
+                        Arrangement.SpaceAround
+                    else -> Arrangement.spacedBy(8.dp)
+                },
         ) {
             list.take(SearchViewModel.FACE_SUGGESTION_MAX_LIMIT).forEach { suggestion ->
                 ShowSuggestionIcon(

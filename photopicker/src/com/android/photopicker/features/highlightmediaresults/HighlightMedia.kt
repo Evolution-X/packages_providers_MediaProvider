@@ -548,12 +548,9 @@ private fun HighlightQueryAndSeeAllButton(
                             tonalElevation = HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE,
                             shadowElevation = HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE,
                         ) {
-                            // TODO Replace with the corresponding HSR string resource b/432446698
                             val callingApplicationLabel: String =
                                 configuration.callingPackageLabel
-                                    ?: stringResource(
-                                        R.string.photopicker_privacy_explainer_generic_app_name
-                                    )
+                                    ?: stringResource(R.string.photopicker_hsr_generic_app_label)
                             Text(
                                 modifier =
                                     Modifier.padding(
