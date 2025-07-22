@@ -1040,6 +1040,127 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
         Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
+    fun testExpandedHighlightTypeForAlbumHighlight() = runTest {
+        val highlightAlbum = HighlightAlbum.HIGHLIGHT_ALBUM_FAVORITES
+        val highlightParams =
+            HighlightQueryResultsParams(
+                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS,
+                queryResultsHighlightQuery = HighlightQuery.Album(album = highlightAlbum),
+            )
+
+        val testDataService = dataService as? TestDataServiceImpl
+        checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+        testDataService.albumMediaSetSize = 0
+        testDataService.albumsList =
+            listOf(
+                Group.Album(
+                    id = ALBUM_ID_FAVORITES,
+                    pickerId = 1234L,
+                    authority = "a",
+                    displayName = "Favorites",
+                    coverUri =
+                        Uri.EMPTY.buildUpon()
+                            .apply {
+                                scheme("content")
+                                authority("a")
+                                path("1234")
+                            }
+                            .build(),
+                    dateTakenMillisLong = 12345678L,
+                    coverMediaSource = MediaSource.LOCAL,
+                )
+            )
+        testDataService.albumMediaList = StubProvider.getTestMediaFromStubProvider(count = 15)
+        testDataService._availableProviders.value =
+            listOf(
+                Provider(
+                    authority = "local_authority",
+                    mediaSource = MediaSource.LOCAL,
+                    uid = 1,
+                    displayName = "Local Provider",
+                )
+            )
+
+        composeTestRule.setContent {
+            CompositionLocalProvider(
+                LocalFeatureManager provides featureManager,
+                LocalPhotopickerConfiguration provides
+                    TestPhotopickerConfiguration.build {
+                        startDestination(PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID)
+                        highlightQueryResultsParams(highlightParams)
+                        action(MediaStore.ACTION_PICK_IMAGES)
+                        intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                        selectionLimit(50)
+                    },
+                LocalNavController provides createNavController(),
+                LocalSelection provides selection,
+                LocalEvents provides events,
+                LocalLocalizationHelper provides LocalizationHelper(),
+            ) {
+                PhotopickerTheme(
+                    isDarkTheme = false,
+                    config =
+                        TestPhotopickerConfiguration.build {
+                            highlightQueryResultsParams(highlightParams)
+                            startDestination(PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID)
+                            action(MediaStore.ACTION_PICK_IMAGES)
+                            intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                        },
+                ) {
+                    // Compose the entire tree to test button behaviour
+                    PhotopickerMain(disruptiveDataNotification = flow { emit(0) })
+                }
+            }
+        }
+
+        // Wait sufficiently for album list to be available
+        advanceTimeBy(3000)
+        composeTestRule.waitForIdle()
+        advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+        advanceTimeBy(1000)
+        composeTestRule.waitForIdle()
+        advanceTimeBy(1000)
+
+        val resources = getTestableContext().getResources()
+        val route = navController.currentBackStackEntry?.destination?.route
+        assertWithMessage("Current destination should be the album media grid")
+            .that(route)
+            .isEqualTo(PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID.route)
+
+        composeTestRule
+            .onNode(
+                hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                useUnmergedTree = true,
+            )
+            .assertIsDisplayed()
+        composeTestRule
+            .onNode(
+                hasText(HighlightAlbum.getAlbumNameFromAlbum(getTestableContext(), highlightAlbum)),
+                useUnmergedTree = true,
+            )
+            .assertIsDisplayed()
+
+        // Verify back takes you the collections grid
+        composeTestRule
+            .onNode(
+                hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                useUnmergedTree = true,
+            )
+            .performClick()
+        val backRoute = navController.currentBackStackEntry?.destination?.route
+        assertWithMessage("Current destination should be the photo grid")
+            .that(backRoute)
+            .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
+    }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+    )
     fun testHighlightMediaSectionIsNotShownForEmptyHighlightQuery() = runTest {
         val testQuery = ""
         val highlightParams =
