@@ -462,7 +462,7 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
             featureManager.composeLocation(
                 Location.PROFILE_SELECTOR,
                 maxSlots = 1,
-                modifier = Modifier.padding(start = 8.dp).width(MEASUREMENT_PROFILE_SELECTOR_WIDTH),
+                modifier = Modifier.padding(start = 8.dp),
             )
             val overFlowMenuEnabled =
                 remember(featureManager) {
