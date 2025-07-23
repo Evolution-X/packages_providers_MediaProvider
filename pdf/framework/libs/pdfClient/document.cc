@@ -160,6 +160,11 @@ bool Document::CloneDocumentWithoutSecurity(LinuxFileOps::FDCloser fd) {
     }
 }
 
+void Document::ClearPageCache() {
+    pages_.clear();
+    fpdf_page_index_lookup_.clear();
+}
+
 bool Document::CloneRawFile(int source, int dest) {
     lseek(source, 0, SEEK_SET);
     char buf[4096];
@@ -179,6 +184,50 @@ bool Document::CloneRawFile(int source, int dest) {
     }
     // We own the FD and have to make sure to close it.
     LinuxFileOps::CloseFD(dest);
+    return success;
+}
+
+bool Document::MovePages(std::vector<int> pageIndices, int destinationIndex) {
+    if (pageIndices.empty()) {
+        LOGE("pageIndices cannot be empty");
+        return false;
+    }
+    int pageCount = NumPages();
+    std::unordered_set<int> uniqueIndices;
+    for (int index : pageIndices) {
+        if (index < 0 || index >= pageCount) {
+            LOGE("Out-of-bounds page index: %d", index);
+            return false;
+        }
+        if (uniqueIndices.count(index)) {
+            LOGE("Duplicate page index found: %d", index);
+            return false;
+        }
+        uniqueIndices.insert(index);
+    }
+    if (destinationIndex < 0 || destinationIndex >= pageCount) {
+        LOGE("Out-of-bounds destinationIndex: %d", destinationIndex);
+        return false;
+    }
+
+    if (destinationIndex > (pageCount - (int)pageIndices.size())) {
+        LOGE("Number of pages to move (%d) is greater than available slots after destinationIndex "
+             "(%d)",
+             (int)pageIndices.size(), pageCount - destinationIndex);
+        return false;
+    }
+
+    bool success = FPDF_MovePages(document_.get(), pageIndices.data(), pageIndices.size(),
+                                  destinationIndex);
+
+    if (success) {
+        // Clear invalid cache.
+        ClearPageCache();
+        LOGV("Success moving page");
+    } else {
+        LOGV("Failed moving page");
+    }
+
     return success;
 }
 

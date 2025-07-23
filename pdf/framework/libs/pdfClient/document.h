@@ -86,6 +86,12 @@ class Document {
     // Clone this document without security into the given file descriptor.
     bool CloneDocumentWithoutSecurity(LinuxFileOps::FDCloser fd);
 
+    // Moves the pages at the given pageIndices to the destinationIndex.
+    // The pages are moved in the order they appear in pageIndices to
+    // destinationIndex, destinationIndex + 1, destinationIndex + 2, ...
+    // Returns true on success.
+    bool MovePages(std::vector<int> pageIndices, int destinationIndex);
+
     // Save this Document to the given file descriptor, presumably opened for
     // write or append. Return true on success.
     bool SaveAs(LinuxFileOps::FDCloser fd);
@@ -124,6 +130,9 @@ class Document {
 
     // Saves the loaded document back to a file (with security removed).
     bool SaveAsCopyWithoutSecurity(LinuxFileOps::FDCloser dest);
+
+    // Clears the cached pages and their lookup map.
+    void ClearPageCache();
 
     // If not null, this will also be deleted when this document is destroyed.
     std::unique_ptr<FileReader> file_reader_;
