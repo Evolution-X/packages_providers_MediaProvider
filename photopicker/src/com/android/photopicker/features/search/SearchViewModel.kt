@@ -16,6 +16,7 @@
 
 package com.android.photopicker.features.search
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -37,6 +38,10 @@ import com.android.photopicker.data.model.Provider
 import com.android.photopicker.extensions.insertMonthSeparators
 import com.android.photopicker.extensions.toMediaGridItemBaseFromMedia
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
+import com.android.photopicker.features.highlightmediaresults.HighlightMediaResultsFeature
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
+import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
+import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
 import com.android.photopicker.features.search.data.SearchDataService
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
@@ -144,6 +149,37 @@ constructor(
     private val suggestionCache = SearchSuggestionCache()
 
     init {
+        // If the expanded highlight type i.e. directly opening to the search page with the given
+        // highlight query is requested, set the search state params so that the UI listens and
+        // reacts to the changes to open the search page directly.
+        // The search bar focused state is set to true, the search term is populated in the
+        // search bar and a request to fetch the corresponding results is triggered.
+        val highlightParams: HighlightQueryResultsParams =
+            configurationManager.configuration.value.highlightQueryResultsParams
+        val highlightQuery: HighlightQuery = highlightParams.queryResultsHighlightQuery
+        val highlightType = highlightParams.queryResultsHighlightType
+
+        // TODO Expanded highlight type for embedded picker b/433228573
+        if (highlightType == QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS) {
+            when (highlightQuery) {
+                is HighlightQuery.Search -> {
+                    val searchQuery = highlightQuery.searchQuery
+                    if (searchQuery.isNotEmpty()) {
+                        setSearchBarFocusedState(focused = true)
+                        setSearchBarText(text = searchQuery)
+                        performSearch(query = searchQuery)
+                    } else {
+                        Log.w(
+                            HighlightMediaResultsFeature.TAG,
+                            "Received empty highlight search string, nothing to highlight.",
+                        )
+                    }
+                }
+                // No op for when the highlight query is an album query here
+                else -> {}
+            }
+        }
+
         fetchSuggestions(ZERO_STATE_SEARCH_QUERY)
         // Listen to available provider changes and clear search suggestions cache.
         scope.launch(backgroundDispatcher) {
