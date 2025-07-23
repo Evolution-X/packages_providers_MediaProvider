@@ -328,6 +328,16 @@ JNIEXPORT jint JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormType(JN
     return doc->GetFormType();
 }
 
+JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_movePages(
+        JNIEnv* env, jobject jPdfDocument, jintArray jPageIndices, jint destinationIndex) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    Document* doc = convert::GetPdfDocPtr(env, jPdfDocument);
+
+    vector<int> pageIndices_native = convert::ToNativeIntegerVector(env, jPageIndices);
+
+    return doc->MovePages(pageIndices_native, destinationIndex);
+}
+
 JNIEXPORT jobject JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormWidgetInfo__III(
         JNIEnv* env, jobject jPdfDocument, jint pageNum, jint x, jint y) {
     std::unique_lock<std::mutex> lock(mutex_);
