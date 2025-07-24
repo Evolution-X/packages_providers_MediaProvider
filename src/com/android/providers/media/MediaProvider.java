@@ -11313,19 +11313,19 @@ public class MediaProvider extends ContentProvider {
             }
 
             final long leveldbQueryStartTime = SystemClock.elapsedRealtimeNanos();
-            FileAccessAttributes attrsFromLevelDb = queryLevelDbForFileAttributes(path);
+            FileAccessAttributes attrs = queryLevelDbForFileAttributes(path);
             final long leveldbQueryTime =
                     SystemClock.elapsedRealtimeNanos() - leveldbQueryStartTime;
 
-            final long sqlQueryStartTime = SystemClock.elapsedRealtimeNanos();
-            FileAccessAttributes attrs = queryForFileAttributes(path);
-            final long sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
-
-            if (attrs != null && attrsFromLevelDb != null) {
-                MediaProviderStatsLog.write(
-                        MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
-                        (int) sqlQueryTime, (int) leveldbQueryTime, attrs.equals(attrsFromLevelDb));
+            long sqlQueryTime = 0;
+            if (attrs == null) {
+                final long sqlQueryStartTime = SystemClock.elapsedRealtimeNanos();
+                attrs = queryForFileAttributes(path);
+                sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
             }
+
+            MediaProviderStatsLog.write(MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
+                    (int) sqlQueryTime, (int) leveldbQueryTime, (sqlQueryTime == 0));
 
             checkIfFileOpenIsPermitted(path, attrs, redactedUriId, forWrite);
 
