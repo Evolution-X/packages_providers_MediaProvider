@@ -28,9 +28,11 @@
     <string name="photopicker_hsr_query_placeholder_text" msgid="2929114759123252442">"အသားပေးထားသော မီဒီယာရလဒ် မေးမြန်းချက်ကို ဖွင့်နေသည်"</string>
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"အသားပေးထားသော မီဒီယာရလဒ်များကို ဖွင့်နေသည်"</string>
     <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"အသားပေးထားသော မီဒီယာရလဒ်များ"</string>
-    <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"အကြံပြုချက်များ"</string>
+    <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"အကြံပြုချက်များ-"</string>
     <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
     <skip />
     <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
     <skip />
 </resources>

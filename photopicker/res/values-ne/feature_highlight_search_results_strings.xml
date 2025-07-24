@@ -23,7 +23,7 @@
     <string name="photopicker_hsr_favorites_album_label" msgid="507125735792216176">"मन पर्ने सामग्रीहरू"</string>
     <string name="photopicker_hsr_screenshots_album_label" msgid="6223215479220055671">"स्क्रिनसटहरू"</string>
     <string name="photopicker_hsr_camera_album_label" msgid="2887020928583531751">"क्यामेरा"</string>
-    <string name="photopicker_hsr_downloads_album_label" msgid="5687964289769180836">"डाउनलोड गरिएका सामग्री"</string>
+    <string name="photopicker_hsr_downloads_album_label" msgid="5687964289769180836">"डाउनलोड गरिएका"</string>
     <string name="photopicker_hsr_videos_album_label" msgid="1290755476191083105">"भिडियोहरू"</string>
     <string name="photopicker_hsr_query_placeholder_text" msgid="2929114759123252442">"हाइलाइट गरिएका मिडियासम्बन्धी परिणामहरूको क्वेरी लोड गरिँदै छ"</string>
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"हाइलाइट गरिएका मिडियासम्बन्धी परिणामहरू लोड गरिँदै छन्"</string>
@@ -32,5 +32,7 @@
     <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
     <skip />
     <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
+    <skip />
+    <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
     <skip />
 </resources>
