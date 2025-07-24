@@ -1496,8 +1496,10 @@ static handle* create_handle_for_node(struct fuse* fuse, const string& path, int
         // arbitrary bytes the first time around. However, if we ensure that transforms are
         // completed, then it's safe to use passthrough. Additionally, transcoded nodes never
         // require redaction so (2) implies (1)
-        handle = new struct handle(fd, ri, !open_info_direct_io /* cached */,
-                                   !redaction_needed && transforms_complete /* passthrough */, uid,
+        bool passthrough = !redaction_needed && transforms_complete;
+        bool direct_io = open_info_direct_io && !passthrough;
+        handle = new struct handle(fd, ri, !direct_io /* cached */,
+                                   passthrough /* passthrough */, uid,
                                    transforms_uid);
     } else {
         // Without fuse->passthrough, we don't want to use the FUSE VFS cache in two cases:
@@ -1571,14 +1573,16 @@ static OpenInfo parse_open_flags(const string& path, const int in_flags) {
     bool direct_io = false;
 
     if (in_flags & O_DIRECT) {
-        // Set direct IO on the FUSE fs file
-        direct_io = true;
 
         if (android::base::StartsWith(path, PRIMARY_VOLUME_PREFIX)) {
             // Remove O_DIRECT because there are strict alignment requirements for direct IO and
             // there were some historical bugs affecting encrypted block devices.
             // Hence, this is only supported on public volumes.
             out_flags &= ~O_DIRECT;
+            direct_io = false;
+        } else {
+            // Set direct IO on the FUSE fs file
+            direct_io = true;
         }
     }
     if (in_flags & O_WRONLY) {
@@ -1597,8 +1601,8 @@ static OpenInfo parse_open_flags(const string& path, const int in_flags) {
     return {.flags = out_flags, .for_write = for_write, .direct_io = direct_io};
 }
 
-static void fill_fuse_file_info(const handle* handle, const OpenInfo* open_info,
-                                const int keep_cache, struct fuse_file_info* fi) {
+static void fill_fuse_file_info(const handle* handle, const int keep_cache,
+                                struct fuse_file_info* fi) {
     fi->fh = ptr_to_id(handle);
     fi->keep_cache = keep_cache;
     fi->direct_io = !handle->cached;
@@ -1665,7 +1669,7 @@ static void pf_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
                                              node, result->redaction_info.release(),
                                              /* allow_passthrough */ !is_fd_from_java,
                                              open_info.direct_io, &keep_cache);
-    fill_fuse_file_info(h, &open_info, keep_cache, fi);
+    fill_fuse_file_info(h, keep_cache, fi);
 
     // TODO(b/173190192) ensuring that h->cached must be enabled in order to
     // user FUSE passthrough is a conservative rule and might be dropped as
@@ -2312,7 +2316,7 @@ static void pf_create(fuse_req_t req,
     const handle* h = create_handle_for_node(
             fuse, child_path, fd, req->ctx.uid, 0 /* transforms_uid */, node, new RedactionInfo(),
             /* allow_passthrough */ true, open_info.direct_io, &keep_cache);
-    fill_fuse_file_info(h, &open_info, keep_cache, fi);
+    fill_fuse_file_info(h, keep_cache, fi);
 
     // TODO(b/173190192) ensuring that h->cached must be enabled in order to
     // user FUSE passthrough is a conservative rule and might be dropped as

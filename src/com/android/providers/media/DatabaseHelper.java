@@ -91,6 +91,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -203,6 +204,8 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
     long mScanStopTime;
     private boolean mEnableNextRowIdRecovery;
     private final DatabaseBackupAndRecovery mDatabaseBackupAndRecovery;
+    private static final Executor sBackgroundThreadExecutor = Flags.enableMediaBackgroundThread()
+            ? MediaBackgroundThread.getDbOpsExecutor() : BackgroundThread.getExecutor();
 
     /**
      * Unfortunately we can have multiple instances of DatabaseHelper, causing
@@ -806,7 +809,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
         public final SparseArray<ArraySet<Uri>> notifyChanges = new SparseArray<>();
 
         /**
-         * List of tasks that should be enqueued onto {@link BackgroundThread}
+         * List of tasks that should be enqueued onto background thread
          * after any {@link #notifyChanges} have been dispatched. We keep this
          * as a separate pass to ensure that we don't risk running in parallel
          * with other more important tasks.
@@ -892,7 +895,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                 // Now that we've finished with all our important work, we can
                 // finally kick off any internal background tasks
                 for (int i = 0; i < state.backgroundTasks.size(); i++) {
-                    BackgroundThread.getExecutor().execute(state.backgroundTasks.get(i));
+                    sBackgroundThreadExecutor.execute(state.backgroundTasks.get(i));
                 }
             });
         }
@@ -1029,7 +1032,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
         if (state != null) {
             state.backgroundTasks.add(command);
         } else {
-            BackgroundThread.getExecutor().execute(command);
+            sBackgroundThreadExecutor.execute(command);
         }
     }
 

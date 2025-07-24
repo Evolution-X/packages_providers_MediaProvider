@@ -242,6 +242,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelFileDescriptor;
 import android.os.ParcelFileDescriptor.OnCloseListener;
@@ -380,6 +381,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
@@ -590,6 +592,11 @@ public class MediaProvider extends ContentProvider {
 
     @GuardedBy("mNonHiddenPaths")
     private final LRUCache<String, Integer> mNonHiddenPaths = new LRUCache<>(NON_HIDDEN_CACHE_SIZE);
+
+    private static final Executor sBackgroundThreadExecutor = Flags.enableMediaBackgroundThread()
+            ? MediaBackgroundThread.getExecutor() : BackgroundThread.getExecutor();
+    private static final Handler sBackgroundThreadHandler = Flags.enableMediaBackgroundThread()
+            ? MediaBackgroundThread.getHandler() : BackgroundThread.getHandler();
 
     public void updateVolumes() {
         mVolumeCache.update();
@@ -1087,7 +1094,7 @@ public class MediaProvider extends ContentProvider {
     /**
      * Since these operations are in the critical path of apps working with
      * media, we only collect the {@link Uri} that need to be notified, and all
-     * other side-effect operations are delegated to {@link BackgroundThread} so
+     * other side-effect operations are delegated to background thread so
      * that we return as quickly as possible.
      */
     private final OnFilesChangeListener mFilesListener = new OnFilesChangeListener() {
@@ -1630,8 +1637,9 @@ public class MediaProvider extends ContentProvider {
         }
 
         storageNativeBootPropertyChangeListener();
-        mConfigStore.addOnChangeListener(
-                BackgroundThread.getExecutor(), this::storageNativeBootPropertyChangeListener);
+
+        mConfigStore.addOnChangeListener(sBackgroundThreadExecutor,
+                this::storageNativeBootPropertyChangeListener);
 
         PulledMetrics.initialize(context);
 
@@ -2433,7 +2441,7 @@ public class MediaProvider extends ContentProvider {
     @Keep
     public void onFileCreatedForFuse(String path) {
         // Make sure we update the quota type of the file
-        BackgroundThread.getExecutor().execute(() -> {
+        sBackgroundThreadExecutor.execute(() -> {
             File file = new File(path);
             int mediaType = MimeUtils.resolveMediaType(MimeUtils.resolveMimeType(file));
             updateQuotaTypeForFileInternal(file, mediaType);
@@ -7713,8 +7721,10 @@ public class MediaProvider extends ContentProvider {
         // db after the sync
         syncAllMedia();
         ForegroundThread.waitForIdle();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch latch = new CountDownLatch(3);
         BackgroundThread.getExecutor().execute(latch::countDown);
+        MediaBackgroundThread.getDbOpsExecutor().execute(latch::countDown);
+        MediaBackgroundThread.getExecutor().execute(latch::countDown);
         try {
             latch.await(30, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
@@ -9604,7 +9614,7 @@ public class MediaProvider extends ContentProvider {
             return;
         }
 
-        BackgroundThread.getExecutor().execute(() -> {
+        sBackgroundThreadExecutor.execute(() -> {
             final LocalCallingIdentity token = clearLocalCallingIdentity();
             try {
                 mTranscodeHelper.onUriPublished(uri);
@@ -9620,7 +9630,7 @@ public class MediaProvider extends ContentProvider {
             return;
         }
 
-        BackgroundThread.getExecutor().execute(() -> {
+        sBackgroundThreadExecutor.execute(() -> {
             final LocalCallingIdentity token = clearLocalCallingIdentity();
             try {
                 mTranscodeHelper.onFileOpen(path, ioPath, uid, transformsReason);
@@ -10749,7 +10759,7 @@ public class MediaProvider extends ContentProvider {
 
             // Second, wrap in any listener that we've requested
             if (!isPending && forWrite) {
-                return ParcelFileDescriptor.wrap(pfd, BackgroundThread.getHandler(), listener);
+                return ParcelFileDescriptor.wrap(pfd, sBackgroundThreadHandler, listener);
             } else {
                 return pfd;
             }
@@ -11313,19 +11323,19 @@ public class MediaProvider extends ContentProvider {
             }
 
             final long leveldbQueryStartTime = SystemClock.elapsedRealtimeNanos();
-            FileAccessAttributes attrsFromLevelDb = queryLevelDbForFileAttributes(path);
+            FileAccessAttributes attrs = queryLevelDbForFileAttributes(path);
             final long leveldbQueryTime =
                     SystemClock.elapsedRealtimeNanos() - leveldbQueryStartTime;
 
-            final long sqlQueryStartTime = SystemClock.elapsedRealtimeNanos();
-            FileAccessAttributes attrs = queryForFileAttributes(path);
-            final long sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
-
-            if (attrs != null && attrsFromLevelDb != null) {
-                MediaProviderStatsLog.write(
-                        MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
-                        (int) sqlQueryTime, (int) leveldbQueryTime, attrs.equals(attrsFromLevelDb));
+            long sqlQueryTime = 0;
+            if (attrs == null) {
+                final long sqlQueryStartTime = SystemClock.elapsedRealtimeNanos();
+                attrs = queryForFileAttributes(path);
+                sqlQueryTime = SystemClock.elapsedRealtimeNanos() - sqlQueryStartTime;
             }
+
+            MediaProviderStatsLog.write(MediaProviderStatsLog.FILE_ACCESS_ATTRIBUTES_QUERY_REPORTED,
+                    (int) sqlQueryTime, (int) leveldbQueryTime, (sqlQueryTime == 0));
 
             checkIfFileOpenIsPermitted(path, attrs, redactedUriId, forWrite);
 
@@ -12921,7 +12931,7 @@ public class MediaProvider extends ContentProvider {
 
         // Load all the MIME types from various files in the background to reduce the latency
         // caused when this method is called from onCreate
-        BackgroundThread.getExecutor().execute(() -> {
+        sBackgroundThreadExecutor.execute(() -> {
             try {
                 MimeTypeFixHandler.loadMimeTypes(context);
             } catch (Exception e) {

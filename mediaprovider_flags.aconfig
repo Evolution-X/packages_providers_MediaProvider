@@ -407,3 +407,11 @@ flag {
     is_fixed_read_only: true
     bug: "421129366"
 }
+
+flag {
+    name: "enable_media_background_thread"
+    namespace: "mediaprovider"
+    description: "Enables MediaBackgroundThread to do all mediaprovider related background tasks"
+    is_fixed_read_only: true
+    bug: "432208806"
+}
