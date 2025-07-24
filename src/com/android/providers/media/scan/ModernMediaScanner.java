@@ -119,6 +119,7 @@ import androidx.annotation.VisibleForTesting;
 import com.android.modules.utils.BackgroundThread;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.ConfigStore;
+import com.android.providers.media.MediaBackgroundThread;
 import com.android.providers.media.MediaProvider;
 import com.android.providers.media.MediaVolume;
 import com.android.providers.media.backupandrestore.RestoreExecutor;
@@ -158,6 +159,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -232,6 +234,8 @@ public class ModernMediaScanner implements MediaScanner {
     @GuardedBy("mActiveScans")
 
     private final List<Scan> mActiveScans = new ArrayList<>();
+    private static final Executor sBackgroundThreadExecutor = Flags.enableMediaBackgroundThread()
+            ? MediaBackgroundThread.getDbOpsExecutor() : BackgroundThread.getExecutor();
 
     /**
      * Holder that contains a reference count of the number of threads
@@ -473,7 +477,7 @@ public class ModernMediaScanner implements MediaScanner {
      * Invalidate FUSE dentry cache while setting directory dirty
      */
     private void invalidateFuseDentryInBg(File file) {
-        BackgroundThread.getExecutor().execute(() -> {
+        sBackgroundThreadExecutor.execute(() -> {
             try (ContentProviderClient client =
                          mContext.getContentResolver().acquireContentProviderClient(
                                  MediaStore.AUTHORITY)) {
