@@ -64,8 +64,13 @@ import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.selection.Selection
+import com.android.photopicker.data.DataService
+import com.android.photopicker.data.TestSearchDataServiceImpl
 import com.android.photopicker.data.model.Media
+import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.PhotopickerFeatureBaseTest
+import com.android.photopicker.features.search.data.SearchDataService
 import com.android.photopicker.features.search.model.GlobalSearchState
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
@@ -139,6 +144,8 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var featureManager: FeatureManager
     @Inject lateinit var userHandle: UserHandle
     @Inject override lateinit var configurationManager: Lazy<ConfigurationManager>
+    @Inject lateinit var dataService: DataService
+    @Inject lateinit var searchDataService: SearchDataService
 
     @BindValue @ApplicationOwned val contentResolver: ContentResolver = MockContentResolver()
 
@@ -155,6 +162,10 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
                     }
                 }
         )
+
+    private val cloudProviderName = "My cloud"
+    var localProvider = Provider("local_authority", MediaSource.LOCAL, 0, "Local")
+    var cloudProvider = Provider("cloud_authority", MediaSource.REMOTE, 1, cloudProviderName)
 
     @Before
     fun setup() {
@@ -658,5 +669,115 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("expected items in selection from search grid drag")
                 .that(selection.size())
                 .isEqualTo(3)
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchBar_withSearchableCloudProvider_showsProviderNameInPlaceholder() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.setSearchableProviders(listOf(cloudProvider))
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceTimeBy(100)
+
+            val expectedSearchBarPlaceholder =
+                resources.getString(
+                    R.string.photopicker_search_provider_placeholder_text,
+                    cloudProviderName,
+                )
+            // Perform click action on the Search bar
+            composeTestRule
+                .onNode(hasText(expectedSearchBarPlaceholder))
+                .assertIsDisplayed()
+                .performClick()
+            advanceTimeBy(100)
+
+            val expectedSearchViewPlaceholder =
+                resources.getString(
+                    R.string.photopicker_search_with_provider_placeholder_text,
+                    cloudProviderName,
+                )
+            composeTestRule.onNode(hasText(expectedSearchViewPlaceholder)).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchBar_withSearchableCloudAndLocalProvider_showsDefaultPlaceholder() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.setSearchableProviders(listOf(cloudProvider, localProvider))
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceTimeBy(100)
+
+            // Perform click action on the Search bar
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchBar_placeholderUpdates_whenProviderChanges() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceTimeBy(100)
+
+            // Click search bar and check initial placeholder
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+                .performClick()
+
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .assertIsDisplayed()
+
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.setSearchableProviders(listOf(cloudProvider))
+
+            val providerPlaceholder =
+                resources.getString(
+                    R.string.photopicker_search_with_provider_placeholder_text,
+                    cloudProviderName,
+                )
+            advanceTimeBy(100)
+            composeTestRule.onNode(hasText(providerPlaceholder)).assertIsDisplayed()
         }
 }

@@ -113,6 +113,10 @@ class SearchDataServiceImpl(
 
     override val userSearchStateInfo: StateFlow<UserSearchStateInfo> = _userSearchStateInfo
 
+    private val _searchableProviders: MutableStateFlow<List<Provider>> =
+        MutableStateFlow(emptyList())
+    override val searchableProviders: StateFlow<List<Provider>> = _searchableProviders
+
     init {
         // Listen to available provider changes and clear search cache when required.
         scope.launch(dispatcher) {
@@ -390,12 +394,16 @@ class SearchDataServiceImpl(
     /** Get search state info for the current user. */
     private suspend fun fetchSearchStateInfo(): UserSearchStateInfo {
         val contentResolver: ContentResolver = dataService.activeContentResolver.value
+        val availableProviders: List<Provider> = dataService.availableProviders.value
         val searchProviderAuthorities: List<String>? =
-            mediaProviderClient.fetchSearchProviderAuthorities(
-                contentResolver,
-                dataService.availableProviders.value,
-            )
+            mediaProviderClient.fetchSearchProviderAuthorities(contentResolver, availableProviders)
         val userSearchStateInfo = UserSearchStateInfo(searchProviderAuthorities)
+
+        val searchableProviders: List<Provider> =
+            searchProviderAuthorities?.let { authorities ->
+                availableProviders.filter { it.authority in authorities }
+            } ?: emptyList()
+        _searchableProviders.update { searchableProviders }
         Log.d(
             SearchDataService.TAG,
             "Available search providers for current user $searchProviderAuthorities. " +

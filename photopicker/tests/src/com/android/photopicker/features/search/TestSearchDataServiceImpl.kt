@@ -23,6 +23,7 @@ import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.data.paging.FakeInMemoryMediaPagingSource
 import com.android.photopicker.features.search.data.SearchDataService
 import com.android.photopicker.features.search.model.SearchSuggestion
@@ -30,6 +31,7 @@ import com.android.photopicker.features.search.model.SearchSuggestionType
 import com.android.photopicker.features.search.model.UserSearchStateInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * A test implementation of [SearchDataService] that provides fake search suggestions and results.
@@ -45,6 +47,13 @@ class TestSearchDataServiceImpl() : SearchDataService {
 
     override val userSearchStateInfo: StateFlow<UserSearchStateInfo> =
         MutableStateFlow(UserSearchStateInfo(listOf("test_provider")))
+
+    var _searchableProviders: MutableStateFlow<List<Provider>> = MutableStateFlow(emptyList())
+    override val searchableProviders: StateFlow<List<Provider>> = _searchableProviders
+
+    fun setSearchableProviders(providers: List<Provider>) {
+        _searchableProviders.update { providers }
+    }
 
     override suspend fun getSearchSuggestions(
         prefix: String,

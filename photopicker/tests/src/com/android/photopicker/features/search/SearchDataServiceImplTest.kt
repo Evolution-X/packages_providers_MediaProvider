@@ -26,12 +26,16 @@ import android.os.UserHandle
 import androidx.paging.PagingSource
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
+import com.android.photopicker.core.configuration.PhotopickerConfiguration
+import com.android.photopicker.core.configuration.PhotopickerFlags
 import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.RegisteredEventClass
+import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.user.UserProfile
 import com.android.photopicker.core.user.UserStatus
+import com.android.photopicker.data.DEFAULT_PROVIDERS
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.DataServiceImpl
 import com.android.photopicker.data.MediaProviderClient
@@ -110,8 +114,20 @@ class SearchDataServiceImplTest {
             )
         testFeatureManager =
             FeatureManager(
-                provideTestConfigurationFlow(scope = scope.backgroundScope),
-                scope,
+                provideTestConfigurationFlow(
+                    scope = scope.backgroundScope,
+                    defaultConfiguration =
+                        PhotopickerConfiguration(
+                            action = "TEST_ACTION",
+                            sessionId = generatePickerSessionId(),
+                            flags =
+                                PhotopickerFlags(
+                                    CLOUD_MEDIA_ENABLED = true,
+                                    CLOUD_ALLOWED_PROVIDERS = arrayOf("cloud_authority"),
+                                ),
+                        ),
+                ),
+                scope.backgroundScope,
                 TestPrefetchDataService(),
                 setOf(CloudMediaFeature.Registration),
                 setOf<RegisteredEventClass>(),
@@ -284,5 +300,75 @@ class SearchDataServiceImplTest {
             )
         assertThat(secondSearchResultsPagingSource).isNotEqualTo(firstSearchResultsPagingSource)
         assertThat(secondSearchResultsPagingSource.invalid).isFalse()
+    }
+
+    @Test
+    fun testSearchableProvidersUpdates() = runTest {
+        val userStatusFlow: MutableStateFlow<UserStatus> = MutableStateFlow(userStatus)
+        events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope),
+                testFeatureManager,
+            )
+
+        val dataService: DataService =
+            DataServiceImpl(
+                userStatus = userStatusFlow,
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                featureManager = testFeatureManager,
+                appContext = mockContext,
+                events = events,
+                processOwnerHandle = userProfilePrimary.handle,
+            )
+
+        val searchDataService: SearchDataService =
+            SearchDataServiceImpl(
+                dataService = dataService,
+                userStatus = userStatusFlow,
+                photopickerConfiguration = provideTestConfigurationFlow(this.backgroundScope),
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                events = events,
+            )
+
+        val emissions = mutableListOf<List<Provider>>()
+        this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
+        advanceTimeBy(100)
+
+        assertThat(emissions.count()).isEqualTo(1)
+        assertThat(searchDataService.searchableProviders.value)
+            .containsExactly(DEFAULT_PROVIDERS[0])
+
+        // The active user changes
+        val updatedContentProvider = TestMediaProvider()
+        val updatedContentResolver: ContentResolver = ContentResolver.wrap(updatedContentProvider)
+        val searchableCloudProvider =
+            Provider(
+                authority = "cloud_authority",
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "My Cloud",
+            )
+
+        updatedContentProvider.providers = listOf(searchableCloudProvider)
+        updatedContentProvider.searchProviders = listOf(searchableCloudProvider)
+
+        userStatusFlow.update { it.copy(activeContentResolver = updatedContentResolver) }
+
+        advanceTimeBy(100)
+
+        // Since the active user has changed, this should trigger a re-fetch of the active
+        // providers.
+        assertThat(emissions.count()).isEqualTo(2)
+
+        assertThat(searchDataService.searchableProviders.value)
+            .containsExactly(searchableCloudProvider)
     }
 }
