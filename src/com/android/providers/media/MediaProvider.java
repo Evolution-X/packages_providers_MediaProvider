@@ -485,7 +485,10 @@ public class MediaProvider extends ContentProvider {
      */
     private static final long POLLING_TIME_IN_MILLIS = 100;
 
-    private static final long TIMEOUT_MILLIS = 30_000;
+    /**
+     * Constants to test MediaServiceV2. Only to be used to testing.
+     */
+    private static final long TIMEOUT_MILLIS = 60_000;
     private static final long POLL_INTERVAL_MILLIS = 100;
     static final String WORK_INFO_STATE = "work_info_state";
     static final String WAIT_FOR_SCAN_COMPLETION = "wait_for_scan_completion";
@@ -8429,6 +8432,10 @@ public class MediaProvider extends ContentProvider {
                         + Binder.getCallingUid());
 
         try {
+            WorkManager workManager =  WorkManager.getInstance(getContext());
+            // cancel all existing works so that it does interfere with our test
+            workManager.cancelAllWork();
+
             Optional<UUID> uuidOptional;
             MediaVolume volume;
 
@@ -8459,8 +8466,6 @@ public class MediaProvider extends ContentProvider {
             }
 
             UUID uuid = uuidOptional.get();
-
-            WorkManager workManager =  WorkManager.getInstance(getContext());
 
             boolean waitForScanCompletion = extras.getBoolean(WAIT_FOR_SCAN_COMPLETION, true);
             if (waitForScanCompletion) {

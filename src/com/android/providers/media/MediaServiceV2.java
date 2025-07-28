@@ -56,7 +56,7 @@ public class MediaServiceV2 extends Worker {
     private static final String KEY_PATH = "path";
     private static final String SCAN_VOLUME_WORK_CHAIN = "scan_volume_work_chain";
     private static final String MEDIA_BROADCAST_WORK_CHAIN = "media_broadcast_work_chain";
-    private static final long INITIAL_DELAY_IN_SECONDS = 20;
+    private static final long INITIAL_DELAY_IN_SECONDS = 40;
     private static final String TAG = MediaServiceV2.class.getSimpleName();
     private final Context mContext;
 
