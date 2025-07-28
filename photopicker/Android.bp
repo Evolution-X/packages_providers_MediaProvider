@@ -78,6 +78,7 @@ android_library {
         "androidx.room_room-compiler-plugin",
     ],
     lint: {
+        baseline_filename: "lint-baseline.xml",
         extra_check_modules: ["PhotopickerLintChecker"],
     },
 }

@@ -717,7 +717,7 @@ public class ModernMediaScanner implements MediaScanner {
             final String dataClause = "(" + FileColumns.DATA + " LIKE ? ESCAPE '\\' OR "
                     + FileColumns.DATA + " LIKE ? ESCAPE '\\')";
             final String excludeDirClause = buildExcludeDirClause(mExcludeDirs.size());
-            final String generationClause = FileColumns.GENERATION_ADDED + " <= "
+            final String generationClause = FileColumns.GENERATION_MODIFIED + " <= "
                     + mStartGeneration;
             final String sqlSelection = formatClause + " AND " + dataClause + " AND "
                     + generationClause
