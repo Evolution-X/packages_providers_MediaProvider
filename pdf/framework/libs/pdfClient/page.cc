@@ -1121,4 +1121,16 @@ bool Page::UpdatePageAnnotation(int index, std::unique_ptr<Annotation> annotatio
     return true;
 }
 
+Rotation Page::GetRotation() const {
+    return static_cast<Rotation>(FPDFPage_GetRotation(page_.get()));
+}
+
+void Page::SetRotation(Rotation rotation) {
+    if (!pdfClient_utils::isValidRotation(rotation)) {
+        LOGE("Invalid rotation value - %d", static_cast<int>(rotation));
+        return;
+    }
+    FPDFPage_SetRotation(page_.get(), static_cast<int>(rotation));
+}
+
 }  // namespace pdfClient

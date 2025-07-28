@@ -46,11 +46,13 @@ using pdfClient::Document;
 using pdfClient::FileReader;
 using pdfClient::GotoLink;
 using pdfClient::Page;
+using pdfClient::PageRotationConfig;
 using pdfClient::Point_f;
 using pdfClient::Point_i;
 using pdfClient::Rectangle_i;
 using pdfClient::SelectionBoundary;
 using pdfClient::Status;
+using pdfClient_utils::Rotation;
 using std::vector;
 
 using pdfClient::LinuxFileOps;
@@ -363,6 +365,25 @@ JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_deletePage
     }
 
     return success;
+}
+
+JNIEXPORT void JNICALL Java_android_graphics_pdf_PdfDocumentProxy_setPagesRotation(
+        JNIEnv* env, jobject jPdfDocument, jobject jPageRotationConfigList) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    Document* doc = convert::GetPdfDocPtr(env, jPdfDocument);
+
+    vector<PageRotationConfig> pageRotationConfigList =
+            convert::ToNativePageRotationConfigs(env, jPageRotationConfigList);
+
+    for (auto& pageRotationConfig : pageRotationConfigList) {
+        int pageNum = pageRotationConfig.pageNum;
+        Rotation rotation = pageRotationConfig.rotation;
+
+        std::shared_ptr<Page> page = doc->GetPage(pageNum);
+        page->SetRotation(rotation);
+
+        doc->ReleaseRetainedPage(pageNum);
+    }
 }
 
 JNIEXPORT jobject JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormWidgetInfo__III(
