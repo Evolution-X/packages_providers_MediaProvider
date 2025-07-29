@@ -31,6 +31,5 @@
     <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"Suggerimenti per"</string>
     <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Pulsante dell\'icona delle informazioni che descrive l\'origine dei risultati multimediali nella sezione in evidenza"</string>
     <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"<xliff:g id="APP_NAME">%1$s</xliff:g> ha fornito le informazioni per questi suggerimenti, ma non può vedere le foto a meno che tu non consenta l\'accesso"</string>
-    <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
-    <skip />
+    <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"Questa app"</string>
 </resources>
