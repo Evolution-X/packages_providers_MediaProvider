@@ -29,10 +29,8 @@
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"Chargement des résultats multimédias mis en avant"</string>
     <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"Résultats multimédias mis en avant"</string>
     <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"Suggestions pour"</string>
-    <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
-    <skip />
+    <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Bouton de l\'icône d\'information qui décrit la source des résultats multimédias dans la section \"Temps forts\""</string>
+    <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"<xliff:g id="APP_NAME">%1$s</xliff:g> a fourni les informations pour ces suggestions, mais ne peut pas voir les photos, sauf si vous autorisez l\'accès"</string>
     <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
     <skip />
 </resources>

@@ -29,10 +29,8 @@
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"हाइलाइट गरिएका मिडियासम्बन्धी परिणामहरू लोड गरिँदै छन्"</string>
     <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"हाइलाइट गरिएका मिडियासम्बन्धी परिणामहरू"</string>
     <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"निम्न कुरासम्बन्धी सुझावहरू:"</string>
-    <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
-    <skip />
+    <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"\"हाइलाइट\" खण्डमा भएका मिडियासम्बन्धी परिणामहरूको स्रोत वर्णन गर्ने जानकारी जनाउने आइकन बटन"</string>
+    <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"<xliff:g id="APP_NAME">%1$s</xliff:g> ले यी सुझावहरूका हकमा जानकारी प्रदान गरेको छ तर तपाईंले एक्सेस नदिएसम्म यसले आफैँ फोटोहरू हेर्न भने सक्दैन"</string>
     <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
     <skip />
 </resources>
