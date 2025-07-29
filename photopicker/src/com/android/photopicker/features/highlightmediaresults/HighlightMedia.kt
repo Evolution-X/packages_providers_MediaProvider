@@ -74,7 +74,6 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
@@ -142,13 +141,20 @@ val MEASUREMENT_ZERO = 0.dp
  * @param params [LocationParams.WithLongClickAction] type params defining the long click behavior
  *   of highlight media items.
  * @param modifier The modifier to be applied to the composable if any
+ * @param highlightMediaViewModel - A viewModel override for the composable. Normally, this is
+ *   fetched via hilt from the backstack entry by using obtainViewModel()
  */
 @Composable
-fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modifier = Modifier) {
+fun HighlightMedia(
+    params: LocationParams = LocationParams.None,
+    modifier: Modifier = Modifier,
+    highlightMediaViewModel: HighlightMediaViewModel = obtainViewModel(isActivityScoped = true),
+) {
     val highlightParams: HighlightQueryResultsParams =
         LocalPhotopickerConfiguration.current.highlightQueryResultsParams
     val highlightQuery: HighlightQuery = highlightParams.queryResultsHighlightQuery
-    var showHighlightSection by rememberSaveable { mutableStateOf(true) }
+    val showHighlightSection by
+        highlightMediaViewModel.showHighlightSection.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
@@ -171,7 +177,6 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
             )
         }
     }
-    val searchViewModel: SearchViewModel = obtainViewModel(isActivityScoped = true)
 
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
     val selectionLimitExceededMessage =
@@ -227,7 +232,9 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                                     )
                                 }
                             },
-                            onEmptyResults = { showHighlightSection = false },
+                            onEmptyResults = {
+                                highlightMediaViewModel.setShowHighlightSection(false)
+                            },
                         )
                     }
 
@@ -284,7 +291,9 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
                                     )
                                 }
                             },
-                            onEmptyResults = { showHighlightSection = false },
+                            onEmptyResults = {
+                                highlightMediaViewModel.setShowHighlightSection(false)
+                            },
                         )
                     }
                 }
@@ -292,10 +301,6 @@ fun HighlightMedia(params: LocationParams = LocationParams.None, modifier: Modif
             // Display the "Recents" label below the highlight grid
             RecentsLabel()
         }
-    }
-
-    LaunchedEffect(Unit) {
-        searchViewModel.providerChangedEvent.collect { showHighlightSection = true }
     }
 }
 
