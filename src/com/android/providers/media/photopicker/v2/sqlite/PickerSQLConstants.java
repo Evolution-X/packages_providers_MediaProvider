@@ -388,7 +388,9 @@ public class PickerSQLConstants {
         CATEGORY_TYPE("category_type"),
         /** True, if the media category is leaf category which contains media sets,
          * otherwise false. */
-        IS_LEAF_CATEGORY("is_leaf_category");
+        IS_LEAF_CATEGORY("is_leaf_category"),
+        /** If the media group has a badge, this will be populated with the badge icon uri. */
+        BADGE_ICON_URI("badge_icon_uri");
 
         private final String mColumnName;
 

@@ -36,6 +36,7 @@ import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Group.Album
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
@@ -47,7 +48,9 @@ import com.android.photopicker.features.cloudmedia.CloudMediaFeature
 import java.util.Collections.emptyList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.channels.awaitClose
@@ -191,6 +194,22 @@ class DataServiceImpl(
             _availableProviders.value,
         )
 
+    /**
+     * The internal map used to update [providerToIconMap]'s value.
+     *
+     * This holds the current mapping of a [Provider] to its icon.
+     */
+    private val _providerToIconMap: MutableMap<Provider, Deferred<Icon?>> = mutableMapOf()
+
+    override suspend fun getProviderToIconMap(): Map<Provider, Icon> {
+        return _providerToIconMap
+            .mapNotNull { (provider, deferredIcon) ->
+                // Await the result and create a mapping if the icon is not null.
+                deferredIcon.await()?.let { icon -> provider to icon }
+            }
+            .toMap()
+    }
+
     // Contains collection info cache
     private val collectionInfoState =
         CollectionInfoState(mediaProviderClient, activeContentResolver, availableProviders)
@@ -237,6 +256,12 @@ class DataServiceImpl(
                         }
                     }
                     albumMediaPagingSources.clear()
+                }
+
+                _providerToIconMap.clear()
+                for (provider in providers) {
+                    _providerToIconMap[provider] =
+                        scope.async(dispatcher) { getIconForProvider(provider) }
                 }
             }
         }
@@ -402,6 +427,65 @@ class DataServiceImpl(
             // Unregister when the flow is closed.
             awaitClose { notificationService.unregisterContentObserverCallback(resolver, observer) }
         }
+
+    /**
+     * Fetches the icon URI for a given content provider authority.
+     *
+     * This function resolves the content provider for the currently active user, finds its
+     * application icon resource, and constructs an `android.resource://` URI that can be used to
+     * load the icon.
+     *
+     * @param authority The authority of the content provider to find.
+     * @return A Uri pointing to the provider's icon. Returns [Uri.EMPTY] if the provider cannot be
+     *   found or if the provider's application does not have an icon.
+     */
+    private fun getIconForProvider(provider: Provider): Icon? {
+        // We do not want to use local provider's icon as it is a system app and is unavailable in
+        // launcher menu
+        if (provider.mediaSource == MediaSource.LOCAL) {
+            return null
+        }
+        val authority = provider.authority
+        try {
+            val userHandle = userStatus.value.activeUserProfile.handle
+            val providerInfo =
+                appContext
+                    .createContextAsUser(userHandle, 0)
+                    .packageManager
+                    .resolveContentProvider(authority, 0)
+            providerInfo?.let {
+                val iconResId = it.applicationInfo.icon
+                if (iconResId == 0) {
+                    return null
+                }
+                val uri =
+                    Uri.Builder()
+                        .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                        .encodedAuthority("${userHandle.identifier}@${it.packageName}")
+                        .appendPath(iconResId.toString())
+                        .build()
+                return Icon(uri, MediaSource.LOCAL)
+            }
+        } catch (exception: Exception) {
+            when (exception) {
+                is IllegalStateException -> {
+                    Log.w(
+                        DataService.TAG,
+                        "IllegalState encountered while fetching icon for $authority.",
+                        exception,
+                    )
+                }
+                else -> {
+                    Log.w(
+                        DataService.TAG,
+                        "Encountered exception during getting icon for $authority: ",
+                        exception,
+                    )
+                }
+            }
+        }
+        return null
+    }
 
     @GuardedBy("albumMediaPagingSourceMutex")
     override fun albumMediaPagingSource(

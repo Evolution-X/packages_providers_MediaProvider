@@ -19,6 +19,7 @@ package com.android.photopicker.data
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ProviderInfo
 import android.content.pm.ResolveInfo
@@ -40,6 +41,7 @@ import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.user.UserProfile
 import com.android.photopicker.core.user.UserStatus
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -50,7 +52,6 @@ import com.android.photopicker.util.test.nonNullableAny
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
 import com.google.common.truth.Truth.assertThat
-import java.lang.RuntimeException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -102,6 +103,9 @@ class DataServiceImplTest {
                 handle = createUserHandle(10),
                 profileType = UserProfile.ProfileType.MANAGED,
             )
+
+        private val testPackageName = "com.test.package"
+        private val testAuthority = "test_authority"
     }
 
     private val sessionId = generatePickerSessionId()
@@ -140,6 +144,9 @@ class DataServiceImplTest {
                 setOf<RegisteredEventClass>(),
                 setOf<RegisteredEventClass>(),
             )
+
+        whenever(mockContext.createContextAsUser(any(), anyInt())).thenReturn(mockContext)
+        whenever(mockContext.packageManager).thenReturn(mockPackageManager)
     }
 
     @Test
@@ -1545,6 +1552,262 @@ class DataServiceImplTest {
         assertThat(actualAllAllowedProviders2.count()).isEqualTo(0)
     }
 
+    @Test
+    fun testGetIconProviderOnProviderChange() = runTest {
+        val testProviderInfo = createFakeProviderInfo("com.test.app", 1231)
+        whenever(mockPackageManager.resolveContentProvider("test_authority", 0))
+            .thenReturn(testProviderInfo)
+
+        val localProvider =
+            Provider(
+                authority = "local_authority",
+                mediaSource = MediaSource.LOCAL,
+                uid = 0,
+                displayName = "",
+            )
+        val localProviderInfo = createFakeProviderInfo("com.local.app", 1232)
+        whenever(mockPackageManager.resolveContentProvider("local_authority", 0))
+            .thenReturn(localProviderInfo)
+
+        val cloudProvider =
+            Provider(
+                authority = "cloud_authority",
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "",
+            )
+        val cloudProviderInfo = createFakeProviderInfo("com.cloud.app", 1233)
+        whenever(mockPackageManager.resolveContentProvider("cloud_authority", 0))
+            .thenReturn(cloudProviderInfo)
+
+        val providerToProviderInfoMap =
+            mapOf(localProvider to localProviderInfo, cloudProvider to cloudProviderInfo)
+
+        val dataService = setupDataServiceForGetIconForProviderTests()
+
+        val emissions = mutableListOf<List<Provider>>()
+        this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
+        advanceTimeBy(100)
+
+        // Assert the initial state of the map
+        assertThat(emissions.count()).isEqualTo(1)
+        // Initially only local provider is present and a provider with local media source should
+        // not have an icon
+        var iconMap = dataService.getProviderToIconMap()
+        assertThat(iconMap[testContentProvider.providers[0]]).isNull()
+
+        // Simulate an update to the available providers
+        val newProviders = mutableListOf(localProvider, cloudProvider)
+        testContentProvider.providers = newProviders
+
+        notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
+
+        advanceTimeBy(100)
+
+        // Assert the map was updated correctly
+        assertThat(emissions).hasSize(2)
+        // The local provider does not have an icon, so the map should only contain the cloud
+        // provider.
+        iconMap = dataService.getProviderToIconMap()
+        assertThat(iconMap[localProvider]).isNull()
+        assertThat(iconMap[cloudProvider])
+            .isEqualTo(
+                getProviderIcon(
+                    providerToProviderInfoMap[cloudProvider],
+                    userStatus.activeUserProfile.identifier,
+                )
+            )
+    }
+
+    @Test
+    fun testGetIconForProvidersWhenUserChanges() = runTest {
+        val primaryContentProvider = TestMediaProvider()
+        val primaryContentResolver = ContentResolver.wrap(primaryContentProvider)
+        val remoteAuthority = "cloud_authority"
+        val remoteProvider =
+            Provider(
+                authority = remoteAuthority,
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "CloudPrimary",
+            )
+        primaryContentProvider.providers = mutableListOf(remoteProvider)
+        val userStatusFlow: MutableStateFlow<UserStatus> =
+            MutableStateFlow(
+                UserStatus(
+                    activeUserProfile = userProfilePrimary,
+                    allProfiles = listOf(userProfilePrimary, userProfileManaged),
+                    activeContentResolver = primaryContentResolver,
+                )
+            )
+
+        val providerInfo = createFakeProviderInfo(testPackageName, 456)
+        whenever(mockPackageManager.resolveContentProvider(remoteAuthority, 0))
+            .thenReturn(providerInfo)
+
+        val dataService = setupDataServiceForGetIconForProviderTests(userStatusFlow)
+
+        val emissions = mutableListOf<List<Provider>>()
+        this.backgroundScope.launch { dataService.availableProviders.toList(emissions) }
+        advanceTimeBy(100)
+
+        assertThat(emissions.count()).isEqualTo(1)
+
+        // Assert provider's icon for Primary User
+        assertThat(emissions).hasSize(1)
+        assertThat(dataService.getProviderToIconMap()[remoteProvider])
+            .isEqualTo(getProviderIcon(providerInfo, userProfilePrimary.identifier))
+
+        val managedContentProvider = TestMediaProvider()
+        val managedContentResolver: ContentResolver = ContentResolver.wrap(managedContentProvider)
+        // keeping the authority same so that the same mocks work
+        val remoteProviderManaged =
+            Provider(
+                authority = remoteAuthority,
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "CloudManaged",
+            )
+        managedContentProvider.providers = mutableListOf(remoteProviderManaged)
+
+        // The active user changes
+        userStatusFlow.update {
+            it.copy(
+                activeUserProfile = userProfileManaged,
+                activeContentResolver = managedContentResolver,
+            )
+        }
+
+        advanceTimeBy(100)
+
+        // Since the active user has changed, this should trigger a re-fetch of the active
+        // providers.
+        assertThat(emissions.count()).isEqualTo(2)
+
+        // Assert provider's icon for Managed User
+        assertThat(dataService.getProviderToIconMap()[remoteProviderManaged])
+            .isEqualTo(getProviderIcon(providerInfo, userProfileManaged.identifier))
+    }
+
+    @Test
+    fun testGetIconForProviderWhenProviderIsNotFound() = runTest {
+        val dataService = setupDataServiceForGetIconForProviderTests()
+        val testProvider =
+            Provider(
+                authority = testAuthority,
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "testProvider",
+            )
+        whenever(mockPackageManager.resolveContentProvider(testAuthority, 0)).thenReturn(null)
+
+        testContentProvider.providers = mutableListOf(testProvider)
+        notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
+        advanceTimeBy(100)
+
+        assertThat(dataService.getProviderToIconMap()[testProvider]).isNull()
+    }
+
+    @Test
+    fun testGetIconForProviderWhenProviderHasNoIcon() = runTest {
+        val dataService = setupDataServiceForGetIconForProviderTests()
+        val testProvider =
+            Provider(
+                authority = testAuthority,
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "testProvider",
+            )
+        val noIconProviderInfo = createFakeProviderInfo(testPackageName, 0) // icon is 0
+        whenever(mockPackageManager.resolveContentProvider(testAuthority, 0))
+            .thenReturn(noIconProviderInfo)
+
+        testContentProvider.providers = mutableListOf(testProvider)
+        notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
+        advanceTimeBy(100)
+
+        assertThat(dataService.getProviderToIconMap()[testProvider]).isNull()
+    }
+
+    @Test
+    fun testGetIconForProviderWhenExceptionIsThrown() = runTest {
+        val dataService = setupDataServiceForGetIconForProviderTests()
+        val testProvider =
+            Provider(
+                authority = testAuthority,
+                mediaSource = MediaSource.REMOTE,
+                uid = 0,
+                displayName = "testProvider",
+            )
+        whenever(mockPackageManager.resolveContentProvider(testAuthority, 0))
+            .thenThrow(IllegalStateException("Test exception"))
+
+        testContentProvider.providers = mutableListOf(testProvider)
+        notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
+        advanceTimeBy(100)
+
+        assertThat(dataService.getProviderToIconMap()[testProvider]).isNull()
+    }
+
+    private fun TestScope.setupDataServiceForGetIconForProviderTests(
+        userStatusFlow: StateFlow<UserStatus> = MutableStateFlow(userStatus)
+    ): DataService {
+        events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope),
+                testFeatureManager,
+            )
+
+        testFeatureManager =
+            FeatureManager(
+                provideTestConfigurationFlow(
+                    scope = this.backgroundScope,
+                    defaultConfiguration =
+                        PhotopickerConfiguration(
+                            action = "TEST_ACTION",
+                            sessionId = sessionId,
+                            flags =
+                                PhotopickerFlags(
+                                    CLOUD_MEDIA_ENABLED = true,
+                                    CLOUD_ALLOWED_PROVIDERS = arrayOf("cloud_authority"),
+                                ),
+                        ),
+                ),
+                this.backgroundScope,
+                TestPrefetchDataService(),
+                setOf(CloudMediaFeature.Registration),
+                setOf<RegisteredEventClass>(),
+                setOf<RegisteredEventClass>(),
+            )
+
+        return DataServiceImpl(
+            userStatus = userStatusFlow,
+            scope = this.backgroundScope,
+            notificationService = notificationService,
+            mediaProviderClient = mediaProviderClient,
+            dispatcher = StandardTestDispatcher(this.testScheduler),
+            config =
+                provideTestConfigurationFlow(
+                    this.backgroundScope,
+                    defaultConfiguration =
+                        PhotopickerConfiguration(
+                            action = "TEST_ACTION",
+                            sessionId = sessionId,
+                            flags =
+                                PhotopickerFlags(
+                                    CLOUD_MEDIA_ENABLED = true,
+                                    CLOUD_ENFORCE_PROVIDER_ALLOWLIST = false,
+                                ),
+                        ),
+                ),
+            featureManager = testFeatureManager,
+            appContext = mockContext,
+            events = events,
+            processOwnerHandle = userProfilePrimary.handle,
+        )
+    }
+
     private fun createResolveInfo(provider: Provider): ResolveInfo {
         val resolveInfo = ResolveInfo()
         resolveInfo.nonLocalizedLabel = provider.displayName
@@ -1554,5 +1817,23 @@ class DataServiceImplTest {
         resolveInfo.providerInfo.readPermission =
             CloudMediaProviderContract.MANAGE_CLOUD_MEDIA_PROVIDERS_PERMISSION
         return resolveInfo
+    }
+
+    private fun createFakeProviderInfo(packageName: String, iconResId: Int): ProviderInfo {
+        return ProviderInfo().apply {
+            this.packageName = packageName
+            this.applicationInfo = ApplicationInfo().apply { this.icon = iconResId }
+        }
+    }
+
+    private fun getProviderIcon(providerInfo: ProviderInfo?, userId: Int): GlideIcon? {
+        if (providerInfo == null) return null
+        val uri =
+            Uri.Builder()
+                .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                .encodedAuthority("$userId@${providerInfo.packageName}")
+                .appendPath(providerInfo.applicationInfo.icon.toString())
+                .build()
+        return GlideIcon(uri, MediaSource.LOCAL)
     }
 }

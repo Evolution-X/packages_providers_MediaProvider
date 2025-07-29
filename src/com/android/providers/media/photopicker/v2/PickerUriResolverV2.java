@@ -199,7 +199,7 @@ public class PickerUriResolverV2 {
                         requireNonNull(queryArgs),
                         cancellationSignal);
             case PICKER_INTERNAL_MEDIA_SETS:
-                return PickerDataLayerV2.queryMediaSets(requireNonNull(queryArgs));
+                return PickerDataLayerV2.queryMediaSets(appContext, requireNonNull(queryArgs));
             case PICKER_INTERNAL_MEDIA_SET_CONTENTS:
                 return PickerDataLayerV2.queryMediaInMediaSet(
                         appContext,

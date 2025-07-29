@@ -33,6 +33,7 @@ import static com.android.providers.media.photopicker.util.PickerDbTestUtils.get
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getDrawableMediaId;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getLocalMediaCursor;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getMediaCategoriesCursor;
+import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getMediaSetsCursor;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getPickerUriString;
 
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -43,12 +44,14 @@ import static org.mockito.MockitoAnnotations.initMocks;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.UserHandle;
 import android.provider.CloudMediaProviderContract;
 
-import androidx.test.InstrumentationRegistry;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.providers.media.cloudproviders.SearchProvider;
 import com.android.providers.media.photopicker.PickerSyncController;
@@ -74,17 +77,22 @@ import java.util.Map;
 public class MediaGroupCursorUtilsTest {
     @Mock
     private PickerSyncController mMockSyncController;
+    @Mock
+    private Context mMockContext;
+    @Mock
+    PackageManager mMockPackageManager;
     private PickerDbFacade mFacade;
-    private Context mContext;
+    private ApplicationInfo mApplicationInfo = new ApplicationInfo();
+
 
     @Before
     public void setUp() {
         initMocks(this);
         PickerSyncController.setInstance(mMockSyncController);
-        mContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        File dbPath = mContext.getDatabasePath(PickerDatabaseHelper.PICKER_DATABASE_NAME);
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        File dbPath = context.getDatabasePath(PickerDatabaseHelper.PICKER_DATABASE_NAME);
         dbPath.delete();
-        mFacade = new PickerDbFacade(mContext, new PickerSyncLockManager(), LOCAL_PROVIDER);
+        mFacade = new PickerDbFacade(context, new PickerSyncLockManager(), LOCAL_PROVIDER);
         mFacade.setCloudProvider(SearchProvider.AUTHORITY);
 
         doReturn(mFacade).when(mMockSyncController).getDbFacade();
@@ -94,6 +102,7 @@ public class MediaGroupCursorUtilsTest {
                 .getCloudProviderOrDefault(any());
         doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
         doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+        doReturn(mMockPackageManager).when(mMockContext).getPackageManager();
     }
 
     @After
@@ -383,5 +392,78 @@ public class MediaGroupCursorUtilsTest {
         assertWithMessage("Unexpected list of unwrapped cover uris found")
                 .that(actualUnwrappedCoverUris)
                 .containsExactlyElementsIn(expectedUnwrappedCoverUris);
+    }
+
+    @Test
+    public void testGetMediaGroupCursorForMediaSets_forNonAppCategory_returnsNullBadgeUri()
+            throws PackageManager.NameNotFoundException {
+        Cursor categoryCursor = getMediaSetsCursor(
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+                PACKAGE_NAME1);
+        mApplicationInfo.icon = RES_ID1;
+
+        doReturn(mApplicationInfo).when(mMockPackageManager).getApplicationInfo(PACKAGE_NAME1, 0);
+
+        Cursor mediaSetGroupCursor = MediaGroupCursorUtils.getMediaGroupCursorForMediaSets(
+                mMockContext,
+                categoryCursor);
+        assertWithMessage("Expected media set group cursor to be non null")
+                .that(mediaSetGroupCursor).isNotNull();
+        assertWithMessage("Unexpected number of rows found in media group cursor")
+                .that(mediaSetGroupCursor.getCount()).isEqualTo(1);
+
+        String expectedGroupId =
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS + ":" + PACKAGE_NAME1;
+        mediaSetGroupCursor.moveToFirst();
+        assertWithMessage("Unexpected media set group id")
+                .that(mediaSetGroupCursor.getString(mediaSetGroupCursor.getColumnIndexOrThrow(
+                        PickerSQLConstants
+                                .MediaGroupResponseColumns.GROUP_ID.getColumnName())))
+                .isEqualTo(expectedGroupId);
+
+        assertWithMessage("Incorrect badge icon uri found, expected it be null")
+                .that(mediaSetGroupCursor.getString(mediaSetGroupCursor.getColumnIndexOrThrow(
+                        PickerSQLConstants
+                                .MediaGroupResponseColumns.BADGE_ICON_URI.getColumnName())))
+                .isNull();
+    }
+
+    @Test
+    public void testGetMediaGroupCursorForMediaSets_forAppCategory_returnsBadgeUri()
+            throws PackageManager.NameNotFoundException {
+        Cursor categoryCursor = getMediaSetsCursor(
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                PACKAGE_NAME1);
+        mApplicationInfo.icon = RES_ID1;
+
+        doReturn(mApplicationInfo).when(mMockPackageManager).getApplicationInfo(PACKAGE_NAME1, 0);
+
+        Cursor mediaSetGroupCursor = MediaGroupCursorUtils.getMediaGroupCursorForMediaSets(
+                mMockContext,
+                categoryCursor);
+        assertWithMessage("Expected media set group cursor to be non null")
+                .that(mediaSetGroupCursor).isNotNull();
+        assertWithMessage("Unexpected number of rows found in media group cursor")
+                .that(mediaSetGroupCursor.getCount()).isEqualTo(1);
+
+        String expectedGroupId =
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS + ":" + PACKAGE_NAME1;
+        mediaSetGroupCursor.moveToFirst();
+        assertWithMessage("Unexpected media set group id")
+                .that(mediaSetGroupCursor.getString(mediaSetGroupCursor.getColumnIndexOrThrow(
+                        PickerSQLConstants
+                                .MediaGroupResponseColumns.GROUP_ID.getColumnName())))
+                .isEqualTo(expectedGroupId);
+
+        String expectedBadgeUri = String.format(
+                Locale.ROOT,
+                "android.resource://%s@%s/%s",
+                MY_USER_ID, PACKAGE_NAME1, RES_ID1
+        );
+        assertWithMessage("Incorrect badge icon uri found, expected it be null")
+                .that(mediaSetGroupCursor.getString(mediaSetGroupCursor.getColumnIndexOrThrow(
+                        PickerSQLConstants
+                                .MediaGroupResponseColumns.BADGE_ICON_URI.getColumnName())))
+                .isEqualTo(expectedBadgeUri);
     }
 }
