@@ -3,39 +3,6 @@
 
     <issue
         id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.content.pm.PackageManager.NameNotFoundException"
-        errorLine1="        return createPackageContextAsUser(&quot;android&quot;, /* flags */ 0, userHandle).contentResolver"
-        errorLine2="               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/extensions/Context.kt"
-            line="64"
-            column="16"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.os.RemoteException"
-        errorLine1="            clientCallback.onSessionOpened(response)"
-        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/core/embedded/EmbeddedPhotopickerImpl.kt"
-            line="101"
-            column="13"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): java.io.IOException"
-        errorLine1="                userMonitor.userStatus.value.activeContentResolver"
-        errorLine2="                ^">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/features/preparemedia/MediaPreparerViewModel.kt"
-            line="401"
-            column="17"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
         message="Uncaught checked exception(s): android.os.RemoteException"
         errorLine1="        wrapped.onSurfaceCreated(surfaceId, surface, mediaId)"
         errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
@@ -142,61 +109,6 @@
             file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/features/preview/video/RemoteSurfaceController.kt"
             line="111"
             column="9"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.os.RemoteException"
-        errorLine1="                        clientCallback.onUriPermissionGranted(selectedUris)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/core/embedded/Session.kt"
-            line="499"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.os.RemoteException"
-        errorLine1="                        clientCallback.onUriPermissionRevoked(deselectedUris)"
-        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/core/embedded/Session.kt"
-            line="502"
-            column="25"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.os.RemoteException"
-        errorLine1="        clientCallback.onSessionError(ParcelableException(IllegalStateException()))"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/core/embedded/Session.kt"
-            line="597"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.os.RemoteException"
-        errorLine1="        clientCallback.onSelectionComplete()"
-        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/core/embedded/Session.kt"
-            line="601"
-            column="9"/>
-    </issue>
-
-    <issue
-        id="UncaughtCheckedException"
-        message="Uncaught checked exception(s): android.os.RemoteException"
-        errorLine1="        val callback = OnBackInvokedCallback { clientCallback.onSelectionComplete() }"
-        errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="packages/providers/MediaProvider/photopicker/src/com/android/photopicker/core/embedded/Session.kt"
-            line="614"
-            column="48"/>
     </issue>
 
 </issues>
