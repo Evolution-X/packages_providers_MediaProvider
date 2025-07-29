@@ -25,8 +25,10 @@ import android.test.mock.MockContentProvider
 import androidx.core.os.bundleOf
 import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.CollectionInfo
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Icon
+import com.android.photopicker.data.model.Icon.Companion.invoke
 import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -102,7 +104,7 @@ val DEFAULT_SEARCH_SUGGESTIONS: List<SearchSuggestion> =
             authority = "cloud.provider",
             type = SearchSuggestionType.FACE,
             displayText = null,
-            icon = Icon(Uri.parse("content://cloud.provider/1234"), MediaSource.LOCAL),
+            icon = GlideIcon(Uri.parse("content://cloud.provider/1234"), MediaSource.LOCAL),
         ),
         SearchSuggestion(
             mediaSetId = "media-set-id-1",
@@ -161,8 +163,9 @@ fun createCategory(type: CategoryType, authority: String): Group.Category {
         authority = authority,
         displayName = type.name,
         categoryType = type,
-        icons = listOf(Icon(Uri.parse("content://test_authority/id"), MediaSource.LOCAL)),
+        icons = listOf(GlideIcon(Uri.parse("content://test_authority/id"), MediaSource.LOCAL)),
         isLeafCategory = true,
+        badge = Icon(Uri.EMPTY, MediaSource.LOCAL),
     )
 }
 
@@ -172,7 +175,9 @@ fun createMediaSet(mediaSetId: String): Group.MediaSet {
         pickerId = mediaSetId.hashCode().toLong(),
         authority = DEFAULT_PROVIDERS[0].authority,
         displayName = mediaSetId,
-        icon = Icon(Uri.parse("content://test_authority/$mediaSetId"), MediaSource.LOCAL),
+        icon = GlideIcon(Uri.parse("content://test_authority/$mediaSetId"), MediaSource.LOCAL),
+        badge = Icon(Uri.EMPTY, MediaSource.LOCAL),
+        parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
     )
 }
 
@@ -586,6 +591,7 @@ class TestMediaProvider(
                     MediaProviderClient.GroupResponse.DISPLAY_NAME.key,
                     MediaProviderClient.GroupResponse.AUTHORITY.key,
                     MediaProviderClient.GroupResponse.UNWRAPPED_COVER_URI.key,
+                    MediaProviderClient.GroupResponse.BADGE_ICON_URI.key,
                 )
             )
         mediaSets.forEach {
@@ -596,6 +602,7 @@ class TestMediaProvider(
                     it.displayName,
                     it.authority,
                     it.icon.getLoadableUri().toString(),
+                    Uri.EMPTY,
                 )
             )
         }

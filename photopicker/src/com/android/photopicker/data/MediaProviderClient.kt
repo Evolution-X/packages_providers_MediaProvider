@@ -23,12 +23,18 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.util.Log
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FolderCopy
+import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.paging.PagingSource.LoadResult
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.data.MediaProviderClient.Companion.SEARCH_REQUEST_INIT_CALL_METHOD
+import com.android.photopicker.data.model.CategoryType
 import com.android.photopicker.data.model.CollectionInfo
+import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.GroupPageKey
 import com.android.photopicker.data.model.Icon
@@ -225,6 +231,7 @@ open class MediaProviderClient {
         ADDITIONAL_UNWRAPPED_COVER_URI_3("additional_cover_uri_3"),
         CATEGORY_TYPE("category_type"),
         IS_LEAF_CATEGORY("is_leaf_category"),
+        BADGE_ICON_URI("badge_icon_uri"),
     }
 
     enum class GroupType() {
@@ -244,7 +251,11 @@ open class MediaProviderClient {
                     /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
-                    return getListOfProviders(cursor!!)
+                    cursor?.let {
+                        return getListOfProviders(it)
+                    }
+                    Log.w(TAG, "Cursor in fetchAvailableProviders was unexpectedly null")
+                    return emptyList()
                 }
         } catch (e: Exception) {
             // If we can't fetch the available providers, basic functionality of photopicker does
@@ -542,7 +553,11 @@ open class MediaProviderClient {
                     /* cancellationSignal */ null,
                 )
                 .use { cursor ->
-                    return getListOfCollectionInfo(cursor!!)
+                    cursor?.let {
+                        return getListOfCollectionInfo(it)
+                    }
+                    Log.w(TAG, "Cursor in fetchCollectionInfo was unexpectedly null")
+                    return emptyList()
                 }
         } catch (e: Exception) {
             throw RuntimeException("Could not fetch collection info", e)
@@ -670,6 +685,7 @@ open class MediaProviderClient {
         parentCategoryId: String?,
         config: PhotopickerConfiguration,
         cancellationSignal: CancellationSignal?,
+        providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group> {
         val input: Bundle =
             bundleOf(
@@ -695,7 +711,11 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfCategoriesAndAlbums(availableProviders),
+                            data =
+                                cursor.getListOfCategoriesAndAlbums(
+                                    availableProviders,
+                                    providerToIconMap,
+                                ),
                             prevKey = cursor.getPrevGroupPageKey(),
                             nextKey = cursor.getNextGroupPageKey(),
                         )
@@ -724,6 +744,7 @@ open class MediaProviderClient {
         parentCategory: Group.Category,
         config: PhotopickerConfiguration,
         cancellationSignal: CancellationSignal?,
+        providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group.MediaSet> {
         val input: Bundle =
             bundleOf(
@@ -741,7 +762,12 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMediaSets(availableProviders),
+                            data =
+                                cursor.getListOfMediaSets(
+                                    availableProviders,
+                                    providerToIconMap,
+                                    parentCategory.categoryType.key,
+                                ),
                             prevKey = cursor.getPrevGroupPageKey(),
                             nextKey = cursor.getNextGroupPageKey(),
                         )
@@ -1482,20 +1508,24 @@ open class MediaProviderClient {
 
     /** Creates a list of [Group.Category]-s and [Group.Album]-s from the given [Cursor]. */
     private fun Cursor.getListOfCategoriesAndAlbums(
-        availableProviders: List<Provider>
+        availableProviders: List<Provider>,
+        providerToIconMap: Map<Provider, Icon>,
     ): List<Group> {
         val result: MutableList<Group> = mutableListOf<Group>()
         val authorityToSourceMap: Map<String, MediaSource> =
             availableProviders.associate { provider -> provider.authority to provider.mediaSource }
+        val authorityToProviderMap: Map<String, Provider> =
+            availableProviders.associateBy { provider -> provider.authority }
 
         if (this.moveToFirst()) {
             do {
                 try {
                     val groupType = getString(getColumnIndexOrThrow(GroupResponse.MEDIA_GROUP.key))
+                    val authority = getString(getColumnIndexOrThrow(GroupResponse.AUTHORITY.key))
                     when (groupType) {
                         GroupType.CATEGORY.name -> {
-                            val icons: List<Icon> =
-                                listOf<Icon?>(
+                            val icons: List<GlideIcon> =
+                                listOf<GlideIcon?>(
                                         this.getIcon(
                                             authorityToSourceMap,
                                             GroupResponse.UNWRAPPED_COVER_URI.key,
@@ -1514,6 +1544,14 @@ open class MediaProviderClient {
                                         ),
                                     )
                                     .filterNotNull()
+                            val categoryType =
+                                KeyToCategoryType[
+                                    getString(
+                                        getColumnIndexOrThrow(GroupResponse.CATEGORY_TYPE.key)
+                                    )]
+                                    ?: throw IllegalArgumentException(
+                                        "Could not recognize category type"
+                                    )
 
                             result.add(
                                 Group.Category(
@@ -1523,24 +1561,12 @@ open class MediaProviderClient {
                                         ),
                                     pickerId =
                                         getLong(getColumnIndexOrThrow(GroupResponse.PICKER_ID.key)),
-                                    authority =
-                                        getString(
-                                            getColumnIndexOrThrow(GroupResponse.AUTHORITY.key)
-                                        ),
+                                    authority = authority,
                                     displayName =
                                         getString(
                                             getColumnIndexOrThrow(GroupResponse.DISPLAY_NAME.key)
                                         ),
-                                    categoryType =
-                                        KeyToCategoryType[
-                                            getString(
-                                                getColumnIndexOrThrow(
-                                                    GroupResponse.CATEGORY_TYPE.key
-                                                )
-                                            )]
-                                            ?: throw IllegalArgumentException(
-                                                "Could not recognize category type"
-                                            ),
+                                    categoryType = categoryType,
                                     icons = icons,
                                     isLeafCategory =
                                         getInt(
@@ -1548,6 +1574,12 @@ open class MediaProviderClient {
                                                 GroupResponse.IS_LEAF_CATEGORY.key
                                             )
                                         ) == 1,
+                                    badge =
+                                        getCategoryBadge(
+                                            categoryType,
+                                            authorityToProviderMap.getOrDefault(authority, null),
+                                            providerToIconMap,
+                                        ),
                                 )
                             )
                         }
@@ -1567,10 +1599,7 @@ open class MediaProviderClient {
                                         ),
                                     pickerId =
                                         getLong(getColumnIndexOrThrow(GroupResponse.PICKER_ID.key)),
-                                    authority =
-                                        getString(
-                                            getColumnIndexOrThrow(GroupResponse.AUTHORITY.key)
-                                        ),
+                                    authority = authority,
                                     dateTakenMillisLong =
                                         Long.MAX_VALUE, // This is not used and will soon be
                                     // obsolete
@@ -1602,28 +1631,45 @@ open class MediaProviderClient {
 
     /** Creates a list of [Group.MediaSet]-s from the given [Cursor]. */
     private fun Cursor.getListOfMediaSets(
-        availableProviders: List<Provider>
+        availableProviders: List<Provider>,
+        providerToIconMap: Map<Provider, Icon>,
+        parentCategoryType: String,
     ): List<Group.MediaSet> {
         val result: MutableList<Group.MediaSet> = mutableListOf<Group.MediaSet>()
         val authorityToSourceMap: Map<String, MediaSource> =
             availableProviders.associate { provider -> provider.authority to provider.mediaSource }
+        val authorityToProviderMap: Map<String, Provider> =
+            availableProviders.associateBy { provider -> provider.authority }
 
         if (this.moveToFirst()) {
             do {
                 try {
+                    val authority = getString(getColumnIndexOrThrow(GroupResponse.AUTHORITY.key))
+                    val badgeUri =
+                        getString(getColumnIndexOrThrow(GroupResponse.BADGE_ICON_URI.key))?.toUri()
                     result.add(
                         Group.MediaSet(
                             id = getString(getColumnIndexOrThrow(GroupResponse.GROUP_ID.key)),
                             pickerId = getLong(getColumnIndexOrThrow(GroupResponse.PICKER_ID.key)),
-                            authority =
-                                getString(getColumnIndexOrThrow(GroupResponse.AUTHORITY.key)),
+                            authority = authority,
                             displayName =
                                 getString(getColumnIndexOrThrow(GroupResponse.DISPLAY_NAME.key)),
                             icon =
                                 this.getIcon(
                                     authorityToSourceMap,
                                     GroupResponse.UNWRAPPED_COVER_URI.key,
-                                ) ?: Icon(uri = Uri.parse(""), mediaSource = MediaSource.LOCAL),
+                                )
+                                    ?: GlideIcon(
+                                        uri = Uri.parse(""),
+                                        mediaSource = MediaSource.LOCAL,
+                                    ),
+                            badge =
+                                getMediaSetBadge(
+                                    badgeUri,
+                                    authorityToProviderMap.getOrDefault(authority, null),
+                                    providerToIconMap,
+                                ),
+                            parentCategoryType = parentCategoryType,
                         )
                     )
                 } catch (e: Exception) {
@@ -1635,11 +1681,14 @@ open class MediaProviderClient {
         return result
     }
 
-    /** Creates an [Icon] object from the current [Cursor] row. If an error occurs, returns null. */
+    /**
+     * Creates an [GlideIcon] object from the current [Cursor] row. If an error occurs, returns
+     * null.
+     */
     private fun Cursor.getIcon(
         authorityToSourceMap: Map<String, MediaSource>,
         columnName: String,
-    ): Icon? {
+    ): GlideIcon? {
         var unwrappedUriString: String? = null
 
         try {
@@ -1652,7 +1701,7 @@ open class MediaProviderClient {
             val unwrappedUri: Uri = Uri.parse(unwrappedUriString)
             val authority: String? = unwrappedUri.getAuthority()
             val mediaSource: MediaSource = authorityToSourceMap[authority] ?: MediaSource.LOCAL
-            val icon = Icon(unwrappedUri, mediaSource)
+            val icon = GlideIcon(unwrappedUri, mediaSource)
             icon
         }
     }
@@ -1722,5 +1771,34 @@ open class MediaProviderClient {
         } catch (e: Exception) {
             Log.e(TAG, "Could not send refresh media call to Media Provider $extras", e)
         }
+    }
+
+    /**
+     * Determines the appropriate badge icon for a given media category.
+     *
+     * This returns a static icon for device folders, no icon for app folders, and looks up the icon
+     * from the provided map for all other categories.
+     */
+    private fun getCategoryBadge(
+        categoryType: CategoryType,
+        provider: Provider?,
+        providerToIconMap: Map<Provider, Icon>,
+    ): Icon? {
+        return when (categoryType) {
+            CategoryType.DEVICE_FOLDERS -> Icon(Icons.Outlined.FolderCopy)
+            CategoryType.APP_FOLDERS -> null
+            else -> providerToIconMap.getOrDefault(provider, null)
+        }
+    }
+
+    private fun getMediaSetBadge(
+        badgeUri: Uri?,
+        provider: Provider?,
+        providerToIconMap: Map<Provider, Icon>,
+    ): Icon? {
+        badgeUri?.let {
+            return Icon(it, MediaSource.LOCAL)
+        }
+        return providerToIconMap.getOrDefault(provider, null)
     }
 }

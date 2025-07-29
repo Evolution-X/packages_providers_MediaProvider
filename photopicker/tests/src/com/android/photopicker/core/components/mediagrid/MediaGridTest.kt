@@ -522,7 +522,7 @@ class MediaGridTest {
 
         // The first item in pinchToZoomTestData is a separator, so media starts at index 1.
         val targetMediaItem = pinchToZoomTestData[1] as MediaGridItem.MediaItem
-        val targetNodeText = targetMediaItem.media.mediaId!!
+        val targetNodeText = targetMediaItem.media.mediaId
 
         val itemNode = composeTestRule.onNode(hasText(targetNodeText), useUnmergedTree = true)
         itemNode.assertExists()

@@ -23,6 +23,7 @@ import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group.Album
 import com.android.photopicker.data.model.Group.BaseAlbum
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
@@ -46,6 +47,14 @@ interface DataService {
 
     /** A [StateFlow] with a list of available [Provider]-s. */
     val availableProviders: StateFlow<List<Provider>>
+
+    /**
+     * Asynchronously retrieves the map of [Provider] to [Icon]. The call suspends until all icons
+     * are loaded.
+     *
+     * @return The map of [Provider] to [Icon]
+     */
+    suspend fun getProviderToIconMap(): Map<Provider, Icon>
 
     /** Count of all preGranted media for the current package and userID. */
     val preGrantedMediaCount: StateFlow<Int?>

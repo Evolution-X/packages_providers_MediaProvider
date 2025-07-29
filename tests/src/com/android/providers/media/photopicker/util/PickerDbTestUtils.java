@@ -22,6 +22,7 @@ import static com.android.providers.media.util.MimeUtils.getExtensionFromMimeTyp
 
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import android.annotation.NonNull;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.database.MatrixCursor;
@@ -32,6 +33,7 @@ import android.provider.MediaStore;
 import com.android.providers.media.MediaGrants;
 import com.android.providers.media.PickerUriResolver;
 import com.android.providers.media.photopicker.data.PickerDbFacade;
+import com.android.providers.media.photopicker.v2.sqlite.PickerSQLConstants;
 
 import java.util.Locale;
 
@@ -389,6 +391,41 @@ public class PickerDbTestUtils {
         MatrixCursor c = new MatrixCursor(projectionKey);
         c.addRow(projectionValue);
         return c;
+    }
+
+    /**
+     * Creates a {@link MatrixCursor} containing a single row representing a media set.
+     *
+     * @param categoryType The category type to which the media set belongs. This is used to
+     *                     construct a unique media set ID.
+     * @param mediaSetName The display name for the media set.
+     * @return A {@link MatrixCursor} containing a single row with the details of the specified
+     *         media set.
+     */
+    public static Cursor getMediaSetsCursor(@NonNull String categoryType, String mediaSetName) {
+        String[] projectionKey = new String[]{
+                PickerSQLConstants.MediaSetsTableColumns.PICKER_ID.getColumnName(),
+                PickerSQLConstants.MediaSetsTableColumns.CATEGORY_ID.getColumnName(),
+                PickerSQLConstants.MediaSetsTableColumns.MEDIA_SET_ID.getColumnName(),
+                PickerSQLConstants.MediaSetsTableColumns.DISPLAY_NAME.getColumnName(),
+                PickerSQLConstants.MediaSetsTableColumns.COVER_ID.getColumnName(),
+                PickerSQLConstants.MediaSetsTableColumns.MEDIA_SET_AUTHORITY.getColumnName(),
+        };
+
+        String mediaSetId = categoryType + ":" + mediaSetName;
+
+        String[] projectionValue = new String[]{
+                LOCAL_ID,
+                categoryType,
+                mediaSetId,
+                mediaSetName,
+                LOCAL_ID,
+                LOCAL_PROVIDER
+        };
+
+        MatrixCursor cursor = new MatrixCursor(projectionKey);
+        cursor.addRow(projectionValue);
+        return cursor;
     }
 
     /**
