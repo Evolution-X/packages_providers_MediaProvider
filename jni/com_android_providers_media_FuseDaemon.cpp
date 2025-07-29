@@ -290,7 +290,8 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     auto deserialize_int = [&](size_t& prev, size_t& pos) -> int {
         pos = value.find(delimiter, prev);
         char* endptr;
-        int result = std::strtol(value.substr(prev, pos - prev).c_str(), &endptr, /* base */ 10);
+        std::string substring = value.substr(prev, pos - prev);
+        int result = static_cast<int>(std::strtol(substring.c_str(), &endptr, /* base */ 10));
         if (*endptr != '\0') {
             return UNSPECIFIED_VALUE;
         }
@@ -301,7 +302,8 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     auto deserialize_long = [&](size_t& prev, size_t& pos) -> int {
         pos = value.find(delimiter, prev);
         char* endptr;
-        long result = std::strtol(value.substr(prev, pos - prev).c_str(), &endptr, /* base */ 10);
+        std::string substring = value.substr(prev, pos - prev);
+        long result = std::strtol(substring.c_str(), &endptr, /* base */ 10);
         if (*endptr != '\0') {
             return UNSPECIFIED_VALUE;
         }
@@ -346,7 +348,7 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     }
 
     char* endptr;
-    int owner_pkg_id = std::strtol(value.substr(prev, pos - prev).c_str(), &endptr, /* base */ 10);
+    int owner_pkg_id = static_cast<int>(std::strtol(key.c_str(), &endptr, /* base */ 10));
     if (*endptr != '\0') {
         LOG(DEBUG) << "Error deserializing owner package id for path {" << path << "} from "
                    << "backed up data";
