@@ -258,18 +258,19 @@ class CategoryDataServiceImpl(
         parentCategory: Group.Category?,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<GroupPageKey, Group> = runBlocking {
+        val localRootCategoryAndAlbumPagingSource = rootCategoryAndAlbumPagingSource
         return@runBlocking cachedPagingSourceMutex.withLock {
             return@withLock when {
                 parentCategory == null &&
-                    rootCategoryAndAlbumPagingSource != null &&
-                    !rootCategoryAndAlbumPagingSource!!.invalid -> {
+                    localRootCategoryAndAlbumPagingSource != null &&
+                    !localRootCategoryAndAlbumPagingSource.invalid -> {
                     Log.d(
                         CategoryDataService.TAG,
                         "A valid paging source is available for root categories and albums. " +
                             "Not creating a new paging source.",
                     )
 
-                    val pagingSource = rootCategoryAndAlbumPagingSource!!
+                    val pagingSource = localRootCategoryAndAlbumPagingSource
                     // Register the new cancellation signal to be cancelled in the callback.
                     pagingSource.registerInvalidatedCallback { cancellationSignal?.cancel() }
                     pagingSource
@@ -277,14 +278,14 @@ class CategoryDataServiceImpl(
 
                 parentCategory != null &&
                     childCategoryPagingSources.containsKey(parentCategory) &&
-                    !childCategoryPagingSources[parentCategory]!!.invalid -> {
+                    !childCategoryPagingSources.getValue(parentCategory).invalid -> {
                     Log.d(
                         CategoryDataService.TAG,
                         "A valid paging source is available for category ${parentCategory.categoryType}. " +
                             "Not creating a new paging source.",
                     )
 
-                    val pagingSource = childCategoryPagingSources[parentCategory]!!
+                    val pagingSource = childCategoryPagingSources.getValue(parentCategory)
                     // Register the new cancellation signal to be cancelled in the callback.
                     pagingSource.registerInvalidatedCallback { cancellationSignal?.cancel() }
                     pagingSource
@@ -335,14 +336,14 @@ class CategoryDataServiceImpl(
         return@runBlocking cachedPagingSourceMutex.withLock {
             if (
                 mediaSetPagingSources.containsKey(category) &&
-                    !mediaSetPagingSources[category]!!.invalid
+                    !mediaSetPagingSources.getValue(category).invalid
             ) {
                 Log.d(
                     CategoryDataService.TAG,
                     "A valid paging source is available for media sets ${category.categoryType}. " +
                         "Not creating a new paging source.",
                 )
-                val pagingSource = mediaSetPagingSources[category]!!
+                val pagingSource = mediaSetPagingSources.getValue(category)
                 // Register the new cancellation signal to be cancelled in the callback.
                 pagingSource.registerInvalidatedCallback { cancellationSignal?.cancel() }
                 pagingSource
@@ -389,14 +390,14 @@ class CategoryDataServiceImpl(
             refreshMediaSetContents(mediaSet)
             if (
                 mediaSetContentPagingSources.containsKey(mediaSet) &&
-                    !mediaSetContentPagingSources[mediaSet]!!.invalid
+                    !mediaSetContentPagingSources.getValue(mediaSet).invalid
             ) {
                 Log.d(
                     CategoryDataService.TAG,
                     "A valid paging source is available for media set content ${mediaSet.id}. " +
                         "Not creating a new paging source.",
                 )
-                val pagingSource = mediaSetContentPagingSources[mediaSet]!!
+                val pagingSource = mediaSetContentPagingSources.getValue(mediaSet)
                 // Register the new cancellation signal to be cancelled in the callback.
                 pagingSource.registerInvalidatedCallback { cancellationSignal?.cancel() }
                 pagingSource

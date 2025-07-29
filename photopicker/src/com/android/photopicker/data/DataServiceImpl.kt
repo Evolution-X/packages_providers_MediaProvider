@@ -497,7 +497,7 @@ class DataServiceImpl(
         albumMediaPagingSourceMutex.withLock {
             val albumMap = albumMediaPagingSources.getOrDefault(album.authority, mutableMapOf())
 
-            if (!albumMap.containsKey(album.id) || albumMap[album.id]!!.invalid) {
+            if (!albumMap.containsKey(album.id) || albumMap.getValue(album.id).invalid) {
                 val availableProviders: List<Provider> = availableProviders.value
                 val contentResolver: ContentResolver = activeContentResolver.value
                 val albumMediaPagingSource =
@@ -522,7 +522,7 @@ class DataServiceImpl(
                 albumMediaPagingSources[album.authority] = albumMap
             }
 
-            albumMap[album.id]!!
+            albumMap.getValue(album.id)
         }
     }
 
@@ -627,7 +627,7 @@ class DataServiceImpl(
             // already cached.
             if (
                 albumMediaPagingSources.containsKey(album.authority) &&
-                    albumMediaPagingSources[album.authority]!!.containsKey(album.id)
+                    albumMediaPagingSources.getValue(album.authority).containsKey(album.id)
             ) {
                 Log.i(
                     DataService.TAG,
