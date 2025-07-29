@@ -1190,7 +1190,7 @@ open class MediaProviderClient {
      * @throws IllegalStateException If the Content Provider returns a null Cursor or if the Cursor
      *   does not contain a valid [MediaPageKey].
      */
-    fun fetchMediaPageKeyForItemPosition(
+    open fun fetchMediaPageKeyForItemPosition(
         contentResolver: ContentResolver,
         itemPosition: Int,
         availableProviders: List<Provider>,

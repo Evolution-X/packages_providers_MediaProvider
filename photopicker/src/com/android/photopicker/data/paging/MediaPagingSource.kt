@@ -54,6 +54,9 @@ class MediaPagingSource(
         val TAG: String = "PickerMediaPagingSource"
     }
 
+    private val shouldEnableJumping =
+        configuration.flags.PICKER_DATESCRUBBER_ENABLED && !isPreviewSession
+
     override suspend fun load(params: LoadParams<MediaPageKey>): LoadResult<MediaPageKey, Media> {
         val pageKey = params.key ?: MediaPageKey()
         val currentPageSize = params.loadSize
@@ -86,8 +89,7 @@ class MediaPagingSource(
                             availableProviders,
                             configuration,
                             shouldEnableItemsBeforeCount = true,
-                            shouldEnableItemsAfterCount =
-                                configuration.flags.PICKER_DATESCRUBBER_ENABLED,
+                            shouldEnableItemsAfterCount = shouldEnableJumping,
                         )
                     }
                 } catch (e: Exception) {
@@ -113,5 +115,39 @@ class MediaPagingSource(
         return mediaFetchResult
     }
 
-    override fun getRefreshKey(state: PagingState<MediaPageKey, Media>): MediaPageKey? = null
+    override fun getRefreshKey(state: PagingState<MediaPageKey, Media>): MediaPageKey? {
+        if (shouldEnableJumping) {
+            val currentAnchorPosition = state.anchorPosition ?: 0
+
+            // Calculates the nearest valid page start position based on current
+            // state.anchorPosition
+            // For example, if pageSize is 50, Valid start positions follow the pattern: 0, 50,
+            // 100,etc.
+            // TODO(b/412418043): If getRefreshKey returns a page key that doesn't align with a
+            //  valid page start, it can result in duplicate items being shown in the grid or,
+            //  in some cases, cause the grid to crash.
+            val validRefreshPosition = currentAnchorPosition - currentAnchorPosition % nextPageSize
+            try {
+                if (availableProviders.isEmpty()) {
+                    throw IllegalArgumentException("No available providers found.")
+                }
+
+                return mediaProviderClient.fetchMediaPageKeyForItemPosition(
+                    itemPosition = validRefreshPosition,
+                    contentResolver = contentResolver,
+                    availableProviders = availableProviders,
+                    config = configuration,
+                )
+            } catch (e: Exception) {
+                Log.e(
+                    TAG,
+                    "Could not fetch page key from MediaProvider for position $validRefreshPosition",
+                    e,
+                )
+            }
+        }
+        return null
+    }
+
+    override val jumpingSupported = shouldEnableJumping
 }

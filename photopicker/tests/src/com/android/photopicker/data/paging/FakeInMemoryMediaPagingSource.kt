@@ -21,6 +21,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingSource.LoadParams
 import androidx.paging.PagingSource.LoadResult
 import androidx.paging.PagingState
+import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
@@ -40,15 +41,32 @@ private constructor(
     val DATA_SIZE: Int = DEFAULT_SIZE,
     private val DATA_LIST: List<Media>? = null,
     private val DELAY_IN_MS: Long = 0L,
+    // If this is true, the load method will return empty data, causing the grid to display only
+    // placeholders.
+    private val IS_PLACEHOLDER_GRID: Boolean = false,
+    private val config: PhotopickerConfiguration? = null,
 ) : PagingSource<MediaPageKey, Media>() {
 
     companion object {
         const val DEFAULT_SIZE = 1_000
     }
 
-    constructor(dataSize: Int = DEFAULT_SIZE, delay: Long = 0L) : this(dataSize, null, delay)
+    constructor(
+        dataSize: Int = DEFAULT_SIZE,
+        delay: Long = 0L,
+        testConfig: PhotopickerConfiguration? = null,
+    ) : this(dataSize, null, delay, false, testConfig)
 
-    constructor(dataList: List<Media>, delay: Long = 0L) : this(DEFAULT_SIZE, dataList, delay)
+    constructor(
+        dataList: List<Media>,
+        delay: Long = 0L,
+        testConfig: PhotopickerConfiguration? = null,
+    ) : this(DEFAULT_SIZE, dataList, delay, false, testConfig)
+
+    constructor(
+        isPlaceholderGrid: Boolean,
+        dataSize: Int = DEFAULT_SIZE,
+    ) : this(DATA_SIZE = dataSize, IS_PLACEHOLDER_GRID = isPlaceholderGrid)
 
     private val currentDateTime = LocalDateTime.now()
 
@@ -93,8 +111,26 @@ private constructor(
                 }
             }
 
+    /**
+     * The [config] parameter is only provided from mediaPagingSource inside [TestDataServiceImpl]
+     * to support jumping in Photo Grid. For other grids, config is null, which means jumping should
+     * not be enabled.
+     */
+    val isJumpingEnabled = config?.flags?.PICKER_DATESCRUBBER_ENABLED ?: false
+
     override suspend fun load(params: LoadParams<MediaPageKey>): LoadResult<MediaPageKey, Media> {
         delay(DELAY_IN_MS)
+
+        // Return empty data, causing the grid to display only placeholders.
+        if (IS_PLACEHOLDER_GRID) {
+            return LoadResult.Page(
+                data = emptyList(),
+                nextKey = null,
+                prevKey = null,
+                itemsBefore = 0,
+                itemsAfter = DATA_SIZE,
+            )
+        }
 
         // Handle a data size of 0 for the first page, and return an empty page with no further
         // keys.
@@ -144,4 +180,6 @@ private constructor(
     override fun getRefreshKey(state: PagingState<MediaPageKey, Media>): MediaPageKey? {
         return state.anchorPosition?.let { null }
     }
+
+    override val jumpingSupported = isJumpingEnabled
 }

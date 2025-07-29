@@ -99,7 +99,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -249,10 +248,17 @@ val MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE = 12.dp
  *   date formatter. Defaults to a factory providing default item rendering.
  * @param contentSeparatorFactory Optional factory to compose [MediaGridItem.SeparatorItem]s.
  *   Defaults to [defaultBuildSeparator].
+ * @param contentPlaceholderFactory Optional factory to compose placeholders . Defaults to
+ *   [defaultBuildPlaceholder]
  * @param bannerContent Optional composable content to be displayed as a banner at the top of the
  *   grid.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid.
+ * @Param arePlaceholdersEnabled Whether placeholders are enabled in the grid. Defaults to false.
+ *   When enabled, every item that has not yet been loaded in the grid will display a placeholder.
+ *   This placeholder occupies the same width, height, and aspect ratio as the actual item
+ *   ([MediaGridItem.MediaItem]) it represents. Until the item is loaded, the grid will receive a
+ *   null item in its place.
  */
 @Composable
 fun mediaGrid(
@@ -272,6 +278,7 @@ fun mediaGrid(
     state: LazyGridState = rememberLazyGridState(),
     contentPadding: PaddingValues = PaddingValues(bottom = MEASUREMENT_DEFAULT_CONTENT_PADDING),
     userScrollEnabled: Boolean = true,
+    arePlaceholdersEnabled: Boolean = false,
     spanFactory: (item: MediaGridItem?, currentColumns: Int) -> GridItemSpan = ::defaultBuildSpan,
     contentTypeFactory: (item: MediaGridItem?) -> Int = ::defaultBuildContentType,
     contentItemFactory:
@@ -298,6 +305,7 @@ fun mediaGrid(
     contentSeparatorFactory: @Composable (item: MediaGridItem.SeparatorItem) -> Unit = { item ->
         defaultBuildSeparator(item)
     },
+    contentPlaceholderFactory: @Composable () -> Unit = { defaultBuildPlaceholder() },
     bannerContent: (@Composable () -> Unit)? = null,
     highlightMediaContent: (@Composable () -> Unit)? = null,
 ) {
@@ -319,10 +327,12 @@ fun mediaGrid(
         state = state,
         contentPadding = contentPadding,
         userScrollEnabled = userScrollEnabled,
+        arePlaceholdersEnabled = arePlaceholdersEnabled,
         spanFactory = spanFactory,
         contentTypeFactory = contentTypeFactory,
         contentItemFactory = contentItemFactory,
         contentSeparatorFactory = contentSeparatorFactory,
+        contentPlaceholderFactory = contentPlaceholderFactory,
         bannerContent = bannerContent,
         highlightMediaContent = highlightMediaContent,
     )
@@ -375,9 +385,16 @@ fun mediaGrid(
  *   Defaults to a factory providing default item rendering.
  * @param contentSeparatorFactory Optional factory for [MediaGridItem.SeparatorItem] composition.
  *   Defaults to [defaultBuildSeparator].
+ * @param contentPlaceholderFactory Optional factory to compose placeholders . Defaults to
+ *   [defaultBuildPlaceholder]
  * @param bannerContent Optional composable banner content at the top of the grid.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid
+ * @Param arePlaceholdersEnabled Whether placeholders are enabled in the grid. Defaults to false.
+ *   When enabled, every item that has not yet been loaded in the grid will display a placeholder.
+ *   This placeholder occupies the same width, height, and aspect ratio as the actual item
+ *   ([MediaGridItem.MediaItem]) it represents. Until the item is loaded, the grid will receive a
+ *   null item in its place.
  */
 @Composable
 fun mediaGrid(
@@ -399,6 +416,7 @@ fun mediaGrid(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = MEASUREMENT_DEFAULT_CONTENT_PADDING),
     userScrollEnabled: Boolean = true,
+    arePlaceholdersEnabled: Boolean = false,
     spanFactory: (item: MediaGridItem?, currentColumns: Int) -> GridItemSpan = ::defaultBuildSpan,
     contentTypeFactory: (item: MediaGridItem?) -> Int = ::defaultBuildContentType,
     contentItemFactory:
@@ -425,6 +443,7 @@ fun mediaGrid(
     contentSeparatorFactory: @Composable (item: MediaGridItem.SeparatorItem) -> Unit = { item ->
         defaultBuildSeparator(item)
     },
+    contentPlaceholderFactory: @Composable () -> Unit = { defaultBuildPlaceholder() },
     bannerContent: (@Composable () -> Unit)? = null,
     highlightMediaContent: (@Composable () -> Unit)? = null,
 ) {
@@ -449,10 +468,12 @@ fun mediaGrid(
         state = dragSelectState.gridState,
         contentPadding = contentPadding,
         userScrollEnabled = userScrollEnabled,
+        arePlaceholdersEnabled = arePlaceholdersEnabled,
         spanFactory = spanFactory,
         contentTypeFactory = contentTypeFactory,
         contentItemFactory = contentItemFactory,
         contentSeparatorFactory = contentSeparatorFactory,
+        contentPlaceholderFactory = contentPlaceholderFactory,
         bannerContent = bannerContent,
         highlightMediaContent = highlightMediaContent,
     )
@@ -490,10 +511,12 @@ fun mediaGrid(
  * @param contentTypeFactory Factory to determine content type for items.
  * @param contentItemFactory Factory to compose individual [MediaGridItem]s.
  * @param contentSeparatorFactory Factory to compose [MediaGridItem.SeparatorItem]s.
+ * @param contentPlaceholderFactory Factory to compose placeholders.
  * @param bannerContent Optional composable banner content.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid
  * @param state The [LazyGridState] to use with the [LazyVerticalGrid].
+ * @Param arePlaceholdersEnabled Whether placeholders are enabled in the grid.
  */
 @Composable
 private fun mediaGrid(
@@ -516,6 +539,7 @@ private fun mediaGrid(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(bottom = MEASUREMENT_DEFAULT_CONTENT_PADDING),
     userScrollEnabled: Boolean = true,
+    arePlaceholdersEnabled: Boolean = false,
     spanFactory: (item: MediaGridItem?, currentColumns: Int) -> GridItemSpan,
     contentTypeFactory: (item: MediaGridItem?) -> Int,
     contentItemFactory:
@@ -528,6 +552,7 @@ private fun mediaGrid(
             dateFormat: DateFormat,
         ) -> Unit,
     contentSeparatorFactory: @Composable (item: MediaGridItem.SeparatorItem) -> Unit,
+    contentPlaceholderFactory: @Composable () -> Unit,
     bannerContent: (@Composable () -> Unit)? = null,
     highlightMediaContent: (@Composable () -> Unit)? = null,
     state: LazyGridState,
@@ -686,29 +711,32 @@ private fun mediaGrid(
                 contentType = { index -> contentTypeFactory(items.peek(index)) },
             ) { index ->
                 val item: MediaGridItem? = items.get(index)
-                item?.let {
-                    when (item) {
-                        is MediaGridItem.MediaItem ->
-                            contentItemFactory(
-                                item,
-                                selection.contains(item.media),
-                                onItemClick,
-                                onItemLongPress,
-                                dateFormat,
-                            )
+                when (item) {
+                    is MediaGridItem.MediaItem ->
+                        contentItemFactory(
+                            item,
+                            selection.contains(item.media),
+                            onItemClick,
+                            onItemLongPress,
+                            dateFormat,
+                        )
 
-                        is MediaGridItem.AlbumItem,
-                        is MediaGridItem.CategoryItem,
-                        is MediaGridItem.MediaSetItem,
-                        is MediaGridItem.PersonMediaSetItem ->
-                            contentItemFactory(
-                                item,
-                                /* isSelected */ false,
-                                onItemClick,
-                                onItemLongPress,
-                                dateFormat,
-                            )
-                        is MediaGridItem.SeparatorItem -> contentSeparatorFactory(item)
+                    is MediaGridItem.AlbumItem,
+                    is MediaGridItem.CategoryItem,
+                    is MediaGridItem.MediaSetItem,
+                    is MediaGridItem.PersonMediaSetItem ->
+                        contentItemFactory(
+                            item,
+                            /* isSelected */ false,
+                            onItemClick,
+                            onItemLongPress,
+                            dateFormat,
+                        )
+                    is MediaGridItem.SeparatorItem -> contentSeparatorFactory(item)
+                    null -> {
+                        if (arePlaceholdersEnabled) {
+                            contentPlaceholderFactory()
+                        }
                     }
                 }
             }
@@ -771,7 +799,9 @@ private fun defaultContentItemFactory(
 /** Default builder for calculating the [GridItemSpan] of the provided [MediaGridItem]. */
 private fun defaultBuildSpan(item: MediaGridItem?, currentColumns: Int): GridItemSpan {
     return when (item) {
-        is MediaGridItem.MediaItem -> GridItemSpan(1)
+        is MediaGridItem.MediaItem,
+        null ->
+            GridItemSpan(1) // Placeholder should take up the same number of columns as a media item
         is MediaGridItem.SeparatorItem -> GridItemSpan(currentColumns)
         is MediaGridItem.AlbumItem -> GridItemSpan(1)
         else -> GridItemSpan(1)
@@ -784,6 +814,20 @@ private fun defaultBuildSpan(item: MediaGridItem?, currentColumns: Int): GridIte
  */
 public fun getCellsPerRow(isExpandedScreen: Boolean): Int {
     return if (isExpandedScreen) CELLS_PER_ROW_EXPANDED else CELLS_PER_ROW
+}
+
+/** Default Placeholder builder that loads placeholder into a square (1:1) aspect ratio GridCell */
+@Composable
+private fun defaultBuildPlaceholder(modifier: Modifier = Modifier) {
+    Box(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .aspectRatio(
+                    1f
+                ) // Ensure it maintains a 1:1 aspect ratio, like [MediaGridItem.MediaItem]
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    ) {}
 }
 
 /**
