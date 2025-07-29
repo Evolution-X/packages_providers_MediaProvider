@@ -244,7 +244,11 @@ open class MediaProviderClient {
                     /* cancellationSignal */ null, // TODO(b/405340486)
                 )
                 .use { cursor ->
-                    return getListOfProviders(cursor!!)
+                    cursor?.let {
+                        return getListOfProviders(it)
+                    }
+                    Log.w(TAG, "Cursor in fetchAvailableProviders was unexpectedly null")
+                    return emptyList()
                 }
         } catch (e: Exception) {
             // If we can't fetch the available providers, basic functionality of photopicker does
@@ -542,7 +546,11 @@ open class MediaProviderClient {
                     /* cancellationSignal */ null,
                 )
                 .use { cursor ->
-                    return getListOfCollectionInfo(cursor!!)
+                    cursor?.let {
+                        return getListOfCollectionInfo(it)
+                    }
+                    Log.w(TAG, "Cursor in fetchCollectionInfo was unexpectedly null")
+                    return emptyList()
                 }
         } catch (e: Exception) {
             throw RuntimeException("Could not fetch collection info", e)

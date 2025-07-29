@@ -119,7 +119,7 @@ constructor(
      */
     fun getData(recentsCellCount: Int): Flow<PagingData<MediaGridItem>> {
         return if (
-            _recentsCellCount != null && _recentsCellCount!! == recentsCellCount && _data != null
+            _recentsCellCount != null && _recentsCellCount == recentsCellCount && _data != null
         ) {
             Log.d(
                 TAG,
@@ -127,7 +127,10 @@ constructor(
                     "cell count: " +
                     recentsCellCount,
             )
-            _data!!
+            // Remove the null type, this is mostly to make the compiler happy as we've already
+            // handled the null above, but smart cast sees this property as mutable, and thus can't
+            // remove the nullable type.
+            checkNotNull(_data) { "PagingData flow was changed after it was checked." }
         } else {
             Log.d(
                 TAG,

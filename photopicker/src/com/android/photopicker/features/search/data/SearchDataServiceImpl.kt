@@ -267,7 +267,7 @@ class SearchDataServiceImpl(
             searchResultsPagingSourceMutex.withLock {
                 if (
                     searchResultsPagingSources.containsKey(searchRequestId) &&
-                        !searchResultsPagingSources[searchRequestId]!!.invalid
+                        !searchResultsPagingSources.getValue(searchRequestId).invalid
                 ) {
                     Log.d(
                         SearchDataService.TAG,
@@ -275,7 +275,7 @@ class SearchDataServiceImpl(
                             "$searchRequestId. Not creating a new paging source.",
                     )
 
-                    searchResultsPagingSources[searchRequestId]!!
+                    searchResultsPagingSources.getValue(searchRequestId)
                 } else {
                     val cancellationSignal = inputCancellationSignal ?: CancellationSignal()
 
@@ -350,7 +350,7 @@ class SearchDataServiceImpl(
                         "Not creating a new search request id.",
                 )
 
-                val searchRequestId = searchRequestIdMap[searchRequest]!!
+                val searchRequestId = searchRequestIdMap.getValue(searchRequest)
 
                 try {
                     // Ensure search results data in data source is ready for the search query.
