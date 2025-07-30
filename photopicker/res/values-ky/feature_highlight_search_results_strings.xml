@@ -29,10 +29,7 @@
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"Бөлүнүп көрсөтүлгөн табылган медиа файлдар жүктөлүүдө"</string>
     <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"Бөлүнүп көрсөтүлгөн табылган медиа файлдар"</string>
     <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"Төмөнкү боюнча сунуштар:"</string>
-    <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
-    <skip />
+    <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Бөлүп көрсөтүү бөлүмүндө медиа натыйжалардын булагын сүрөттөгөн маалымат сүрөтчөсүнүн баскычы"</string>
+    <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"<xliff:g id="APP_NAME">%1$s</xliff:g> бул сунуштар үчүн маалымат берди, бирок сиз уруксат бермейинче сүрөттөрдү көрө албайт"</string>
+    <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"Ушул колдонмо"</string>
 </resources>

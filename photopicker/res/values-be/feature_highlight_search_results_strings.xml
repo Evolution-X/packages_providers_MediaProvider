@@ -29,10 +29,7 @@
     <string name="photopicker_hsr_media_placeholder_text" msgid="5749653983266687172">"Загружаюцца рэкамендаваныя вынікі па медыязмесціве"</string>
     <string name="photopicker_hsr_media_text" msgid="2764361056677273805">"Рэкамендаваныя вынікі па медыязмесціве"</string>
     <string name="photopicker_hsr_suggestions_for_text" msgid="729432575959823808">"Прапановы для"</string>
-    <!-- no translation found for photopicker_hsr_tooltip_icon_description (3111632594059184450) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_tooltip_text (8908953116230979466) -->
-    <skip />
-    <!-- no translation found for photopicker_hsr_generic_app_label (6629276825147930885) -->
-    <skip />
+    <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Кнопка са значком інфармацыі, якая апісвае крыніцу вынікаў пошуку мультымедыя ў вылучаным раздзеле"</string>
+    <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"Праграма \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" перадала інфармацыю для гэтых прапаноў, але яна не можа бачыць самі фота, пакуль вы не дазволіце доступ"</string>
+    <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"Гэта праграма"</string>
 </resources>

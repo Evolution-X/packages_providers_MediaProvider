@@ -57,7 +57,7 @@
     <string name="recent" msgid="6694613584743207874">"Të fundit"</string>
     <string name="picker_photos_empty_message" msgid="5980619500554575558">"Nuk ka fotografi apo video"</string>
     <string name="picker_album_media_empty_message" msgid="7061850698189881671">"Nuk ka fotografi ose video të mbështetura"</string>
-    <string name="picker_albums_empty_message" msgid="8341079772950966815">"Nuk ka albume"</string>
+    <string name="picker_albums_empty_message" msgid="8341079772950966815">"Nuk ka asnjë album"</string>
     <string name="picker_view_selected" msgid="2266031384396143883">"Shiko të zgjedhurat"</string>
     <string name="picker_photos" msgid="7415035516411087392">"Fotografitë"</string>
     <!-- no translation found for picker_videos (2886971435439047097) -->

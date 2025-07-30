@@ -154,7 +154,8 @@ fun NavigationBar(
 
             // When inside an album display the album title and a back button,
             // instead of the normal navigation bar contents.
-            currentRoute == PhotopickerDestinations.ALBUM_MEDIA_GRID.route -> {
+            currentRoute == PhotopickerDestinations.ALBUM_MEDIA_GRID.route ||
+                currentRoute == PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID.route -> {
                 if (featureManager.isFeatureEnabled(AlbumGridFeature::class.java)) {
                     NavigationBarForAlbum(modifier)
                 } else {
@@ -363,6 +364,7 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
         when (group) {
             is Group.BaseAlbum -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statDestination = LocalPhotopickerConfiguration.current.startDestination
                     // back button
                     IconButton(
                         modifier =
@@ -372,7 +374,21 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                         // of going to the CategoryGrid directly.
                         // We need to move back to the PhotoGrid when the See All button of the
                         // highlight section is pressed and to the CategoryGrid otherwise.
-                        onClick = { navController.popBackStack() },
+                        // In case the photopicker is directly opened to the media grid for a
+                        // specific album highlight, we move back to the category grid.
+                        onClick = {
+                            val hasPopped = navController.popBackStack()
+                            // We won't be able to pop anything from the back stack if the picker
+                            // is starting from the album media grid. So, we navigate to the
+                            // category grid.
+                            if (
+                                !hasPopped &&
+                                    statDestination ==
+                                        PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID
+                            ) {
+                                navController.navigateToCategoryGrid()
+                            }
+                        },
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
