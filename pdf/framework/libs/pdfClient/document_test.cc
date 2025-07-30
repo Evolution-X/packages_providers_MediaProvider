@@ -278,6 +278,79 @@ TEST(Test, movePagesTest_duplicateSourceIndex) {
     comparePDFPagesDimensions(kIncreasingDimPDF, doc, initial_page_order);
 }
 
+TEST(Test, deleteSinglePageTest) {
+    std::shared_ptr<Document> doc = LoadDocument(GetTestFile(kIncreasingDimPDF));
+
+    int initial_page_count = doc->NumPages();
+    EXPECT_EQ(initial_page_count, 5);
+
+    std::vector<int> pageIndicesToDelete = {1};
+    ASSERT_TRUE(doc->DeletePages(pageIndicesToDelete));
+
+    ASSERT_EQ(doc->NumPages(), initial_page_count - 1);
+
+    std::vector<int> expected_order = {0, 2, 3, 4};
+
+    comparePDFPagesDimensions(kIncreasingDimPDF, doc, expected_order);
+}
+
+TEST(Test, deleteMultiplePagesTest) {
+    std::shared_ptr<Document> doc = LoadDocument(GetTestFile(kIncreasingDimPDF));
+
+    int initial_page_count = doc->NumPages();
+    EXPECT_EQ(initial_page_count, 5);
+
+    std::vector<int> pageIndicesToDelete = {1, 3, 2};
+    ASSERT_TRUE(doc->DeletePages(pageIndicesToDelete));
+
+    ASSERT_EQ(doc->NumPages(), initial_page_count - 3);
+
+    std::vector<int> expected_order = {0, 4};
+
+    comparePDFPagesDimensions(kIncreasingDimPDF, doc, expected_order);
+}
+
+TEST(Test, deleteAllPagesTest) {
+    std::shared_ptr<Document> doc = LoadDocument(GetTestFile(kIncreasingDimPDF));
+
+    int initial_page_count = doc->NumPages();
+    EXPECT_EQ(initial_page_count, 5);
+
+    std::vector<int> pageIndicesToDelete = {1, 3, 2, 0, 4};
+    ASSERT_TRUE(doc->DeletePages(pageIndicesToDelete));
+
+    ASSERT_EQ(doc->NumPages(), 0);
+}
+
+TEST(Test, deleteOutOfBoundsPageTest) {
+    std::shared_ptr<Document> doc = LoadDocument(GetTestFile(kIncreasingDimPDF));
+
+    int initial_page_count = doc->NumPages();
+    EXPECT_EQ(initial_page_count, 5);
+
+    std::vector<int> pageIndicesToDelete = {5, 6, -1};
+    ASSERT_TRUE(doc->DeletePages(pageIndicesToDelete));
+
+    // check no page deleted
+    ASSERT_EQ(doc->NumPages(), 5);
+}
+
+TEST(Test, deleteDuplicateIndicesTest) {
+    std::shared_ptr<Document> doc = LoadDocument(GetTestFile(kIncreasingDimPDF));
+
+    int initial_page_count = doc->NumPages();
+    EXPECT_EQ(initial_page_count, 5);
+
+    std::vector<int> pageIndicesToDelete = {3, 3, 1, 1};
+    ASSERT_TRUE(doc->DeletePages(pageIndicesToDelete));
+
+    ASSERT_EQ(doc->NumPages(), initial_page_count - 2);
+
+    std::vector<int> expected_order = {0, 2, 4};
+
+    comparePDFPagesDimensions(kIncreasingDimPDF, doc, expected_order);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
