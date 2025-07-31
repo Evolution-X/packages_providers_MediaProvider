@@ -2379,6 +2379,52 @@ public class MediaProviderTest {
         }
     }
 
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+    public void testQuerySpecialFormatColumn_returnsNonEmptyCursor() throws Exception {
+        String[][] projections = new String[][] {
+                new String[] {
+                        MediaColumns.DISPLAY_NAME,
+                        MediaColumns.MIME_TYPE,
+                        FileColumns._SPECIAL_FORMAT
+                },
+                new String[] {
+                        MediaColumns.DISPLAY_NAME,
+                        MediaColumns.MIME_TYPE,
+                        "_SPECIAL_FORMAT"
+                },
+                new String[] {
+                        MediaColumns.DISPLAY_NAME,
+                        MediaColumns.MIME_TYPE,
+                        FileColumns._SPECIAL_FORMAT + " AS SPECIAL_FORMAT"
+                }
+        };
+
+        for (int i = 0; i < projections.length; i++) {
+            String[] projection = projections[i];
+            String testFileName = "test_file" + System.nanoTime() + ".jpg";
+            final File downloads = new File(Environment.getExternalStorageDirectory(),
+                    Environment.DIRECTORY_DOWNLOADS);
+            File file = stage(R.raw.test_motion_photo, new File(downloads, testFileName));
+            ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sIsolatedContext,
+                    new TestConfigStore());
+            Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+            try (Cursor cursor = sIsolatedContext.getContentResolver()
+                    .query(testFileUri, projection, null, null, null);) {
+                assertNotNull(cursor);
+                assertThat(cursor.getCount()).isEqualTo(1);
+
+                assertTrue(cursor.moveToFirst());
+                // _SPECIAL_FORMAT value should be a motion photo
+                assertThat(cursor.getString(1)).isEqualTo("image/jpeg");
+                assertThat(cursor.getInt(2)).isEqualTo(FileColumns._SPECIAL_FORMAT_MOTION_PHOTO);
+            } finally {
+                // Cleanup
+                file.delete();
+            }
+        }
+    }
+
 
     private void testRedactionForFileExtension(int resId, String extension) throws Exception {
         final File dir = Environment
