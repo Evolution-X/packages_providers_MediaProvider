@@ -41,7 +41,7 @@
     <string name="picker_settings" msgid="7388913035769329672">"Подешавања"</string>
     <string name="picker_settings_system_settings_menu_title" msgid="8376154377841981825">"Подешавања медија у клауду"</string>
     <string name="picker_settings_title" msgid="1745398289847815694">"Подешавања медија у клауду"</string>
-    <string name="picker_settings_description" msgid="2916686824777214585">"Приступ медијима у клауду када апликација или веб-сајт затражи да изаберете слике или видео снимке"</string>
+    <string name="picker_settings_description" msgid="2916686824777214585">"Приступите медијима у клауду када апликација или веб-сајт затражи да изаберете слике или видео снимке"</string>
     <string name="picker_settings_selection_message" msgid="245453573086488596">"Приступајте медијима у клауду из"</string>
     <string name="picker_settings_no_provider" msgid="2582311853680058223">"Ништа"</string>
     <string name="picker_settings_toast_error" msgid="697274445512467469">"Промена апликације за медије у клауду није успела."</string>
