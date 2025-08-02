@@ -496,10 +496,18 @@ open class Session(
 
                     // notify client about final selection
                     if (selectedUris.isNotEmpty()) {
-                        clientCallback.onUriPermissionGranted(selectedUris)
+                        try {
+                            clientCallback.onUriPermissionGranted(selectedUris)
+                        } catch (e: RemoteException) {
+                            Log.e(TAG, "Failed to notify client of new permission grants", e)
+                        }
                     }
                     if (deselectedUris.isNotEmpty()) {
-                        clientCallback.onUriPermissionRevoked(deselectedUris)
+                        try {
+                            clientCallback.onUriPermissionRevoked(deselectedUris)
+                        } catch (e: RemoteException) {
+                            Log.e(TAG, "Failed to notify client of revoked permission grants", e)
+                        }
                     }
 
                     // Update previous selection to current flow
@@ -594,11 +602,19 @@ open class Session(
     }
 
     private fun callClosedSessionError() {
-        clientCallback.onSessionError(ParcelableException(IllegalStateException()))
+        try {
+            clientCallback.onSessionError(ParcelableException(IllegalStateException()))
+        } catch (e: RemoteException) {
+            Log.e(TAG, "onSessionError failed: client binder is likely dead.", e)
+        }
     }
 
     private fun onMediaSelectionConfirmed() {
-        clientCallback.onSelectionComplete()
+        try {
+            clientCallback.onSelectionComplete()
+        } catch (e: RemoteException) {
+            Log.e(TAG, "onSelectionComplete failed: client binder is likely dead.", e)
+        }
     }
 
     private fun refreshBannerState() {
@@ -611,7 +627,13 @@ open class Session(
     }
 
     private fun setupBackInvokedCallback(): OnBackInvokedCallback {
-        val callback = OnBackInvokedCallback { clientCallback.onSelectionComplete() }
+        val callback = OnBackInvokedCallback {
+            try {
+                clientCallback.onSelectionComplete()
+            } catch (e: RemoteException) {
+                Log.e(TAG, "onSelectionComplete failed: client binder is likely dead.", e)
+            }
+        }
         runBlocking(_main) {
             _view
                 .findOnBackInvokedDispatcher()
