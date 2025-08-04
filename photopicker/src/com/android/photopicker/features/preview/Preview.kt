@@ -69,6 +69,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
@@ -531,7 +532,9 @@ fun PreviewSelectionButton(modifier: Modifier) {
             modifier = modifier,
         ) {
             Text(
-                stringResource(R.string.photopicker_preview_button_label),
+                text = stringResource(R.string.photopicker_preview_button_label),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 color =
                     CustomAccentColorScheme.current.getAccentColorIfDefinedOrElse(
                         /* fallback */ MaterialTheme.colorScheme.primary
