@@ -195,15 +195,3 @@ java_aconfig_library {
         "com.android.mediaprovider",
     ],
 }
-
-java_aconfig_library {
-    name: "mediaprovider_exported_aconfig_flag_lib",
-    aconfig_declarations: "mediaprovider_flags",
-    min_sdk_version: "30",
-    mode: "exported",
-    apex_available: [
-        "//apex_available:platform",
-        "com.android.mediaprovider",
-    ],
-    defaults: ["framework-minus-apex-aconfig-java-defaults"],
-}
