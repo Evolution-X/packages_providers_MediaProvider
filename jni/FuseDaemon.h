@@ -41,6 +41,7 @@ class FuseDaemon final {
      * Start the FUSE daemon loop that will handle filesystem calls.
      */
     void Start(android::base::unique_fd fd, const std::string& path, const bool uncached_mode,
+               const bool enable_parallel_fuse_dir_ops,
                const std::vector<std::string>& supported_transcoding_relative_paths,
                const std::vector<std::string>& supported_uncached_relative_paths);
 

@@ -259,7 +259,8 @@ class FAdviser {
 /* Single FUSE mount */
 struct fuse {
     explicit fuse(const std::string& _path, const ino_t _ino, const bool _uncached_mode,
-                  const bool _bpf, android::base::unique_fd&& _bpf_fd,
+                  const bool _bpf, const bool _enable_parallel_fuse_dir_ops,
+                  android::base::unique_fd&& _bpf_fd,
                   const std::vector<string>& _supported_transcoding_relative_paths,
                   const std::vector<string>& _supported_uncached_relative_paths)
         : path(_path),
@@ -272,6 +273,7 @@ struct fuse {
           passthrough(false),
           upstream_passthrough(false),
           bpf(_bpf),
+          enable_parallel_fuse_dir_ops(_enable_parallel_fuse_dir_ops),
           bpf_fd(std::move(_bpf_fd)),
           supported_transcoding_relative_paths(_supported_transcoding_relative_paths),
           supported_uncached_relative_paths(_supported_uncached_relative_paths) {}
@@ -398,6 +400,7 @@ struct fuse {
     std::atomic_bool passthrough;
     std::atomic_bool upstream_passthrough;
     std::atomic_bool bpf;
+    std::atomic_bool enable_parallel_fuse_dir_ops;
 
     const android::base::unique_fd bpf_fd;
 
@@ -764,6 +767,10 @@ static void pf_init(void* userdata, struct fuse_conn_info* conn) {
     // bind-mount, we need to disable it on the primary emulated volume as well as on StubVolumes.
     if (fuse->uncached_mode || is_arc) {
         mask &= ~FUSE_CAP_WRITEBACK_CACHE;
+    }
+
+    if (fuse->enable_parallel_fuse_dir_ops) {
+        mask |= FUSE_CAP_PARALLEL_DIROPS;
     }
 
     bool disable_splice_write = false;
@@ -2624,7 +2631,7 @@ bool IsFuseBpfEnabled() {
 }
 
 void FuseDaemon::Start(android::base::unique_fd fd, const std::string& path,
-                       const bool uncached_mode,
+                       const bool uncached_mode, const bool enable_parallel_fuse_dir_ops,
                        const std::vector<std::string>& supported_transcoding_relative_paths,
                        const std::vector<std::string>& supported_uncached_relative_paths) {
     android::base::SetDefaultTag(LOG_TAG);
@@ -2668,7 +2675,8 @@ void FuseDaemon::Start(android::base::unique_fd fd, const std::string& path,
         LOG(INFO) << "Not using FUSE BPF";
     }
 
-    struct fuse fuse_default(path, stat.st_ino, uncached_mode, bpf_enabled, std::move(bpf_fd),
+    struct fuse fuse_default(path, stat.st_ino, uncached_mode, bpf_enabled,
+                             enable_parallel_fuse_dir_ops, std::move(bpf_fd),
                              supported_transcoding_relative_paths,
                              supported_uncached_relative_paths);
     fuse_default.mp = &mp;
