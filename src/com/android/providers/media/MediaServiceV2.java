@@ -26,6 +26,7 @@ import android.content.ContentProviderClient;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Parcel;
+import android.os.SystemClock;
 import android.os.Trace;
 import android.os.storage.StorageVolume;
 import android.provider.MediaStore;
@@ -35,6 +36,7 @@ import androidx.annotation.NonNull;
 import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.OutOfQuotaPolicy;
 import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
@@ -56,7 +58,7 @@ public class MediaServiceV2 extends Worker {
     private static final String KEY_PATH = "path";
     private static final String SCAN_VOLUME_WORK_CHAIN = "scan_volume_work_chain";
     private static final String MEDIA_BROADCAST_WORK_CHAIN = "media_broadcast_work_chain";
-    private static final long INITIAL_DELAY_IN_SECONDS = 40;
+    private static final long INITIAL_DELAY_MS = 30_000;
     private static final String TAG = MediaServiceV2.class.getSimpleName();
     private final Context mContext;
 
@@ -149,7 +151,7 @@ public class MediaServiceV2 extends Worker {
                         intent.getParcelableExtra(StorageVolume.EXTRA_STORAGE_VOLUME);
                 byte[] bytes = serializeStorageVolume(storageVolume);
                 dataBuilder.putByteArray(KEY_STORAGE_VOLUME_SERIALISED, bytes);
-                workRequestBuilder.setInitialDelay(INITIAL_DELAY_IN_SECONDS, TimeUnit.SECONDS);
+                delayWorkIfRequired(workRequestBuilder);
                 break;
             }
             case ACTION_SCAN_VOLUME: {
@@ -158,7 +160,7 @@ public class MediaServiceV2 extends Worker {
                 dataBuilder.putByteArray(KEY_MEDIA_VOLUME_SERIALISED, bytes);
                 int scanReason = intent.getIntExtra(EXTRA_SCAN_REASON, REASON_UNKNOWN);
                 dataBuilder.putInt(KEY_SCAN_REASON, scanReason);
-                workRequestBuilder.setInitialDelay(INITIAL_DELAY_IN_SECONDS, TimeUnit.SECONDS);
+                delayWorkIfRequired(workRequestBuilder);
                 break;
             }
             case Intent.ACTION_LOCALE_CHANGED: {
@@ -174,6 +176,14 @@ public class MediaServiceV2 extends Worker {
         Data inputData = dataBuilder.build();
         workRequestBuilder.setInputData(inputData);
         return Optional.of(workRequestBuilder.build());
+    }
+
+    private static void delayWorkIfRequired(OneTimeWorkRequest.Builder workRequestBuilder) {
+        if (!MediaReceiver.isBootCompleted() && SystemClock.elapsedRealtime() < INITIAL_DELAY_MS) {
+            workRequestBuilder.setInitialDelay(INITIAL_DELAY_MS, TimeUnit.MILLISECONDS);
+        } else {
+            workRequestBuilder.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST);
+        }
     }
 
     @NonNull
