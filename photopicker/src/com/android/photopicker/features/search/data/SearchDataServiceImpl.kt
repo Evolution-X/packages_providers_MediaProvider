@@ -35,6 +35,7 @@ import com.android.photopicker.data.SEARCH_RESULTS_UPDATE_URI
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
+import com.android.photopicker.extensions.throttleTakeLatest
 import com.android.photopicker.features.search.model.SearchRequest
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.UserSearchStateInfo
@@ -87,6 +88,7 @@ class SearchDataServiceImpl(
     companion object {
         // Timeout for receiving suggestions from the data source in milli seconds.
         private const val SUGGESTIONS_TIMEOUT: Long = 3000
+        const val UPDATE_FLOW_THROTTLE_MILLIS: Long = 2000
     }
 
     // An internal lock to allow thread-safe updates to the search request and results cache.
@@ -416,30 +418,41 @@ class SearchDataServiceImpl(
      * Creates a callback flow that emits search request id when an update in search results is
      * observed using [ContentObserver] notifications.
      */
-    private fun initSearchResultsUpdateFlow(resolver: ContentResolver): Flow<Int> = callbackFlow {
-        val observer =
-            object : ContentObserver(/* handler */ null) {
-                override fun onChange(selfChange: Boolean, uri: Uri?) {
-                    // Verify that search request id is present in the URI
-                    if (
-                        uri?.pathSegments?.size == (1 + SEARCH_RESULTS_UPDATE_URI.pathSegments.size)
-                    ) {
-                        val searchRequestId: Int =
-                            Integer.parseInt(uri.pathSegments[uri.pathSegments.size - 1] ?: "-1")
-                        trySend(searchRequestId)
+    private fun initSearchResultsUpdateFlow(resolver: ContentResolver): Flow<Int> =
+        callbackFlow {
+                val observer =
+                    object : ContentObserver(/* handler */ null) {
+                        override fun onChange(selfChange: Boolean, uri: Uri?) {
+                            // Verify that search request id is present in the URI
+                            if (
+                                uri?.pathSegments?.size ==
+                                    (1 + SEARCH_RESULTS_UPDATE_URI.pathSegments.size)
+                            ) {
+                                val searchRequestId: Int =
+                                    Integer.parseInt(
+                                        uri.pathSegments[uri.pathSegments.size - 1] ?: "-1"
+                                    )
+                                trySend(searchRequestId)
+                            }
+                        }
                     }
+
+                // Register the content observer callback.
+                notificationService.registerContentObserverCallback(
+                    resolver,
+                    SEARCH_RESULTS_UPDATE_URI,
+                    /* notifyForDescendants */ true,
+                    observer,
+                )
+
+                // Unregister when the flow is closed.
+                awaitClose {
+                    notificationService.unregisterContentObserverCallback(resolver, observer)
                 }
             }
-
-        // Register the content observer callback.
-        notificationService.registerContentObserverCallback(
-            resolver,
-            SEARCH_RESULTS_UPDATE_URI,
-            /* notifyForDescendants */ true,
-            observer,
-        )
-
-        // Unregister when the flow is closed.
-        awaitClose { notificationService.unregisterContentObserverCallback(resolver, observer) }
-    }
+            // Add a delay here to throttle emissions, and combined with the conflate above
+            // means that this flow will only emit a maximum of once per delay period.
+            // This prevents "spammy" notifications from MP which may delay queries or
+            // constantly invalidating the grid.
+            .throttleTakeLatest(UPDATE_FLOW_THROTTLE_MILLIS)
 }
