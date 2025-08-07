@@ -20,6 +20,7 @@ import android.os.CancellationSignal
 import androidx.paging.PagingSource
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.UserSearchStateInfo
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +43,9 @@ interface SearchDataService {
      * [UserSearchStateInfo].
      */
     val userSearchStateInfo: StateFlow<UserSearchStateInfo>
+
+    /** A [StateFlow] that emits a list of providers that have search enabled. */
+    val searchableProviders: StateFlow<List<Provider>>
 
     /**
      * Get search suggestions for the user in zero state and as the user is typing.
