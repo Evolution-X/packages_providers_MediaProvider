@@ -28,6 +28,7 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -61,6 +62,12 @@ interface DataService {
 
     /** Data for preSelection media */
     val preSelectionMediaData: StateFlow<List<Media>?>
+
+    /**
+     * A SharedFlow that emits a signal whenever the media paging source is invalidated, allowing
+     * collectors to refresh their data accordingly.
+     */
+    val mediaInvalidationFlow: SharedFlow<Unit>
 
     /**
      * A [Channel] that emits a [Unit] when a disruptive data change is observed in the backend. The

@@ -29,6 +29,7 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.features.albumgrid.AlbumGridViewModel
 import com.android.photopicker.features.categorygrid.CategoryGridViewModel
 import com.android.photopicker.features.categorygrid.data.CategoryDataService
+import com.android.photopicker.features.datescrubber.data.DateScrubberDataService
 import com.android.photopicker.features.highlightmediaresults.HighlightMediaViewModel
 import com.android.photopicker.features.photogrid.PhotoGridViewModel
 import com.android.photopicker.features.preparemedia.MediaPreparerViewModel
@@ -73,6 +74,7 @@ class EmbeddedViewModelFactory(
     val dataService: Lazy<DataService>,
     val searchDataService: Lazy<SearchDataService>,
     val categoryDataService: Lazy<CategoryDataService>,
+    val dateScrubberDataService: Lazy<DateScrubberDataService>,
     val events: Lazy<Events>,
     val featureManager: Lazy<FeatureManager>,
     val selection: Lazy<Selection<Media>>,
