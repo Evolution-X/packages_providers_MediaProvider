@@ -29,10 +29,13 @@ import com.android.providers.media.stableuris.job.StableUriIdleMaintenanceServic
 import com.android.providers.media.util.Metrics;
 
 public class MediaReceiver extends BroadcastReceiver {
+    static boolean sBootCompleted = false;
+
     @Override
     public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+            sBootCompleted = true;
             PickerSyncController.getInstanceOrThrow().onBootComplete();
             // Register our idle maintenance service
             IdleService.scheduleIdlePass(context);
@@ -49,5 +52,9 @@ public class MediaReceiver extends BroadcastReceiver {
                 MediaService.enqueueWork(context, intent);
             }
         }
+    }
+
+    static boolean isBootCompleted() {
+        return sBootCompleted;
     }
 }
