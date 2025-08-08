@@ -26,7 +26,6 @@ import static com.android.providers.media.photopicker.util.PickerDbTestUtils.PAC
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.PACKAGE_NAME2;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.RES_ID1;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.RES_ID2;
-import static com.android.providers.media.photopicker.util.PickerDbTestUtils.USER_ID;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.assertAddMediaOperation;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getAndroidResourceUriString;
 import static com.android.providers.media.photopicker.util.PickerDbTestUtils.getCloudMediaCursor;
@@ -256,8 +255,8 @@ public class MediaGroupCursorUtilsTest {
 
     @Test
     public void testGetCustomAndroidResourceUri_validMediaId_returnsAndroidId() {
-        final String mediaId = getDrawableMediaId(PACKAGE_NAME1, RES_ID1, USER_ID);
-        final String uriString = getAndroidResourceUriString(PACKAGE_NAME1, RES_ID1, USER_ID);
+        final String mediaId = getDrawableMediaId(PACKAGE_NAME1, RES_ID1);
+        final String uriString = getAndroidResourceUriString(PACKAGE_NAME1, RES_ID1);
         final Uri expectedUri = Uri.parse(uriString);
         final Uri actualUri = MediaGroupCursorUtils.getCustomAndroidResourceUri(mediaId);
 
@@ -278,12 +277,11 @@ public class MediaGroupCursorUtilsTest {
 
     @Test
     public void testGetCustomAndroidResourceUri_inValidMediaId_returnsEmptyUri() {
-        // userId is missing
+        // resource id is missing
         final String invalidMediaId = String.format(
                 Locale.ROOT,
-                "%s/%s",
-                PACKAGE_NAME1,
-                RES_ID1
+                "%s/",
+                PACKAGE_NAME1
         );
         final Uri actualUri = MediaGroupCursorUtils.getCustomAndroidResourceUri(invalidMediaId);
 
@@ -378,8 +376,8 @@ public class MediaGroupCursorUtilsTest {
         );
 
         List<String> expectedUnwrappedCoverUris = Arrays.asList(
-                getAndroidResourceUriString(PACKAGE_NAME1, RES_ID1, USER_ID),
-                getAndroidResourceUriString(PACKAGE_NAME2, RES_ID2, USER_ID),
+                getAndroidResourceUriString(PACKAGE_NAME1, RES_ID1),
+                getAndroidResourceUriString(PACKAGE_NAME2, RES_ID2),
                 null,
                 null
         );

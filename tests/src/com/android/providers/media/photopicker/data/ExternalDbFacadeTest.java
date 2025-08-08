@@ -1458,7 +1458,6 @@ public class ExternalDbFacadeTest {
             // The last media item belong to different media set and
             // has the same date_taken as the second media item, but has a higher _id
             ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
-            contentValues.put(FileColumns._USER_ID, sIsolatedContext.getUserId());
             contentValues.put(MediaColumns._ID, ID1);
             contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
             helper.runWithTransaction(db -> db.insert(TABLE_FILES, null, contentValues));
@@ -1487,12 +1486,12 @@ public class ExternalDbFacadeTest {
                 // Media cover ids for App Folder Collection is the app icon res id uri
                 String expectedCoverIdForPackage1 = String.format(
                         Locale.ROOT,
-                        "%s/%s/%s",
-                        PACKAGE_NAME1, RES_ID, sIsolatedContext.getUserId());
+                        "%s/%s",
+                        PACKAGE_NAME1, RES_ID);
                 String expectedCoverIdForPackage2 = String.format(
                         Locale.ROOT,
-                        "%s/%s/%s",
-                        PACKAGE_NAME2, RES_ID, sIsolatedContext.getUserId());
+                        "%s/%s",
+                        PACKAGE_NAME2, RES_ID);
                 cursor.moveToFirst();
                 assertWithMessage("Incorrect MEDIA_COVER_ID1 found, implying wrong order")
                         .that(getCursorString(cursor,
@@ -2244,6 +2243,7 @@ public class ExternalDbFacadeTest {
                 assertMediaSetColumns(cursor,
                         CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
                         String.valueOf(ID4), DATE_TAKEN_MS1, 1);
+                // TODO(b/429580294): Replace with string resource for finalized name.
                 String expectedDisplayName = sIsolatedContext.getResources().getString(
                         R.string.storage_description);
                 assertWithMessage("Unexpected display name for the media set")
@@ -2251,6 +2251,107 @@ public class ExternalDbFacadeTest {
                                 cursor,
                                 CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME))
                         .isEqualTo(expectedDisplayName);
+            }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_forAppMediaSet_uninstalledAppsAreNotReturned() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            // Media with uninstalled app as owner package name, this should throw NameNotFound
+            // exception when display name is fetched for the app
+            contentValues.put(MediaColumns.DATE_TAKEN, DATE_TAKEN_MS2);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, "uninstalled_app");
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(2);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Unexpected number of media sets on querying TABLE_FILES for "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+
+                cursor.moveToFirst();
+                assertMediaSetColumns(cursor,
+                        CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                        PACKAGE_NAME1, DATE_TAKEN_MS1, 1);
+                assertWithMessage("Unexpected display name for the media set")
+                        .that(getCursorString(
+                                cursor,
+                                CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME))
+                        .isEqualTo(APP_LABEL);
+            }
+        }
+    }
+
+    @Test
+    public void testCreateMediaSetCursor_withEmptyCursor_returnsEmptyCursor() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            // Not initialising TABLE_FILES so that the source cursor is empty
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Expected the cursor to be empty on querying for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Expected the cursor to be empty on querying for media set of "
+                        + "MEDIA_CATEGORY_TYPE_APP_FOLDERS.")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
+            }
+        }
+    }
+
+    @Test
+    public void testCreateMediaSetCursor_withUnknownCategoryType_returnsEmptyCursor() {
+        try (DatabaseHelper helper = new TestDatabaseHelper(sIsolatedContext)) {
+            ExternalDbFacade facade = new ExternalDbFacade(sIsolatedContext, helper,
+                    mock(VolumeCache.class));
+
+            ContentValues contentValues = getContentValues(DATE_TAKEN_MS1, GENERATION_MODIFIED1);
+            contentValues.put(MediaColumns.OWNER_PACKAGE_NAME, PACKAGE_NAME1);
+            helper.runWithTransaction(db ->
+                    db.insert(TABLE_FILES, null, contentValues));
+
+            try (Cursor cursor = queryAllMedia(facade)) {
+                assertWithMessage(
+                        "Unexpected number of rows on querying TABLE_FILES for all media.")
+                        .that(cursor.getCount())
+                        .isEqualTo(1);
+            }
+
+            try (Cursor cursor = facade.queryMediaSets(
+                    /* mediaCategoryType */ "SOME_RANDOM_CATEGORY",
+                    /* mimeType */ null, /* pageSize */ -1, /* pageToken */ null)) {
+                assertWithMessage("Expected the cursor to be empty on querying for media set of "
+                        + "unrecognized category type")
+                        .that(cursor.getCount())
+                        .isEqualTo(0);
             }
         }
     }
