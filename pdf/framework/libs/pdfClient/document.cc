@@ -19,7 +19,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <memory>
+#include <set>
 #include <utility>
 
 #include "cpp/fpdf_scopers.h"
@@ -226,6 +228,36 @@ bool Document::MovePages(std::vector<int> pageIndices, int destinationIndex) {
         LOGV("Success moving page");
     } else {
         LOGV("Failed moving page");
+    }
+
+    return success;
+}
+
+bool Document::DeletePages(std::vector<int> pageIndices) {
+    int oldNumPages = NumPages();
+
+    // Store unique indices in descending order.
+    std::set<int, std::greater<int>> uniqueDescendingIndices;
+    for (int index : pageIndices) {
+        if (index >= 0 && index < oldNumPages) {
+            uniqueDescendingIndices.insert(index);
+        }
+    }
+
+    for (int index : uniqueDescendingIndices) {
+        FPDFPage_Delete(document_.get(), index);
+    }
+
+    // clear invalid cache
+    ClearPageCache();
+
+    int newNumPages = NumPages();
+    bool success = (newNumPages + uniqueDescendingIndices.size() == oldNumPages);
+
+    if (success) {
+        LOGV("Success deleting %zu pages", uniqueDescendingIndices.size());
+    } else {
+        LOGV("Failed deleting %zu pages", uniqueDescendingIndices.size());
     }
 
     return success;

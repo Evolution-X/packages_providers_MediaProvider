@@ -371,4 +371,86 @@ class SearchDataServiceImplTest {
         assertThat(searchDataService.searchableProviders.value)
             .containsExactly(searchableCloudProvider)
     }
+
+    @Test
+    fun testOnUpdateSearchResultsNotificationThrottling() = runTest {
+        val userStatusFlow: MutableStateFlow<UserStatus> = MutableStateFlow(userStatus)
+        events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope),
+                testFeatureManager,
+            )
+
+        val dataService: DataService =
+            DataServiceImpl(
+                userStatus = userStatusFlow,
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                featureManager = testFeatureManager,
+                appContext = mockContext,
+                events = events,
+                processOwnerHandle = userProfilePrimary.handle,
+            )
+
+        val searchDataService: SearchDataService =
+            SearchDataServiceImpl(
+                dataService = dataService,
+                userStatus = userStatusFlow,
+                photopickerConfiguration = provideTestConfigurationFlow(this.backgroundScope),
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                events = events,
+            )
+
+        advanceTimeBy(100) // allow init to complete
+
+        val searchText: String = "search_query"
+        val pagingSource1 =
+            searchDataService.getSearchResults(
+                regularPageSize = DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE,
+                searchText = searchText,
+            )
+        assertThat(pagingSource1.invalid).isFalse()
+
+        val searchResultsUpdateUri: Uri =
+            searchMediaUpdateUri
+                .buildUpon()
+                .apply { appendPath(testContentProvider.searchRequestId.toString()) }
+                .build()
+
+        // Send a burst of notifications.
+        notificationService.dispatchChangeToObservers(searchResultsUpdateUri)
+        notificationService.dispatchChangeToObservers(searchResultsUpdateUri)
+        notificationService.dispatchChangeToObservers(searchResultsUpdateUri)
+
+        // The first notification should invalidate the paging source immediately.
+        // The collector then starts its delay, and further notifications are conflated.
+        advanceTimeBy(100)
+        assertThat(pagingSource1.invalid).isTrue()
+
+        // Create a new paging source. This should be valid initially.
+        val pagingSource2 =
+            searchDataService.getSearchResults(
+                regularPageSize = DEFAULT_SEARCH_RESULT_GRID_PAGE_SIZE,
+                searchText = searchText,
+            )
+        assertThat(pagingSource2.invalid).isFalse()
+        assertThat(pagingSource2).isNotEqualTo(pagingSource1)
+
+        // Advance time, but less than the throttle duration.
+        // The conflated notification should not have been processed yet.
+        advanceTimeBy(SearchDataServiceImpl.UPDATE_FLOW_THROTTLE_MILLIS - 200)
+        assertThat(pagingSource2.invalid).isFalse()
+
+        // Advance time past the throttle duration.
+        // The conflated notification should now be processed, invalidating the new source.
+        advanceTimeBy(200)
+        assertThat(pagingSource2.invalid).isTrue()
+    }
 }

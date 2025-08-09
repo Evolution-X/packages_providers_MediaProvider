@@ -168,10 +168,9 @@ public class MediaGroupCursorUtils {
             int resId = applicationInfo.icon;
             return getCustomAndroidResourceUri(String.format(
                     Locale.ROOT,
-                    "%s/%s/%s",
+                    "%s/%s",
                     packageName,
-                    resId,
-                    MY_USER_ID)).toString();
+                    resId)).toString();
         } catch (PackageManager.NameNotFoundException exception) {
             Log.e(TAG, "Package not found for media set: " + mediaSetId, exception);
         } catch (RuntimeException exception) {
@@ -469,7 +468,7 @@ public class MediaGroupCursorUtils {
 
     private static Uri getUri(String mediaId, String authority) {
         return PickerUriResolver
-                .getMediaUri(getEncodedUserAuthority(authority, MY_USER_ID))
+                .getMediaUri(getEncodedUserAuthority(authority))
                 .buildUpon()
                 .appendPath(mediaId)
                 .build();
@@ -487,16 +486,15 @@ public class MediaGroupCursorUtils {
         if (mediaId == null) {
             return Uri.EMPTY;
         }
-        // mediaId is of the form "<package_name>/<res_id>/<user_id>"
+        // mediaId is of the form "<package_name>/<res_id>"
         try {
             final String[] segments = mediaId.split("/");
             final String packageName = segments[0];
             final String resId = segments[1];
-            final int userId = Integer.parseInt(segments[2]);
 
             Uri.Builder builder =  new Uri.Builder()
                     .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-                    .encodedAuthority(getEncodedUserAuthority(packageName, userId))
+                    .encodedAuthority(getEncodedUserAuthority(packageName))
                     .path(resId);
             return builder.build();
         } catch (NumberFormatException e) {
@@ -509,11 +507,11 @@ public class MediaGroupCursorUtils {
         return Uri.EMPTY;
     }
 
-    private static String getEncodedUserAuthority(String authority, int userId) {
+    private static String getEncodedUserAuthority(String authority) {
         if (authority.contains("@")) {
             return authority;
         } else {
-            return userId + "@" + authority;
+            return MY_USER_ID + "@" + authority;
         }
     }
 }

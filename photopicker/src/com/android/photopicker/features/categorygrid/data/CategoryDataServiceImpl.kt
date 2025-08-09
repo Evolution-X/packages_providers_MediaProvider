@@ -35,6 +35,7 @@ import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
+import com.android.photopicker.extensions.throttleTakeLatest
 import com.android.photopicker.features.categorygrid.paging.CategoryAndAlbumPagingSource
 import com.android.photopicker.features.categorygrid.paging.MediaSetContentsPagingSource
 import com.android.photopicker.features.categorygrid.paging.MediaSetsPagingSource
@@ -77,6 +78,11 @@ class CategoryDataServiceImpl(
     private val mediaProviderClient: MediaProviderClient,
     private val events: Events,
 ) : CategoryDataService {
+
+    companion object {
+        const val UPDATE_FLOW_THROTTLE_MILLIS: Long = 2000
+    }
+
     private val cachedPagingSourceMutex = Mutex()
     private var rootCategoryAndAlbumPagingSource: PagingSource<GroupPageKey, Group>? = null
     private val childCategoryPagingSources:
@@ -218,30 +224,37 @@ class CategoryDataServiceImpl(
 
     private fun initMediaSetContentCallbackFlow(resolver: ContentResolver): Flow<String> =
         callbackFlow {
-            val observer =
-                object : ContentObserver(/*handler*/ null) {
-                    override fun onChange(selfChange: Boolean, uri: Uri?) {
-                        // Verify that the mediaSetId is present in the uri
-                        if (
-                            uri?.pathSegments?.size ==
-                                (MEDIA_SET_CONTENT_UPDATE_URI.pathSegments.size + 1)
-                        ) {
-                            val mediaSetId: String = uri.lastPathSegment ?: "-1"
-                            trySend(mediaSetId)
+                val observer =
+                    object : ContentObserver(/*handler*/ null) {
+                        override fun onChange(selfChange: Boolean, uri: Uri?) {
+                            // Verify that the mediaSetId is present in the uri
+                            if (
+                                uri?.pathSegments?.size ==
+                                    (MEDIA_SET_CONTENT_UPDATE_URI.pathSegments.size + 1)
+                            ) {
+                                val mediaSetId: String = uri.lastPathSegment ?: "-1"
+                                trySend(mediaSetId)
+                            }
                         }
                     }
-                }
-            // Register the content observer callback.
-            notificationService.registerContentObserverCallback(
-                resolver,
-                MEDIA_SET_CONTENT_UPDATE_URI,
-                /*notifyForDescendants*/ true,
-                observer,
-            )
+                // Register the content observer callback.
+                notificationService.registerContentObserverCallback(
+                    resolver,
+                    MEDIA_SET_CONTENT_UPDATE_URI,
+                    /*notifyForDescendants*/ true,
+                    observer,
+                )
 
-            // Unregister when the flow is closed.
-            awaitClose { notificationService.unregisterContentObserverCallback(resolver, observer) }
-        }
+                // Unregister when the flow is closed.
+                awaitClose {
+                    notificationService.unregisterContentObserverCallback(resolver, observer)
+                }
+            }
+            // Add a delay here to throttle emissions, and combined with the conflate above
+            // means that this flow will only emit a maximum of once per delay period.
+            // This prevents "spammy" notifications from MP which may delay queries or
+            // constantly invalidating the grid.
+            .throttleTakeLatest(UPDATE_FLOW_THROTTLE_MILLIS)
 
     private fun getMediaSetPagingSourceForMediaSetId(
         mediaSetId: String

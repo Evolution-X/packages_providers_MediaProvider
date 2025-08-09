@@ -92,6 +92,14 @@ class Document {
     // Returns true on success.
     bool MovePages(std::vector<int> pageIndices, int destinationIndex);
 
+    /*
+     * Delete the pages at the given indices of a document. Duplicates and out-of-bounds
+     * indices are ignored.
+     * Returns TRUE on successful deletion of all pages.
+     * Returns FALSE on partial or complete failure; document may be in indeterminate state.
+     */
+    bool DeletePages(std::vector<int> pageIndices);
+
     // Save this Document to the given file descriptor, presumably opened for
     // write or append. Return true on success.
     bool SaveAs(LinuxFileOps::FDCloser fd);

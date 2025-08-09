@@ -594,6 +594,59 @@ class DataServiceImplTest {
     }
 
     @Test
+    fun testMediaUpdateNotificationThrottling() = runTest {
+        val userStatusFlow: StateFlow<UserStatus> = MutableStateFlow(userStatus)
+        events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope),
+                testFeatureManager,
+            )
+
+        val dataService: DataService =
+            DataServiceImpl(
+                userStatus = userStatusFlow,
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                featureManager = testFeatureManager,
+                appContext = mockContext,
+                events = events,
+                processOwnerHandle = userProfilePrimary.handle,
+            )
+        advanceTimeBy(100) // allow init to complete
+
+        val pagingSource1 = dataService.mediaPagingSource(DEFAULT_PHOTO_GRID_PAGE_SIZE)
+        assertThat(pagingSource1.invalid).isFalse()
+
+        // Send a burst of notifications.
+        notificationService.dispatchChangeToObservers(mediaUpdateUri)
+        notificationService.dispatchChangeToObservers(mediaUpdateUri)
+        notificationService.dispatchChangeToObservers(mediaUpdateUri)
+
+        // The first notification should invalidate the paging source immediately.
+        // The collector then starts its delay, and further notifications are conflated.
+        advanceTimeBy(100)
+        assertThat(pagingSource1.invalid).isTrue()
+
+        // Create a new paging source. This should be valid initially.
+        val pagingSource2 = dataService.mediaPagingSource(DEFAULT_PHOTO_GRID_PAGE_SIZE)
+        assertThat(pagingSource2.invalid).isFalse()
+
+        // Advance time, but less than the throttle duration.
+        // The conflated notification should not have been processed yet.
+        advanceTimeBy(DataServiceImpl.UPDATE_FLOW_THROTTLE_MILLIS - 200)
+        assertThat(pagingSource2.invalid).isFalse()
+
+        // Advance time past the throttle duration.
+        // The conflated notification should now be processed, invalidating the new source.
+        advanceTimeBy(200)
+        assertThat(pagingSource2.invalid).isTrue()
+    }
+
+    @Test
     fun testMediaPagingSourceInvalidation() = runTest {
         val userStatusFlow: MutableStateFlow<UserStatus> = MutableStateFlow(userStatus)
         events =
@@ -811,6 +864,83 @@ class DataServiceImplTest {
         assertThat(testContentProvider.lastRefreshMediaRequest).isNotNull()
         assertThat(testContentProvider.lastRefreshMediaRequest)
             .isEqualTo(albumMediaRefreshRequestExtras)
+    }
+
+    @Test
+    fun testOnUpdateAlbumMediaNotificationThrottling() = runTest {
+        val userStatusFlow: StateFlow<UserStatus> = MutableStateFlow(userStatus)
+        events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope),
+                testFeatureManager,
+            )
+
+        val dataService: DataService =
+            DataServiceImpl(
+                userStatus = userStatusFlow,
+                scope = this.backgroundScope,
+                notificationService = notificationService,
+                mediaProviderClient = mediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                config = provideTestConfigurationFlow(this.backgroundScope),
+                featureManager = testFeatureManager,
+                appContext = mockContext,
+                events = events,
+                processOwnerHandle = userProfilePrimary.handle,
+            )
+        advanceTimeBy(100) // allow init to complete
+
+        // Create a sample album
+        val album =
+            Group.Album(
+                id = testContentProvider.albumMedia.keys.first(),
+                pickerId = Long.MAX_VALUE,
+                authority = testContentProvider.providers[0].authority,
+                dateTakenMillisLong = Long.MAX_VALUE,
+                displayName = "album",
+                coverUri = Uri.parse("content://media/picker/authority/media/${Long.MAX_VALUE}"),
+                coverMediaSource = testContentProvider.providers[0].mediaSource,
+            )
+
+        // Get an initial paging source
+        val pagingSource1 = dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
+        assertThat(pagingSource1.invalid).isFalse()
+
+        // Build the update URI
+        val albumUpdateUri: Uri =
+            albumMediaUpdateUri
+                .buildUpon()
+                .apply {
+                    appendPath(album.authority)
+                    appendPath(album.id)
+                }
+                .build()
+
+        // Send a burst of notifications.
+        notificationService.dispatchChangeToObservers(albumUpdateUri)
+        notificationService.dispatchChangeToObservers(albumUpdateUri)
+        notificationService.dispatchChangeToObservers(albumUpdateUri)
+
+        // The first notification should invalidate the paging source immediately.
+        // The collector then starts its delay, and further notifications are conflated.
+        advanceTimeBy(100)
+        assertThat(pagingSource1.invalid).isTrue()
+
+        // Create a new paging source. This should be valid initially.
+        val pagingSource2 = dataService.albumMediaPagingSource(album, DEFAULT_ALBUM_GRID_PAGE_SIZE)
+        assertThat(pagingSource2.invalid).isFalse()
+        assertThat(pagingSource2).isNotEqualTo(pagingSource1)
+
+        // Advance time, but less than the throttle duration.
+        // The conflated notification should not have been processed yet.
+        advanceTimeBy(DataServiceImpl.UPDATE_FLOW_THROTTLE_MILLIS - 200)
+        assertThat(pagingSource2.invalid).isFalse()
+
+        // Advance time past the throttle duration.
+        // The conflated notification should now be processed, invalidating the new source.
+        advanceTimeBy(200)
+        assertThat(pagingSource2.invalid).isTrue()
     }
 
     @Test

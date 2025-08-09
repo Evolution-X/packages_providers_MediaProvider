@@ -44,6 +44,7 @@ import com.android.photopicker.data.model.Provider
 import com.android.photopicker.data.paging.AlbumMediaPagingSource
 import com.android.photopicker.data.paging.AlbumPagingSource
 import com.android.photopicker.data.paging.MediaPagingSource
+import com.android.photopicker.extensions.throttleTakeLatest
 import com.android.photopicker.features.cloudmedia.CloudMediaFeature
 import java.util.Collections.emptyList
 import kotlinx.coroutines.CoroutineDispatcher
@@ -230,6 +231,7 @@ class DataServiceImpl(
 
     companion object {
         const val FLOW_TIMEOUT_MILLI_SECONDS: Long = 5000
+        const val UPDATE_FLOW_THROTTLE_MILLIS: Long = 2000
     }
 
     init {
@@ -376,24 +378,32 @@ class DataServiceImpl(
      */
     private fun initMediaUpdateFlow(resolver: ContentResolver): Flow<Unit> =
         callbackFlow<Unit> {
-            val observer =
-                object : ContentObserver(/* handler */ null) {
-                    override fun onChange(selfChange: Boolean, uri: Uri?) {
-                        trySend(Unit)
+                val observer =
+                    object : ContentObserver(/* handler */ null) {
+                        override fun onChange(selfChange: Boolean, uri: Uri?) {
+                            Log.v(DataService.TAG, "Received media changed notification.")
+                            trySend(Unit)
+                        }
                     }
+
+                // Register the content observer callback.
+                notificationService.registerContentObserverCallback(
+                    resolver,
+                    MEDIA_CHANGE_NOTIFICATION_URI,
+                    /* notifyForDescendants */ true,
+                    observer,
+                )
+
+                // Unregister when the flow is closed.
+                awaitClose {
+                    notificationService.unregisterContentObserverCallback(resolver, observer)
                 }
-
-            // Register the content observer callback.
-            notificationService.registerContentObserverCallback(
-                resolver,
-                MEDIA_CHANGE_NOTIFICATION_URI,
-                /* notifyForDescendants */ true,
-                observer,
-            )
-
-            // Unregister when the flow is closed.
-            awaitClose { notificationService.unregisterContentObserverCallback(resolver, observer) }
-        }
+            }
+            // Add a delay here to throttle emissions, and combined with the conflate above
+            // means that this flow will only emit a maximum of once per delay period.
+            // This prevents "spammy" notifications from MP which may delay queries or
+            // constantly invalidating the grid.
+            .throttleTakeLatest(UPDATE_FLOW_THROTTLE_MILLIS)
 
     /**
      * Creates a callback flow that emits the album ID when an update in the album's media is
@@ -401,32 +411,40 @@ class DataServiceImpl(
      */
     private fun initAlbumMediaUpdateFlow(resolver: ContentResolver): Flow<Pair<String, String>> =
         callbackFlow {
-            val observer =
-                object : ContentObserver(/* handler */ null) {
-                    override fun onChange(selfChange: Boolean, uri: Uri?) {
-                        // Verify that album authority and album ID is present in the URI
-                        if (
-                            uri?.pathSegments?.size ==
-                                (2 + ALBUM_CHANGE_NOTIFICATION_URI.pathSegments.size)
-                        ) {
-                            val albumAuthority = uri.pathSegments[uri.pathSegments.size - 2] ?: ""
-                            val albumID = uri.pathSegments[uri.pathSegments.size - 1] ?: ""
-                            trySend(Pair(albumAuthority, albumID))
+                val observer =
+                    object : ContentObserver(/* handler */ null) {
+                        override fun onChange(selfChange: Boolean, uri: Uri?) {
+                            // Verify that album authority and album ID is present in the URI
+                            if (
+                                uri?.pathSegments?.size ==
+                                    (2 + ALBUM_CHANGE_NOTIFICATION_URI.pathSegments.size)
+                            ) {
+                                val albumAuthority =
+                                    uri.pathSegments[uri.pathSegments.size - 2] ?: ""
+                                val albumID = uri.pathSegments[uri.pathSegments.size - 1] ?: ""
+                                trySend(Pair(albumAuthority, albumID))
+                            }
                         }
                     }
+
+                // Register the content observer callback.
+                notificationService.registerContentObserverCallback(
+                    resolver,
+                    ALBUM_CHANGE_NOTIFICATION_URI,
+                    /* notifyForDescendants */ true,
+                    observer,
+                )
+
+                // Unregister when the flow is closed.
+                awaitClose {
+                    notificationService.unregisterContentObserverCallback(resolver, observer)
                 }
-
-            // Register the content observer callback.
-            notificationService.registerContentObserverCallback(
-                resolver,
-                ALBUM_CHANGE_NOTIFICATION_URI,
-                /* notifyForDescendants */ true,
-                observer,
-            )
-
-            // Unregister when the flow is closed.
-            awaitClose { notificationService.unregisterContentObserverCallback(resolver, observer) }
-        }
+            }
+            // Add a delay here to throttle emissions, and combined with the conflate above
+            // means that this flow will only emit a maximum of once per delay period.
+            // This prevents "spammy" notifications from MP which may delay queries or
+            // constantly invalidating the grid.
+            .throttleTakeLatest(UPDATE_FLOW_THROTTLE_MILLIS)
 
     /**
      * Fetches the icon URI for a given content provider authority.

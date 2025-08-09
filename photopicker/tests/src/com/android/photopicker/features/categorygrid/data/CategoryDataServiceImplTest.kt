@@ -478,6 +478,55 @@ class CategoryDataServiceImplTest {
             )
     }
 
+    @Test
+    fun testMediaSetContentUpdateNotificationThrottling() = runTest {
+        val dataService = getDataService(this)
+        val categoryDataService = getCategoryDataService(this, dataService)
+
+        advanceTimeBy(100)
+
+        val pagingSource1: PagingSource<MediaPageKey, Media> =
+            categoryDataService.getMediaSetContents(
+                testContentProvider.mediaSets[0],
+                DEFAULT_CATEGORY_GRID_PAGE_SIZE,
+            )
+        assertThat(pagingSource1.invalid).isFalse()
+
+        val updateUri: Uri =
+            mediaSetContentUpdateUri
+                .buildUpon()
+                .apply { appendPath(testContentProvider.mediaSets[0].id) }
+                .build()
+
+        // Dispatch a burst of update notifications
+        notificationService.dispatchChangeToObservers(updateUri)
+        notificationService.dispatchChangeToObservers(updateUri)
+        notificationService.dispatchChangeToObservers(updateUri)
+
+        // The first notification should invalidate the paging source immediately.
+        advanceTimeBy(100)
+        assertThat(pagingSource1.invalid).isTrue()
+
+        // Create a new paging source. This should be valid initially.
+        val pagingSource2: PagingSource<MediaPageKey, Media> =
+            categoryDataService.getMediaSetContents(
+                testContentProvider.mediaSets[0],
+                DEFAULT_CATEGORY_GRID_PAGE_SIZE,
+            )
+        assertThat(pagingSource2.invalid).isFalse()
+        assertThat(pagingSource2).isNotEqualTo(pagingSource1)
+
+        // Advance time, but less than the throttle duration.
+        // The conflated notification should not have been processed yet.
+        advanceTimeBy(CategoryDataServiceImpl.UPDATE_FLOW_THROTTLE_MILLIS - 200)
+        assertThat(pagingSource2.invalid).isFalse()
+
+        // Advance time past the throttle duration.
+        // The conflated notification should now be processed, invalidating the new source.
+        advanceTimeBy(200)
+        assertThat(pagingSource2.invalid).isTrue()
+    }
+
     private fun getDataService(scope: TestScope): DataService {
         return DataServiceImpl(
             userStatus = userStatusFlow,
