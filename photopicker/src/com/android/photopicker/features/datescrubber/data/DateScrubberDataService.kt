@@ -17,10 +17,15 @@
 package com.android.photopicker.features.datescrubber.data
 
 /**
- * Powers UI with data for the date scrubber feature. This class owns the responsibility to:
+ * Powers UI with data for the date scrubber feature in the Photo Grid.
+ *
+ * This class owns the responsibility to:
  * - fetch Items per month data on demand
  * - keep track of data updates in the data source
  * - detect and refresh stale data
+ *
+ * NOTE: Currently scoped to the Photo Grid only. Future extensions may generalize this service to
+ * support other grids.
  */
 interface DateScrubberDataService {
     companion object {
@@ -33,10 +38,13 @@ interface DateScrubberDataService {
      * @return A list of Pair<String, Int> where:
      * - The first element [String] represents the date in "MMMM yyyy" format (e.g.,"July 2025"), in
      *   local time.
-     * - The second element [Int] represents the total number of items associated with that month.
+     * - The second element [Int] represents the total number of items associated with that month in
+     *   the Photo grid.
+     *
+     * Returns null if data is unavailable.
      */
     fun getItemsCountPerMonthList(): List<Pair<String, Int>>?
 
-    /** Get total no of items count currently available in DB */
+    /** Get total no of items count currently available in Photo Grid */
     fun getTotalItemsCount(): Int?
 }

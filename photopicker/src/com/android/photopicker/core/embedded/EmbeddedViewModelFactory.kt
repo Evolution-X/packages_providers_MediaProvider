@@ -29,6 +29,7 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.features.albumgrid.AlbumGridViewModel
 import com.android.photopicker.features.categorygrid.CategoryGridViewModel
 import com.android.photopicker.features.categorygrid.data.CategoryDataService
+import com.android.photopicker.features.datescrubber.DateScrubberViewModel
 import com.android.photopicker.features.datescrubber.data.DateScrubberDataService
 import com.android.photopicker.features.highlightmediaresults.HighlightMediaViewModel
 import com.android.photopicker.features.photogrid.PhotoGridViewModel
@@ -147,6 +148,8 @@ class EmbeddedViewModelFactory(
                         as T
                 isAssignableFrom(HighlightMediaViewModel::class.java) ->
                     HighlightMediaViewModel(null, backgroundDispatcher, dataService.get()) as T
+                isAssignableFrom(DateScrubberViewModel::class.java) ->
+                    DateScrubberViewModel(null, dateScrubberDataService.get()) as T
                 else ->
                     throw IllegalArgumentException(
                         "Unknown ViewModel class: ${modelClass.simpleName}"
