@@ -26,6 +26,7 @@ import androidx.paging.cachedIn
 import com.android.photopicker.core.Background
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.configuration.ConfigurationManager
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.Telemetry
@@ -151,17 +152,25 @@ constructor(
         // reacts to the changes to open the search page directly.
         // The search bar focused state is set to true, the search term is populated in the
         // search bar and a request to fetch the corresponding results is triggered.
-        val highlightParams: HighlightQueryResultsParams =
-            configurationManager.configuration.value.highlightQueryResultsParams
+        val configuration = configurationManager.configuration.value
+        val highlightParams: HighlightQueryResultsParams = configuration.highlightQueryResultsParams
         val highlightQuery: HighlightQuery = highlightParams.queryResultsHighlightQuery
         val highlightType = highlightParams.queryResultsHighlightType
 
-        // TODO Expanded highlight type for embedded picker b/433228573
         if (highlightType == QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS) {
             when (highlightQuery) {
                 is HighlightQuery.Search -> {
+                    val pickerRuntimeEnv = configuration.runtimeEnv
                     val searchQuery = highlightQuery.searchQuery
-                    if (searchQuery.isNotEmpty()) {
+                    // Search page can directly be opened on picker launch for expanded highlight
+                    // type only if it is requested for the regular picker or if it is requested in
+                    // the embedded picker which should initially
+                    // be launched in the expanded state.
+                    val canOpenToSearchPage =
+                        pickerRuntimeEnv == PhotopickerRuntimeEnv.ACTIVITY ||
+                            (pickerRuntimeEnv == PhotopickerRuntimeEnv.EMBEDDED &&
+                                configuration.embeddedPickerLaunchedInExpandedState)
+                    if (searchQuery.isNotEmpty() && canOpenToSearchPage) {
                         setSearchBarFocusedState(focused = true)
                         setSearchBarText(text = searchQuery)
                         performSearch(query = searchQuery)

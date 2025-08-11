@@ -1285,6 +1285,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val info: EmbeddedPhotoPickerFeatureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder()
                     .setHighlightSearchMediaTextQuery(testQuery)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED)
                     .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
 
@@ -1338,6 +1339,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val info: EmbeddedPhotoPickerFeatureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder()
                     .setHighlightSearchMediaTextQuery(testQuery)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED)
                     .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
             val callingPackageLabel = "TestPackage"
@@ -1420,6 +1422,131 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
         Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+        Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API,
+    )
+    fun testSearchHighlightMediaGridIsShownInEmbeddedExpandedMode() =
+        testScope.runTest {
+            assumeTrue(SdkLevel.isAtLeastU())
+
+            val testQuery = "cats"
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightSearchMediaTextQuery(testQuery)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED)
+                    .setPickerLaunchedInExpandedState(true)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+            val callingPackageLabel = "TestPackage"
+            configurationManager
+                .get()
+                .setCaller(
+                    callingPackage = "com.android.test.package",
+                    callingPackageUid = 12345,
+                    callingPackageLabel = callingPackageLabel,
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify search page components
+            val resources = getTestableContext().getResources()
+            val route = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the photo grid")
+                .that(route)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule.onNode(hasText(testQuery), useUnmergedTree = true).assertIsDisplayed()
+            // Assert back button navigates back to the photogrid
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .performClick()
+
+            val backRoute = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the photo grid")
+                .that(backRoute)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+            // Search bar with placeholder text
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+        Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API,
+    )
+    fun testHighlightMediaGridIsNotShownInCollapsedMode() =
+        testScope.runTest {
+            val testQuery = "cats"
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightSearchMediaTextQuery(testQuery)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Verify search page components are not displayed
+            val resources = getTestableContext().getResources()
+            val route = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the photo grid")
+                .that(route)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(hasText(testQuery), useUnmergedTree = true)
+                .assertIsNotDisplayed()
+            // Verify the lazy grid is displayed, there should be only one scrollable component
+            // which is the photo grid
+            composeTestRule
+                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
+                .assertCountEquals(1)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testSearchHighlightMediaSectionIsShownInExpandedMode_nullCallingPackageLabel() =
         testScope.runTest {
@@ -1429,6 +1556,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val info: EmbeddedPhotoPickerFeatureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder()
                     .setHighlightSearchMediaTextQuery(testQuery)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED)
                     .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
             // Set a null calling package label
@@ -1509,6 +1637,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val info: EmbeddedPhotoPickerFeatureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder()
                     .setHighlightAlbumId(highlightAlbumId)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED)
                     .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
 
@@ -1608,6 +1737,118 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
         Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+        Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API,
+    )
+    fun testAlbumHighlightMediaGridIsShownInEmbeddedExpandedMode() =
+        testScope.runTest {
+            assumeTrue(SdkLevel.isAtLeastU())
+
+            val highlightAlbum = HighlightAlbum.HIGHLIGHT_ALBUM_FAVORITES
+            val highlightAlbumId = MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES
+            val info: EmbeddedPhotoPickerFeatureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setHighlightAlbumId(highlightAlbumId)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED)
+                    .setPickerLaunchedInExpandedState(true)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.albumMediaSetSize = 1
+            testDataService.albumSetSize = 1
+            testDataService.albumsList =
+                listOf(
+                    Group.Album(
+                        id = ALBUM_ID_FAVORITES,
+                        pickerId = 1234L,
+                        authority = "a",
+                        displayName = "Favorites",
+                        coverUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority("a")
+                                    path("1234")
+                                }
+                                .build(),
+                        dateTakenMillisLong = 12345678L,
+                        coverMediaSource = MediaSource.LOCAL,
+                    )
+                )
+            testDataService._availableProviders.value =
+                listOf(
+                    Provider(
+                        authority = "local_authority",
+                        mediaSource = MediaSource.LOCAL,
+                        uid = 1,
+                        displayName = "Local Provider",
+                    )
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Wait sufficiently for albums list to be available
+            // Repeated calls to advanceTimeBy followed by waitForIdle  are necessary because the
+            // animations/transitions relies on the passage of time to complete its rendering.
+            advanceTimeBy(3000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            // Verify elements of the album media page
+            val resources = getTestableContext().getResources()
+            val route = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the album media grid")
+                .that(route)
+                .isEqualTo(PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID.route)
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasText(
+                        HighlightAlbum.getAlbumNameFromAlbum(getTestableContext(), highlightAlbum)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+
+            // Verify back takes you the collections grid
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_back_option)),
+                    useUnmergedTree = true,
+                )
+                .performClick()
+            val backRoute = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Current destination should be the collections grid")
+                .that(backRoute)
+                .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaSectionIsNotShownInExpandedModeWithEmptyTestQuery() =
         testScope.runTest {
@@ -1615,6 +1856,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val info: EmbeddedPhotoPickerFeatureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder()
                     .setHighlightSearchMediaTextQuery(testQuery)
+                    .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED)
                     .build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
 

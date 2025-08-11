@@ -1476,6 +1476,7 @@ class ConfigurationManagerTest {
         val featureInfo =
             EmbeddedPhotoPickerFeatureInfo.Builder()
                 .setHighlightSearchMediaTextQuery(highlightMediaQuery)
+                .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED)
                 .build()
 
         runTest {
@@ -1507,7 +1508,7 @@ class ConfigurationManagerTest {
             assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightQuery)
                 .isEqualTo(HighlightQuery.Search(highlightMediaQuery))
             assertThat(emissions.last().highlightQueryResultsParams.queryResultsHighlightType)
-                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION)
+                .isEqualTo(QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS)
         }
     }
 
@@ -1570,7 +1571,10 @@ class ConfigurationManagerTest {
     fun testSetEmbeddedPhotopickerFeatureInfoForValidHighlightAlbumName() {
         val highlightAlbumName = MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_CAMERA
         val featureInfo =
-            EmbeddedPhotoPickerFeatureInfo.Builder().setHighlightAlbumId(highlightAlbumName).build()
+            EmbeddedPhotoPickerFeatureInfo.Builder()
+                .setHighlightAlbumId(highlightAlbumName)
+                .setHighlightType(MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED)
+                .build()
 
         runTest {
             val configurationManager =
