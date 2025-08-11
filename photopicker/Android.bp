@@ -27,6 +27,7 @@ android_library {
     kotlincflags: [
         "-Werror",
         "-Xjvm-default=all",
+        "-Xannotation-default-target=param-property",
     ],
     static_libs: [
         "androidx.activity_activity-compose",
