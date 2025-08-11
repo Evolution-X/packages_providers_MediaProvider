@@ -16,6 +16,8 @@
 
 package com.android.providers.media.fuse;
 
+import static com.android.providers.media.flags.Flags.enableParallelFuseDirOps;
+
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
@@ -81,6 +83,7 @@ public final class FuseDaemon extends Thread {
 
         Log.i(TAG, "Starting thread for " + getName() + " ...");
         native_start(ptr, mFuseDeviceFd, mPath, mUncachedMode,
+                enableParallelFuseDirOps(),
                 mSupportedTranscodingRelativePaths,
                 mSupportedUncachedRelativePaths); // Blocks
         Log.i(TAG, "Exiting thread for " + getName() + " ...");
@@ -347,7 +350,8 @@ public final class FuseDaemon extends Thread {
 
     // Takes ownership of the passed in file descriptor!
     private native void native_start(long daemon, int deviceFd, String path,
-            boolean uncachedMode, String[] supportedTranscodingRelativePaths,
+            boolean uncachedMode, boolean enableParallelFuseDirOps,
+            String[] supportedTranscodingRelativePaths,
             String[] supportedUncachedRelativePaths);
 
     private native void native_delete(long daemon);
