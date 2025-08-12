@@ -26,4 +26,8 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"Forslag"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"Søgning er deaktiveret."</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Prøv at søge efter lignende ord.\n\nDet er kun elementer, der er sikkerhedskopieret, som vises i dine søgeresultater."</string>
+    <!-- no translation found for photopicker_search_provider_placeholder_text (1336430915166074865) -->
+    <skip />
+    <!-- no translation found for photopicker_search_with_provider_placeholder_text (1821869425999804589) -->
+    <skip />
 </resources>
