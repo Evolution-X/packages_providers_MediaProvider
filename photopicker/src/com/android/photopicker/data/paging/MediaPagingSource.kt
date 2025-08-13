@@ -23,11 +23,13 @@ import androidx.paging.PagingState
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
+import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.data.MediaProviderClient
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.Provider
+import com.android.photopicker.features.datescrubber.DateScrubberFeature
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 
@@ -43,6 +45,7 @@ class MediaPagingSource(
     private val mediaProviderClient: MediaProviderClient,
     private val dispatcher: CoroutineDispatcher,
     private val configuration: PhotopickerConfiguration,
+    private val featureManager: FeatureManager,
     private val events: Events,
     private val nextPageSize:
         Int, // The number of items per page after the first page or after first initial load
@@ -54,8 +57,9 @@ class MediaPagingSource(
         val TAG: String = "PickerMediaPagingSource"
     }
 
-    private val shouldEnableJumping =
-        configuration.flags.PICKER_DATESCRUBBER_ENABLED && !isPreviewSession
+    private val isDateScrubberEnabled =
+        featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
+    private val shouldEnableJumping = isDateScrubberEnabled && !isPreviewSession
 
     override suspend fun load(params: LoadParams<MediaPageKey>): LoadResult<MediaPageKey, Media> {
         val pageKey = params.key ?: MediaPageKey()
