@@ -96,6 +96,9 @@ JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_movePages(
 JNIEXPORT jboolean JNICALL Java_android_graphics_pdf_PdfDocumentProxy_deletePages(
         JNIEnv* env, jobject jPdfDocument, jintArray jPageIndices);
 
+JNIEXPORT void JNICALL Java_android_graphics_pdf_PdfDocumentProxy_setPagesRotation(
+        JNIEnv* env, jobject jPdfDocument, jobject jPageRotationConfigList);
+
 JNIEXPORT jobject JNICALL Java_android_graphics_pdf_PdfDocumentProxy_getFormWidgetInfo__III(
         JNIEnv* env, jobject jPdfDocument, jint pageNum, jint x, jint y);
 
