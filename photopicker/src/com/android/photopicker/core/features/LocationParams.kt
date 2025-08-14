@@ -79,4 +79,16 @@ sealed interface LocationParams {
         // Grid state for the grid that supports fast scrolling through the date scrubber
         val gridState: LazyGridState
     }
+
+    /**
+     * Parameter passed to [Location.NAVIGATION_BAR] for passing through click handlers.
+     *
+     * @property onSearchBarClicked A callback to be invoked when the search bar is clicked.
+     * @property onCloseButtonClicked A callback to be invoked when the close button is clicked.
+     */
+    interface WithNavigationBar : LocationParams {
+        fun onSearchBarClicked()
+
+        fun onCloseButtonClicked()
+    }
 }

@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -57,6 +58,7 @@ import com.android.photopicker.R
 import com.android.photopicker.core.StateSelector
 import com.android.photopicker.core.animations.standardDecelerate
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.embedded.LocalEmbeddedState
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.features.Location
@@ -157,18 +159,18 @@ fun NavigationBar(
             currentRoute == PhotopickerDestinations.ALBUM_MEDIA_GRID.route ||
                 currentRoute == PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID.route -> {
                 if (featureManager.isFeatureEnabled(AlbumGridFeature::class.java)) {
-                    NavigationBarForAlbum(modifier)
+                    NavigationBarForAlbum(modifier, params)
                 } else {
-                    NavigationBarForGroup(modifier, badgeIconModifier)
+                    NavigationBarForGroup(modifier, badgeIconModifier, params)
                 }
             }
 
             currentRoute == PhotopickerDestinations.MEDIA_SET_GRID.route -> {
-                NavigationBarForGroup(modifier, badgeIconModifier)
+                NavigationBarForGroup(modifier, badgeIconModifier, params)
             }
 
             currentRoute == PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route -> {
-                NavigationBarForGroup(modifier, badgeIconModifier)
+                NavigationBarForGroup(modifier, badgeIconModifier, params)
             }
 
             // When search feature is enabled then display search bar along with profile selector,
@@ -176,7 +178,7 @@ fun NavigationBar(
             searchFeatureEnabled -> NavigationBarWithSearch(modifier, params)
 
             // For all other routes, show the profile selector and the navigation buttons
-            else -> BasicNavigationBar(modifier)
+            else -> BasicNavigationBar(modifier, params)
         }
     }
 }
@@ -288,7 +290,7 @@ private fun NavigationBarButtons(modifier: Modifier) {
  * @param modifier Modifier used to configure the layout of the navigation bar.
  */
 @Composable
-private fun NavigationBarForAlbum(modifier: Modifier) {
+private fun NavigationBarForAlbum(modifier: Modifier, params: LocationParams) {
     val navController = LocalNavController.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     Row(modifier = modifier.fillMaxWidth()) {
@@ -341,6 +343,12 @@ private fun NavigationBarForAlbum(modifier: Modifier) {
             } else {
                 Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
             }
+            if (LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.DESKTOP) {
+                DesktopCloseButton(
+                    modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+                    params = params,
+                )
+            }
         }
     }
 }
@@ -352,7 +360,11 @@ private fun NavigationBarForAlbum(modifier: Modifier) {
  * @param modifier Modifier used to configure the layout of the navigation bar.
  */
 @Composable
-private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifier = Modifier) {
+private fun NavigationBarForGroup(
+    modifier: Modifier,
+    badgeIconModifier: Modifier = Modifier,
+    params: LocationParams,
+) {
     val navController = LocalNavController.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     Row(modifier = modifier.fillMaxWidth()) {
@@ -408,6 +420,7 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                     )
                 }
             }
+
             is Group.Category -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // back button
@@ -436,6 +449,7 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                     )
                 }
             }
+
             is Group.MediaSet -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // back button
@@ -461,6 +475,7 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                                     coverIcon = group.icon,
                                     badgeIconModifier,
                                 )
+
                             else -> NavigationBarBadgeIcon(it, badgeIconModifier)
                         }
                     }
@@ -476,6 +491,7 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                     )
                 }
             }
+
             else -> {}
         }
         val featureManager = LocalFeatureManager.current
@@ -491,6 +507,12 @@ private fun NavigationBarForGroup(modifier: Modifier, badgeIconModifier: Modifie
                 )
             } else {
                 Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
+            }
+            if (LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.DESKTOP) {
+                DesktopCloseButton(
+                    modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+                    params = params,
+                )
             }
         }
     }
@@ -508,6 +530,7 @@ private fun NavigationBarBadgeIcon(icon: Icon, modifier: Modifier = Modifier) {
     when (icon) {
         is GlideIcon ->
             loadMedia(media = icon, resolution = Resolution.THUMBNAIL, modifier = modifier)
+
         is VectorIcon ->
             VectorIconBadge(
                 icon = icon,
@@ -578,6 +601,10 @@ private fun NavigationBarOverlappingBadgeIcon(
 @Composable
 private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) {
     val featureManager = LocalFeatureManager.current
+
+    val navbarParams: LocationParams.WithNavigationBar =
+        checkNotNull(params as? LocationParams.WithNavigationBar)
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Top,
@@ -588,27 +615,37 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
                 Location.SEARCH_BAR,
                 maxSlots = 1,
                 modifier = Modifier.weight(1f),
-                params,
+                params = LocationParams.WithClickAction { navbarParams.onSearchBarClicked() },
             )
             featureManager.composeLocation(
                 Location.PROFILE_SELECTOR,
                 maxSlots = 1,
                 modifier = Modifier.padding(start = 8.dp),
             )
-            val overFlowMenuEnabled =
-                remember(featureManager) {
-                    featureManager.isFeatureEnabled(OverflowMenuFeature::class.java)
-                }
-            if (
-                overFlowMenuEnabled &&
-                    LocalFeatureManager.current.getSizeOfLocationInRegistry(
-                        Location.OVERFLOW_MENU_ITEMS
-                    ) > 0
-            ) {
-                Row(modifier = Modifier, horizontalArrangement = Arrangement.End) {
+            Row(modifier = Modifier, horizontalArrangement = Arrangement.End) {
+                val overFlowMenuEnabled =
+                    remember(featureManager) {
+                        featureManager.isFeatureEnabled(OverflowMenuFeature::class.java)
+                    }
+                if (
+                    overFlowMenuEnabled &&
+                        LocalFeatureManager.current.getSizeOfLocationInRegistry(
+                            Location.OVERFLOW_MENU_ITEMS
+                        ) > 0
+                ) {
                     featureManager.composeLocation(
                         Location.OVERFLOW_MENU,
                         modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+                    )
+                }
+
+                if (
+                    LocalPhotopickerConfiguration.current.runtimeEnv ==
+                        PhotopickerRuntimeEnv.DESKTOP
+                ) {
+                    DesktopCloseButton(
+                        modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+                        params = params,
                     )
                 }
             }
@@ -622,7 +659,7 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
  * and [OVERFLOW_MENU] along with navigation buttons.
  */
 @Composable
-private fun BasicNavigationBar(modifier: Modifier) {
+private fun BasicNavigationBar(modifier: Modifier, params: LocationParams) {
     val featureManager = LocalFeatureManager.current
     val profileSelectorEnabled =
         remember(featureManager) {
@@ -659,13 +696,34 @@ private fun BasicNavigationBar(modifier: Modifier) {
         ) {
             NavigationBarButtons(Modifier.weight(1f))
         }
-        if (overFlowMenuEnabled) {
-            featureManager.composeLocation(
-                Location.OVERFLOW_MENU,
-                modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
-            )
-        } else {
-            Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
+
+        Row {
+            if (overFlowMenuEnabled) {
+                featureManager.composeLocation(
+                    Location.OVERFLOW_MENU,
+                    modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+                )
+            } else {
+                Spacer(Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH))
+            }
+            if (LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.DESKTOP) {
+                DesktopCloseButton(
+                    modifier = Modifier.width(MEASUREMENT_ICON_BUTTON_WIDTH),
+                    params = params,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun DesktopCloseButton(modifier: Modifier, params: LocationParams) {
+    val navbarParams: LocationParams.WithNavigationBar =
+        checkNotNull(params as? LocationParams.WithNavigationBar)
+    IconButton(onClick = { navbarParams.onCloseButtonClicked() }) {
+        Icon(
+            Icons.Filled.Close,
+            contentDescription = stringResource(R.string.photopicker_close_button_description),
+        )
     }
 }
