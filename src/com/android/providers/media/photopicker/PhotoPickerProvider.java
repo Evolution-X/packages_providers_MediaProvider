@@ -182,7 +182,7 @@ public class PhotoPickerProvider extends CloudMediaProvider {
         }
         final CloudProviderQueryExtras queryExtras =
                 CloudProviderQueryExtras.fromCloudMediaBundle(extras);
-        return mDbFacade.queryMediaCategories(queryExtras.getMimeTypes());
+        return mDbFacade.queryMediaCategories(queryExtras.getMimeTypes(), mConfigStore);
     }
 
     @Override
@@ -198,7 +198,7 @@ public class PhotoPickerProvider extends CloudMediaProvider {
         final CloudProviderQueryExtras queryExtras =
                 CloudProviderQueryExtras.fromCloudMediaBundle(extras);
         return mDbFacade.queryMediaSets(mediaCategoryId, queryExtras.getMimeTypes(),
-                queryExtras.getPageSize(), queryExtras.getPageToken());
+                queryExtras.getPageSize(), queryExtras.getPageToken(), mConfigStore);
     }
 
     @Override
@@ -214,7 +214,8 @@ public class PhotoPickerProvider extends CloudMediaProvider {
         final CloudProviderQueryExtras queryExtras =
                 CloudProviderQueryExtras.fromCloudMediaBundle(extras);
         return mDbFacade.queryMediaInMediaSet(mediaSetId, queryExtras.getMimeTypes(),
-                queryExtras.getPageSize(), queryExtras.getPageToken(), queryExtras.getSortOrder());
+                queryExtras.getPageSize(), queryExtras.getPageToken(), queryExtras.getSortOrder(),
+                mConfigStore);
     }
 
     private MediaProvider getMediaProvider() {

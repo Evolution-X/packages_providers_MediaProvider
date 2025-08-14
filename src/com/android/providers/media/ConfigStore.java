@@ -76,6 +76,7 @@ public interface ConfigStore {
     boolean DEFAULT_PICKER_CHOICE_MANAGED_SELECTION_ENABLED = true;
 
     boolean DEFAULT_LOCAL_CATEGORIES_IN_PHOTO_PICKER_ENABLED = false;
+    boolean DEFAULT_SD_CARD_CATEGORY_IN_PHOTO_PICKER_ENABLED = false;
 
 
     /**
@@ -244,6 +245,13 @@ public interface ConfigStore {
         return DEFAULT_LOCAL_CATEGORIES_IN_PHOTO_PICKER_ENABLED;
     }
 
+    /**
+     * @return if the sd card category feature in photopicker is enabled.
+     */
+    default boolean isSdCardCategoryInPhotoPickerEnabled() {
+        return DEFAULT_SD_CARD_CATEGORY_IN_PHOTO_PICKER_ENABLED;
+    }
+
     @NonNull
     List<String> getTranscodeCompatManifest();
 
@@ -385,6 +393,11 @@ public interface ConfigStore {
         @Override
         public boolean isLocalCategoriesInPhotoPickerEnabled() {
             return isModernPickerEnabled() && Flags.enableLocalMediaProviderCapabilities();
+        }
+
+        @Override
+        public boolean isSdCardCategoryInPhotoPickerEnabled() {
+            return isLocalCategoriesInPhotoPickerEnabled() && Flags.enableSdCardCategory();
         }
 
         @Override
