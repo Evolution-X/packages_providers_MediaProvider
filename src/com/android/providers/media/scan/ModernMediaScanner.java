@@ -1030,7 +1030,7 @@ public class ModernMediaScanner implements MediaScanner {
                 // on, so the file is later scanned as the appropriate type (otherwise, this
                 // audio filed would be scanned as video and it would be missing the correct
                 // metadata).
-                actualMimeType = updateM4aMimeType(realFile, actualMimeType);
+                actualMimeType = MimeUtils.updateM4aMimeType(realFile, actualMimeType);
                 actualMediaType =
                         mediaTypeFromMimeType(realFile, actualMimeType, actualMediaType);
             } finally {
@@ -1141,28 +1141,6 @@ public class ModernMediaScanner implements MediaScanner {
                             && mReason != REASON_IDLE);
 
             return sameTime && sameSize && !isPendingFromFuse && isScanned;
-        }
-
-        /**
-         * For this one very narrow case, we allow mime types to be customised when the top levels
-         * differ. This opens the given file, so avoid calling unless really necessary. This
-         * returns the defaultMimeType for non-m4a files or if opening the file throws an exception.
-         */
-        private String updateM4aMimeType(File file, String defaultMimeType) {
-            if ("video/mp4".equalsIgnoreCase(defaultMimeType)) {
-                try (
-                    FileInputStream is = new FileInputStream(file);
-                    MediaMetadataRetriever mmr = new MediaMetadataRetriever()) {
-                    mmr.setDataSource(is.getFD());
-                    String refinedMimeType = mmr.extractMetadata(METADATA_KEY_MIMETYPE);
-                    if ("audio/mp4".equalsIgnoreCase(refinedMimeType)) {
-                        return refinedMimeType;
-                    }
-                } catch (Exception e) {
-                    return defaultMimeType;
-                }
-            }
-            return defaultMimeType;
         }
 
         @Override
