@@ -28,7 +28,6 @@ import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Icon
-import com.android.photopicker.data.model.Icon.Companion.invoke
 import com.android.photopicker.data.model.ItemsPerMonth
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
@@ -78,6 +77,10 @@ val DEFAULT_MEDIA: List<Media> =
         createMediaImage(15L, 1707542400000L), // 10th February 2024
         createMediaImage(13L, 1706707200000L), // 31st January 2024
     )
+
+val DEFAULT_ITEMS_BEFORE_COUNT = 0
+
+val DEFAULT_ITEMS_AFTER_COUNT = 0
 
 val DEFAULT_ALBUMS: List<Group.Album> =
     listOf(createAlbum("Favorites"), createAlbum("Downloads"), createAlbum("CloudAlbum"))
@@ -185,6 +188,8 @@ class TestMediaProvider(
     var providers: List<Provider> = DEFAULT_PROVIDERS,
     var collectionInfos: List<CollectionInfo> = DEFAULT_COLLECTION_INFO,
     var media: List<Media> = DEFAULT_MEDIA,
+    var itemsBeforeCount: Int = DEFAULT_ITEMS_BEFORE_COUNT,
+    var itemsAfterCount: Int = DEFAULT_ITEMS_AFTER_COUNT,
     var albums: List<Group.Album> = DEFAULT_ALBUMS,
     var albumMedia: Map<String, List<Media>> = DEFAULT_ALBUM_MEDIA,
     var searchRequestId: Int = DEFAULT_SEARCH_REQUEST_ID,
@@ -304,7 +309,11 @@ class TestMediaProvider(
         return cursor
     }
 
-    private fun getMedia(mediaItems: List<Media> = media): Cursor {
+    private fun getMedia(
+        mediaItems: List<Media> = media,
+        itemsBefore: Int = itemsBeforeCount,
+        itemsAfter: Int = itemsAfterCount,
+    ): Cursor {
         val cursor =
             MatrixCursor(
                 arrayOf(
@@ -340,6 +349,15 @@ class TestMediaProvider(
                 )
             )
         }
+
+        val extraArgs = Bundle()
+        extraArgs.putInt(
+            MediaProviderClient.MediaResponseExtras.ITEMS_BEFORE_COUNT.key,
+            itemsBefore,
+        )
+        extraArgs.putInt(MediaProviderClient.MediaResponseExtras.ITEMS_AFTER_COUNT.key, itemsAfter)
+        cursor.setExtras(extraArgs)
+
         return cursor
     }
 

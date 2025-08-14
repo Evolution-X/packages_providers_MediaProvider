@@ -72,6 +72,7 @@ public class MediaQuery {
     // If this is true, only fetch the rows from Picker Database where the IS_VISIBLE flag is on.
     protected boolean mShouldDedupe;
     protected boolean mShouldPopulateItemsBeforeCount;
+    protected boolean mShouldPopulateItemsAfterCount;
 
     public MediaQuery(Bundle queryArgs) {
         mPickerId = queryArgs.getLong("picker_id", Long.MAX_VALUE);
@@ -79,6 +80,16 @@ public class MediaQuery {
         mCurrentPageSize = queryArgs.getInt("current_page_size", Integer.MAX_VALUE);
         mNextPageSize = queryArgs.getInt("next_page_size", Integer.MAX_VALUE);
         mIntentAction = queryArgs.getString("intent_action");
+
+        // If the items-before count needs to be included in the resulting query cursor extras
+        // when the data is being served from the Picker DB cache
+        mShouldPopulateItemsBeforeCount = queryArgs.getBoolean(
+                "enable_items_before_count", false);
+
+        // If the items-after count needs to be included in the resulting query cursor extras
+        // when the data is being served from the Picker DB cache
+        mShouldPopulateItemsAfterCount = queryArgs.getBoolean(
+                "enable_items_after_count", false);
 
         // Make deep copies of the arrays to avoid leaking changes made to the arrays.
         mProviders = new ArrayList<>(
@@ -89,10 +100,6 @@ public class MediaQuery {
         // This is true by default.
         mShouldDedupe = true;
         mCallingPackageUid = queryArgs.getInt(Intent.EXTRA_UID, -1);
-
-        // This is true by default. When this is true, include items before count in the resultant
-        // query cursor extras when the data is being served from the Picker DB cache.
-        mShouldPopulateItemsBeforeCount = true;
     }
 
     @NonNull
@@ -128,6 +135,10 @@ public class MediaQuery {
         return mShouldPopulateItemsBeforeCount;
     }
 
+    /** Return if items after count should be included in the resultant query cursor extras*/
+    public boolean shouldPopulateItemsAfterCount() {
+        return mShouldPopulateItemsAfterCount;
+    }
     /**
      * Create and return a bundle for extras for CMP queries made from Media Provider.
      */
