@@ -433,3 +433,11 @@ flag {
     is_exported: false
     bug: "428016109"
 }
+
+flag {
+    name: "enable_photopicker_thumbnail_preload"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables image thumbnail preloading in photopicker"
+    bug: "407099745"
+}
