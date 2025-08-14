@@ -210,7 +210,8 @@ public class PickerSQLConstants {
         PREV_PAGE_DATE_TAKEN("prev_page_date_taken"),
         NEXT_PAGE_ID("next_page_picker_id"),
         NEXT_PAGE_DATE_TAKEN("next_page_date_taken"),
-        ITEMS_BEFORE_COUNT("items_before_count");
+        ITEMS_BEFORE_COUNT("items_before_count"),
+        ITEMS_AFTER_COUNT("items_after_count");
 
         private final String mKey;
 

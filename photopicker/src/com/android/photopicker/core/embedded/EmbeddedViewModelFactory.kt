@@ -100,6 +100,7 @@ class EmbeddedViewModelFactory(
                         dataService.get(),
                         events.get(),
                         bannerManager.get(),
+                        configurationManager.get(),
                     )
                         as T
                 isAssignableFrom(PreviewViewModel::class.java) ->

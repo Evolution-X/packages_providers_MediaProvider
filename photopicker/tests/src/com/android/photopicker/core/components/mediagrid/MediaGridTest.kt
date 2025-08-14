@@ -100,6 +100,7 @@ import com.android.photopicker.extensions.toMediaGridItemFromMedia
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.util.test.MockContentProviderWrapper
 import com.android.photopicker.util.test.whenever
+import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -203,8 +204,11 @@ class MediaGridTest {
     private val BANNER_CONTENT_TEST_TAG = "banner_content"
     private val CUSTOM_ITEM_TEST_TAG = "custom_item"
     private val CUSTOM_ITEM_SEPARATOR_TAG = "custom_separator"
+    private val CUSTOM_PLACEHOLDER_TAG = "custom_placeholder"
+
     private val CUSTOM_ITEM_FACTORY_TEXT = "custom item factory"
     private val CUSTOM_ITEM_SEPARATOR_TEXT = "custom item separator"
+    private val CUSTOM_PLACEHOLDER_TEXT = "custom placeholder"
 
     private val FIRST_SEPARATOR_LABEL = "First"
     private val SECOND_SEPARATOR_LABEL = "Second"
@@ -450,6 +454,21 @@ class MediaGridTest {
                 }
         ) {
             Text(CUSTOM_ITEM_FACTORY_TEXT)
+        }
+    }
+
+    /**
+     * A custom content placeholder factory that renders the same text string for each placeholder.
+     */
+    @Composable
+    private fun customContentPlaceholderFactory() {
+        Box(
+            modifier =
+                // Merge the semantics into the parent node to make it easy to assert and select
+                // these nodes in the tree.
+                Modifier.semantics(mergeDescendants = true) {}.testTag(CUSTOM_PLACEHOLDER_TAG)
+        ) {
+            Text(CUSTOM_PLACEHOLDER_TEXT)
         }
     }
 
@@ -1146,6 +1165,123 @@ class MediaGridTest {
             composeTestRule
                 .onAllNodes(hasTestTag(CUSTOM_ITEM_SEPARATOR_TAG))
                 .assertAll(hasText(CUSTOM_ITEM_SEPARATOR_TEXT))
+        }
+    }
+
+    /**
+     * Ensures that the grid uses a custom content placeholder factory when it is provided and
+     * placeholders are enabled
+     */
+    @Test
+    fun testMediaGridCustomContentPlaceholderFactory_enablePlaceholders() {
+        val placeholderGridDataSize = 15
+
+        // Creates a data flow that simulates a grid with a known size
+        // but without any actual content just to render placeholders.
+        pager =
+            Pager(PagingConfig(pageSize = 50, maxSize = 500)) {
+                FakeInMemoryMediaPagingSource(
+                    dataSize = placeholderGridDataSize,
+                    isPlaceholderGrid = true,
+                )
+            }
+        flow = pager.flow.toMediaGridItemFromMedia().insertMonthSeparators()
+
+        runTest {
+            val selection =
+                SelectionImpl<Media>(
+                    scope = backgroundScope,
+                    configuration = provideTestConfigurationFlow(scope = backgroundScope),
+                    preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            action("TEST_ACTION")
+                            intent(Intent("TEST_ACTION"))
+                        },
+                    LocalNavController provides TestNavHostController(getTestableContext()),
+                    LocalSelection provides selection,
+                ) {
+                    val items = flow.collectAsLazyPagingItems()
+                    val selected by selection.flow.collectAsStateWithLifecycle()
+                    mediaGrid(
+                        items = items,
+                        selection = selected,
+                        onItemClick = {},
+                        contentPlaceholderFactory = { customContentPlaceholderFactory() },
+                        arePlaceholdersEnabled = true,
+                    )
+                }
+            }
+
+            composeTestRule.waitForIdle()
+
+            val nodes = composeTestRule.onAllNodes(hasTestTag(CUSTOM_PLACEHOLDER_TAG))
+
+            // Check if at-least one placeholder visible on the screen
+            assertThat(nodes.fetchSemanticsNodes().isNotEmpty()).isEqualTo(true)
+            nodes.assertAll(hasText(CUSTOM_PLACEHOLDER_TEXT))
+        }
+    }
+
+    /**
+     * Ensures that the grid doesn't uses a custom content placeholder factory when it is provided
+     * and placeholders are disabled
+     */
+    @Test
+    fun testMediaGridCustomContentPlaceholderFactory_disablePlaceholders() {
+        val placeholderGridDataSize = 15
+
+        // Creates a data flow that simulates a grid with a known size
+        // but without any actual content just to render placeholders.
+        pager =
+            Pager(PagingConfig(pageSize = 50, maxSize = 500)) {
+                FakeInMemoryMediaPagingSource(
+                    dataSize = placeholderGridDataSize,
+                    isPlaceholderGrid = true,
+                )
+            }
+        flow = pager.flow.toMediaGridItemFromMedia().insertMonthSeparators()
+
+        runTest {
+            val selection =
+                SelectionImpl<Media>(
+                    scope = backgroundScope,
+                    configuration = provideTestConfigurationFlow(scope = backgroundScope),
+                    preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            action("TEST_ACTION")
+                            intent(Intent("TEST_ACTION"))
+                        },
+                    LocalNavController provides TestNavHostController(getTestableContext()),
+                    LocalSelection provides selection,
+                ) {
+                    val items = flow.collectAsLazyPagingItems()
+                    val selected by selection.flow.collectAsStateWithLifecycle()
+                    mediaGrid(
+                        items = items,
+                        selection = selected,
+                        onItemClick = {},
+                        contentPlaceholderFactory = { customContentPlaceholderFactory() },
+                        arePlaceholdersEnabled = false,
+                    )
+                }
+            }
+
+            composeTestRule.waitForIdle()
+
+            val nodes = composeTestRule.onAllNodes(hasTestTag(CUSTOM_PLACEHOLDER_TAG))
+
+            // Check no placeholder visible on the screen
+            assertThat(nodes.fetchSemanticsNodes().isEmpty()).isEqualTo(true)
         }
     }
 

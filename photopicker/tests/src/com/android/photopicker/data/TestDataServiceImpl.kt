@@ -19,6 +19,7 @@ package com.android.photopicker.data
 import android.content.ContentResolver
 import android.net.Uri
 import androidx.paging.PagingSource
+import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group.Album
@@ -35,6 +36,7 @@ import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.test.TestScope
 
 /**
  * A test implementation of [DataService] that provides fake, in memory paging sources that isolate
@@ -107,8 +109,9 @@ class TestDataServiceImpl() : DataService {
         throw NotImplementedError("This method is not implemented yet.")
 
     override fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media> {
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize)
+        val testConfig = provideTestConfigurationFlow(scope = TestScope().backgroundScope).value
+        return mediaList?.let { FakeInMemoryMediaPagingSource(it, testConfig = testConfig) }
+            ?: FakeInMemoryMediaPagingSource(mediaSetSize, testConfig = testConfig)
     }
 
     override fun previewMediaPagingSource(

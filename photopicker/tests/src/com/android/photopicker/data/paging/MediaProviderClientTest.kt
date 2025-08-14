@@ -70,6 +70,8 @@ class MediaProviderClientTest {
     @Test
     fun testFetchMediaPage() = runTest {
         val mediaProviderClient = MediaProviderClient()
+        val config =
+            PhotopickerConfiguration(action = MediaStore.ACTION_PICK_IMAGES, sessionId = sessionId)
 
         val mediaLoadResult: LoadResult<MediaPageKey, Media> =
             mediaProviderClient.fetchMedia(
@@ -78,21 +80,22 @@ class MediaProviderClientTest {
                 nextPageSize = 5,
                 contentResolver = testContentResolver,
                 availableProviders = listOf(Provider("provider", MediaSource.LOCAL, 0, "")),
-                config =
-                    PhotopickerConfiguration(
-                        action = MediaStore.ACTION_PICK_IMAGES,
-                        sessionId = sessionId,
-                    ),
+                config = config,
             )
 
         assertThat(mediaLoadResult is LoadResult.Page).isTrue()
 
         val media: List<Media> = (mediaLoadResult as LoadResult.Page).data
+        val itemsBeforeCount = (mediaLoadResult as LoadResult.Page).itemsBefore
+        val itemsAfterCount = (mediaLoadResult as LoadResult.Page).itemsAfter
 
         assertThat(media.count()).isEqualTo(testContentProvider.media.count())
         for (index in media.indices) {
             assertThat(media[index]).isEqualTo(testContentProvider.media[index])
         }
+
+        assertThat(itemsBeforeCount).isEqualTo(testContentProvider.itemsBeforeCount)
+        assertThat(itemsAfterCount).isEqualTo(testContentProvider.itemsAfterCount)
     }
 
     @Test
