@@ -26,8 +26,6 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"Suggerimenti"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"Ricerca disattivata."</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Prova a cercare parole simili.\n\nNei risultati di ricerca verranno visualizzati solo gli elementi di cui è stato eseguito il backup."</string>
-    <!-- no translation found for photopicker_search_provider_placeholder_text (1336430915166074865) -->
-    <skip />
-    <!-- no translation found for photopicker_search_with_provider_placeholder_text (1821869425999804589) -->
-    <skip />
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Cerca in <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Cerca con <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
 </resources>

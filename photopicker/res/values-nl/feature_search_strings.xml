@@ -26,8 +26,6 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"Suggesties"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"Zoekfunctie staat uit"</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Zoek naar vergelijkbare woorden.\n\nAlleen items waarvan een back-up is gemaakt, worden in de zoekresultaten getoond."</string>
-    <!-- no translation found for photopicker_search_provider_placeholder_text (1336430915166074865) -->
-    <skip />
-    <!-- no translation found for photopicker_search_with_provider_placeholder_text (1821869425999804589) -->
-    <skip />
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Zoeken in <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Zoeken met <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
 </resources>
