@@ -26,8 +26,6 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"Προτάσεις"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"Η αναζήτηση απενεργοποιήθηκε."</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Δοκιμάστε να αναζητήσετε παρόμοιες λέξεις.\n\nΣτα αποτελέσματα αναζήτησης, θα εμφανίζονται μόνο τα στοιχεία για τα οποία έχουν δημιουργηθεί αντίγραφα ασφαλείας."</string>
-    <!-- no translation found for photopicker_search_provider_placeholder_text (1336430915166074865) -->
-    <skip />
-    <!-- no translation found for photopicker_search_with_provider_placeholder_text (1821869425999804589) -->
-    <skip />
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Αναζήτηση <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Αναζήτηση με <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
 </resources>

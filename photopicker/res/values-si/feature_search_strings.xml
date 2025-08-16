@@ -26,8 +26,6 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"යෝජනා"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"සෙවීම අබලයි."</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"සමාන වචන සෙවීමට උත්සාහ කරන්න.\n\nඔබේ සෙවීම් ප්‍රතිඵලවල දිස් වනු ඇත්තේ උපස්ථ කරන ලද අයිතම පමණි."</string>
-    <!-- no translation found for photopicker_search_provider_placeholder_text (1336430915166074865) -->
-    <skip />
-    <!-- no translation found for photopicker_search_with_provider_placeholder_text (1821869425999804589) -->
-    <skip />
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> සොයන්න"</string>
+    <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> සමග සොයන්න"</string>
 </resources>

@@ -26,8 +26,6 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"सूचना"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"शोध बंद केला आहे."</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"समानार्थी शब्द शोधण्याचा प्रयत्न करा.\n\nफक्त बॅकअप घेतलेले आयटम तुमच्या शोध परिणामांमध्ये दिसतील."</string>
-    <!-- no translation found for photopicker_search_provider_placeholder_text (1336430915166074865) -->
-    <skip />
-    <!-- no translation found for photopicker_search_with_provider_placeholder_text (1821869425999804589) -->
-    <skip />
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> शोधा"</string>
+    <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> वापरून शोधा"</string>
 </resources>
