@@ -61,6 +61,7 @@ public class MediaServiceV2 extends Worker {
     private static final long INITIAL_DELAY_MS = 30_000;
     private static final String TAG = MediaServiceV2.class.getSimpleName();
     private final Context mContext;
+    private static final boolean ENABLE_MEDIA_SERVICE_V2 = true;
 
     public MediaServiceV2(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
@@ -88,7 +89,7 @@ public class MediaServiceV2 extends Worker {
      * flag is enabled before calling this function.
      */
     public static Optional<UUID> enqueueWork(Context context, Intent intent) {
-        if (!Flags.enableMediaServiceV2() || !SdkLevel.isAtLeastS()) {
+        if (!isFlagEnabled() || !SdkLevel.isAtLeastS()) {
             Log.e(TAG, "Work not enqueued because enable_media_service_v2 flag was disabled "
                     + "or SdkLevel was less than S.");
             return Optional.empty();
@@ -350,5 +351,9 @@ public class MediaServiceV2 extends Worker {
         } finally {
             parcel.recycle();
         }
+    }
+
+    public static boolean isFlagEnabled() {
+        return ENABLE_MEDIA_SERVICE_V2 || Flags.enableMediaServiceV2();
     }
 }
