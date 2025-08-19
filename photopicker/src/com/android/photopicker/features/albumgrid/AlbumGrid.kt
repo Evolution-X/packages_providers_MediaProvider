@@ -26,6 +26,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -70,7 +71,8 @@ private val MEASUREMENT_HORIZONTAL_CELL_SPACING_ALBUM_GRID = 16.dp
  */
 @Composable
 fun AlbumGrid(viewModel: AlbumGridViewModel = obtainViewModel()) {
-    val items = viewModel.getAlbums().collectAsLazyPagingItems()
+    val itemsFlow = remember { viewModel.getAlbums() }
+    val items = itemsFlow.collectAsLazyPagingItems()
     val state = rememberLazyGridState()
     val navController = LocalNavController.current
     val featureManager = LocalFeatureManager.current

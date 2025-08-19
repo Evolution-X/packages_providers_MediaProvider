@@ -121,11 +121,11 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
         }
 
     val cellsPerRow = remember(isExpandedScreen) { getCellsPerRow(isExpandedScreen) }
-
-    val items =
-        viewModel
-            .getData(/* recentsCellCount */ (cellsPerRow * RECENTS_ROW_COUNT))
-            .collectAsLazyPagingItems()
+    val itemsFlow =
+        remember(cellsPerRow) {
+            viewModel.getData(/* recentsCellCount */ (cellsPerRow * RECENTS_ROW_COUNT))
+        }
+    val items = itemsFlow.collectAsLazyPagingItems()
 
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
     val localizedSelectionLimit = LocalLocalizationHelper.current.getLocalizedCount(selectionLimit)
