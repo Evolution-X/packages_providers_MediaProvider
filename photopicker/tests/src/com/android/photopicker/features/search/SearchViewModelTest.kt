@@ -17,7 +17,11 @@
 package com.android.photopicker.features.search
 
 import android.net.Uri
+import android.platform.test.annotations.DisableFlags
 import android.platform.test.annotations.EnableFlags
+import android.platform.test.flag.junit.CheckFlagsRule
+import android.platform.test.flag.junit.DeviceFlagsValueProvider
+import android.platform.test.flag.junit.SetFlagsRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
 import com.android.photopicker.core.configuration.ConfigurationManager
@@ -49,6 +53,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -56,6 +61,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
+
+    @get:Rule(order = 0) var setFlagsRule = SetFlagsRule()
+    @get:Rule(order = 1)
+    val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
 
     lateinit var selection: Selection<Media>
     lateinit var events: Events
@@ -574,6 +583,134 @@ class SearchViewModelTest {
         assertWithMessage("providerToIconMap should update when a cloud provider is added")
             .that(viewModel.providerToIconMap.value)
             .containsExactly(cloudProvider, icon)
+    }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PHOTOPICKER_DELETE_HISTORY_SUGGESTION,
+    )
+    fun removeSearchHistory_flagEnabled_clearsCacheAndRefetches() = runTest {
+        provideSelectionEvents(this.backgroundScope)
+        val configurationManager =
+            ConfigurationManager(
+                runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                scope = this.backgroundScope,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                deviceConfigProxy,
+                generatePickerSessionId(),
+            )
+        val testSearchDataService = TestSearchDataServiceImpl()
+        val viewModel =
+            SearchViewModel(
+                this.backgroundScope,
+                StandardTestDispatcher(this.testScheduler),
+                testSearchDataService,
+                TestDataServiceImpl(),
+                selection,
+                events,
+                configurationManager,
+            )
+
+        assertWithMessage("Cache is empty before fetching suggestions")
+            .that(viewModel.getCachedSuggestions().getSuggestions(""))
+            .isNull()
+
+        viewModel.fetchSuggestions("")
+        advanceTimeBy(1000)
+        // Populate the cache first
+        assertWithMessage("Unexpected: total suggestions list size not correct")
+            .that(viewModel.searchSuggestions.value.totalSuggestions)
+            .isEqualTo(4)
+        val cachedSuggestions = viewModel.getCachedSuggestions().getSuggestions("")
+        assertWithMessage("Cache should not be empty before removal")
+            .that(cachedSuggestions)
+            .isNotNull()
+        assertWithMessage("Unexpected: cache suggestions list size is not correct before delete")
+            .that(cachedSuggestions?.size)
+            .isEqualTo(4)
+
+        val suggestionToRemove =
+            SearchSuggestion(null, "authority", "paris", SearchSuggestionType.HISTORY, null)
+        viewModel.removeSearchHistory(suggestionToRemove)
+        // Verify cache is cleared and refetched
+        advanceTimeBy(300)
+        advanceTimeBy(300)
+        advanceTimeBy(300)
+
+        assertWithMessage("Unexpected: total suggestions list size not correct")
+            .that(viewModel.searchSuggestions.value.totalSuggestions)
+            .isEqualTo(3)
+        val cachedSuggestions2 = viewModel.getCachedSuggestions().getSuggestions("")
+        assertWithMessage("Cache should not be empty after removal")
+            .that(cachedSuggestions2)
+            .isNotNull()
+        assertWithMessage("Unexpected: cache suggestions list size is not correct after delete")
+            .that(cachedSuggestions2?.size)
+            .isEqualTo(3)
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_DELETE_HISTORY_SUGGESTION)
+    fun removeSearchHistory_flagDisabled_doesNotDelete() = runTest {
+        provideSelectionEvents(this.backgroundScope)
+        val configurationManager =
+            ConfigurationManager(
+                runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                scope = this.backgroundScope,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                deviceConfigProxy,
+                generatePickerSessionId(),
+            )
+        val testSearchDataService = TestSearchDataServiceImpl()
+        val viewModel =
+            SearchViewModel(
+                this.backgroundScope,
+                StandardTestDispatcher(this.testScheduler),
+                testSearchDataService,
+                TestDataServiceImpl(),
+                selection,
+                events,
+                configurationManager,
+            )
+
+        assertWithMessage("Cache is empty before fetching suggestions")
+            .that(viewModel.getCachedSuggestions().getSuggestions(""))
+            .isNull()
+
+        viewModel.fetchSuggestions("")
+        advanceTimeBy(1000)
+        // Populate the cache first
+        assertWithMessage("Unexpected: total suggestions list size not correct")
+            .that(viewModel.searchSuggestions.value.totalSuggestions)
+            .isEqualTo(4)
+        val cachedSuggestions = viewModel.getCachedSuggestions().getSuggestions("")
+        assertWithMessage("Cache should not be empty before removal")
+            .that(cachedSuggestions)
+            .isNotNull()
+        assertWithMessage("Unexpected: cache suggestions list size is not correct before delete")
+            .that(cachedSuggestions?.size)
+            .isEqualTo(4)
+
+        val suggestionToRemove =
+            SearchSuggestion(null, "authority", "paris", SearchSuggestionType.HISTORY, null)
+        viewModel.removeSearchHistory(suggestionToRemove)
+        // Verify cache is cleared and refetched
+        advanceTimeBy(300)
+        advanceTimeBy(300)
+        advanceTimeBy(300)
+
+        assertWithMessage("Unexpected: total suggestions list size not correct")
+            .that(viewModel.searchSuggestions.value.totalSuggestions)
+            .isEqualTo(4)
+        val cachedSuggestions2 = viewModel.getCachedSuggestions().getSuggestions("")
+        assertWithMessage("Cache should not be empty after delete")
+            .that(cachedSuggestions2)
+            .isNotNull()
+        assertWithMessage("Unexpected: cache suggestions list size is not correct")
+            .that(cachedSuggestions2?.size)
+            .isEqualTo(4)
     }
 
     private fun provideSelectionEvents(scope: CoroutineScope) {
