@@ -52,11 +52,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
@@ -229,6 +232,20 @@ class DataServiceImpl(
      */
     override val preSelectionMediaData: StateFlow<List<Media>?> = _preSelectionMediaData
 
+    // It's used internally to send a signal when the data needs to be refreshed.
+    private val _mediaInvalidationFlow =
+        MutableSharedFlow<Unit>(
+            replay = 1, // New collectors receive the most recent signal immediately.
+            extraBufferCapacity = 0, // No additional buffer; only the latest value is stored.
+            onBufferOverflow =
+                BufferOverflow
+                    .DROP_OLDEST, // If a new signal comes before the previous is collected, the old
+            // one is dropped.
+        )
+
+    // Public read-only SharedFlow exposing media invalidation signals to external collectors.
+    override val mediaInvalidationFlow: SharedFlow<Unit> = _mediaInvalidationFlow
+
     companion object {
         const val FLOW_TIMEOUT_MILLI_SECONDS: Long = 5000
         const val UPDATE_FLOW_THROTTLE_MILLIS: Long = 2000
@@ -243,6 +260,9 @@ class DataServiceImpl(
                     mediaPagingSources.forEach { mediaPagingSource ->
                         mediaPagingSource.invalidate()
                     }
+
+                    _mediaInvalidationFlow.emit(Unit)
+
                     albumPagingSources.forEach { albumPagingSource ->
                         albumPagingSource.invalidate()
                     }
@@ -301,6 +321,7 @@ class DataServiceImpl(
                                 mediaPagingSources.forEach { mediaPagingSource ->
                                     mediaPagingSource.invalidate()
                                 }
+                                _mediaInvalidationFlow.emit(Unit)
                             }
                         }
                     }

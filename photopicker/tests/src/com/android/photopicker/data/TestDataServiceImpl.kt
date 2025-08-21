@@ -34,6 +34,7 @@ import com.android.photopicker.data.paging.FakeInMemoryMediaPagingSource
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.TestScope
@@ -73,6 +74,9 @@ class TestDataServiceImpl() : DataService {
     val collectionInfo: HashMap<Provider, CollectionInfo> = HashMap()
 
     private var _preGrantsCount = MutableStateFlow(/* default value */ 0)
+
+    override val mediaInvalidationFlow: SharedFlow<Unit>
+        get() = TODO("Not yet implemented")
 
     fun setAvailableProviders(newProviders: List<Provider>) {
         _availableProviders.update { newProviders }
