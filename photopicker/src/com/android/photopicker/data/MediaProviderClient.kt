@@ -1144,7 +1144,7 @@ open class MediaProviderClient {
      *   the corresponding item count (all in local time)
      * @throws RuntimeException if an error occurs during the query or fetching the items counts
      */
-    fun fetchItemsPerMonth(
+    open suspend fun fetchItemsPerMonth(
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
