@@ -75,6 +75,7 @@ import static com.android.providers.media.AccessChecker.getWhereForUserSelectedA
 import static com.android.providers.media.AccessChecker.hasAccessToCollection;
 import static com.android.providers.media.AccessChecker.hasUserSelectedAccess;
 import static com.android.providers.media.AccessChecker.isRedactionNeededForPickerUri;
+import static com.android.providers.media.DatabaseBackupAndRecovery.DEFAULT_LEVEL_DB_VERSION;
 import static com.android.providers.media.DatabaseHelper.EXTERNAL_DATABASE_NAME;
 import static com.android.providers.media.DatabaseHelper.INTERNAL_DATABASE_NAME;
 import static com.android.providers.media.LocalCallingIdentity.APPOP_REQUEST_INSTALL_PACKAGES_FOR_SHARED_UID;
@@ -497,6 +498,14 @@ public class MediaProvider extends ContentProvider {
     static final String BROADCAST_INTENT = "broadcast_intent";
     static final String CANCEL_WORK_AFTER_ENQUEUEING = "cancel_work_after_enqueueing";
     static final String REMOVE_VOL_BEFORE_ENQUEUEING = "remove_vol_before_enqueueing";
+
+    /**
+     * Constants to test changes related database backup and recovery.
+     * Only to be used to testing.
+     */
+    static final String BACKED_UP_DATA_IN_LEVEL_DB = "backed_up_data_in_level_db";
+    static final String BACKED_UP_FILE_PATH = "backed_up_file_path";
+    static final String BACKED_UP_LEVELDB_VERSION = "backed_up_leveldb_version";
 
     /**
      * Enable option to defer the scan triggered as part of MediaProvider#update()
@@ -7452,6 +7461,15 @@ public class MediaProvider extends ContentProvider {
             case MediaStore.MEDIA_SERVICE_V2_CALL: {
                 return getResultForMediaServiceV2Call(extras);
             }
+            case MediaStore.RECOVER_DATA_CALL: {
+                return getResultForRecoverData(extras);
+            }
+            case MediaStore.RESET_LEVEL_DB_AT_DEFAULT_VERSION_CALL: {
+                return getResultForSetLevelDbAtDefaultVersionCall(extras);
+            }
+            case MediaStore.ENSURE_LEVEL_DB_AT_LATEST_VERSION_CALL: {
+                return getResultForEnsureLevelDbAtLatestVersionCall(extras);
+            }
             case MediaStore.BULK_UPDATE_OEM_METADATA_CALL: {
                 callForBulkUpdateOemMetadataColumn();
                 return new Bundle();
@@ -8582,6 +8600,65 @@ public class MediaProvider extends ContentProvider {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Bundle getResultForRecoverData(Bundle extras) {
+        getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
+                "Permission missing to call RECOVER_DATA_CALL by uid:"
+                        + Binder.getCallingUid());
+
+        String volumeName = extras.getString(VOLUME_NAME);
+        mExternalDatabase.runWithoutTransaction((db)-> {
+            try {
+                mDatabaseBackupAndRecovery.recoverData(db, volumeName, /* isExternal */ true);
+            } catch (Exception e) {
+                Log.e(TAG, "Recover data call failed", e);
+                throw new RuntimeException(e);
+            }
+            return null;
+        });
+        return null;
+    }
+
+    private Bundle getResultForSetLevelDbAtDefaultVersionCall(Bundle extras) {
+        getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
+                "Permission missing to call RESET_LEVEL_DB_AT_DEFAULT_VERSION_CALL by uid:"
+                        + Binder.getCallingUid());
+
+        String volumeName = extras.getString(VOLUME_NAME);
+        String filePath = extras.getString(BACKED_UP_FILE_PATH);
+
+        BackupIdRow backedUpRow =
+                mDatabaseBackupAndRecovery.readDataFromBackup(volumeName, filePath).get();
+        backedUpRow.setGenerationModified(0);
+        try {
+            mDatabaseBackupAndRecovery.backupRowInLevelDb(volumeName, filePath, backedUpRow);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to backup row in level db", e);
+        }
+        mDatabaseBackupAndRecovery.saveVersionInLevelDb(volumeName, DEFAULT_LEVEL_DB_VERSION);
+
+        return null;
+    }
+
+    private Bundle getResultForEnsureLevelDbAtLatestVersionCall(Bundle extras) {
+        getContext().enforceCallingPermission(Manifest.permission.WRITE_MEDIA_STORAGE,
+                "Permission missing to call ENSURE_LEVEL_DB_AT_VERSION_CALL by uid:"
+                        + Binder.getCallingUid());
+
+        String volumeName = extras.getString(VOLUME_NAME);
+        String filePath = extras.getString(BACKED_UP_FILE_PATH);
+
+        mDatabaseBackupAndRecovery.ensureLevelDbAtLatestVersion(volumeName, mExternalDatabase,
+                /* signal */null);
+
+        Bundle result = new Bundle();
+        long levelDbVersion = mDatabaseBackupAndRecovery.getVersionFromLevelDb(volumeName);
+        result.putLong(BACKED_UP_LEVELDB_VERSION, levelDbVersion);
+        BackupIdRow backedUpRow =
+                mDatabaseBackupAndRecovery.readDataFromBackup(volumeName, filePath).get();
+        result.putSerializable(BACKED_UP_DATA_IN_LEVEL_DB, backedUpRow);
+        return result;
     }
 
     private String getSecurityExceptionMessage(String method) {

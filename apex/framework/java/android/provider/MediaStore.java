@@ -426,6 +426,29 @@ public final class MediaStore {
      * @hide
      */
     @VisibleForTesting
+    public static final String RECOVER_DATA_CALL = "recover_data_call";
+
+    /**
+     * Only used for testing.
+     * @hide
+     */
+    @VisibleForTesting
+    public static final String RESET_LEVEL_DB_AT_DEFAULT_VERSION_CALL =
+            "reset_level_db_at_default_version_call";
+
+    /**
+     * Only used for testing.
+     * @hide
+     */
+    @VisibleForTesting
+    public static final String ENSURE_LEVEL_DB_AT_LATEST_VERSION_CALL =
+            "ensure_level_db_at_latest_version_call";
+
+    /**
+     * Only used for testing.
+     * @hide
+     */
+    @VisibleForTesting
     public static final String DELETE_BACKED_UP_FILE_PATHS = "delete_backed_up_file_paths";
 
     /** @hide */
