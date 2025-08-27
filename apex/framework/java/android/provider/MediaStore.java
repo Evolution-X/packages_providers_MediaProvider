@@ -1901,7 +1901,6 @@ public final class MediaStore {
      * will also be trashed recursively.
      * </p>
      * <p>
-     * This API is available starting from Target SDK 37.
      * Apps using this API must declare the
      * {@link android.Manifest.permission#MANAGE_EXTERNAL_STORAGE} permission
      * in their manifest and be granted it by the user.
@@ -1943,9 +1942,11 @@ public final class MediaStore {
      * restoration process. Optionally, a new {@code targetPath} can be specified to restore
      * the item to a different location. If the specified {@code path} refers to a trashed
      * directory, all its trashed contents will also be restored.
+     * If restoring a file would create a name conflict with an existing file, the system
+     * resolves this by appending a numerical suffix. For example, if {@code image.jpeg} exists,
+     * the restored file will be named {@code image (1).jpeg}.
      * </p>
      * <p>
-     * This API is available starting from **Target SDK 37**.
      * Apps using this API must declare the
      * {@link android.Manifest.permission#MANAGE_EXTERNAL_STORAGE} permission
      * in their manifest and be granted it by the user.
