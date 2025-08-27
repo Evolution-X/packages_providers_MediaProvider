@@ -181,117 +181,117 @@ public final class MediaStore {
      */
     public static final String VOLUME_EXTERNAL_PRIMARY = "external_primary";
 
-    /** {@hide} */
+    /** @hide */
     public static final String VOLUME_DEMO = "demo";
 
-    /** {@hide} */
+    /** @hide */
     public static final String RESOLVE_PLAYLIST_MEMBERS_CALL = "resolve_playlist_members";
-    /** {@hide} */
+    /** @hide */
     public static final String RUN_IDLE_MAINTENANCE_CALL = "run_idle_maintenance";
-    /** {@hide} */
+    /** @hide */
     public static final String WAIT_FOR_IDLE_CALL = "wait_for_idle";
-    /** {@hide} */
+    /** @hide */
     public static final String SCAN_FILE_CALL = "scan_file";
-    /** {@hide} */
+    /** @hide */
     public static final String SCAN_VOLUME_CALL = "scan_volume";
-    /** {@hide} */
+    /** @hide */
     public static final String CREATE_WRITE_REQUEST_CALL = "create_write_request";
-    /** {@hide} */
+    /** @hide */
     public static final String CREATE_TRASH_REQUEST_CALL = "create_trash_request";
-    /** {@hide} */
+    /** @hide */
     public static final String CREATE_FAVORITE_REQUEST_CALL = "create_favorite_request";
-    /** {@hide} */
+    /** @hide */
     public static final String MARK_MEDIA_AS_FAVORITE = "mark_media_as_favorite";
-    /** {@hide} */
+    /** @hide */
     public static final String CREATE_DELETE_REQUEST_CALL = "create_delete_request";
 
-    /** {@hide} */
+    /** @hide */
     public static final String GET_VERSION_CALL = "get_version";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_GENERATION_CALL = "get_generation";
 
-    /** {@hide} */
+    /** @hide */
     public static final String START_LEGACY_MIGRATION_CALL = "start_legacy_migration";
-    /** {@hide} */
+    /** @hide */
     public static final String FINISH_LEGACY_MIGRATION_CALL = "finish_legacy_migration";
 
-    /** {@hide} */
+    /** @hide */
     @Deprecated
     public static final String EXTERNAL_STORAGE_PROVIDER_AUTHORITY =
             "com.android.externalstorage.documents";
 
-    /** {@hide} */
+    /** @hide */
     public static final String GET_DOCUMENT_URI_CALL = "get_document_uri";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_MEDIA_URI_CALL = "get_media_uri";
 
-    /** {@hide} */
+    /** @hide */
     public static final String ENSURE_PROVIDERS_CALL = "ensure_providers_call";
 
-    /** {@hide} */
+    /** @hide */
     public static final String GET_REDACTED_MEDIA_URI_CALL = "get_redacted_media_uri";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_REDACTED_MEDIA_URI_LIST_CALL = "get_redacted_media_uri_list";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_URI_LIST = "uri_list";
-    /** {@hide} */
+    /** @hide */
     public static final String QUERY_ARG_REDACTED_URI = "android:query-arg-redacted-uri";
 
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_URI = "uri";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_URI_PERMISSIONS = "uriPermissions";
 
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_CLIP_DATA = "clip_data";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_CONTENT_VALUES = "content_values";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_RESULT = "result";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_FILE_DESCRIPTOR = "file_descriptor";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_LOCAL_PROVIDER = "local_provider";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_IS_STABLE_URIS_ENABLED = "is_stable_uris_enabled";
 
-    /** {@hide} */
+    /** @hide */
     public static final String IS_SYSTEM_GALLERY_CALL = "is_system_gallery";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_IS_SYSTEM_GALLERY_UID = "is_system_gallery_uid";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_IS_SYSTEM_GALLERY_RESPONSE = "is_system_gallery_response";
 
-    /** {@hide} */
+    /** @hide */
     public static final String IS_CURRENT_CLOUD_PROVIDER_CALL = "is_current_cloud_provider";
-    /** {@hide} */
+    /** @hide */
     public static final String IS_SUPPORTED_CLOUD_PROVIDER_CALL = "is_supported_cloud_provider";
-    /** {@hide} */
+    /** @hide */
     public static final String NOTIFY_CLOUD_MEDIA_CHANGED_EVENT_CALL =
             "notify_cloud_media_changed_event";
-    /** {@hide} */
+    /** @hide */
     public static final String SYNC_PROVIDERS_CALL = "sync_providers";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_CLOUD_PROVIDER_CALL = "get_cloud_provider";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_CLOUD_PROVIDER_RESULT = "get_cloud_provider_result";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_CLOUD_PROVIDER_LABEL_CALL = "get_cloud_provider_label";
-    /** {@hide} */
+    /** @hide */
     public static final String SET_CLOUD_PROVIDER_RESULT = "set_cloud_provider_result";
-    /** {@hide} */
+    /** @hide */
     public static final String SET_CLOUD_PROVIDER_CALL = "set_cloud_provider";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_CLOUD_PROVIDER = "cloud_provider";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_CLOUD_PROVIDER_RESULT = "cloud_provider_result";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_CLOUD_PROVIDER_DETAILS =
             "get_cloud_provider_details";
-    /** {@hide} */
+    /** @hide */
     public static final String GET_CLOUD_PROVIDER_DETAILS_RESULT =
             "get_cloud_provider_details_result";
-    /** {@hide} */
+    /** @hide */
     public static final String CREATE_SURFACE_CONTROLLER = "create_surface_controller";
 
     /** @hide */
@@ -333,39 +333,39 @@ public final class MediaStore {
     public static final String CREATE_CANCELLATION_SIGNAL_RESULT =
             "create_cancellation_signal_result";
 
-    /** {@hide} */
+    /** @hide */
     public static final String USES_FUSE_PASSTHROUGH = "uses_fuse_passthrough";
-    /** {@hide} */
+    /** @hide */
     public static final String USES_FUSE_PASSTHROUGH_RESULT = "uses_fuse_passthrough_result";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_MEDIA_INIT_CALL = "picker_media_init";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_INTERNAL_SEARCH_MEDIA_INIT_CALL =
             "picker_internal_search_media_init";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_MEDIA_SETS_INIT_CALL =
             "picker_media_sets_init_call";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_MEDIA_IN_MEDIA_SET_INIT_CALL =
             "picker_media_in_media_set_init";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_GET_SEARCH_PROVIDERS_CALL =
             "picker_internal_get_search_providers";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_TRANSCODE_CALL = "picker_transcode";
-    /** {@hide} */
+    /** @hide */
     public static final String PICKER_TRANSCODE_RESULT = "picker_transcode_result";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_LOCAL_ONLY = "is_local_only";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_ALBUM_ID = "album_id";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_ALBUM_AUTHORITY = "album_authority";
-    /** {@hide} */
+    /** @hide */
     public static final String EXTRA_CALLING_PACKAGE_UID = "calling_package_uid";
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String SET_STABLE_URIS_FLAG =
@@ -373,7 +373,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String RUN_IDLE_MAINTENANCE_FOR_STABLE_URIS =
@@ -381,63 +381,63 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String READ_BACKUP = "read_backup";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String GET_OWNER_PACKAGE_NAME = "get_owner_package_name";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String GET_BACKUP_FILES = "get_backup_files";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String GET_RECOVERY_DATA = "get_recovery_data";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String REMOVE_RECOVERY_DATA = "remove_recovery_data";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String MEDIA_SERVICE_V2_CALL = "media_service_v2_call";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String DELETE_BACKED_UP_FILE_PATHS = "delete_backed_up_file_paths";
 
-    /** {@hide} */
+    /** @hide */
     public static final String QUERY_FILE_ATTRS_FROM_LEVELDB = "query_file_attrs_from_leveldb";
 
-    /** {@hide} */
+    /** @hide */
     public static final String QUERY_ARG_MIME_TYPE = "android:query-arg-mime_type";
-    /** {@hide} */
+    /** @hide */
     public static final String QUERY_ARG_SIZE_BYTES = "android:query-arg-size_bytes";
-    /** {@hide} */
+    /** @hide */
     public static final String QUERY_ARG_ALBUM_ID = "android:query-arg-album_id";
-    /** {@hide} */
+    /** @hide */
     public static final String QUERY_ARG_ALBUM_AUTHORITY = "android:query-arg-album_authority";
 
     /**
@@ -452,21 +452,21 @@ public final class MediaStore {
      */
     public static final String PARAM_DELETE_DATA = "deletedata";
 
-    /** {@hide} */
+    /** @hide */
     public static final String PARAM_INCLUDE_PENDING = "includePending";
-    /** {@hide} */
+    /** @hide */
     public static final String PARAM_PROGRESS = "progress";
-    /** {@hide} */
+    /** @hide */
     public static final String PARAM_REQUIRE_ORIGINAL = "requireOriginal";
-    /** {@hide} */
+    /** @hide */
     public static final String PARAM_LIMIT = "limit";
 
-    /** {@hide} */
+    /** @hide */
     public static final int MY_USER_ID = UserHandle.myUserId();
-    /** {@hide} */
+    /** @hide */
     public static final int MY_UID = android.os.Process.myUid();
     // Stolen from: UserHandle#getUserId
-    /** {@hide} */
+    /** @hide */
     public static final int PER_USER_RANGE = 100000;
 
     private static final int PICK_IMAGES_MAX_LIMIT = 100;
@@ -476,28 +476,28 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String FILE_PATH = "file_path";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String PARENT_FILE_PATH = "parent_file_path";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String MARK_FILE_AS_TRASHED = "mark_file_as_trashed";
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static final String MARK_FILE_AS_RESTORED = "mark_file_as_restored";
@@ -2794,19 +2794,19 @@ public final class MediaStore {
             return ContentUris.withAppendedId(getContentUri(volumeName), rowId);
         }
 
-        /** {@hide} */
+        /** @hide */
         @UnsupportedAppUsage
         public static Uri getMtpObjectsUri(@NonNull String volumeName) {
             return MediaStore.Files.getContentUri(volumeName);
         }
 
-        /** {@hide} */
+        /** @hide */
         @UnsupportedAppUsage
         public static final Uri getMtpObjectsUri(@NonNull String volumeName, long fileId) {
             return MediaStore.Files.getContentUri(volumeName, fileId);
         }
 
-        /** {@hide} */
+        /** @hide */
         @UnsupportedAppUsage
         public static final Uri getMtpReferencesUri(@NonNull String volumeName, long fileId) {
             return MediaStore.Files.getContentUri(volumeName, fileId);
@@ -5428,7 +5428,7 @@ public final class MediaStore {
         throw new IllegalArgumentException("Missing volume name: " + uri);
     }
 
-    /** {@hide} */
+    /** @hide */
     public static boolean isKnownVolume(@NonNull String volumeName) {
         if (VOLUME_INTERNAL.equals(volumeName)) return true;
         if (VOLUME_EXTERNAL.equals(volumeName)) return true;
@@ -5437,7 +5437,7 @@ public final class MediaStore {
         return false;
     }
 
-    /** {@hide} */
+    /** @hide */
     public static @NonNull String checkArgumentVolumeName(@NonNull String volumeName) {
         if (TextUtils.isEmpty(volumeName)) {
             throw new IllegalArgumentException();
@@ -5556,7 +5556,7 @@ public final class MediaStore {
         return getGeneration(context.getContentResolver(), volumeName);
     }
 
-    /** {@hide} */
+    /** @hide */
     public static long getGeneration(@NonNull ContentResolver resolver,
             @NonNull String volumeName) {
         final Bundle in = new Bundle();
@@ -5794,7 +5794,7 @@ public final class MediaStore {
         }
     }
 
-    /** {@hide} */
+    /** @hide */
     public static void resolvePlaylistMembers(@NonNull ContentResolver resolver,
             @NonNull Uri playlistUri) {
         final Bundle in = new Bundle();
@@ -5802,12 +5802,12 @@ public final class MediaStore {
         resolver.call(AUTHORITY, RESOLVE_PLAYLIST_MEMBERS_CALL, null, in);
     }
 
-    /** {@hide} */
+    /** @hide */
     public static void runIdleMaintenance(@NonNull ContentResolver resolver) {
         resolver.call(AUTHORITY, RUN_IDLE_MAINTENANCE_CALL, null, null);
     }
 
-    /** {@hide} */
+    /** @hide */
     public static void setStableUrisFlag(@NonNull ContentResolver resolver,
             @NonNull String volumeName, boolean isEnabled) {
         final Bundle extras = new Bundle();
@@ -5817,7 +5817,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static void runIdleMaintenanceForStableUris(@NonNull ContentResolver resolver) {
@@ -5826,7 +5826,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static String readBackup(@NonNull ContentResolver resolver,
@@ -5839,7 +5839,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static String getOwnerPackageName(@NonNull ContentResolver resolver, int ownerId) {
@@ -5850,7 +5850,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static void deleteBackedUpFilePaths(@NonNull ContentResolver resolver,
@@ -5860,7 +5860,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static String[] getBackupFiles(@NonNull ContentResolver resolver) {
@@ -5870,7 +5870,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static String[] getRecoveryData(@NonNull ContentResolver resolver) {
@@ -5880,7 +5880,7 @@ public final class MediaStore {
 
     /**
      * Only used for testing.
-     * {@hide}
+     * @hide
      */
     @VisibleForTesting
     public static void removeRecoveryData(@NonNull ContentResolver resolver) {
@@ -6032,7 +6032,7 @@ public final class MediaStore {
         return out.getBoolean(EXTRA_CLOUD_PROVIDER_RESULT);
     }
 
-    /** {@hide} */
+    /** @hide */
     public static String getCurrentCloudProvider(@NonNull ContentResolver resolver) {
         try (ContentProviderClient client = resolver.acquireContentProviderClient(AUTHORITY)) {
             final Bundle out = client.call(GET_CLOUD_PROVIDER_CALL, /* arg */ null,

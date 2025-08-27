@@ -1274,7 +1274,7 @@ public class MediaProvider extends ContentProvider {
         return null;
     };
 
-    /** {@hide} */
+    /** @hide */
     public static final OnLegacyMigrationListener MIGRATION_LISTENER =
             new OnLegacyMigrationListener() {
         @Override
