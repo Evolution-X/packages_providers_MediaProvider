@@ -27,6 +27,9 @@
     <!-- Search Bar trailing icon description text-->
     <string name="photopicker_search_clear_text" translation_description="Description for trailing icon to clear search text in Search Bar">Clear search text</string>
 
+    <!-- Search Bar trailing voice search button icon description text-->
+    <string name="photopicker_search_voice_search_button_description" translation_description="Description for trailing icon for voice search input in Search Bar [CHAR LIMIT=30]">Voice input</string>
+
     <!-- Empty state title when the search has no results -->
     <string name="photopicker_search_result_empty_state_title" translation_description="Title of the message shown to the user when there are no search results to show">No results found</string>
 

@@ -780,4 +780,109 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.onNode(hasText(providerPlaceholder)).assertIsDisplayed()
         }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchBar_whenClicked_opensSearchViewWithVoiceSearchIcon() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Perform click action on the Search bar
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+                .performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(
+                            R.string.photopicker_search_voice_search_button_description
+                        )
+                    )
+                )
+                .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testClearSearchQueryIcon_clearsQuery() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Perform click action on the Search bar to focus it
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            composeTestRule.waitForIdle()
+
+            // Input test query in search bar
+            val testQuery = "testquery"
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .performTextInput(testQuery)
+            composeTestRule.waitForIdle()
+
+            // Verify the clear icon is displayed
+            val clearTextContentDescription =
+                resources.getString(R.string.photopicker_search_clear_text)
+            composeTestRule
+                .onNode(hasContentDescription(clearTextContentDescription))
+                .assertIsDisplayed()
+
+            // Click the clear icon
+            composeTestRule
+                .onNode(hasContentDescription(clearTextContentDescription))
+                .performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            // Verify the query is cleared
+            composeTestRule.onNodeWithText(testQuery).assertIsNotDisplayed()
+
+            // Verify the placeholder is shown again
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .assertIsDisplayed()
+
+            // Verify the clear icon is gone
+            composeTestRule
+                .onNode(hasContentDescription(clearTextContentDescription))
+                .assertIsNotDisplayed()
+
+            // Verify the voice search icon is now displayed
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(
+                            R.string.photopicker_search_voice_search_button_description
+                        )
+                    )
+                )
+                .assertIsDisplayed()
+        }
 }

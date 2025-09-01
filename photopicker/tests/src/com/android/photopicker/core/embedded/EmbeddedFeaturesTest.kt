@@ -1479,8 +1479,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 .performClick()
 
             // Verify the tooltip text uses the generic app label
-            val genericAppLabel =
-                resources.getString(R.string.photopicker_hsr_generic_app_label)
+            val genericAppLabel = resources.getString(R.string.photopicker_hsr_generic_app_label)
             val expectedTooltipText =
                 resources.getString(R.string.photopicker_hsr_tooltip_text, genericAppLabel)
             composeTestRule
@@ -1648,5 +1647,62 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             // Verify the lazy grid is displayed, there should be only one scrollable component
             // which is the photo grid
             composeTestRule.onAllNodes(hasScrollAction()).assertCountEquals(1)
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH, Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER)
+    fun testVoiceSearchInputIsNotAvailableInEmbedded() =
+        testScope.runTest {
+            configurationManager
+                .get()
+                .setCaller(
+                    callingPackage = "com.android.test.package",
+                    callingPackageUid = 12345,
+                    callingPackageLabel = "Test Package",
+                )
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+            testDataService.collectionInfo.put(
+                cloudProvider,
+                CollectionInfo(
+                    authority = cloudProvider.authority,
+                    collectionId = null,
+                    accountName = null,
+                    accountConfigurationIntent = Intent(),
+                ),
+            )
+
+            val resources = getTestableContext().getResources()
+
+            advanceTimeBy(100)
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+            composeTestRule.waitForIdle()
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+                .performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(
+                            R.string.photopicker_search_voice_search_button_description
+                        )
+                    )
+                )
+                .assertIsNotDisplayed()
         }
 }
