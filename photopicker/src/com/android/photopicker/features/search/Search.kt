@@ -16,8 +16,13 @@
 
 package com.android.photopicker.features.search
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
 import android.util.Log
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +43,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.HideImage
 import androidx.compose.material.icons.outlined.History
@@ -119,10 +125,10 @@ import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.extensions.navigateToPreviewMedia
 import com.android.photopicker.extensions.transferScrollableTouchesToHostInEmbedded
 import com.android.photopicker.features.preview.PreviewFeature
-import com.android.photopicker.features.search.SearchViewModel.Companion.ZERO_STATE_SEARCH_QUERY
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
 import com.android.photopicker.features.search.model.UserSearchState
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -470,40 +476,129 @@ private fun SearchInput(
         expanded = focused,
         onExpandedChange = onFocused,
         leadingIcon = { SearchBarIcon(focused, onFocused, onSearchQueryChanged) },
-        trailingIcon = {
-            SearchBarTrailingIcon(
-                focused && !searchQuery.equals(ZERO_STATE_SEARCH_QUERY),
-                onSearchQueryChanged,
-            )
-        },
+        trailingIcon = { SearchBarTrailingIcon(focused, searchQuery, onSearchQueryChanged) },
         modifier = modifier.focusRequester(focusRequester),
     )
     RequestFocusOnResume(focusRequester = focusRequester, focused)
 }
 
 /**
- * A composable function that displays the trailing icon in a SearchBar. The icon is shown when
- * query is typed clicking on which clears the typed text.
+ * A composable function that displays the trailing icon in a SearchBar.
  *
- * @param showClearIcon A boolean value indicating whether clear icon is to be shown
- * @param onSearchQueryChanged A callback function that is invoked when the search query text
- *   changes. This function receives the updated search query as a parameter.
+ * The icon changes based on the search query and focus state. It shows a voice input icon when the
+ * query is empty and a clear icon when there is text. These icons are only shown when the search
+ * bar is focused and in an inactive search state.
+ *
+ * @param focused A boolean value indicating whether the search bar is in focus.
+ * @param searchQuery The current search query string.
+ * @param onSearchQueryChanged A callback function to update the search query.
  * @param viewModel The `SearchViewModel` providing the search logic and state.
  */
 @Composable
 private fun SearchBarTrailingIcon(
-    showClearIcon: Boolean,
+    focused: Boolean,
+    searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     viewModel: SearchViewModel = obtainViewModel(),
 ) {
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
-    if (showClearIcon && searchState is SearchState.Inactive) {
-        IconButton(onClick = { onSearchQueryChanged("") }) {
-            Icon(
-                Icons.Filled.Close,
-                contentDescription = stringResource(R.string.photopicker_search_clear_text),
-            )
+
+    if (focused && searchState is SearchState.Inactive) {
+        when (searchQuery.isEmpty()) {
+            true -> {
+                val isEmbedded =
+                    LocalPhotopickerConfiguration.current.runtimeEnv ==
+                        PhotopickerRuntimeEnv.EMBEDDED
+                if (!isEmbedded) {
+                    VoiceSearchIcon { spokenText ->
+                        onSearchQueryChanged(spokenText)
+                        viewModel.performSearch(query = spokenText)
+                    }
+                }
+            }
+            false -> {
+                ClearSearchQueryIcon { onSearchQueryChanged("") }
+            }
         }
+    }
+}
+
+/**
+ * A composable that displays a microphone icon to initiate voice search.
+ *
+ * It handles launching the speech recognizer intent and returns the result via a callback.
+ *
+ * @param onResult A callback that provides the recognized spoken text.
+ */
+@Composable
+private fun VoiceSearchIcon(onResult: (String) -> Unit) {
+    val speechRecognizerLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result
+            ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val results = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                val confidenceScores =
+                    result.data?.getFloatArrayExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES)
+                var spokenText: String? = null
+                if (!results.isNullOrEmpty()) {
+                    if (confidenceScores != null && confidenceScores.size == results.size) {
+                        var highestConfidence = -1.0f
+                        var bestResultIndex = 0
+                        for (i in confidenceScores.indices) {
+                            if (confidenceScores[i] > highestConfidence) {
+                                highestConfidence = confidenceScores[i]
+                                bestResultIndex = i
+                            }
+                        }
+                        spokenText = results[bestResultIndex]
+                    } else {
+                        // Fallback to the first result if confidence scores are not available
+                        spokenText = results[0]
+                    }
+                }
+                if (!spokenText.isNullOrEmpty()) {
+                    onResult(spokenText)
+                }
+            }
+        }
+
+    IconButton(
+        onClick = {
+            val intent =
+                Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(
+                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+                    )
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+                }
+            try {
+                speechRecognizerLauncher.launch(intent)
+            } catch (e: Exception) {
+                Log.w(SearchFeature.TAG, "Failed to launch speech recognition activity.", e)
+            }
+        }
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Mic,
+            contentDescription =
+                stringResource(R.string.photopicker_search_voice_search_button_description),
+        )
+    }
+}
+
+/**
+ * A composable that displays a close (X) icon to clear the current search query.
+ *
+ * @param onClear A callback function to be invoked when the icon is clicked.
+ */
+@Composable
+private fun ClearSearchQueryIcon(onClear: () -> Unit) {
+    IconButton(onClick = onClear) {
+        Icon(
+            Icons.Filled.Close,
+            contentDescription = stringResource(R.string.photopicker_search_clear_text),
+        )
     }
 }
 

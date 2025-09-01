@@ -24,8 +24,8 @@ import android.os.Bundle
 import android.os.CancellationSignal
 import android.util.Log
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.material.icons.outlined.SdCard
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.paging.PagingSource.LoadResult
@@ -1826,6 +1826,7 @@ open class MediaProviderClient {
         return when (categoryType) {
             CategoryType.DEVICE_FOLDERS -> Icon(Icons.Outlined.FolderCopy)
             CategoryType.APP_FOLDERS -> null
+            CategoryType.SD_CARD -> Icon(Icons.Outlined.SdCard)
             else -> providerToIconMap.getOrDefault(provider, null)
         }
     }

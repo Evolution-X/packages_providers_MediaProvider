@@ -384,7 +384,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
         db.setCustomScalarFunction("_INSERT", (arg) -> {
             if (arg != null && mFilesListener != null
                     && !mSchemaLock.isWriteLockedByCurrentThread()) {
-                final String[] split = arg.split(":", 11);
+                final String[] split = arg.split(":", 12);
                 final String volumeName = split[0];
                 final long id = Long.parseLong(split[1]);
                 final int mediaType = Integer.parseInt(split[2]);
@@ -393,9 +393,11 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                 final boolean isTrashed = Integer.parseInt(split[5]) != 0;
                 final boolean isFavorite = Integer.parseInt(split[6]) != 0;
                 final int userId = Integer.parseInt(split[7]);
-                final String dateExpires = split[8];
-                final String ownerPackageName = split[9];
-                final String path = split[10];
+                final long generationModified = Long.parseLong(split[8]);
+                final String dateExpires = split[9];
+                final String ownerPackageName = split[10];
+                final String path = split[11];
+
 
                 FileRow insertedRow = FileRow.newBuilder(id)
                         .setVolumeName(volumeName)
@@ -1683,8 +1685,11 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
         final String insertArg =
                 "new.volume_name||':'||new._id||':'||new.media_type||':'||new"
                         + ".is_download||':'||new.is_pending||':'||new.is_trashed||':'||new"
-                        + ".is_favorite||':'||new._user_id||':'||ifnull(new.date_expires,'null')"
-                        + "||':'||ifnull(new.owner_package_name,'null')||':'||new._data";
+                        + ".is_favorite||':'||new._user_id"
+                        + "||':'||new.generation_modified"
+                        + "||':'||ifnull(new.date_expires,'null')"
+                        + "||':'||ifnull(new.owner_package_name,'null')"
+                        + "||':'||new._data";
         final String updateArg =
                 "old.volume_name||':'||old._id||':'||old.media_type||':'||old.is_download"
                         + "||':'||new._id||':'||new.media_type||':'||new.is_download"
@@ -2096,7 +2101,8 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
     // to go independent of U schema changes.
     static final int VERSION_U = 1409;
     static final int VERSION_V = 1506;
-    public static final int VERSION_LATEST = VERSION_V;
+    static final int VERSION_B = 1602;
+    public static final int VERSION_LATEST = VERSION_B;
 
     /**
      * This method takes care of updating all the tables in the database to the
@@ -2351,6 +2357,10 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
 
             if (fromVersion < 1506) {
                 createSearchIndexProcessingStatusTable(db);
+            }
+
+            if (fromVersion < 1602) {
+                // Empty version bump to ensure triggers are recreated
             }
 
             // If this is the legacy database, it's not worth recomputing data

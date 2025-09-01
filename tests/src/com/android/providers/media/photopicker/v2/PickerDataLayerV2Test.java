@@ -120,6 +120,7 @@ import androidx.work.WorkManager;
 
 import com.android.providers.media.MediaProvider;
 import com.android.providers.media.PickerUriResolver;
+import com.android.providers.media.TestConfigStore;
 import com.android.providers.media.cloudproviders.CloudProviderPrimary;
 import com.android.providers.media.cloudproviders.SearchProvider;
 import com.android.providers.media.flags.Flags;
@@ -202,6 +203,7 @@ public class PickerDataLayerV2Test {
     private MockContentResolver mMockContentResolver;
     private TestContentProvider mLocalProvider;
     private TestContentProvider mCloudProvider;
+    private TestConfigStore mTestConfigStore;
 
     @Rule
     public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
@@ -258,6 +260,8 @@ public class PickerDataLayerV2Test {
         doReturn(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
                     .getTargetContext().getResources())
                 .when(mMockContext).getResources();
+
+        mTestConfigStore = new TestConfigStore();
 
         androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
                 .getUiAutomation()
@@ -3694,7 +3698,8 @@ public class PickerDataLayerV2Test {
                 mContext,
                 getMediaQueryExtras(Long.MAX_VALUE, Long.MAX_VALUE, 100,
                         new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, SearchProvider.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
                     .isEqualTo(5);
@@ -3812,7 +3817,8 @@ public class PickerDataLayerV2Test {
                         new ArrayList<>(Arrays.asList(
                                 LOCAL_PROVIDER,
                                 CloudProviderPrimary.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
                     .isEqualTo(5);
@@ -3921,22 +3927,27 @@ public class PickerDataLayerV2Test {
                 CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
         final Cursor cursor2 = getMediaCategoriesCursor(
                 CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS);
-        final Cursor localCategoryCursor = new MergeCursor(new Cursor[]{cursor1, cursor2});
+        final Cursor cursor3 = getMediaCategoriesCursor(
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD);
+        final Cursor localCategoryCursor = new MergeCursor(new Cursor[]{cursor1, cursor2, cursor3});
         mLocalProvider.setQueryResult(localCategoryCursor);
 
         doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
         doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
-        Cursor cursor3 = getAlbumCursor("CloudAlbum", DATE_TAKEN_MS, CLOUD_ID_1, CLOUD_PROVIDER);
-        mCloudProvider.setQueryResult(cursor3);
+        final Cursor cursor4 = getAlbumCursor("CloudAlbum", DATE_TAKEN_MS, CLOUD_ID_1,
+                CLOUD_PROVIDER);
+        mCloudProvider.setQueryResult(cursor4);
 
+        mTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
         try (Cursor cursor = PickerDataLayerV2.queryCategoriesAndAlbums(
                 mMockContext,
                 getMediaQueryExtras(Long.MAX_VALUE, Long.MAX_VALUE, 100,
                         new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, SearchProvider.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
-                    .isEqualTo(6);
+                    .isEqualTo(7);
 
             cursor.moveToFirst();
             // Assert for Favorites album
@@ -4029,6 +4040,24 @@ public class PickerDataLayerV2Test {
                     .isEqualTo(4L);
 
             cursor.moveToNext();
+            // Assert that the next media group is "Sd card" category
+            assertWithMessage("Unexpected media group")
+                    .that(MediaGroup.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    PickerSQLConstants.MediaGroupResponseColumns
+                                            .MEDIA_GROUP.getColumnName()))))
+                    .isEqualTo(MediaGroup.CATEGORY);
+            assertWithMessage("Unexpected group id")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName())))
+                    .isEqualTo(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(5L);
+
+            cursor.moveToNext();
             // Assert that the next media group is a cloud album
             assertWithMessage("Unexpected media group")
                     .that(MediaGroup.valueOf(
@@ -4047,7 +4076,7 @@ public class PickerDataLayerV2Test {
                     .that(cursor.getLong(cursor.getColumnIndexOrThrow(
                             PickerSQLConstants.MediaGroupResponseColumns
                                     .PICKER_ID.getColumnName())))
-                    .isEqualTo(5L);
+                    .isEqualTo(6L);
         }
 
     }
@@ -4083,7 +4112,8 @@ public class PickerDataLayerV2Test {
                         new ArrayList<>(Arrays.asList(
                                 LOCAL_PROVIDER,
                                 CloudProviderPrimary.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
                     .isEqualTo(5);
