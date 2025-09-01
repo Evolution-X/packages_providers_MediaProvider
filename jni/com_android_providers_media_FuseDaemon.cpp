@@ -65,11 +65,12 @@ static std::vector<std::string> convert_object_array_to_string_vector(
 
 static jobjectArray convert_string_vector_to_object_array(JNIEnv* env,
                                                           std::vector<std::string> string_vector) {
-    jclass stringClass = env->FindClass("java/lang/String");
-    jobjectArray arr = env->NewObjectArray(string_vector.size(), stringClass, NULL);
+    ScopedLocalRef<jclass> stringClass(env, env->FindClass("java/lang/String"));
+    jobjectArray arr = env->NewObjectArray(string_vector.size(), stringClass.get(), NULL);
     for (int i = 0; i < string_vector.size(); i++) {
-        ScopedLocalRef<jstring> path(env, env->NewStringUTF(string_vector.at(i).c_str()));
-        env->SetObjectArrayElement(arr, i, path.get());
+        jstring path = env->NewStringUTF(string_vector.at(i).c_str());
+        env->SetObjectArrayElement(arr, i, path);
+        env->DeleteLocalRef(path);
     }
     return arr;
 }
@@ -107,10 +108,9 @@ void com_android_providers_media_FuseDaemon_start(
         return;
     }
 
-    const std::vector<std::string>& transcoding_relative_paths =
-            get_supported_transcoding_relative_paths(env,
-                    java_supported_transcoding_relative_paths);
-    const std::vector<std::string>& uncached_relative_paths =
+    std::vector<std::string> transcoding_relative_paths = get_supported_transcoding_relative_paths(
+            env, java_supported_transcoding_relative_paths);
+    std::vector<std::string> uncached_relative_paths =
             get_supported_uncached_relative_paths(env, java_supported_uncached_relative_paths);
 
     daemon->Start(std::move(ufd), utf_chars_path.c_str(), uncached_mode,
@@ -372,9 +372,13 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
         }
     }
 
+    ScopedLocalRef<jstring> j_ref_owner_pkg_name(env, env->NewStringUTF(owner_pkg_name.c_str()));
+    if (!j_ref_owner_pkg_name.get()) {
+        return nullptr;
+    }
+
     return env->NewObject(gFileAccessAttributesClass, gFileAccessAttributesCtor, row_id, media_type,
-                          is_pending, is_trashed, owner_pkg_id,
-                          env->NewStringUTF(owner_pkg_name.c_str()));
+                          is_pending, is_trashed, owner_pkg_id, j_ref_owner_pkg_name.get());
 }
 
 jstring com_android_providers_media_FuseDaemon_read_backed_up_data(JNIEnv* env, jobject self,
@@ -386,14 +390,20 @@ jstring com_android_providers_media_FuseDaemon_read_backed_up_data(JNIEnv* env, 
         LOG(WARNING) << "Couldn't initialise FUSE device id";
         return nullptr;
     }
-    return env->NewStringUTF(daemon->ReadBackedUpDataFromLevelDb(utf_chars_path.c_str()).c_str());
+
+    std::string backed_up_data = daemon->ReadBackedUpDataFromLevelDb(utf_chars_path.c_str());
+    ScopedLocalRef<jstring> j_backed_up_data(env, env->NewStringUTF(backed_up_data.c_str()));
+    return j_backed_up_data.release();
 }
 
 jstring com_android_providers_media_FuseDaemon_read_ownership(JNIEnv* env, jobject self,
                                                               jlong java_daemon, jstring key) {
     fuse::FuseDaemon* const daemon = reinterpret_cast<fuse::FuseDaemon*>(java_daemon);
     ScopedUtfChars utf_chars_key(env, key);
-    return env->NewStringUTF(daemon->ReadOwnership(utf_chars_key.c_str()).c_str());
+
+    std::string ownership = daemon->ReadOwnership(utf_chars_key.c_str());
+    ScopedLocalRef<jstring> result(env, env->NewStringUTF(ownership.c_str()));
+    return result.release();
 }
 
 void com_android_providers_media_FuseDaemon_create_owner_id_relation(JNIEnv* env, jobject self,
@@ -410,25 +420,50 @@ void com_android_providers_media_FuseDaemon_create_owner_id_relation(JNIEnv* env
 jobject com_android_providers_media_FuseDaemon_read_owner_relations(JNIEnv* env, jobject self,
                                                                     jlong java_daemon) {
     fuse::FuseDaemon* const daemon = reinterpret_cast<fuse::FuseDaemon*>(java_daemon);
-    // Create a Java map object.
-    jobject map =
-            env->NewObject(env->FindClass("java/util/HashMap"),
-                           env->GetMethodID(env->FindClass("java/util/HashMap"), "<init>", "()V"));
+
+    // Get a reference to HashMap class and the constructor method ID
+    ScopedLocalRef<jclass> hashMapClass(env, env->FindClass("java/util/HashMap"));
+    if (!hashMapClass.get()) {
+        return nullptr;
+    }
+    jmethodID hashMapCtor = env->GetMethodID(hashMapClass.get(), "<init>", "()V");
+    if (!hashMapCtor) {
+        return nullptr;
+    }
+
+    // Get the HashMap.put method ID
+    jmethodID hashMapPut = env->GetMethodID(
+            hashMapClass.get(), "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+    if (!hashMapPut) {
+        return nullptr;
+    }
+
+    // Create a Java map object and manage it with ScopedLocalRef.
+    ScopedLocalRef<jobject> map(env, env->NewObject(hashMapClass.get(), hashMapCtor));
+    if (!map.get()) {
+        return nullptr;
+    }
 
     // Get the key-value pairs from the native method.
     std::map<std::string, std::string> myMap = daemon->GetOwnerRelationship();
 
     // Iterate over the map and add the key-value pairs to the Java map.
-    for (auto it = myMap.begin(); it != myMap.end(); ++it) {
-        env->CallObjectMethod(
-                map,
-                env->GetMethodID(env->FindClass("java/util/HashMap"), "put",
-                                 "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"),
-                env->NewStringUTF(it->first.c_str()), env->NewStringUTF(it->second.c_str()));
+    for (auto const& [key, value] : myMap) {
+        ScopedLocalRef<jstring> j_key(env, env->NewStringUTF(key.c_str()));
+        if (!j_key.get()) {
+            continue;
+        }
+
+        ScopedLocalRef<jstring> j_value(env, env->NewStringUTF(value.c_str()));
+        if (!j_value.get()) {
+            continue;
+        }
+
+        env->CallObjectMethod(map.get(), hashMapPut, j_key.get(), j_value.get());
     }
 
     // Return the Java map object.
-    return map;
+    return map.release();
 }
 
 void com_android_providers_media_FuseDaemon_remove_owner_id_relation(JNIEnv* env, jobject self,

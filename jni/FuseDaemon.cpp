@@ -1539,7 +1539,8 @@ static void pf_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t new_parent,
 */
 
 static handle* create_handle_for_node(struct fuse* fuse, const string& path, int fd, uid_t uid,
-                                      uid_t transforms_uid, node* node, const RedactionInfo* ri,
+                                      uid_t transforms_uid, node* node,
+                                      std::unique_ptr<const RedactionInfo>&& ri,
                                       const bool allow_passthrough, const bool open_info_direct_io,
                                       int* keep_cache) {
     std::lock_guard<std::recursive_mutex> guard(fuse->lock);
@@ -1564,9 +1565,8 @@ static handle* create_handle_for_node(struct fuse* fuse, const string& path, int
         // require redaction so (2) implies (1)
         bool passthrough = !redaction_needed && transforms_complete;
         bool direct_io = open_info_direct_io && !passthrough;
-        handle = new struct handle(fd, ri, !direct_io /* cached */,
-                                   passthrough /* passthrough */, uid,
-                                   transforms_uid);
+        handle = new struct handle(fd, std::move(ri), !direct_io /* cached */,
+                                   passthrough /* passthrough */, uid, transforms_uid);
     } else {
         // Without fuse->passthrough, we don't want to use the FUSE VFS cache in two cases:
         // 1. When redaction is needed because app A with EXIF access might access
@@ -1595,8 +1595,8 @@ static handle* create_handle_for_node(struct fuse* fuse, const string& path, int
         } else {
             *keep_cache = transforms_complete;
         }
-        handle = new struct handle(fd, ri, !direct_io /* cached */, false /* passthrough */, uid,
-                                   transforms_uid);
+        handle = new struct handle(fd, std::move(ri), !direct_io /* cached */,
+                                   false /* passthrough */, uid, transforms_uid);
     }
 
     node->AddHandle(handle);
@@ -1738,7 +1738,7 @@ static void pf_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
     // If is_fd_from_java==true, we disallow passthrough because the fd can be pointing to the
     // FUSE fs if gotten from another process
     const handle* h = create_handle_for_node(fuse, io_path, fd, result->uid, result->transforms_uid,
-                                             node, result->redaction_info.release(),
+                                             node, std::move(result->redaction_info),
                                              /* allow_passthrough */ !is_fd_from_java,
                                              open_info.direct_io, &keep_cache);
     fill_fuse_file_info(h, keep_cache, fi);
@@ -2415,8 +2415,9 @@ static void pf_create(fuse_req_t req,
     // to the file before all the EXIF content is written. We could special case reads before the
     // first close after a file has just been created.
     int keep_cache = 1;
+    std::unique_ptr<RedactionInfo> ri = std::make_unique<RedactionInfo>();
     const handle* h = create_handle_for_node(
-            fuse, child_path, fd, req->ctx.uid, 0 /* transforms_uid */, node, new RedactionInfo(),
+            fuse, child_path, fd, req->ctx.uid, 0 /* transforms_uid */, node, std::move(ri),
             /* allow_passthrough */ true, open_info.direct_io, &keep_cache);
     fill_fuse_file_info(h, keep_cache, fi);
 
@@ -2796,11 +2797,15 @@ void FuseDaemon::SetupLevelDbConnection(const std::string& instance_name) {
             "/data/media/" + MY_USER_ID_STRING + "/.transforms/recovery/leveldb-" + instance_name;
     leveldb::Options options;
     options.create_if_missing = true;
-    leveldb::DB* leveldb;
-    leveldb::Status status = leveldb::DB::Open(options, leveldbPath, &leveldb);
+
+    std::unique_ptr<leveldb::DB> leveldb_db_ptr;
+    leveldb::DB* raw_ptr = nullptr;
+    leveldb::Status status = leveldb::DB::Open(options, leveldbPath, &raw_ptr);
+    leveldb_db_ptr.reset(raw_ptr);
+
     if (status.ok()) {
         fuse->level_db_connection_map.insert(
-                std::pair<std::string, leveldb::DB*>(instance_name, leveldb));
+                std::make_pair(instance_name, leveldb_db_ptr.release()));
         LOG(INFO) << "Leveldb connection established for :" << instance_name;
     } else {
         LOG(ERROR) << "Leveldb connection failed for :" << instance_name
@@ -2891,8 +2896,9 @@ std::vector<std::string> FuseDaemon::ReadFilePathsFromLevelDb(const std::string&
         return file_paths;
     }
 
-    leveldb::Iterator* it =
-            fuse->level_db_connection_map[volume_name]->NewIterator(leveldb::ReadOptions());
+    std::unique_ptr<leveldb::Iterator> it(
+            fuse->level_db_connection_map[volume_name]->NewIterator(leveldb::ReadOptions()));
+
     if (android::base::EqualsIgnoreCase(last_read_value, "")) {
         it->SeekToFirst();
     } else {
@@ -3023,10 +3029,9 @@ std::map<std::string, std::string> FuseDaemon::GetOwnerRelationship() {
         return resultMap;
     }
 
-    leveldb::Status status;
-    // Get the key-value pairs from the database.
-    leveldb::Iterator* it =
-            fuse->level_db_connection_map[OWNERSHIP_RELATION]->NewIterator(leveldb::ReadOptions());
+    std::unique_ptr<leveldb::Iterator> it(
+            fuse->level_db_connection_map[OWNERSHIP_RELATION]->NewIterator(leveldb::ReadOptions()));
+
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         std::string key = it->key().ToString();
         std::string value = it->value().ToString();

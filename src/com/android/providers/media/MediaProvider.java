@@ -406,12 +406,6 @@ public class MediaProvider extends ContentProvider {
     @EnabledAfter(targetSdkVersion = android.os.Build.VERSION_CODES.R)
     static final long ENABLE_CHECKS_FOR_PRIVATE_FILES = 172100307L;
 
-    /**
-     * Regex of a selection string that matches a specific ID.
-     */
-    static final Pattern PATTERN_SELECTION_ID = Pattern.compile(
-            "(?:image_id|video_id)\\s*=\\s*(\\d+)");
-
     /** File access by uid requires the transcoding transform */
     private static final int FLAG_TRANSFORM_TRANSCODING = 1 << 0;
 
@@ -4173,7 +4167,11 @@ public class MediaProvider extends ContentProvider {
             final String selection = queryArgs.getString(QUERY_ARG_SQL_SELECTION);
             if ((table == IMAGES_THUMBNAILS || table == VIDEO_THUMBNAILS)
                     && !TextUtils.isEmpty(selection)) {
-                final Matcher matcher = PATTERN_SELECTION_ID.matcher(selection);
+                // Regex of a selection string that matches a specific ID. Does not have to be
+                // static as it is only for apps with targetSdk < Q.
+                Pattern patternSelectionId = Pattern.compile(
+                        "(?:image_id|video_id)\\s*=\\s*(\\d+)");
+                final Matcher matcher = patternSelectionId.matcher(selection);
                 if (matcher.matches()) {
                     final long id = Long.parseLong(matcher.group(1));
 
