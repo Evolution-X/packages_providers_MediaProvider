@@ -61,6 +61,9 @@
     <!-- Permission required to bind to OemMetadataService -->
     <uses-permission android:name="com.android.providers.media.permission.BIND_OEM_METADATA_SERVICE" />
 
+    <!-- Permission required to bind to SearchMediaService -->
+    <uses-permission android:name="com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE" />
+
     <!-- Allows an application to have access to OWNER_PACKAGE_NAME field of accessible media files.
          Applications are still required to have read access to media files.
          <p>Protection level: normal -->
@@ -83,6 +86,9 @@
 
     <permission android:name="com.android.providers.media.permission.BIND_OEM_METADATA_SERVICE"
                 android:protectionLevel="signature"/>
+
+    <permission android:name="com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE"
+        android:protectionLevel="signature|privileged"/>
 
     <!-- We use Photo Picker app icon and label for this package. It is necessary for Photo Picker
          GET_CONTENT take over. Some apps query packages that can handle GET_CONTENT and want to
