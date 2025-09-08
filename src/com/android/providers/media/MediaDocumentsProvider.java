@@ -29,6 +29,7 @@ import static android.provider.MediaStore.MATCH_INCLUDE;
 import android.annotation.NonNull;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.database.Cursor;
@@ -118,6 +119,8 @@ public class MediaDocumentsProvider extends DocumentsProvider {
 
     private static final String DOCUMENT_MIME_TYPES = joinNewline("*/*");
 
+    private static final String FILE_MIME_TYPES = joinNewline("*/*");
+
     static final String TYPE_IMAGES_ROOT = "images_root";
     static final String TYPE_IMAGES_BUCKET = "images_bucket";
     static final String TYPE_IMAGE = "image";
@@ -135,12 +138,16 @@ public class MediaDocumentsProvider extends DocumentsProvider {
     static final String TYPE_DOCUMENTS_BUCKET = "documents_bucket";
     static final String TYPE_DOCUMENT = "document";
 
+    static final String TYPE_FILES_ROOT = "files_root";
+    static final String TYPE_FILE = "file";
+
     private static volatile boolean sMediaStoreReady = false;
 
     private static volatile boolean sReturnedImagesEmpty = false;
     private static volatile boolean sReturnedVideosEmpty = false;
     private static volatile boolean sReturnedAudioEmpty = false;
     private static volatile boolean sReturnedDocumentsEmpty = false;
+    private static volatile boolean sReturnedFilesEmpty = false;
 
     private static String joinNewline(String... args) {
         return TextUtils.join("\n", args);
@@ -232,6 +239,14 @@ public class MediaDocumentsProvider extends DocumentsProvider {
             sReturnedDocumentsEmpty = false;
             notifyRootsChanged(context);
         }
+
+        if (Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+            // All items appear in the Files root, so any insertion makes it non-empty.
+            if (sReturnedFilesEmpty) {
+                sReturnedFilesEmpty = false;
+                notifyRootsChanged(context);
+            }
+        }
     }
 
     /**
@@ -240,25 +255,39 @@ public class MediaDocumentsProvider extends DocumentsProvider {
     static void onMediaStoreDelete(Context context, String volumeName, int type, long id) {
         if (MediaStore.VOLUME_INTERNAL.equals(volumeName)) return;
 
+        boolean permissionRevoked = false;
+
         if (type == FileColumns.MEDIA_TYPE_IMAGE) {
             final Uri uri = DocumentsContract.buildDocumentUri(
                     AUTHORITY, getDocIdForIdent(TYPE_IMAGE, id));
             context.revokeUriPermission(uri, ~0);
-            notifyRootsChanged(context);
+            permissionRevoked = true;
         } else if (type == FileColumns.MEDIA_TYPE_VIDEO) {
             final Uri uri = DocumentsContract.buildDocumentUri(
                     AUTHORITY, getDocIdForIdent(TYPE_VIDEO, id));
             context.revokeUriPermission(uri, ~0);
-            notifyRootsChanged(context);
+            permissionRevoked = true;
         } else if (type == FileColumns.MEDIA_TYPE_AUDIO) {
             final Uri uri = DocumentsContract.buildDocumentUri(
                     AUTHORITY, getDocIdForIdent(TYPE_AUDIO, id));
             context.revokeUriPermission(uri, ~0);
-            notifyRootsChanged(context);
+            permissionRevoked = true;
         } else if (type == FileColumns.MEDIA_TYPE_DOCUMENT) {
             final Uri uri = DocumentsContract.buildDocumentUri(
                     AUTHORITY, getDocIdForIdent(TYPE_DOCUMENT, id));
             context.revokeUriPermission(uri, ~0);
+            permissionRevoked = true;
+        }
+
+        if (Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+            // "Files" includes all of the types, so any deletion means revocation of a File URI.
+            final Uri uri = DocumentsContract.buildDocumentUri(
+                    AUTHORITY, getDocIdForIdent(TYPE_FILE, id));
+            context.revokeUriPermission(uri, ~0);
+            permissionRevoked = true;
+        }
+
+        if (permissionRevoked) {
             notifyRootsChanged(context);
         }
     }
@@ -383,6 +412,22 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         return new Pair<>(retSelection, retSelectionArgs.toArray(new String[0]));
     }
 
+    static Pair<String, String[]> addFileSelection(String selection,
+            String[] selectionArgs) {
+        String retSelection = "";
+        final List<String> retSelectionArgs = new ArrayList<>();
+        if (!TextUtils.isEmpty(selection) && selectionArgs != null) {
+            retSelection = selection + " AND ";
+            for (int i = 0; i < selectionArgs.length; i++) {
+                retSelectionArgs.add(selectionArgs[i]);
+            }
+        }
+
+        // Directories have an empty mime_type, all files have a non-empty mime_type.
+        retSelection += "mime_type != ''";
+        return new Pair<>(retSelection, retSelectionArgs.toArray(new String[0]));
+    }
+
     /**
      * Check whether filter mime type and get the matched mime types.
      * If we don't need to filter mime type, the matchedMimeTypes will be empty.
@@ -431,6 +476,9 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         } else if (TYPE_DOCUMENT.equals(ident.type) && ident.id != -1) {
             return ContentUris.withAppendedId(
                     Files.EXTERNAL_CONTENT_URI, ident.id);
+        } else if (TYPE_FILE.equals(ident.type) && ident.id != -1) {
+            return ContentUris.withAppendedId(
+                    Files.EXTERNAL_CONTENT_URI, ident.id);
         } else {
             throw new UnsupportedOperationException("Unsupported document " + docId);
         }
@@ -470,6 +518,35 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         } finally {
             Binder.restoreCallingIdentity(token);
         }
+    }
+
+    @Override
+    public String renameDocument(String docId, String displayName) throws FileNotFoundException {
+        enforceShellRestrictions();
+        final Uri target = getUriForDocumentId(docId);
+        final Ident ident = getIdentForDocId(docId);
+
+        // This shouldn't be called for other Roots (their documents don't advertise
+        // FLAG_SUPPORTS_RENAME) but check anyway.
+        if (!TYPE_FILE.equals(ident.type) || !Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+            // TODO: Does it make sense to throw FileNotFoundException here?
+            return null;
+        }
+
+        // Delegate to real provider
+        final long token = Binder.clearCallingIdentity();
+        try {
+            final ContentValues values = new ContentValues();
+            values.put(FileColumns.DISPLAY_NAME, displayName);
+            Bundle extras = new Bundle();
+            extras.putBoolean(MediaStore.QUERY_ARG_ALLOW_MOVEMENT, true);
+            getContext().getContentResolver().update(target, values, extras);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+
+        // the Uri and ID remain stable with a name change for MediaDocumentsProvider
+        return null;
     }
 
     @Override
@@ -600,6 +677,10 @@ public class MediaDocumentsProvider extends DocumentsProvider {
             includeVideosRoot(result);
             includeAudioRoot(result);
             includeDocumentsRoot(result);
+
+            if (Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+                includeFilesRoot(result);
+            }
         }
         return result;
     }
@@ -707,6 +788,19 @@ public class MediaDocumentsProvider extends DocumentsProvider {
                 result.setNotificationUri(resolver, Files.EXTERNAL_CONTENT_URI);
                 if (cursor.moveToFirst()) {
                     includeDocument(result, cursor);
+                }
+            } else if (TYPE_FILES_ROOT.equals(ident.type)
+                    && Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+                // single root
+                includeFilesRootDocument(result);
+            } else if (TYPE_FILE.equals(ident.type)
+                    && Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+                // single file
+                cursor = resolver.query(Files.EXTERNAL_CONTENT_URI, FileQuery.PROJECTION,
+                        FileColumns._ID + "=?", queryArgs, null);
+                result.setNotificationUri(resolver, Files.EXTERNAL_CONTENT_URI);
+                if (cursor.moveToFirst()) {
+                    includeFile(result, cursor);
                 }
             } else {
                 throw new UnsupportedOperationException("Unsupported document " + docId);
@@ -888,6 +982,17 @@ public class MediaDocumentsProvider extends DocumentsProvider {
                 while (cursor.moveToNext() && result.getCount() < limit) {
                     includeDocument(result, cursor);
                 }
+            } else if (TYPE_FILES_ROOT.equals(rootId)
+                    && Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+                // include all unique buckets
+                final Pair<String, String[]> selectionPair = addFileSelection(null, null);
+                cursor = resolver.query(Files.EXTERNAL_CONTENT_URI, FileQuery.PROJECTION,
+                        selectionPair.first, selectionPair.second,
+                        FileColumns.DATE_MODIFIED + " DESC");
+                result.setNotificationUri(resolver, Files.EXTERNAL_CONTENT_URI);
+                while (cursor.moveToNext() && result.getCount() < limit) {
+                    includeFile(result, cursor);
+                }
             } else {
                 throw new UnsupportedOperationException("Unsupported root " + rootId);
             }
@@ -995,6 +1100,22 @@ public class MediaDocumentsProvider extends DocumentsProvider {
                 while (cursor.moveToNext()) {
                     includeDocument(result, cursor);
                 }
+            } else if (TYPE_FILES_ROOT.equals(rootId)
+                    && Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+                final Pair<String, String[]> initialSelectionPair = buildSearchSelection(
+                        displayName, mimeTypes, lastModifiedAfter, fileSizeOver,
+                        FileColumns.DISPLAY_NAME, FileColumns.MIME_TYPE, FileColumns.DATE_MODIFIED,
+                        FileColumns.SIZE);
+                final Pair<String, String[]> selectionPair = addFileSelection(
+                        initialSelectionPair.first, initialSelectionPair.second);
+
+                cursor = resolver.query(Files.EXTERNAL_CONTENT_URI, FileQuery.PROJECTION,
+                        selectionPair.first, selectionPair.second,
+                        FileColumns.DATE_MODIFIED + " DESC");
+                result.setNotificationUri(resolver, Files.EXTERNAL_CONTENT_URI);
+                while (cursor.moveToNext()) {
+                    includeFile(result, cursor);
+                }
             } else {
                 throw new UnsupportedOperationException("Unsupported root " + rootId);
             }
@@ -1092,6 +1213,19 @@ public class MediaDocumentsProvider extends DocumentsProvider {
                 return openOrCreateVideoThumbnailCleared(id, sizeHint, signal);
             } else if (TYPE_VIDEO.equals(ident.type)) {
                 return openOrCreateVideoThumbnailCleared(ident.id, sizeHint, signal);
+            } else if (TYPE_FILE.equals(ident.type)
+                    && Flags.enableMediaDocumentsProviderAllfilesRoot()) {
+                final String[] queryArgs = new String[] { Long.toString(ident.id) };
+                Cursor cursor = getContext().getContentResolver().query(Files.EXTERNAL_CONTENT_URI,
+                        FileQuery.PROJECTION, FileColumns._ID + "=?", queryArgs, null);
+                if (cursor.moveToFirst()) {
+                    final String mimeType = cursor.getString(FileQuery.MIME_TYPE);
+                    if (isImageOrVideoMimeType(mimeType)) {
+                        return openOrCreateImageThumbnailCleared(ident.id, sizeHint, signal);
+                    }
+                }
+
+                throw new UnsupportedOperationException("Unsupported document " + docId);
             } else {
                 throw new UnsupportedOperationException("Unsupported document " + docId);
             }
@@ -1262,6 +1396,22 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         row.add(Root.COLUMN_QUERY_ARGS, SUPPORTED_QUERY_ARGS);
     }
 
+    private void includeFilesRoot(MatrixCursor result) {
+        int flags = Root.FLAG_LOCAL_ONLY | Root.FLAG_SUPPORTS_RECENTS | Root.FLAG_SUPPORTS_SEARCH;
+        if (isEmpty(Files.EXTERNAL_CONTENT_URI)) {
+            flags |= Root.FLAG_EMPTY;
+            sReturnedFilesEmpty = true;
+        }
+
+        final RowBuilder row = result.newRow();
+        row.add(Root.COLUMN_ROOT_ID, TYPE_FILES_ROOT);
+        row.add(Root.COLUMN_FLAGS, flags);
+        row.add(Root.COLUMN_TITLE, getContext().getString(R.string.root_files));
+        row.add(Root.COLUMN_DOCUMENT_ID, TYPE_FILES_ROOT);
+        row.add(Root.COLUMN_MIME_TYPES, FILE_MIME_TYPES);
+        row.add(Root.COLUMN_QUERY_ARGS, SUPPORTED_QUERY_ARGS);
+    }
+
     private void includeImagesRootDocument(MatrixCursor result) {
         final RowBuilder row = result.newRow();
         row.add(Document.COLUMN_DOCUMENT_ID, TYPE_IMAGES_ROOT);
@@ -1291,6 +1441,15 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         final RowBuilder row = result.newRow();
         row.add(Document.COLUMN_DOCUMENT_ID, TYPE_DOCUMENTS_ROOT);
         row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.root_documents));
+        row.add(Document.COLUMN_FLAGS,
+                Document.FLAG_DIR_PREFERS_GRID | Document.FLAG_DIR_PREFERS_LAST_MODIFIED);
+        row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
+    }
+
+    private void includeFilesRootDocument(MatrixCursor result) {
+        final RowBuilder row = result.newRow();
+        row.add(Document.COLUMN_DOCUMENT_ID, TYPE_FILES_ROOT);
+        row.add(Document.COLUMN_DISPLAY_NAME, getContext().getString(R.string.root_files));
         row.add(Document.COLUMN_FLAGS,
                 Document.FLAG_DIR_PREFERS_GRID | Document.FLAG_DIR_PREFERS_LAST_MODIFIED);
         row.add(Document.COLUMN_MIME_TYPE, Document.MIME_TYPE_DIR);
@@ -1480,6 +1639,47 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         row.add(Document.COLUMN_LAST_MODIFIED,
                 cursor.getLong(DocumentQuery.DATE_MODIFIED) * DateUtils.SECOND_IN_MILLIS);
         row.add(Document.COLUMN_FLAGS, resolveFlags(flags));
+    }
+
+    private interface FileQuery {
+        final String[] PROJECTION = new String[] {
+                FileColumns._ID,
+                FileColumns.DISPLAY_NAME,
+                FileColumns.MIME_TYPE,
+                FileColumns.SIZE,
+                FileColumns.DATE_MODIFIED };
+
+        final int _ID = 0;
+        final int DISPLAY_NAME = 1;
+        final int MIME_TYPE = 2;
+        final int SIZE = 3;
+        final int DATE_MODIFIED = 4;
+    }
+
+    private void includeFile(MatrixCursor result, Cursor cursor) {
+        final long id = cursor.getLong(FileQuery._ID);
+        final String docId = getDocIdForIdent(TYPE_FILE, id);
+        final String mimeType = cursor.getString(FileQuery.MIME_TYPE);
+        int flags = Document.FLAG_SUPPORTS_DELETE | Document.FLAG_SUPPORTS_WRITE
+                | Document.FLAG_SUPPORTS_RENAME;
+
+        if (isImageOrVideoMimeType(mimeType)) {
+            flags |= Document.FLAG_SUPPORTS_THUMBNAIL;
+        }
+
+        final RowBuilder row = result.newRow();
+        row.add(Document.COLUMN_DOCUMENT_ID, docId);
+        row.add(Document.COLUMN_DISPLAY_NAME, cursor.getString(FileQuery.DISPLAY_NAME));
+        row.add(Document.COLUMN_SIZE, cursor.getLong(FileQuery.SIZE));
+        row.add(Document.COLUMN_MIME_TYPE, mimeType);
+        row.add(Document.COLUMN_LAST_MODIFIED,
+                cursor.getLong(FileQuery.DATE_MODIFIED) * DateUtils.SECOND_IN_MILLIS);
+        row.add(Document.COLUMN_FLAGS, resolveFlags(flags));
+    }
+
+    private boolean isImageOrVideoMimeType(String mimeType) {
+        return mimeType.toLowerCase(Locale.ROOT).startsWith("image/")
+                || mimeType.toLowerCase(Locale.ROOT).startsWith("video/");
     }
 
     private interface ArtistQuery {

@@ -466,3 +466,11 @@ flag {
     description: "This flag controls the camera feature in photopicker"
     bug: "303784048"
 }
+
+flag {
+    name: "enable_media_documents_provider_allfiles_root"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables a new Root in MediaDocumentsProvider that surfaces all file types"
+    bug: "444316005"
+}

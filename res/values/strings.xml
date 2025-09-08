@@ -38,6 +38,8 @@
     <string name="root_audio">Audio</string>
     <!-- Title for documents backend that offers documents. [CHAR LIMIT=24] -->
     <string name="root_documents">Documents</string>
+    <!-- Title for documents backend that offers all files. [CHAR LIMIT=24] -->
+    <string name="root_files">Files</string>
 
     <!-- Message telling users that the app must request permission before working with a media item. [CHAR LIMIT=128] -->
     <string name="permission_required">Permission required to modify or delete this item.</string>
