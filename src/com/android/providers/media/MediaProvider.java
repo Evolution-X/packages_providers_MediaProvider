@@ -7456,6 +7456,11 @@ public class MediaProvider extends ContentProvider {
             String trashedPath = FileTrashManager.trashFile(path,
                     mediaScannerCallback);
 
+            // Since the trash operation involves low-level file rename and move operations,
+            // need to invalidate the dentry cache for the affected paths.
+            invalidateFuseDentry(path);
+            invalidateFuseDentry(trashedPath);
+
             result.putString(MediaStore.FILE_PATH, trashedPath);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -7485,6 +7490,11 @@ public class MediaProvider extends ContentProvider {
             String restoredPath = FileRestoreManager.restoreFile(trashedPath,
                     Optional.ofNullable(targetPath),
                     mediaScannerCallback);
+
+            // Since the restore operation involves low-level file rename and move operations,
+            // need to invalidate the dentry cache for the affected paths.
+            invalidateFuseDentry(trashedPath);
+            invalidateFuseDentry(restoredPath);
 
             result.putString(MediaStore.FILE_PATH, restoredPath);
         } catch (Exception e) {
