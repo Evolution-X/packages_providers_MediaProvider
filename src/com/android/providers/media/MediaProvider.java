@@ -335,6 +335,7 @@ import com.android.providers.media.util.FileRestoreManager;
 import com.android.providers.media.util.FileTrashManager;
 import com.android.providers.media.util.FileUtils;
 import com.android.providers.media.util.ForegroundThread;
+import com.android.providers.media.util.LocationMetadataUtils;
 import com.android.providers.media.util.Logging;
 import com.android.providers.media.util.LongArray;
 import com.android.providers.media.util.Metrics;
@@ -565,7 +566,7 @@ public class MediaProvider extends ContentProvider {
      */
     private static final String META_DATA_PREFERENCE_SUMMARY = "com.android.settings.summary";
 
-    private static final String MEDIAPROVIDER_PREFS = "mediaprovider_prefs";
+    public static final String MEDIAPROVIDER_PREFS = "mediaprovider_prefs";
 
     private static final String MIME_TYPE_FIX_APPLIED_IN_ANDROID_15 =
             "mime_type_fix_applied_android_15";
@@ -1878,6 +1879,10 @@ public class MediaProvider extends ContentProvider {
         // Calculate standard_mime_type_extension column for files which have SPECIAL_FORMAT column
         // value as NULL, and update the same in the picker db
         detectSpecialFormat(signal);
+
+        // Update location metadata for image and video files which have LATITUDE, LONGITUDE columns
+        // as null. Repopulates these columns only once for each device.
+        LocationMetadataUtils.updateLocationMetadata(getContext(), mExternalDatabase, signal);
 
         mExternalPrimaryBackupExecutor.doBackup(signal);
 
