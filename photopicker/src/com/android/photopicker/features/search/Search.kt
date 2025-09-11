@@ -86,6 +86,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
@@ -122,12 +123,14 @@ import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.extensions.fadingEdge
 import com.android.photopicker.extensions.navigateToPreviewMedia
 import com.android.photopicker.extensions.transferScrollableTouchesToHostInEmbedded
 import com.android.photopicker.features.preview.PreviewFeature
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
 import com.android.photopicker.features.search.model.UserSearchState
+import com.android.photopicker.util.applyWhen
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -476,7 +479,7 @@ private fun SearchInput(
         expanded = focused,
         onExpandedChange = onFocused,
         leadingIcon = { SearchBarIcon(focused, onFocused, onSearchQueryChanged) },
-        trailingIcon = { SearchBarTrailingIcon(focused, searchQuery, onSearchQueryChanged) },
+        trailingIcon = SearchBarTrailingIcon(focused, searchQuery, onSearchQueryChanged),
         modifier = modifier.focusRequester(focusRequester),
     )
     RequestFocusOnResume(focusRequester = focusRequester, focused)
@@ -489,6 +492,10 @@ private fun SearchInput(
  * query is empty and a clear icon when there is text. These icons are only shown when the search
  * bar is focused and in an inactive search state.
  *
+ * This returns a composable lambda containing the icon if it should be visible, and `null`
+ * otherwise. This `null` return is critical, as it signals to the parent composable not to reserve
+ * any layout space for the icon.
+ *
  * @param focused A boolean value indicating whether the search bar is in focus.
  * @param searchQuery The current search query string.
  * @param onSearchQueryChanged A callback function to update the search query.
@@ -500,26 +507,30 @@ private fun SearchBarTrailingIcon(
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     viewModel: SearchViewModel = obtainViewModel(),
-) {
+): (@Composable () -> Unit)? {
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
 
-    if (focused && searchState is SearchState.Inactive) {
-        when (searchQuery.isEmpty()) {
-            true -> {
-                val isEmbedded =
-                    LocalPhotopickerConfiguration.current.runtimeEnv ==
-                        PhotopickerRuntimeEnv.EMBEDDED
-                if (!isEmbedded) {
-                    VoiceSearchIcon { spokenText ->
-                        onSearchQueryChanged(spokenText)
-                        viewModel.performSearch(query = spokenText)
+    return if (focused && searchState is SearchState.Inactive) {
+        {
+            when (searchQuery.isEmpty()) {
+                true -> {
+                    val isEmbedded =
+                        LocalPhotopickerConfiguration.current.runtimeEnv ==
+                            PhotopickerRuntimeEnv.EMBEDDED
+                    if (!isEmbedded) {
+                        VoiceSearchIcon { spokenText ->
+                            onSearchQueryChanged(spokenText)
+                            viewModel.performSearch(query = spokenText)
+                        }
                     }
                 }
-            }
-            false -> {
-                ClearSearchQueryIcon { onSearchQueryChanged("") }
+                false -> {
+                    ClearSearchQueryIcon { onSearchQueryChanged("") }
+                }
             }
         }
+    } else {
+        null
     }
 }
 
@@ -754,7 +765,25 @@ private fun SearchBarPlaceHolder(focused: Boolean, viewModel: SearchViewModel = 
                 else -> stringResource(R.string.photopicker_search_placeholder_text)
             }
         }
-    Text(text = placeholderText, style = MaterialTheme.typography.bodyLarge)
+
+    // State to track if the text is overflowing.
+    var isOverflowing by remember { mutableStateOf(false) }
+
+    Text(
+        text = placeholderText,
+        style = MaterialTheme.typography.bodyLarge,
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        softWrap = false,
+        modifier =
+            Modifier.fillMaxWidth()
+                .applyWhen(
+                    condition = isOverflowing,
+                    block = { fadingEdge(color = MaterialTheme.colorScheme.surfaceContainer) },
+                ),
+        // The onTextLayout callback gets called after layout and provides the layout result.
+        onTextLayout = { textLayoutResult -> isOverflowing = textLayoutResult.didOverflowWidth },
+    )
 }
 
 /**

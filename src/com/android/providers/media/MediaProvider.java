@@ -1128,6 +1128,10 @@ public class MediaProvider extends ContentProvider {
                 }
 
                 mDatabaseBackupAndRecovery.backupVolumeDbData(helper, insertedRow);
+
+                if (helper.isExternal()) {
+                    updateNextGenerationNumber(helper);
+                }
             });
         }
 
@@ -1179,6 +1183,12 @@ public class MediaProvider extends ContentProvider {
                     invalidateThumbnails(fileUri);
                 });
             }
+
+            helper.postBackground(() -> {
+                if (helper.isExternal()) {
+                    updateNextGenerationNumber(helper);
+                }
+            });
         }
 
         @Override
@@ -1242,6 +1252,17 @@ public class MediaProvider extends ContentProvider {
             });
         }
     };
+
+    private void updateNextGenerationNumber(DatabaseHelper helper) {
+        if (!DatabaseBackupAndRecovery.isNextGenerationFlagEnabled()) {
+            return;
+        }
+
+        helper.runWithoutTransaction((db) -> {
+            mDatabaseBackupAndRecovery.updateNextGenerationNumber(db);
+            return null;
+        });
+    }
 
     private final UnaryOperator<String> mIdGenerator = path -> {
         final long rowId = mCallingIdentity.get().getDeletedRowId(path);

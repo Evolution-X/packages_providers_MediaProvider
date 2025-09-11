@@ -35,6 +35,7 @@ constexpr const char* FUSE_DAEMON_CLASS_NAME = "com/android/providers/media/fuse
 constexpr const char* FD_ACCESS_RESULT_CLASS_NAME = "com/android/providers/media/FdAccessResult";
 constexpr const char* FILE_ACCESS_ATTRIBUTES_CLASS_NAME =
         "com/android/providers/media/FileAccessAttributes";
+constexpr const char* NEXT_GENERATION_NUMBER = "NEXT_GENERATION_NUMBER";
 static jclass gFuseDaemonClass;
 static jclass gFdAccessResultClass;
 static jmethodID gFdAccessResultCtor;
@@ -239,6 +240,49 @@ void com_android_providers_media_FuseDaemon_backup_volume_db_data(JNIEnv* env, j
     }
     daemon->InsertInLevelDb(utf_chars_volumeName.c_str(), utf_chars_path.c_str(),
                             utf_chars_value.c_str());
+}
+
+void com_android_providers_media_FuseDaemon_backup_next_generation_number(JNIEnv* env, jobject self,
+                                                                          jlong java_daemon,
+                                                                          jstring volume_name,
+                                                                          jstring value) {
+    fuse::FuseDaemon* const daemon = reinterpret_cast<fuse::FuseDaemon*>(java_daemon);
+    ScopedUtfChars utf_chars_volumeName(env, volume_name);
+    if (!utf_chars_volumeName.c_str()) {
+        LOG(WARNING)
+                << "Failed to convert volume_name jstring for backing up next generation number.";
+        return;
+    }
+
+    ScopedUtfChars utf_chars_value(env, value);
+    if (!utf_chars_value.c_str()) {
+        LOG(WARNING) << "Failed to convert value jstring for backing up next generation number.";
+        return;
+    }
+
+    daemon->InsertInLevelDb(utf_chars_volumeName.c_str(), NEXT_GENERATION_NUMBER,
+                            utf_chars_value.c_str());
+}
+
+jstring com_android_providers_media_FuseDaemon_read_next_generation_number(JNIEnv* env,
+                                                                           jobject self,
+                                                                           jlong java_daemon,
+                                                                           jstring volume_name) {
+    fuse::FuseDaemon* const daemon = reinterpret_cast<fuse::FuseDaemon*>(java_daemon);
+
+    ScopedUtfChars utf_chars_volumeName(env, volume_name);
+    if (!utf_chars_volumeName.c_str()) {
+        LOG(WARNING) << "Failed to convert volume_name jstring for reading next generation number.";
+        return nullptr;
+    }
+
+    std::string value_from_db =
+            daemon->ReadFromLevelDb(utf_chars_volumeName.c_str(), NEXT_GENERATION_NUMBER);
+    if (value_from_db.empty()) {
+        return nullptr;
+    }
+
+    return env->NewStringUTF(value_from_db.c_str());
 }
 
 bool com_android_providers_media_FuseDaemon_is_fuse_thread(JNIEnv* env, jclass clazz) {
@@ -509,6 +553,12 @@ const JNINativeMethod methods[] = {
         {"native_backup_volume_db_data",
          "(JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
          reinterpret_cast<void*>(com_android_providers_media_FuseDaemon_backup_volume_db_data)},
+        {"native_backup_next_generation_number", "(JLjava/lang/String;Ljava/lang/String;)V",
+         reinterpret_cast<void*>(
+                 com_android_providers_media_FuseDaemon_backup_next_generation_number)},
+        {"native_read_next_generation_number", "(JLjava/lang/String;)Ljava/lang/String;",
+         reinterpret_cast<void*>(
+                 com_android_providers_media_FuseDaemon_read_next_generation_number)},
         {"native_read_backed_up_file_paths",
          "(JLjava/lang/String;Ljava/lang/String;I)[Ljava/lang/String;",
          reinterpret_cast<void*>(com_android_providers_media_FuseDaemon_read_backed_up_file_paths)},

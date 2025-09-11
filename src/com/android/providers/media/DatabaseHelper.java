@@ -409,6 +409,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                         .setUserId(userId)
                         .setDateExpires(dateExpires)
                         .setOwnerPackageName(ownerPackageName)
+                        .setGenerationModified(generationModified)
                         .setPath(path)
                         .build();
                 Trace.beginSection(traceSectionName("_INSERT"));
@@ -599,7 +600,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
             final SQLiteDatabase db = super.getWritableDatabase();
             mIsRecovering.set(true);
             try {
-                mDatabaseBackupAndRecovery.recoverData(db, volumeName);
+                mDatabaseBackupAndRecovery.recoverData(db, volumeName, isExternal());
             } catch (Exception exception) {
                 Log.e(TAG, "Error in recovering data", exception);
             } finally {
@@ -649,7 +650,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
             // Ensure we do not back up in case of recovery.
             mIsRecovering.set(true);
             try {
-                mDatabaseBackupAndRecovery.recoverData(db, volumeName);
+                mDatabaseBackupAndRecovery.recoverData(db, volumeName, isExternal());
             } catch (Exception exception) {
                 Log.e(TAG, "Error in recovering data", exception);
             } finally {

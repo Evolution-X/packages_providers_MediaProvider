@@ -113,6 +113,11 @@ class FuseDaemon final {
     std::string ReadBackedUpDataFromLevelDb(const std::string& filePath);
 
     /**
+     * Reads backed up data from leveldb of given volume.
+     */
+    std::string ReadFromLevelDb(const std::string& volume_name, const std::string& key);
+
+    /**
      * Reads value for given key, returns empty string if not found.
      */
     std::string ReadOwnership(const std::string& key);
