@@ -328,7 +328,9 @@ class MediaGridTest {
 
         // Normally this would be created in the view model that owns the paged data.
         pager =
-            Pager(PagingConfig(pageSize = 50, maxSize = 500)) { FakeInMemoryMediaPagingSource() }
+            Pager(PagingConfig(pageSize = 50, maxSize = 500)) {
+                FakeInMemoryMediaPagingSource(nextPageSize = 50)
+            }
 
         // Keep the flow processing out of the composable as that drastically cuts down on the
         // flakiness of individual test runs.
@@ -1183,6 +1185,7 @@ class MediaGridTest {
                 FakeInMemoryMediaPagingSource(
                     dataSize = placeholderGridDataSize,
                     isPlaceholderGrid = true,
+                    nextPageSize = 50,
                 )
             }
         flow = pager.flow.toMediaGridItemFromMedia().insertMonthSeparators()
@@ -1242,6 +1245,7 @@ class MediaGridTest {
                 FakeInMemoryMediaPagingSource(
                     dataSize = placeholderGridDataSize,
                     isPlaceholderGrid = true,
+                    nextPageSize = 50,
                 )
             }
         flow = pager.flow.toMediaGridItemFromMedia().insertMonthSeparators()

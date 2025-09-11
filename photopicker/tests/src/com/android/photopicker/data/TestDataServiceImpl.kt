@@ -98,8 +98,9 @@ class TestDataServiceImpl() : DataService {
         album: BaseAlbum,
         regularPageSize: Int,
     ): PagingSource<MediaPageKey, Media> {
-        return albumMediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(albumMediaSetSize)
+        return albumMediaList?.let {
+            FakeInMemoryMediaPagingSource(it, nextPageSize = regularPageSize)
+        } ?: FakeInMemoryMediaPagingSource(albumMediaSetSize, nextPageSize = regularPageSize)
     }
 
     override fun albumPagingSource(): PagingSource<MediaPageKey, Album> {
@@ -114,8 +115,18 @@ class TestDataServiceImpl() : DataService {
 
     override fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media> {
         val testConfig = provideTestConfigurationFlow(scope = TestScope().backgroundScope).value
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it, testConfig = testConfig) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize, testConfig = testConfig)
+        return mediaList?.let {
+            FakeInMemoryMediaPagingSource(
+                it,
+                testConfig = testConfig,
+                nextPageSize = regularPageSize,
+            )
+        }
+            ?: FakeInMemoryMediaPagingSource(
+                mediaSetSize,
+                testConfig = testConfig,
+                nextPageSize = regularPageSize,
+            )
     }
 
     override fun previewMediaPagingSource(
@@ -124,8 +135,8 @@ class TestDataServiceImpl() : DataService {
         currentDeselection: Set<Media>,
     ): PagingSource<MediaPageKey, Media> {
         // re-using the media source, modify as per future test usage.
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize)
+        return mediaList?.let { FakeInMemoryMediaPagingSource(it, nextPageSize = regularPageSize) }
+            ?: FakeInMemoryMediaPagingSource(mediaSetSize, nextPageSize = regularPageSize)
     }
 
     override suspend fun refreshMedia() =
