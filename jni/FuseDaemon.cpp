@@ -2916,26 +2916,29 @@ std::vector<std::string> FuseDaemon::ReadFilePathsFromLevelDb(const std::string&
 }
 
 std::string FuseDaemon::ReadBackedUpDataFromLevelDb(const std::string& filePath) {
-    fuse->level_db_mutex.lock();
-    std::string data = "";
     std::string volume_name = deriveVolumeName(filePath);
+    return ReadFromLevelDb(volume_name, filePath);
+}
+
+std::string FuseDaemon::ReadFromLevelDb(const std::string& volume_name, const std::string& key) {
+    std::string data = "";
+    fuse->level_db_mutex.lock();
     if (!CheckLevelDbConnection(volume_name)) {
         fuse->level_db_mutex.unlock();
-        LOG(ERROR) << "ReadBackedUpDataFromLevelDb: Missing leveldb connection.";
+        LOG(ERROR) << "ReadFromLevelDb: Missing leveldb connection.";
         return data;
     }
 
-    leveldb::Status status = fuse->level_db_connection_map[volume_name]->Get(
-            leveldb::ReadOptions(), filePath, &data);
+    leveldb::Status status =
+            fuse->level_db_connection_map[volume_name]->Get(leveldb::ReadOptions(), key, &data);
     fuse->level_db_mutex.unlock();
 
     if (status.IsNotFound()) {
         data = "";
-        LOG(VERBOSE) << "Key is not found in leveldb: " << filePath << " " << status.ToString();
+        LOG(VERBOSE) << "Key is not found in leveldb: " << key << " " << status.ToString();
     } else if (!status.ok()) {
         data = "";
-        LOG(WARNING) << "Failure in leveldb read for key: " << filePath << " "
-                     << status.ToString();
+        LOG(WARNING) << "Failure in leveldb read for key: " << key << " " << status.ToString();
     }
     return data;
 }
