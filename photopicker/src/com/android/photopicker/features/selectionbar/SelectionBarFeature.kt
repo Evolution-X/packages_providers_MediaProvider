@@ -19,6 +19,7 @@ package com.android.photopicker.features.selectionbar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.RegisteredEventClass
 import com.android.photopicker.core.features.FeatureManager
@@ -44,7 +45,14 @@ class SelectionBarFeature : PhotopickerUiFeature {
         override fun isEnabled(
             config: PhotopickerConfiguration,
             deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>>,
-        ): Boolean = true
+        ): Boolean {
+            if (config.runtimeEnv == PhotopickerRuntimeEnv.ACTIVITY) {
+                return config.selectionLimit > 1
+            }
+            // This is static enablement of feature. It will be hidden in collapsed
+            // mode for embedded at runtime.
+            return config.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
+        }
 
         override fun build(featureManager: FeatureManager) = SelectionBarFeature()
     }
