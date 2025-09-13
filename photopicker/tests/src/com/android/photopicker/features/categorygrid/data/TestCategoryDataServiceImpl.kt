@@ -62,7 +62,13 @@ class TestCategoryDataServiceImpl : CategoryDataService {
         regularPageSize: Int,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
-        return mediaSetContentList?.let { FakeInMemoryMediaPagingSource(it, mediaSetContentDelay) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetContentSize, mediaSetContentDelay)
+        return mediaSetContentList?.let {
+            FakeInMemoryMediaPagingSource(it, mediaSetContentDelay, nextPageSize = regularPageSize)
+        }
+            ?: FakeInMemoryMediaPagingSource(
+                mediaSetContentSize,
+                mediaSetContentDelay,
+                nextPageSize = regularPageSize,
+            )
     }
 }

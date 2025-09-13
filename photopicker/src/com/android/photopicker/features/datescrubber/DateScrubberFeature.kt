@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Android Open Source Project
+ * Copyright 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package com.android.photopicker.features.selectionbar
+package com.android.photopicker.features.datescrubber
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
-import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
-import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.RegisteredEventClass
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureRegistration
@@ -30,54 +28,39 @@ import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.features.PhotopickerUiFeature
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.features.Priority
-import com.android.photopicker.core.navigation.Route
 import kotlinx.coroutines.Deferred
 
-/** Feature class for the Photopicker's selection bar. */
-class SelectionBarFeature : PhotopickerUiFeature {
+/** Feature class for the Photopicker's Date Scrubber feature. */
+class DateScrubberFeature : PhotopickerUiFeature {
 
     companion object Registration : FeatureRegistration {
-        override val TAG: String = "PhotopickerSelectionBarFeature"
+        override val TAG: String = "PhotoPickerDateScrubberFeature"
 
-        // The selection bar is only shown when in multi-select mode. For single select,
-        // the activity ends as soon as the first Media is selected, so this feature is
-        // disabled to prevent it's animation for playing when the selection changes.
+        // TODO(b/438247685): Disable date scrubber feature for small screens
         override fun isEnabled(
             config: PhotopickerConfiguration,
             deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>>,
-        ): Boolean {
-            if (config.runtimeEnv == PhotopickerRuntimeEnv.ACTIVITY) {
-                return config.selectionLimit > 1
-            }
-            // This is static enablement of feature. It will be hidden in collapsed
-            // mode for embedded at runtime.
-            return config.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
-        }
+        ) = config.flags.PICKER_DATESCRUBBER_ENABLED
 
-        override fun build(featureManager: FeatureManager) = SelectionBarFeature()
+        override fun build(featureManager: FeatureManager) = DateScrubberFeature()
     }
 
     override fun registerLocations(): List<Pair<Location, Int>> {
-        return listOf(Pair(Location.SELECTION_BAR, Priority.HIGH.priority))
+        return listOf(Pair(Location.DATE_SCRUBBER, Priority.HIGH.priority))
     }
 
-    override fun registerNavigationRoutes(): Set<Route> {
-        return emptySet()
-    }
+    override val token = FeatureToken.DATE_SCRUBBER.token
 
-    override val token = FeatureToken.SELECTION_BAR.token
-
-    /** Events consumed by the selection bar */
+    /** Events consumed by the DateScrubber */
     override val eventsConsumed = setOf<RegisteredEventClass>()
 
-    /** Events produced by the selection bar */
-    override val eventsProduced =
-        setOf<RegisteredEventClass>(Event.LogPhotopickerUIEvent::class.java)
+    /** Events produced by the DateScrubber */
+    override val eventsProduced = setOf<RegisteredEventClass>()
 
     @Composable
     override fun compose(location: Location, modifier: Modifier, params: LocationParams) {
         when (location) {
-            Location.SELECTION_BAR -> SelectionBar(modifier, params)
+            Location.DATE_SCRUBBER -> DateScrubber(modifier = modifier, params = params)
             else -> {}
         }
     }

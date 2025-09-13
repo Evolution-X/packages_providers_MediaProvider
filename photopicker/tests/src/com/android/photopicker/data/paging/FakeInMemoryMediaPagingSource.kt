@@ -45,6 +45,7 @@ private constructor(
     // placeholders.
     private val IS_PLACEHOLDER_GRID: Boolean = false,
     private val config: PhotopickerConfiguration? = null,
+    private val nextPageSize: Int,
 ) : PagingSource<MediaPageKey, Media>() {
 
     companion object {
@@ -55,18 +56,25 @@ private constructor(
         dataSize: Int = DEFAULT_SIZE,
         delay: Long = 0L,
         testConfig: PhotopickerConfiguration? = null,
-    ) : this(dataSize, null, delay, false, testConfig)
+        nextPageSize: Int,
+    ) : this(dataSize, null, delay, false, testConfig, nextPageSize)
 
     constructor(
         dataList: List<Media>,
         delay: Long = 0L,
         testConfig: PhotopickerConfiguration? = null,
-    ) : this(DEFAULT_SIZE, dataList, delay, false, testConfig)
+        nextPageSize: Int,
+    ) : this(DEFAULT_SIZE, dataList, delay, false, testConfig, nextPageSize)
 
     constructor(
         isPlaceholderGrid: Boolean,
         dataSize: Int = DEFAULT_SIZE,
-    ) : this(DATA_SIZE = dataSize, IS_PLACEHOLDER_GRID = isPlaceholderGrid)
+        nextPageSize: Int,
+    ) : this(
+        DATA_SIZE = dataSize,
+        IS_PLACEHOLDER_GRID = isPlaceholderGrid,
+        nextPageSize = nextPageSize,
+    )
 
     private val currentDateTime = LocalDateTime.now()
 
@@ -165,7 +173,7 @@ private constructor(
                 )
 
         // Find the start of the previous page and generate a Page key.
-        val prevPageRow = DATA.getOrNull((startIndex) - params.loadSize)
+        val prevPageRow = DATA.getOrNull((startIndex) - nextPageSize)
         val prevKey =
             if (prevPageRow == null) null
             else
@@ -174,11 +182,30 @@ private constructor(
                     dateTakenMillis = prevPageRow.dateTakenMillisLong,
                 )
 
-        return LoadResult.Page(data = pageData, nextKey = nextKey, prevKey = prevKey)
+        val itemsBeforeCount = startIndex
+        val itemsAfterCount = DATA.size - endIndex - 1
+
+        return LoadResult.Page(
+            data = pageData,
+            nextKey = nextKey,
+            prevKey = prevKey,
+            itemsBefore = itemsBeforeCount,
+            itemsAfter = itemsAfterCount,
+        )
     }
 
     override fun getRefreshKey(state: PagingState<MediaPageKey, Media>): MediaPageKey? {
-        return state.anchorPosition?.let { null }
+        if (isJumpingEnabled) {
+            val currentAnchorPosition = state.anchorPosition ?: 0
+            // Calculates the nearest valid page start position based on current
+            // state.anchorPosition
+            // For example, if pageSize is 50, Valid start positions follow the pattern: 0, 50,
+            // 100,etc.
+            val validRefreshPosition = currentAnchorPosition - currentAnchorPosition % nextPageSize
+            val media = DATA[validRefreshPosition]
+            return MediaPageKey(media.pickerId, media.dateTakenMillisLong)
+        }
+        return null
     }
 
     override val jumpingSupported = isJumpingEnabled

@@ -42,8 +42,7 @@ class TestSearchDataServiceImpl() : SearchDataService {
     var mediaList: List<Media>? = null
 
     // Fetch the album media again
-    var mediaPagingSource: PagingSource<MediaPageKey, Media> =
-        FakeInMemoryMediaPagingSource(mediaSetSize)
+    var mediaPagingSource: PagingSource<MediaPageKey, Media>? = null
 
     override val userSearchStateInfo: StateFlow<UserSearchStateInfo> =
         MutableStateFlow(UserSearchStateInfo(listOf("test_provider")))
@@ -79,12 +78,11 @@ class TestSearchDataServiceImpl() : SearchDataService {
         suggestion: SearchSuggestion,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
-        if (mediaPagingSource.invalid) {
-            mediaPagingSource = FakeInMemoryMediaPagingSource(mediaSetSize)
-        }
-        mediaPagingSource =
-            mediaList?.let { FakeInMemoryMediaPagingSource(it) } ?: mediaPagingSource
-        return mediaPagingSource
+        val newMediaPagingSource =
+            mediaList?.let { FakeInMemoryMediaPagingSource(it, nextPageSize = regularPageSize) }
+                ?: FakeInMemoryMediaPagingSource(mediaSetSize, nextPageSize = regularPageSize)
+        mediaPagingSource = newMediaPagingSource
+        return newMediaPagingSource
     }
 
     override fun getSearchResults(
@@ -92,15 +90,14 @@ class TestSearchDataServiceImpl() : SearchDataService {
         searchText: String,
         cancellationSignal: CancellationSignal?,
     ): PagingSource<MediaPageKey, Media> {
-        if (mediaPagingSource.invalid) {
-            mediaPagingSource = FakeInMemoryMediaPagingSource(mediaSetSize)
-        }
-        mediaPagingSource =
-            mediaList?.let { FakeInMemoryMediaPagingSource(it) } ?: mediaPagingSource
-        return mediaPagingSource
+        val newMediaPagingSource =
+            mediaList?.let { FakeInMemoryMediaPagingSource(it, nextPageSize = regularPageSize) }
+                ?: FakeInMemoryMediaPagingSource(mediaSetSize, nextPageSize = regularPageSize)
+        mediaPagingSource = newMediaPagingSource
+        return newMediaPagingSource
     }
 
     fun invalidateFakeInCache() {
-        mediaPagingSource.invalidate()
+        mediaPagingSource?.invalidate()
     }
 }

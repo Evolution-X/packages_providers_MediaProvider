@@ -35,14 +35,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Provides item count information for each available month to correctly position the date scrubber
- * cursor on the UI. The data is sourced from a [ContentProvider] called [MediaProvider].
+ * cursor on the Photo grid UI. The data is sourced from a [ContentProvider] called [MediaProvider].
  *
  * Changes in the underlying data of [MediaProvider] are observed using [ContentObserver]s. When a
  * change is detected, the data is re-fetched from the [MediaProvider] process, and the item count
  * per month data list is updated accordingly.
  *
+ * Note: Currently supports Photo grid data only, but may be extended for other grids in the future.
+ *
  * @param dataService Core Picker's data service that provides data related to core functionality.
- * @param photopickerConfiguration A [StateFlow] that emits [PhotopickerConfiguration] changes.
+ * @param config A [StateFlow] that emits [PhotopickerConfiguration] changes.
  * @param scope The [CoroutineScope] the data flows will be shared in.
  * @param dispatcher A [CoroutineDispatcher] to run the coroutines in.
  * @param mediaProviderClient An instance of [MediaProviderClient] responsible to get data from
