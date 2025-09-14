@@ -2621,7 +2621,7 @@ public class MediaProvider extends ContentProvider {
         boolean allowHidden = isCallingPackageAllowedHidden();
         final SQLiteQueryBuilder qbForUpdate = getQueryBuilder(TYPE_UPDATE,
                 matchUri(uriOldPath, allowHidden), uriOldPath, qbExtras, null,
-                  /* includedDefaultDirectoriesOptional */ Optional.empty());
+                  includedDefaultDirectoriesOptional);
         if (values.containsKey(FileColumns._MODIFIER)) {
             qbForUpdate.allowColumn(FileColumns._MODIFIER);
         }
