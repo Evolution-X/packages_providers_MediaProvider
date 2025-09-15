@@ -294,6 +294,7 @@ open class MediaProviderClient {
         shouldEnableItemsAfterCount: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -352,6 +353,7 @@ open class MediaProviderClient {
         shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -410,6 +412,7 @@ open class MediaProviderClient {
         isFirstPage: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -461,6 +464,7 @@ open class MediaProviderClient {
         config: PhotopickerConfiguration,
     ): LoadResult<MediaPageKey, Group.Album> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -511,6 +515,7 @@ open class MediaProviderClient {
         shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 AlbumMediaQuery.ALBUM_AUTHORITY.key to albumAuthority,
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
@@ -605,7 +610,9 @@ open class MediaProviderClient {
         }
         // Create a Bundle containing the calling package's UID. This is used as a selection
         // argument for the query.
-        val input: Bundle = bundleOf(Intent.EXTRA_UID to callingPackageUid)
+        val input: Bundle =
+                    @Suppress("DEPRECATION") // bundleOf is deprecated
+                    bundleOf(Intent.EXTRA_UID to callingPackageUid)
 
         try {
             contentResolver.query(MEDIA_GRANTS_COUNT_URI, /* projection */ null, input, null).use {
@@ -634,6 +641,7 @@ open class MediaProviderClient {
         uris: List<Uri>,
     ): List<Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -676,7 +684,8 @@ open class MediaProviderClient {
     ): List<SearchSuggestion> {
         try {
             val input: Bundle =
-                bundleOf(
+            @Suppress("DEPRECATION") // bundleOf is deprecated
+            bundleOf(
                     SearchSuggestionsQuery.PREFIX.key to prefix,
                     SearchSuggestionsQuery.LIMIT.key to limit,
                     SearchSuggestionsQuery.HISTORY_LIMIT.key to historyLimit,
@@ -709,6 +718,7 @@ open class MediaProviderClient {
         providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
@@ -768,6 +778,7 @@ open class MediaProviderClient {
         providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group.MediaSet> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
@@ -820,6 +831,7 @@ open class MediaProviderClient {
         shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -918,6 +930,7 @@ open class MediaProviderClient {
         providers: List<Provider>,
     ) {
         val extras =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 MediaSetsQuery.PARENT_CATEGORY_ID.key to category.id,
@@ -952,6 +965,7 @@ open class MediaProviderClient {
         providers: List<Provider>,
     ) {
         val extras =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 MediaSetContentsQuery.PARENT_MEDIA_SET_PICKER_ID.key to mediaSet.pickerId,
@@ -1057,6 +1071,7 @@ open class MediaProviderClient {
         config: PhotopickerConfiguration,
     ): Bundle {
         val extras =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 EXTRA_INTENT_ACTION to config.action,
@@ -1150,6 +1165,7 @@ open class MediaProviderClient {
         config: PhotopickerConfiguration,
     ): List<ItemsPerMonth> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
@@ -1200,6 +1216,7 @@ open class MediaProviderClient {
             throw IllegalArgumentException("Received invalid itemPosition $itemPosition ")
         }
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaPageKeyQuery.ITEM_POSITION.key to itemPosition,
                 EXTRA_PROVIDERS to
