@@ -281,6 +281,7 @@ constructor(
                 .build()
 
         val extras =
+        @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_LOOPING_PLAYBACK_ENABLED to true,
                 EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true,
