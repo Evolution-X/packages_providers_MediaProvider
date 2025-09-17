@@ -86,6 +86,7 @@ import com.android.providers.media.photopicker.v2.model.MediaPageKeyListQuery;
 import com.android.providers.media.photopicker.v2.model.MediaPageKeyQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQueryForPreSelection;
+import com.android.providers.media.photopicker.v2.model.MediaSetsQuery;
 import com.android.providers.media.photopicker.v2.model.MediaSetsSyncRequestParams;
 import com.android.providers.media.photopicker.v2.model.MediaSource;
 import com.android.providers.media.photopicker.v2.model.PreviewMediaQuery;
@@ -336,31 +337,31 @@ public class PickerDataLayerV2 {
     public static Cursor queryMediaSets(Context appContext, @NonNull Bundle queryArgs) {
         requireNonNull(queryArgs);
 
-        MediaSetsSyncRequestParams requestParams = new MediaSetsSyncRequestParams(queryArgs);
+        MediaSetsQuery query = new MediaSetsQuery(queryArgs);
         PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
         final Set<String> providers = new HashSet<>(
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
 
         final String currentLocalAuthority = syncController.getLocalProvider();
         final String effectiveLocalAuthority =
-                requestParams.getAuthority().equals(currentLocalAuthority)
+                query.getParentCategoryAuthority().equals(currentLocalAuthority)
                         && providers.contains(currentLocalAuthority)
                 ? syncController.getLocalProvider() : null;
 
         final String currentCloudAuthority = syncController
                 .getCloudProviderOrDefault(/*defaultValue*/ null);
         final String effectiveCloudAuthority =
-                requestParams.getAuthority().equals(currentCloudAuthority)
+                query.getParentCategoryAuthority().equals(currentCloudAuthority)
                         && providers.contains(currentCloudAuthority)
                         ? currentCloudAuthority : null;
 
         waitForOngoingMediaSetsSync(effectiveLocalAuthority, effectiveCloudAuthority);
 
+
         final Cursor mediaSetsCursor = MediaSetsDatabaseUtil.getMediaSetsForCategory(
-                syncController.getDbFacade().getDatabase(),
-                requestParams);
+                    syncController.getDbFacade().getDatabase(), query);
         final Cursor result = MediaGroupCursorUtils
-                .getMediaGroupCursorForMediaSets(appContext, mediaSetsCursor);
+                    .getMediaGroupCursorForMediaSets(appContext, mediaSetsCursor);
 
         Log.i(TAG, "Returning " + (result == null ? null : result.getCount()) + " media sets.");
         return result;
