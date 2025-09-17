@@ -127,35 +127,38 @@ fun PreviewSelection(
             else -> true
         }
 
-    val selection =
+    val config = LocalPhotopickerConfiguration.current
+
+    val selectionFlow =
         when (previewSingleItem) {
             true -> {
                 checkNotNull(previewItemFlow) { "Flow cannot be null for previewSingleItem" }
                 val media by previewItemFlow.collectAsStateWithLifecycle()
                 val localMedia = media
                 if (localMedia != null) {
-                    viewModel
-                        .getPreviewMediaIncludingPreGrantedItems(
+                    remember(localMedia) {
+                        viewModel.getPreviewMediaIncludingPreGrantedItems(
                             setOf(localMedia),
-                            LocalPhotopickerConfiguration.current,
+                            SelectionStrategy.determineSelectionStrategy(config),
                             /* isSingleItemPreview */ true,
                         )
-                        .collectAsLazyPagingItems()
+                    }
                 } else {
                     null
                 }
             }
             false -> {
                 val selectionSnapshot by viewModel.selectionSnapshot.collectAsStateWithLifecycle()
-                viewModel
-                    .getPreviewMediaIncludingPreGrantedItems(
+                remember(selectionSnapshot) {
+                    viewModel.getPreviewMediaIncludingPreGrantedItems(
                         selectionSnapshot,
-                        LocalPhotopickerConfiguration.current,
+                        SelectionStrategy.determineSelectionStrategy(config),
                         /* isSingleItemPreview */ false,
                     )
-                    .collectAsLazyPagingItems()
+                }
             }
         }
+    val selection = selectionFlow?.collectAsLazyPagingItems()
 
     if (selection != null) {
         val dateFormat =
