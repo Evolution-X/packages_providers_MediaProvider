@@ -458,3 +458,11 @@ flag {
     description: "This flag will enable support for the special format column"
     bug: "346244100"
 }
+
+flag {
+    name: "photopicker_polaroid"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag controls the camera feature in photopicker"
+    bug: "303784048"
+}
