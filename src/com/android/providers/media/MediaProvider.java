@@ -141,6 +141,7 @@ import static com.android.providers.media.PickerUriResolver.PICKER_GET_CONTENT_S
 import static com.android.providers.media.PickerUriResolver.PICKER_SEGMENT;
 import static com.android.providers.media.PickerUriResolver.PICKER_TRANSCODED_SEGMENT;
 import static com.android.providers.media.PickerUriResolver.getMediaUri;
+import static com.android.providers.media.flags.Flags.enableSpecialFormatColumn;
 import static com.android.providers.media.flags.Flags.indexMediaLatitudeLongitude;
 import static com.android.providers.media.flags.Flags.versionLockdown;
 import static com.android.providers.media.photopicker.data.ItemsProvider.EXTRA_MIME_TYPE_SELECTION;
@@ -4243,6 +4244,13 @@ public class MediaProvider extends ContentProvider {
             // Filter latitude and longitude to return as NULL
             projection = updateProjectionToFilterColumns(
                     qb, projection,  List.of(LATITUDE, LONGITUDE));
+        }
+
+        if (!enableSpecialFormatColumn() && hasColumnsToFilterInProjection(
+                qb, projection, List.of(_SPECIAL_FORMAT)) && !isCallingPackageSelf()) {
+            // Filter _SPECIAL_FORMAT column to return as NULL
+            projection = updateProjectionToFilterColumns(
+                    qb, projection,  List.of(_SPECIAL_FORMAT));
         }
 
         if (shouldFilterOwnerPackageNameFlag()

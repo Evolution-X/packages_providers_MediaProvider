@@ -829,6 +829,7 @@ public class MediaProviderTest {
     }
 
     @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
     public void testSpecialFormatDefaultValue() throws Exception {
         final Uri uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         final ContentValues values = new ContentValues();
@@ -843,6 +844,25 @@ public class MediaProviderTest {
             assertTrue(c.moveToFirst());
             assertEquals("test_specialFormat.png", c.getString(0));
             assertEquals(FileColumns._SPECIAL_FORMAT_NONE, c.getInt(1));
+        }
+    }
+
+    @Test
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+    public void testSpecialFormat_returnsNull() throws Exception {
+        final Uri uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        final ContentValues values = new ContentValues();
+        values.put(MediaColumns.DISPLAY_NAME, "test_specialFormat");
+        values.put(MediaColumns.MIME_TYPE, "image/png");
+        Uri result = sIsolatedResolver.insert(uri, values);
+        try (Cursor c = sIsolatedResolver.query(result,
+                new String[]{MediaColumns.DISPLAY_NAME, FileColumns._SPECIAL_FORMAT},
+                null, null)) {
+            assertNotNull(c);
+            assertEquals(1, c.getCount());
+            assertTrue(c.moveToFirst());
+            assertEquals("test_specialFormat.png", c.getString(0));
+            assertTrue(c.isNull(1));
         }
     }
 
@@ -2380,6 +2400,7 @@ public class MediaProviderTest {
     }
 
     @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
     public void testQuerySpecialFormatColumn_returnsNonEmptyCursor() throws Exception {
         String[][] projections = new String[][] {
                 new String[] {
