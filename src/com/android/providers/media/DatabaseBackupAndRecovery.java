@@ -654,6 +654,11 @@ public class DatabaseBackupAndRecovery {
             nextGenerationNumber = getGeneration(db) + NEXT_GEN_NUM_INCREMENT;
         }
 
+        setGenerationNumberInExternalDb(db, nextGenerationNumber);
+    }
+
+    private static void setGenerationNumberInExternalDb(SQLiteDatabase db,
+            long nextGenerationNumber) {
         db.execSQL(String.format(Locale.ROOT, "UPDATE local_metadata SET generation=%d",
                 nextGenerationNumber));
         Log.i(TAG, "Generation number set to" + nextGenerationNumber + " in external.db");
@@ -1146,6 +1151,7 @@ public class DatabaseBackupAndRecovery {
         long rowsRecovered = 0, dirtyRowsCount = 0, insertionFailuresCount = 0,
                 totalLevelDbRows = 0;
         final long startTime = SystemClock.elapsedRealtime();
+        boolean generationNumberUpdatedInExternalDb = false;
         try {
             final String fuseFilePath = getFuseFilePathFromVolumeName(volumeName);
             // Wait for external primary to be attached as we use same thread for internal volume.
@@ -1165,6 +1171,7 @@ public class DatabaseBackupAndRecovery {
 
             if (isExternalDb && VOLUME_EXTERNAL_PRIMARY.equalsIgnoreCase(volumeName)) {
                 updateNextGenerationNumberInExternalDb(db);
+                generationNumberUpdatedInExternalDb = true;
             }
 
             String[] backedUpFilePaths;
@@ -1239,6 +1246,12 @@ public class DatabaseBackupAndRecovery {
                     totalLevelDbRows, insertionFailuresCount,
                     MEDIA_PROVIDER_VOLUME_RECOVERY_REPORTED__STATUS__OTHER_ERROR);
             throw e;
+        } finally {
+            if (!generationNumberUpdatedInExternalDb && isNextGenerationFlagEnabled()
+                    && isExternalDb && VOLUME_EXTERNAL_PRIMARY.equalsIgnoreCase(volumeName)) {
+                long nextGenerationNumber = getGeneration(db) + NEXT_GEN_NUM_INCREMENT;
+                setGenerationNumberInExternalDb(db, nextGenerationNumber);
+            }
         }
     }
 
