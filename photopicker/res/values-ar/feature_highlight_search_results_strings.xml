@@ -31,6 +31,5 @@
     <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"زر رمز المعلومات الذي يصف مصدر نتائج الوسائط في قسم \"مختارات\""</string>
     <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"قدّم \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" المعلومات لهذه الاقتراحات، ولكن لا يمكنه الاطّلاع على الصور نفسها إلا إذا سمحت له بالوصول إليها"</string>
     <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"هذا التطبيق"</string>
-    <!-- no translation found for photopicker_hsr_suggestions_for_label (4359104502811280076) -->
-    <skip />
+    <string name="photopicker_hsr_suggestions_for_label" msgid="4359104502811280076">"‏اقتراحات حول \"%1$s\""</string>
 </resources>

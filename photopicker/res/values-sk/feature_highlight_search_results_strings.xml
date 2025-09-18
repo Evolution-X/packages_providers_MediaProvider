@@ -31,6 +31,5 @@
     <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Tlačidlo s ikonou Informácie opisujúce zdroj výsledkov vyhľadávania médií v sekcii výberu"</string>
     <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> poskytla informácie pre tieto návrhy, ale príslušné fotky si nemôže zobraziť, pokiaľ nepovolíte prístup"</string>
     <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"Táto aplikácia"</string>
-    <!-- no translation found for photopicker_hsr_suggestions_for_label (4359104502811280076) -->
-    <skip />
+    <string name="photopicker_hsr_suggestions_for_label" msgid="4359104502811280076">"Návrhy pre %1$s"</string>
 </resources>
