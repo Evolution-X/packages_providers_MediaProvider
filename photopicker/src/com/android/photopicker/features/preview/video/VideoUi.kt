@@ -628,8 +628,10 @@ private fun rememberAudioFocus(
             // session's audio state.
             val bundle =
                 when (audioIsMuted) {
-                    true -> bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true)
-                    false -> bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to false)
+                    true -> @Suppress("DEPRECATION") // bundleOf is deprecated
+                    bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true)
+                    false -> @Suppress("DEPRECATION") // bundleOf is deprecated
+                    bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to false)
                 }
             onConfigChangeRequested(bundle)
 
@@ -657,7 +659,9 @@ private fun rememberAudioFocus(
                         AudioManager.AUDIOFOCUS_REQUEST_GRANTED
                 ) {
                     Log.d(PreviewFeature.TAG, "Acquired audio focus to unmute player")
-                    val bundle = bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to false)
+                    val bundle =
+                    @Suppress("DEPRECATION") // bundleOf is deprecated
+                    bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to false)
                     onConfigChangeRequested(bundle)
                     onRequestAudioMuteChange(false)
                 }
@@ -665,7 +669,9 @@ private fun rememberAudioFocus(
             false -> {
                 Log.d(PreviewFeature.TAG, "Abandoning audio focus and muting player")
                 audioManager.abandonAudioFocusRequest(audioRequest)
-                val bundle = bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true)
+                val bundle =
+                @Suppress("DEPRECATION") // bundleOf is deprecated
+                bundleOf(EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true)
                 onConfigChangeRequested(bundle)
                 onRequestAudioMuteChange(true)
             }
