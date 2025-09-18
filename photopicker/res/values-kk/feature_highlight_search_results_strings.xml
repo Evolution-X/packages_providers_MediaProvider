@@ -31,6 +31,5 @@
     <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Ерекшелеу бөліміндегі мультимедиа нәтижелеріне арналған дереккөзді сипаттайтын ақпарат белгішесінің түймесі"</string>
     <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"<xliff:g id="APP_NAME">%1$s</xliff:g> осы ұсыныстар туралы ақпарат берді, бірақ пайдалануға рұқсат бермесеңіз, ол фотосуреттерді көре алмайды"</string>
     <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"Осы қолданба"</string>
-    <!-- no translation found for photopicker_hsr_suggestions_for_label (4359104502811280076) -->
-    <skip />
+    <string name="photopicker_hsr_suggestions_for_label" msgid="4359104502811280076">"%1$s туралы ұсыныстар"</string>
 </resources>

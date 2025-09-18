@@ -31,6 +31,5 @@
     <string name="photopicker_hsr_tooltip_icon_description" msgid="3111632594059184450">"Teabeikooni nupp, mis kirjeldab esiletõstetud jaotises meediatulemuste allikat"</string>
     <string name="photopicker_hsr_tooltip_text" msgid="8908953116230979466">"<xliff:g id="APP_NAME">%1$s</xliff:g> esitas nende soovituste teabe, aga ei näe neid fotosid ise, kui te ei anna juurdepääsu"</string>
     <string name="photopicker_hsr_generic_app_label" msgid="6629276825147930885">"See rakendus"</string>
-    <!-- no translation found for photopicker_hsr_suggestions_for_label (4359104502811280076) -->
-    <skip />
+    <string name="photopicker_hsr_suggestions_for_label" msgid="4359104502811280076">"Soovitused: %1$s"</string>
 </resources>
