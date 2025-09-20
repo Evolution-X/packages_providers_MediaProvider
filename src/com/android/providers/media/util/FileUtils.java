@@ -1448,9 +1448,37 @@ public class FileUtils {
      */
     public static void computeDataFromValues(@NonNull ContentValues values,
             @NonNull File volumePath, boolean isForFuse) {
+        computeDataFromValues(values, volumePath, isForFuse,
+                false /* handleTrashAndRestoreByPath */);
+    }
+
+    /**
+     * Computes the {@link MediaColumns#DATA} column from other {@link MediaColumns} values,
+     * with additional logic to handle the file paths for trashed and restored items.
+     * This method introduces a flag to conditionally enable logic that modifies the
+     * {@link MediaColumns#RELATIVE_PATH} and {@link MediaColumns#DATA} for files being moved to
+     * or restored from the trash.
+     *
+     * @param values                      The {@code ContentValues} object to compute and update.
+     * @param volumePath                  The base path of the storage volume.
+     * @param isForFuse                   A boolean indicating if the operation is from a FUSE
+     *                                    thread.
+     * @param handleTrashAndRestoreByPath A boolean flag that, when {@code true}, enables the
+     *                                    logic to handle trashing and restoring files by
+     *                                    manipulating their file paths.
+     *                                    If {@code false}, this logic is skipped.
+     * @throws IllegalArgumentException if the final computed file path is invalid and a
+     *                                  canonical path cannot be generated.
+     */
+    public static void computeDataFromValues(@NonNull ContentValues values,
+            @NonNull File volumePath, boolean isForFuse, boolean handleTrashAndRestoreByPath) {
         values.remove(MediaColumns.DATA);
 
         final String displayName = values.getAsString(MediaColumns.DISPLAY_NAME);
+        String relativePath = values.getAsString(MediaColumns.RELATIVE_PATH);
+        if (relativePath == null) {
+            relativePath = "";
+        }
         final String resolvedDisplayName;
         // Pending file path shouldn't be rewritten for files inserted via filepath.
         if (!isForFuse && getAsBoolean(values, MediaColumns.IS_PENDING, false)) {
@@ -1471,13 +1499,29 @@ public class FileUtils {
             // after trim the file, if the user untrashes the file,
             // the file name is not the original one
             resolvedDisplayName = trimFilename(combinedString, MAX_FILENAME_BYTES);
+
+            // For a trash operation, ensure the file is logically moved into the trash directory
+            // by prepending the trash path prefix, if not already present.
+            if (handleTrashAndRestoreByPath && !relativePath.startsWith(
+                    FileUtils.DIRECTORY_TRASH_STORAGE + File.separator)) {
+                relativePath = FileUtils.DIRECTORY_TRASH_STORAGE + File.separator + relativePath;
+                values.put(MediaColumns.RELATIVE_PATH, relativePath);
+            }
         } else {
             resolvedDisplayName = displayName;
-        }
-
-        String relativePath = values.getAsString(MediaColumns.RELATIVE_PATH);
-        if (relativePath == null) {
-          relativePath = "";
+            // Since this is not a trash operation, check for a restore operation.
+            // A file is being restored if its path currently includes the trash prefix. If so,
+            // remove the prefix to restore its original relative path.
+            final String trashPrefix = FileUtils.DIRECTORY_TRASH_STORAGE + File.separator;
+            if (relativePath.startsWith(trashPrefix)) {
+                // This is a restore operation: remove the trash prefix.
+                String originalRelativePath = relativePath.substring(trashPrefix.length());
+                // This relativePath might consist the trash folders.
+                String cleanRelativePath = FileRestoreManager.getValidTargetPath(
+                        originalRelativePath);
+                values.put(MediaColumns.RELATIVE_PATH, cleanRelativePath);
+                relativePath = cleanRelativePath;
+            }
         }
         try {
             final File filePath = buildPath(volumePath, relativePath, resolvedDisplayName);
@@ -1640,6 +1684,21 @@ public class FileUtils {
     @VisibleForTesting
     public static boolean isDirectoryHidden(@NonNull File dir) {
         final String name = dir.getName();
+        if (Flags.enableTrashAndRestoreByFilePathApi()) {
+            // The trash storage directory is a special case and must not be treated as hidden.
+            // Although its name starts with a dot, MediaProvider needs to see its contents
+            // to manage trashed files.
+            if (name.equalsIgnoreCase(FileUtils.DIRECTORY_TRASH_STORAGE)) {
+                return false;
+            }
+
+            // Handle well-known folder names that are trashed, they normally appear hidden,
+            // but we give them special treatment
+            if (isTrashedFileInTrashDirectory(dir.getPath())) {
+                return false;
+            }
+        }
+
         if (name.startsWith(".")) {
             return true;
         }
@@ -1965,13 +2024,39 @@ public class FileUtils {
      * @return {@code true} if the path matches the trashed file name format, {@code false}
      * otherwise.
      */
-    private static boolean isTrashedPath(@NonNull String filePath) {
+    public static boolean isTrashedPath(@NonNull String filePath) {
         final String displayName = extractDisplayName(filePath);
         if (displayName == null) {
             return false;
         }
         final Matcher matcher = PATTERN_EXPIRES_FILE.matcher(displayName);
         return matcher.matches() && PREFIX_TRASHED.equals(matcher.group(1));
+    }
+
+    /**
+     * Normalizes a file name by removing the ' (N)' copy suffix, where N is a number.
+     * This allows comparing 'file.txt', 'file (1).txt', and 'file (2).txt' as the same.
+     *
+     * @param fileName The original file name (e.g., "document (1).pdf").
+     * @return The normalized file name (e.g., "document.pdf").
+     */
+    public static String normalizeFileName(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        String namePart = fileName;
+        String extensionPart = "";
+
+        if (lastDotIndex != -1) {
+            namePart = fileName.substring(0, lastDotIndex);
+            extensionPart = fileName.substring(lastDotIndex); // Includes the dot, e.g., ".pdf"
+        }
+
+        String suffixPattern = " \\(\\d+\\)$";
+        if (namePart.matches(".*" + suffixPattern)) {
+            // Replace the matched suffix with an empty string
+            namePart = namePart.replaceAll(suffixPattern, "");
+        }
+
+        return namePart + extensionPart;
     }
 
 }
