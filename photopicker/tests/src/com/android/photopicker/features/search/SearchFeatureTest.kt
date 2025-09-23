@@ -449,7 +449,11 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
                 )
                 .performClick()
             composeTestRule.waitForIdle()
-            advanceTimeBy(1000)
+            advanceTimeBy(300)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(300)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(300)
 
             // Make sure test query is cleared and Search text placeholder is displayed
             composeTestRule.onNodeWithText(testQuery).assertIsNotDisplayed()
