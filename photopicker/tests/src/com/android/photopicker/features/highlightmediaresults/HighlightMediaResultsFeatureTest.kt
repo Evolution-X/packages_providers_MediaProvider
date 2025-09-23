@@ -1896,6 +1896,8 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
 
             advanceTimeBy(500)
             composeTestRule.waitForIdle()
+            advanceTimeBy(500)
+            composeTestRule.waitForIdle()
 
             val testDataService = dataService as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
