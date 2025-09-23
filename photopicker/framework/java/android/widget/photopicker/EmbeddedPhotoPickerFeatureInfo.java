@@ -16,6 +16,9 @@
 
 package android.widget.photopicker;
 
+import static android.provider.MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED;
+import static android.provider.MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED;
+
 import static java.util.Objects.requireNonNull;
 
 import android.annotation.FlaggedApi;
@@ -27,6 +30,7 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore.PickImagesHighlightAlbum;
+import android.provider.MediaStore.PickImagesHighlightType;
 
 import androidx.annotation.ColorLong;
 import androidx.annotation.IntRange;
@@ -69,6 +73,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
     private final int mThemeNightMode;
     @NonNull private final String mHighlightSearchMediaTextQuery;
     @NonNull private final String mHighlightAlbumId;
+    private final int mHighlightType;
+    private final boolean mLaunchedPickerInExpandedState;
 
     private EmbeddedPhotoPickerFeatureInfo(
             List<String> mimeTypes,
@@ -78,7 +84,9 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             List<Uri> preSelectedUris,
             int themeNightMode,
             String highlightSearchMediaQuery,
-            String highlightAlbumId) {
+            String highlightAlbumId,
+            int highlightType,
+            boolean launchedPickerInExpandedState) {
         this.mMimeTypes = mimeTypes;
         this.mAccentColor = accentColor;
         this.mOrderedSelection = orderedSelection;
@@ -87,6 +95,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         this.mThemeNightMode = themeNightMode;
         this.mHighlightSearchMediaTextQuery = highlightSearchMediaQuery;
         this.mHighlightAlbumId = highlightAlbumId;
+        this.mHighlightType = highlightType;
+        this.mLaunchedPickerInExpandedState = launchedPickerInExpandedState;
     }
     @NonNull
     public List<Uri> getPreSelectedUris() {
@@ -128,6 +138,23 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         return this.mHighlightAlbumId;
     }
 
+    /**
+     * Returns the highlight type set by the app
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+    public int getHighlightType() {
+        return mHighlightType;
+    }
+
+    /**
+     * Returns whether or not the picker was launched in expanded state
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+    public boolean isPickerLaunchedInExpandedState() {
+        return mLaunchedPickerInExpandedState;
+    }
+
+
     public static final class Builder {
         //All mime-types are returned by default.
         @NonNull private static final List<String> DEFAULT_MIME_TYPES =
@@ -145,6 +172,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private static final int DEFAULT_NIGHT_MODE = Configuration.UI_MODE_NIGHT_UNDEFINED;
         private static final String DEFAULT_HIGHLIGHT_SEARCH_MEDIA_TEXT_QUERY = "";
         private static final String DEFAULT_HIGHLIGHT_ALBUM_ID = "";
+        private static final int DEFAULT_HIGHLIGHT_TYPE = PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED;
+        private static boolean DEFAULT_EXPANDED_STATE = false;
 
         private List<String> mMimeTypes = DEFAULT_MIME_TYPES;
         private long mAccentColor = DEFAULT_ACCENT_COLOR;
@@ -154,6 +183,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private int mThemeNightMode = DEFAULT_NIGHT_MODE;
         private String mHighlightSearchMediaTextQuery = DEFAULT_HIGHLIGHT_SEARCH_MEDIA_TEXT_QUERY;
         private String mHighlightAlbumId = DEFAULT_HIGHLIGHT_ALBUM_ID;
+        private int mHighlightType = DEFAULT_HIGHLIGHT_TYPE;
+        private boolean mLaunchedPickerInExpandedState = DEFAULT_EXPANDED_STATE;
 
         public Builder() {}
 
@@ -283,6 +314,56 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         }
 
         /**
+         * The app can choose to specify the highlight type i.e. the way in which the highlighted
+         * media results will be shown in the photopicker. The highlight type can be set for both
+         * album and search highlights.
+         *
+         * <p> The value can be one of:
+         * <ul>
+         * <li> {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED} to show a highlighted media
+         * section in the photopicker or
+         * <li> {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED}
+         * to show a highlighted media results grid. If this is the preferred highlight type,
+         * the embedded picker must be launched in the expanded state iniially by the app itself and
+         * {@link setLaunchedPickerInExpandedState} must be set to true to indicate the same.
+         * If the embedded picker's initial expanded state is found to be false, then the
+         * request for {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED} is ignored.
+         * </ul>
+         * The default highlight type value will be
+         * {@link MediaStore#PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED}.
+         * Any other input highlight value will result in {@code IllegalArgumentException} to be
+         * thrown.
+         * @param highlightType One of the above mentioned int params specifying the highlight
+         *                      type.
+         * @throws IllegalArgumentException if the input highlight type is invalid.
+         */
+        @NonNull
+        @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+        public Builder setHighlightType(@PickImagesHighlightType int highlightType) {
+            if (highlightType != PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED
+                    && highlightType != PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED) {
+                throw new IllegalArgumentException("Invalid value for input highlight type");
+            }
+            mHighlightType = highlightType;
+            return this;
+        }
+
+        /**
+         * Embedded photopicker can be launched in the expanded state by the app. If the app opts
+         * to do so, this field must be set to true indicating the app chose to initially launch
+         * the embedded picker in the expanded state.
+         * @param launchedPickerInExpandedState Indicates that the app chose to
+         *                                      launch the picker in expanded state.
+         */
+        @NonNull
+        @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+        public Builder setPickerLaunchedInExpandedState(boolean launchedPickerInExpandedState) {
+            mLaunchedPickerInExpandedState = launchedPickerInExpandedState;
+            return this;
+        }
+
+
+        /**
          * Sets ordered selection of media items i.e. this allows user to view/receive items in
          * their selected order
          *
@@ -372,7 +453,9 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                     mPreSelectedUris,
                     mThemeNightMode,
                     mHighlightSearchMediaTextQuery,
-                    mHighlightAlbumId);
+                    mHighlightAlbumId,
+                    mHighlightType,
+                    mLaunchedPickerInExpandedState);
         }
     }
     private EmbeddedPhotoPickerFeatureInfo(Parcel in) {
@@ -388,6 +471,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         this.mThemeNightMode = in.readInt();
         this.mHighlightSearchMediaTextQuery = in.readString();
         this.mHighlightAlbumId = in.readString();
+        this.mHighlightType = in.readInt();
+        this.mLaunchedPickerInExpandedState = in.readBoolean();
     }
 
     @Override
@@ -400,6 +485,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         dest.writeInt(mThemeNightMode);
         dest.writeString(mHighlightSearchMediaTextQuery);
         dest.writeString(mHighlightAlbumId);
+        dest.writeInt(mHighlightType);
+        dest.writeBoolean(mLaunchedPickerInExpandedState);
     }
 
     @Override
@@ -432,6 +519,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                 + ", mThemeNightMode=" + mThemeNightMode
                 + ", mHighlightSearchMediaQuery=" + mHighlightSearchMediaTextQuery
                 + ", mHighlightAlbumId=" + mHighlightAlbumId
+                + ", mHighlightType=" + mHighlightType
+                + ", mLaunchedPickerInExpandedState=" + mLaunchedPickerInExpandedState
                 + '}';
     }
 }

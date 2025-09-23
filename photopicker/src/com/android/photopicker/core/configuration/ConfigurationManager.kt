@@ -19,6 +19,7 @@ package com.android.photopicker.core.configuration
 import android.content.Intent
 import android.os.Build
 import android.provider.DeviceConfig
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import androidx.annotation.RequiresApi
@@ -175,7 +176,20 @@ class ConfigurationManager(
          * Check if a valid highlight media query was set and get a [HighLightQueryResultsParam]
          * object
          */
-        val highlightQueryResultsParams = getEmbeddedHighlightQueryResultsParams(featureInfo)
+        var highlightQueryResultsParams = getEmbeddedHighlightQueryResultsParams(featureInfo)
+        // Accommodate opening directly to album media page. We don't need to validate the album
+        // here since it's already done when the highlight params are extracted.
+        val startDestination =
+            if (
+                highlightQueryResultsParams.queryResultsHighlightType ==
+                    QueryResultsHighlightType.HIGHLIGHT_MEDIA_RESULTS &&
+                    highlightQueryResultsParams.queryResultsHighlightQuery is HighlightQuery.Album
+            ) {
+                PhotopickerDestinations.HIGHLIGHT_ALBUM_MEDIA_GRID
+            } else {
+                PhotopickerDestinations.DEFAULT
+            }
+        val launchedInExpandedState = featureInfo.isPickerLaunchedInExpandedState
 
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.
@@ -187,6 +201,8 @@ class ConfigurationManager(
                 preSelectedUris = preSelectedUris.toCollection(ArrayList()),
                 pickImagesInOrder = pickImagesInOrder,
                 highlightQueryResultsParams = highlightQueryResultsParams,
+                startDestination = startDestination,
+                embeddedPickerLaunchedInExpandedState = launchedInExpandedState,
             )
         }
     }
@@ -198,7 +214,8 @@ class ConfigurationManager(
     ): HighlightQueryResultsParams {
         val highlightTextQuery: String = featureInfo.highlightSearchMediaTextQuery
         val highlightAlbumQuery: String = featureInfo.highlightAlbumId
-
+        val highlightType =
+            QueryResultsHighlightType.toQueryResultsHighlightType(featureInfo.highlightType)
         if (highlightTextQuery.isNotEmpty() && highlightAlbumQuery.isNotEmpty()) {
             throw IllegalArgumentException(
                 "Only one of text highlight or album highlight can be specified."
@@ -211,12 +228,12 @@ class ConfigurationManager(
                 throw IllegalArgumentException("Unexpected highlight album")
             }
             return HighlightQueryResultsParams(
-                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                queryResultsHighlightType = highlightType,
                 queryResultsHighlightQuery = HighlightQuery.Album(highlightAlbum),
             )
         } else if (highlightTextQuery.isNotEmpty()) {
             return HighlightQueryResultsParams(
-                queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
+                queryResultsHighlightType = highlightType,
                 queryResultsHighlightQuery = HighlightQuery.Search(highlightTextQuery),
             )
         } else {

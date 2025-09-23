@@ -474,3 +474,11 @@ flag {
     description: "This flag enables a new Root in MediaDocumentsProvider that surfaces all file types"
     bug: "444316005"
 }
+
+flag {
+    name: "enable_embedded_picker_expanded_highlight_type_api"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "This flag will enable expanded highlight type for the embedded picker."
+    bug: "435395584"
+}

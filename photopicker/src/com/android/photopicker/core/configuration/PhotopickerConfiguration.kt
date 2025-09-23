@@ -97,6 +97,7 @@ data class PhotopickerConfiguration(
     val preSelectedUris: ArrayList<Uri>? = null,
     val highlightQueryResultsParams: HighlightQueryResultsParams =
         DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS,
+    val embeddedPickerLaunchedInExpandedState: Boolean = false,
     val deviceIsDebuggable: Boolean = buildIsDebuggable,
     val flags: PhotopickerFlags = PhotopickerFlags(),
     val sessionId: Int,
