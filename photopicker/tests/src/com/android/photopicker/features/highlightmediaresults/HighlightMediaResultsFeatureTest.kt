@@ -649,11 +649,30 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     useUnmergedTree = true,
                 )
                 .assertIsDisplayed()
-            // There is a vertically scrollable photogrid and a horizontally scrollable highlight
-            // grid
             composeTestRule
-                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
-                .assertCountEquals(2)
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(
+                            R.string.photopicker_search_results_grid_content_description
+                        )
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_media_grid_content_description)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_hsr_media_text)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
 
             // Click the "See All" button
             composeTestRule
@@ -663,16 +682,46 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 )
                 .performClick()
 
+            advanceTimeBy(3000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
             // Assert components of the search page to open: back button, search query text is
-            // visible
-            // with a scrollable grid.
+            // visible and the grid is displayed.
             // Also assert on current destination. For search page, the underlying destination is
-            // the
-            // PhotoGrid itself with an expanded search bar and its content
+            // the PhotoGrid itself with an expanded search bar and its content
             val route = navController.currentBackStackEntry?.destination?.route
             assertWithMessage("Current destination should be the album media grid")
                 .that(route)
                 .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(
+                            R.string.photopicker_search_results_grid_content_description
+                        )
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_media_grid_content_description)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_hsr_media_text)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
             composeTestRule
                 .onNode(
                     hasContentDescription(resources.getString(R.string.photopicker_back_option)),
@@ -680,9 +729,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 )
                 .assertIsDisplayed()
             composeTestRule.onNode(hasText(testQuery), useUnmergedTree = true).assertIsDisplayed()
-            composeTestRule
-                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
-                .assertCountEquals(1)
 
             // Assert back button navigates back to the photogrid
             composeTestRule
@@ -700,12 +746,30 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.waitForIdle()
 
-            // There is a vertically scrollable photogrid and a horizontally scrollable highlight
-            // grid
-            // when back is pressed
             composeTestRule
-                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
-                .assertCountEquals(2)
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(
+                            R.string.photopicker_search_results_grid_content_description
+                        )
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_media_grid_content_description)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_hsr_media_text)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
         }
 
     @Test
@@ -971,11 +1035,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 )
                 .assertIsDisplayed()
 
-            // There is a vertically scrollable photogrid and a horizontally scrollable highlight
-            // grid
             composeTestRule
-                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
-                .assertCountEquals(2)
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_hsr_media_text)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
 
             // Click the "See All" button
             composeTestRule
@@ -984,8 +1049,15 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                     useUnmergedTree = true,
                 )
                 .performClick()
+
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
             // Assert components of the album media grid page to open: back button and album name
-            // are visible with a scrollable grid.
+            // are visible.
             // Also assert on the current destination which should be the AlbumMediaGrid
             val route = navController.currentBackStackEntry?.destination?.route
             assertWithMessage("Current destination should be the album media grid")
@@ -1007,8 +1079,11 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 )
                 .assertIsDisplayed()
             composeTestRule
-                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
-                .assertCountEquals(1)
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_hsr_media_text)),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
 
             // Assert back button navigates back to the photogrid
             composeTestRule
@@ -1026,11 +1101,12 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.waitForIdle()
 
-            // There is a vertically scrollable photogrid and a horizontally scrollable highlight
-            // grid when back is pressed
             composeTestRule
-                .onAllNodes(hasScrollAction(), useUnmergedTree = true)
-                .assertCountEquals(2)
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_hsr_media_text)),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
         }
 
     @Test
