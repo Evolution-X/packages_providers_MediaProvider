@@ -103,7 +103,12 @@ fun ProfileSelector(
 
         Box(modifier = modifier) {
             FilledTonalButton(
-                modifier = Modifier.align(Alignment.CenterStart),
+                modifier =
+                    Modifier.align(Alignment.CenterStart).semantics {
+                        // Combine the descriptions for a comprehensive label for the button
+                        this.contentDescription = currentProfileLabel
+                        onClick(label = profileSelectorDescription, action = null)
+                    },
                 onClick = { expanded = !expanded },
                 contentPadding = PaddingValues(start = 16.dp, end = 8.dp),
                 colors =
@@ -118,22 +123,16 @@ fun ProfileSelector(
                 currentProfile.icon?.let {
                     Icon(
                         it,
-                        contentDescription = currentProfileLabel,
-                        modifier =
-                            Modifier.size(MEASUREMENT_PROFILE_ICON_SIZE).semantics {
-                                onClick(label = profileSelectorDescription, action = null)
-                            },
+                        contentDescription = null,
+                        modifier = Modifier.size(MEASUREMENT_PROFILE_ICON_SIZE),
                     )
                 }
                     // If the profile doesn't have an icon drawable set, then
                     // generate one.
                     ?: Icon(
                         getIconForProfile(currentProfile),
-                        contentDescription = currentProfileLabel,
-                        modifier =
-                            Modifier.size(MEASUREMENT_PROFILE_ICON_SIZE).semantics {
-                                onClick(label = profileSelectorDescription, action = null)
-                            },
+                        contentDescription = null,
+                        modifier = Modifier.size(MEASUREMENT_PROFILE_ICON_SIZE),
                     )
 
                 Icon(
