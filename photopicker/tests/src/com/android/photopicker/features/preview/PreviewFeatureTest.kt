@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.hasClickAction
@@ -220,7 +221,7 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             dateTakenMillisLong = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC) * 1000,
             sizeInBytes = 1000L,
             mimeType = "image/png",
-            standardMimeTypeExtension = 1,
+            standardMimeTypeExtension = 0,
         )
 
     val TEST_MEDIA_VIDEO =
@@ -1273,6 +1274,123 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule.onNode(hasText(errorMessage)).assertIsDisplayed()
         }
 
+    @Test
+    fun testPreviewSelectionChangesContentDescription() =
+        testScope.runTest {
+            configurationManager
+                .get()
+                .setIntent(
+                    Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                        putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    }
+                )
+
+            val resources = getTestableContext().resources
+            val selectedContentDescriptionSubstring = "Selected Photo taken on"
+            val unselectedContentDescriptionSubstring = "Photo taken on"
+
+            composeTestRule.setContent {
+                // Set an explicit size to prevent errors in glide being unable to measure
+                Column(modifier = Modifier.defaultMinSize(minHeight = 100.dp, minWidth = 100.dp)) {
+                    callPhotopickerMain(
+                        featureManager = featureManager,
+                        selection = selection,
+                        events = events,
+                    )
+                }
+            }
+
+            // Initially select the item
+            selection.add(TEST_MEDIA_IMAGE)
+            advanceTimeBy(100)
+
+            val initialRoute = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Unable to find initial route").that(initialRoute).isNotNull()
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({
+                navController.navigateToPreviewMedia(TEST_MEDIA_IMAGE)
+            })
+
+            // This looks a little awkward, but is necessary. There are two flows that need
+            // to be awaited, and a recomposition is required between them, so await idle twice
+            // and advance the test clock twice.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            assertWithMessage("Expected route to be preview/media")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.PREVIEW_MEDIA.route)
+
+            // Verify that there exists an item with "Selected" substring in its content description
+            composeTestRule
+                .onAllNodes(
+                    hasContentDescription(selectedContentDescriptionSubstring, substring = true),
+                    useUnmergedTree = true,
+                )
+                .assertCountEquals(1)
+            composeTestRule
+                .onNode(
+                    hasContentDescription(unselectedContentDescriptionSubstring, substring = true),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+
+            // Click the selection icon to deselect
+            composeTestRule
+                .onNode(
+                    hasContentDescription(resources.getString(R.string.photopicker_item_selected))
+                )
+                .performClick()
+
+            // Allow selection to update
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify that no item exists with "Selected" substring in its content description
+            composeTestRule
+                .onAllNodes(
+                    hasContentDescription(selectedContentDescriptionSubstring, substring = true),
+                    useUnmergedTree = true,
+                )
+                .assertCountEquals(0)
+            composeTestRule
+                .onNode(
+                    hasContentDescription(unselectedContentDescriptionSubstring, substring = true),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+
+            // Click the selection icon to select again
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_item_not_selected)
+                    )
+                )
+                .performClick()
+
+            // Allow selection to update
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify that there exists an item with "Selected" substring in its content description
+            composeTestRule
+                .onAllNodes(
+                    hasContentDescription(selectedContentDescriptionSubstring, substring = true),
+                    useUnmergedTree = true,
+                )
+                .assertCountEquals(1)
+            composeTestRule
+                .onNode(
+                    hasContentDescription(unselectedContentDescriptionSubstring, substring = true),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+        }
+
     /** Ensures that a pinch-out gesture on the preview screen navigates backwards. */
     @Test
     fun testPinchToZoomOutNavigatesBack() =
@@ -1311,7 +1429,10 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             // The content description is composed of multiple parts, so we do a substring match.
             // We target the image itself to perform the pinch gesture on.
             composeTestRule
-                .onNode(hasContentDescription("Photo", substring = true), useUnmergedTree = true)
+                .onNode(
+                    hasContentDescription("Photo taken on", substring = true),
+                    useUnmergedTree = true,
+                )
                 .assertIsDisplayed()
                 .performTouchInput {
                     // Perform a pinch-in gesture to simulate zooming out.
