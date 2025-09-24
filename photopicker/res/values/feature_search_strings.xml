@@ -50,4 +50,7 @@
 
     <!-- Search view placeholder text when a cloud provider is available with search enabled -->
     <string name="photopicker_search_with_provider_placeholder_text" translation_description="Placeholder text shown in the search bar in search view when the searchable provider is only a cloud provider.">Search with <xliff:g id="provider_name" example="Photos">%1$s</xliff:g></string>
+
+    <!-- Content description for search results media grid-->
+    <string name="photopicker_search_results_grid_content_description" translation_description="Text for describing the search results media grid">Search results grid</string>
 </resources>
