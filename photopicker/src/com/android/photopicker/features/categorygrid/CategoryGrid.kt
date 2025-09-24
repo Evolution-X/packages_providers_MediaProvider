@@ -37,9 +37,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -90,6 +92,7 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
     val configuration = LocalPhotopickerConfiguration.current
     val events = LocalEvents.current
     val scope = rememberCoroutineScope()
+    val layoutDirection = LocalLayoutDirection.current
 
     // Use the expanded layout any time the Width is Medium or larger.
     val isExpandedScreen: Boolean =
@@ -105,11 +108,10 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
             Modifier.fillMaxSize().pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onHorizontalDrag = { _, dragAmount ->
-                        // This may need some additional fine tuning by looking at a certain
-                        // distance in dragAmount, but initial testing suggested this worked
-                        // pretty well as is.
-                        if (dragAmount > 0) {
-                            // Positive is a right swipe
+                        val adjustedDragAmount =
+                            if (layoutDirection == LayoutDirection.Rtl) -dragAmount else dragAmount
+                        if (adjustedDragAmount > 0) {
+                            // Positive adjusted drag amount indicates navigate to photo grid
                             if (featureManager.isFeatureEnabled(PhotoGridFeature::class.java)) {
                                 navController.navigateToPhotoGrid()
                                 // Dispatch UI event to indicate switching to photos tab
