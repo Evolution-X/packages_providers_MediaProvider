@@ -4331,13 +4331,21 @@ public class MediaProvider extends ContentProvider {
         List<String> projectionList = Arrays.asList(projection);
         projectionList.replaceAll(String::toLowerCase);
 
+        if (qb.getProjectionAllowlist() == null) {
+            qb.setProjectionAllowlist(new ArrayList<>());
+        }
+
         for (String columnToFilter: columnsToFilter) {
             if (projectionList.contains(columnToFilter)) {
                 int indexOfColumnToBeFiltered = projectionList.indexOf(columnToFilter);
+                String newProjection = constructNullProjectionForColumn(columnToFilter);
                 projectionList.set(
                         indexOfColumnToBeFiltered,
-                        constructNullProjectionForColumn(columnToFilter)
+                        newProjection
                 );
+                // Allow constructed null column in projection
+                final String escapedColumnCase = Pattern.quote(newProjection);
+                qb.getProjectionAllowlist().add(Pattern.compile(escapedColumnCase));
             }
         }
         String[] updatedProjection = new String[projectionList.size()];
