@@ -39,6 +39,7 @@ android_app {
         "mediaprovider_flags_java_lib",
         "androidx.media3.media3-common",
         "androidx.media3.media3-transformer",
+        "dynamiccolors",
     ],
 
     libs: [
