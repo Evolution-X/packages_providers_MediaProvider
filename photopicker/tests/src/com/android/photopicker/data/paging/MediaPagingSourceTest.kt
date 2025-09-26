@@ -131,7 +131,7 @@ class MediaPagingSourceTest {
                 mediaProviderClient = mockMediaProviderClient,
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
-                featureManager,
+                isDateScrubberEnabled,
                 events,
                 pageSize,
             )
@@ -184,6 +184,16 @@ class MediaPagingSourceTest {
             )
 
         val pageSize: Int = 10
+        val isDateScrubberEnabled = featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
+        val mediaPageKeyCacheInterval = 100
+        val mockMediaPageKeyCache =
+            listOf(
+                MediaPageKey(pickerId = 105L, dateTakenMillis = 1759165800000L),
+                MediaPageKey(pickerId = 104L, dateTakenMillis = 1759165700000L),
+                MediaPageKey(pickerId = 103L, dateTakenMillis = 1759165700000L),
+                MediaPageKey(pickerId = 102L, dateTakenMillis = 1759165600000L),
+                MediaPageKey(pickerId = 101L, dateTakenMillis = 1759165500000L),
+            )
         val mediaPagingSource =
             MediaPagingSource(
                 contentResolver = contentResolver,
@@ -191,27 +201,24 @@ class MediaPagingSourceTest {
                 mediaProviderClient = mockMediaProviderClient,
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
-                featureManager,
+                isDateScrubberEnabled,
                 events,
                 pageSize,
+                mediaPageKeyCacheInterval = mediaPageKeyCacheInterval,
+                mediaPageKeyCache = mockMediaPageKeyCache,
             )
 
-        val anchorPosition = 75
-        val validRefreshPosition = anchorPosition - anchorPosition % pageSize
-        val pagingState = createFakePagingState(anchorPosition = 75, pageSize = pageSize)
-        mediaPagingSource.getRefreshKey(pagingState)
+        val anchorPosition = 175
+        val validRefreshPosition = anchorPosition - anchorPosition % mediaPageKeyCacheInterval
+        val expectedIndexInCache = validRefreshPosition / mediaPageKeyCacheInterval
+        val pagingState = createFakePagingState(anchorPosition = 175, pageSize = pageSize)
+        assertThat(mediaPagingSource.getRefreshKey(pagingState))
+            .isEqualTo(mockMediaPageKeyCache[expectedIndexInCache])
+
         advanceTimeBy(100)
 
         // Verify that jumping is enabled in the PagingSource
         assertThat(mediaPagingSource.jumpingSupported).isEqualTo(true)
-
-        verify(mockMediaProviderClient, times(1))
-            .fetchMediaPageKeyForItemPosition(
-                contentResolver,
-                validRefreshPosition,
-                availableProviders,
-                testPhotopickerConfiguration,
-            )
     }
 
     @Test
@@ -230,7 +237,6 @@ class MediaPagingSourceTest {
                 this.backgroundScope,
                 TestPrefetchDataService(),
             )
-
         val events =
             Events(
                 scope = this.backgroundScope,
@@ -239,6 +245,16 @@ class MediaPagingSourceTest {
             )
 
         val pageSize: Int = 10
+        val isDateScrubberEnabled = featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
+        val mediaPageKeyCacheInterval = 100
+        val mockMediaPageKeyCache =
+            listOf(
+                MediaPageKey(pickerId = 105L, dateTakenMillis = 1759165800000L),
+                MediaPageKey(pickerId = 104L, dateTakenMillis = 1759165700000L),
+                MediaPageKey(pickerId = 103L, dateTakenMillis = 1759165700000L),
+                MediaPageKey(pickerId = 102L, dateTakenMillis = 1759165600000L),
+                MediaPageKey(pickerId = 101L, dateTakenMillis = 1759165500000L),
+            )
         val mediaPagingSource =
             MediaPagingSource(
                 contentResolver = contentResolver,
@@ -246,27 +262,124 @@ class MediaPagingSourceTest {
                 mediaProviderClient = mockMediaProviderClient,
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
-                featureManager,
+                isDateScrubberEnabled,
                 events,
                 pageSize,
+                mediaPageKeyCacheInterval = mediaPageKeyCacheInterval,
+                mediaPageKeyCache = mockMediaPageKeyCache,
             )
 
-        val anchorPosition = 75
-        val validRefreshPosition = anchorPosition - anchorPosition % pageSize
-        val pagingState = createFakePagingState(anchorPosition = 75, pageSize = pageSize)
-        mediaPagingSource.getRefreshKey(pagingState)
+        val anchorPosition = 175
+        val validRefreshPosition = anchorPosition - anchorPosition % mediaPageKeyCacheInterval
+        val expectedIndexInCache = validRefreshPosition / mediaPageKeyCacheInterval
+        val pagingState = createFakePagingState(anchorPosition = 175, pageSize = pageSize)
+
+        // Since date scrubber flag is disabled ,getRefreshKey Should return null
+        assertThat(mediaPagingSource.getRefreshKey(pagingState)).isEqualTo(null)
+
         advanceTimeBy(100)
 
-        // Verify that jumping is disabled in the PagingSource
+        // Verify that jumping is enabled in the PagingSource
         assertThat(mediaPagingSource.jumpingSupported).isEqualTo(false)
+    }
 
-        verify(mockMediaProviderClient, times(0))
-            .fetchMediaPageKeyForItemPosition(
-                contentResolver,
-                validRefreshPosition,
-                availableProviders,
-                testPhotopickerConfiguration,
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_DATESCRUBBER)
+    fun testGetRefreshKey_returnsNull_whenMediaPageKeyCacheIsEmpty() = runTest {
+        val testPhotopickerConfiguration =
+            PhotopickerConfiguration(
+                action = MediaStore.ACTION_PICK_IMAGES,
+                intent = Intent(MediaStore.ACTION_PICK_IMAGES),
+                sessionId = testSessionId,
             )
+        val featureManager =
+            FeatureManager(
+                provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
+                this.backgroundScope,
+                TestPrefetchDataService(),
+            )
+        val events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
+                featureManager,
+            )
+
+        val pageSize: Int = 10
+        val isDateScrubberEnabled = featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
+        val mediaPageKeyCacheInterval = 100
+        val mediaPagingSource =
+            MediaPagingSource(
+                contentResolver = contentResolver,
+                availableProviders = availableProviders,
+                mediaProviderClient = mockMediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                testPhotopickerConfiguration,
+                isDateScrubberEnabled,
+                events,
+                pageSize,
+                mediaPageKeyCacheInterval = mediaPageKeyCacheInterval,
+            )
+
+        val pagingState = createFakePagingState(anchorPosition = 175, pageSize = pageSize)
+        assertThat(mediaPagingSource.getRefreshKey(pagingState)).isEqualTo(null)
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_DATESCRUBBER)
+    fun testGetRefreshKey_returnsNull_whenAnchorPositionIsBeyondCachedKeys() = runTest {
+        val testPhotopickerConfiguration =
+            PhotopickerConfiguration(
+                action = MediaStore.ACTION_PICK_IMAGES,
+                intent = Intent(MediaStore.ACTION_PICK_IMAGES),
+                sessionId = testSessionId,
+            )
+        val featureManager =
+            FeatureManager(
+                provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
+                this.backgroundScope,
+                TestPrefetchDataService(),
+            )
+        val events =
+            Events(
+                scope = this.backgroundScope,
+                provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
+                featureManager,
+            )
+
+        val pageSize: Int = 10
+        val isDateScrubberEnabled = featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
+        val mediaPageKeyCacheInterval = 100
+        val mockMediaPageKeyCache =
+            listOf(
+                MediaPageKey(pickerId = 105L, dateTakenMillis = 1759165800000L),
+                MediaPageKey(pickerId = 104L, dateTakenMillis = 1759165700000L),
+                MediaPageKey(pickerId = 103L, dateTakenMillis = 1759165700000L),
+                MediaPageKey(pickerId = 102L, dateTakenMillis = 1759165600000L),
+                MediaPageKey(pickerId = 101L, dateTakenMillis = 1759165500000L),
+            )
+        val mediaPagingSource =
+            MediaPagingSource(
+                contentResolver = contentResolver,
+                availableProviders = availableProviders,
+                mediaProviderClient = mockMediaProviderClient,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                testPhotopickerConfiguration,
+                isDateScrubberEnabled,
+                events,
+                pageSize,
+                mediaPageKeyCacheInterval = mediaPageKeyCacheInterval,
+                mediaPageKeyCache = mockMediaPageKeyCache,
+            )
+
+        val anchorPosition = 555
+        val pagingState =
+            createFakePagingState(anchorPosition = anchorPosition, pageSize = pageSize)
+
+        // Required index in cache is 5, that is not available, getRefreshKey should return null
+        assertThat(mediaPagingSource.getRefreshKey(pagingState)).isEqualTo(null)
     }
 
     /**

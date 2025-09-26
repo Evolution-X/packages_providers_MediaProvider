@@ -89,6 +89,8 @@ val DEFAULT_ALBUM_NAME = "album_id"
 
 val DEFAULT_ITEM_POSITION_FOR_MEDIA_PAGE_KEY = 2
 
+val DEFAULT_INTERVAL_FOR_MEDIA_PAGE_KEY_CACHE = 2
+
 val DEFAULT_ALBUM_MEDIA: Map<String, List<Media>> = mapOf(DEFAULT_ALBUM_NAME to DEFAULT_MEDIA)
 
 val DEFAULT_SEARCH_REQUEST_ID: Int = 100
@@ -221,6 +223,7 @@ class TestMediaProvider(
             MEDIA_SET_CONTENTS_PATH_SEGMENT -> getMedia()
             ITEMS_PER_MONTH_PATH_SEGMENT -> getItemsPerMonth()
             PAGE_KEY_PATH_SEGMENT -> getMediaPageKey()
+            PAGE_KEY_LIST_PATH_SEGMENT -> getMediaPageKeyList()
             else -> {
                 val pathSegments: MutableList<String> = uri.getPathSegments()
                 if (pathSegments.size == 4 && pathSegments[2].equals(ALBUM_PATH_SEGMENT)) {
@@ -423,6 +426,37 @@ class TestMediaProvider(
             pickerId = targetItem.pickerId,
             dateTakenMillis = targetItem.dateTakenMillisLong,
         )
+    }
+
+    private fun getMediaPageKeyList(): Cursor {
+        val cursor =
+            MatrixCursor(
+                arrayOf(
+                    MediaProviderClient.MediaResponse.PICKER_ID.key,
+                    MediaProviderClient.MediaResponse.DATE_TAKEN.key,
+                )
+            )
+        media.forEachIndexed { index, mediaItem ->
+            if (index % DEFAULT_INTERVAL_FOR_MEDIA_PAGE_KEY_CACHE == 0) {
+                cursor.addRow(arrayOf(mediaItem.pickerId, mediaItem.dateTakenMillisLong))
+            }
+        }
+        return cursor
+    }
+
+    fun getMediaPageKeyListForAllItemsAtInterval(): List<MediaPageKey> {
+        val result: MutableList<MediaPageKey> = mutableListOf()
+        var currentItemIndex = 0
+        while (currentItemIndex < media.size) {
+            result.add(
+                MediaPageKey(
+                    media[currentItemIndex].pickerId,
+                    media[currentItemIndex].dateTakenMillisLong,
+                )
+            )
+            currentItemIndex += DEFAULT_INTERVAL_FOR_MEDIA_PAGE_KEY_CACHE
+        }
+        return result
     }
 
     private fun fetchFilteredMedia(queryArgs: Bundle?, mediaItems: List<Media> = media): Cursor {

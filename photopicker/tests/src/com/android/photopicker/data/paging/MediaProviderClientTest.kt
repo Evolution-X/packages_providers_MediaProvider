@@ -670,4 +670,23 @@ class MediaProviderClientTest {
         assertThat(mediaPageKey.pickerId).isEqualTo(expectedMediaPageKey.pickerId)
         assertThat(mediaPageKey.dateTakenMillis).isEqualTo(expectedMediaPageKey.dateTakenMillis)
     }
+
+    @Test
+    fun testFetchMediaPageKeyListForGivenCacheInterval() = runTest {
+        val mediaProviderClient = MediaProviderClient()
+        val mediaPageKeyList: List<MediaPageKey> =
+            mediaProviderClient.fetchMediaPageKeyList(
+                contentResolver = testContentResolver,
+                mediaPageKeyCacheInterval = 2,
+                availableProviders = listOf(Provider("provider", MediaSource.LOCAL, 0, "")),
+                config =
+                    PhotopickerConfiguration(
+                        action = MediaStore.ACTION_PICK_IMAGES,
+                        sessionId = sessionId,
+                    ),
+            )
+        val expectedMediaPageKeyList =
+            testContentProvider.getMediaPageKeyListForAllItemsAtInterval()
+        assertThat(mediaPageKeyList).containsExactlyElementsIn(expectedMediaPageKeyList)
+    }
 }

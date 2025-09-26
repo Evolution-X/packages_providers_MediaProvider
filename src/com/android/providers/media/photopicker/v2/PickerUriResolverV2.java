@@ -49,6 +49,7 @@ public class PickerUriResolverV2 {
     public static final String UPDATE_PATH_SEGMENT = "update";
     private static final String MEDIA_GRANTS_COUNT_PATH_SEGMENT = "media_grants_count";
     public static final String PAGE_KEY_PATH_SEGMENT = "page_key";
+    public static final String PAGE_KEY_LIST_PATH_SEGMENT = "page_key_list";
     private static final String PREVIEW_PATH_SEGMENT = "preview";
     private static final String PRE_SELECTION_PATH_SEGMENT = "pre_selection";
     private static final String SEARCH_SUGGESTIONS_PATH_SEGMENT = "search_suggestions";
@@ -73,6 +74,7 @@ public class PickerUriResolverV2 {
     static final int PICKER_INTERNAL_MEDIA_SET_CONTENTS = 13;
     static final int PICKER_INTERNAL_ITEMS_PER_MONTH = 14;
     static final int PICKER_INTERNAL_MEDIA_PAGE_KEY = 15;
+    static final int PICKER_INTERNAL_MEDIA_PAGE_KEY_LIST = 16;
 
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({
@@ -92,6 +94,7 @@ public class PickerUriResolverV2 {
             PICKER_INTERNAL_MEDIA_SET_CONTENTS,
             PICKER_INTERNAL_ITEMS_PER_MONTH,
             PICKER_INTERNAL_MEDIA_PAGE_KEY,
+            PICKER_INTERNAL_MEDIA_PAGE_KEY_LIST,
     })
     private @interface PickerQuery {}
 
@@ -146,6 +149,9 @@ public class PickerUriResolverV2 {
         sUriMatcher.addURI(MediaStore.AUTHORITY,
                 BASE_PICKER_PATH + MEDIA_PATH_SEGMENT + "/" + PAGE_KEY_PATH_SEGMENT,
                 PICKER_INTERNAL_MEDIA_PAGE_KEY);
+        sUriMatcher.addURI(MediaStore.AUTHORITY,
+                BASE_PICKER_PATH + MEDIA_PATH_SEGMENT + "/" + PAGE_KEY_LIST_PATH_SEGMENT,
+                PICKER_INTERNAL_MEDIA_PAGE_KEY_LIST);
     }
 
     /**
@@ -211,6 +217,9 @@ public class PickerUriResolverV2 {
                 return PickerDataLayerV2.queryItemsPerMonth(appContext, requireNonNull(queryArgs));
             case PICKER_INTERNAL_MEDIA_PAGE_KEY:
                 return PickerDataLayerV2.queryMediaPageKey(appContext, requireNonNull(queryArgs));
+            case PICKER_INTERNAL_MEDIA_PAGE_KEY_LIST:
+                return PickerDataLayerV2.queryMediaPageKeyList(appContext,
+                        requireNonNull(queryArgs));
             default:
                 throw new UnsupportedOperationException("Could not recognize content URI " + uri);
         }
