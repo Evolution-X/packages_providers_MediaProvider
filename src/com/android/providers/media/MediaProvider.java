@@ -1260,6 +1260,15 @@ public class MediaProvider extends ContentProvider {
                         && deletedRow.getVolumeName().equalsIgnoreCase(VOLUME_EXTERNAL_PRIMARY)) {
                     mExternalPrimaryBackupExecutor.deleteBackupForPath(deletedRow.getPath());
                 }
+
+                // Check if the file was previously trashed and is now being permanently deleted.
+                // In this case, for items in the trash, we also need to clean up any empty
+                // parent directories.
+                if (Flags.enableTrashAndRestoreByFilePathApi()
+                        && FileUtils.isTrashedFileInTrashDirectory(deletedRow.getPath())) {
+                    FileRestoreManager.deleteAllParentIfNonTrashed(new File(deletedRow.getPath()),
+                            parentFile -> scanFileAsMediaProvider(parentFile));
+                }
             });
         }
     };
