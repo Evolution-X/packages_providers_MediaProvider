@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +54,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.testing.TestNavHostController
 import androidx.test.filters.SdkSuppress
+import androidx.test.platform.app.InstrumentationRegistry
 import com.android.photopicker.core.ActivityModule
 import com.android.photopicker.core.ApplicationModule
 import com.android.photopicker.core.ApplicationOwned
@@ -108,6 +108,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import org.junit.Assume
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -125,6 +126,17 @@ import org.mockito.MockitoAnnotations
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTestApi::class)
 class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
+    companion object {
+        private fun isHardwareSupported(): Boolean {
+            // These UI tests are not optimised for Watches, TVs, Auto;
+            // IoT devices do not have a UI to run these UI tests
+            val pm = InstrumentationRegistry.getInstrumentation().context.packageManager
+            return !pm.hasSystemFeature(PackageManager.FEATURE_EMBEDDED) &&
+                !pm.hasSystemFeature(PackageManager.FEATURE_WATCH) &&
+                !pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK) &&
+                !pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
+        }
+    }
 
     /* Hilt's rule needs to come first to ensure the DI container is setup for the test. */
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
@@ -228,6 +240,8 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
     @Before
     fun setup() {
+        Assume.assumeTrue(isHardwareSupported())
+
         MockitoAnnotations.openMocks(this)
         hiltRule.inject()
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
@@ -563,8 +577,9 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
         // Calculate offsets based on measured pixels
         val halfHeightPx = parentHeightState.value / 2f
-        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET.toPx() }
-        val bottomOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET.toPx() }
+        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET_MAX.toPx() }
+        val bottomOffsetPx =
+            with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
         val maxScrollOffsetTop = (-halfHeightPx + topOffsetPx).coerceAtMost(0f)
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
@@ -680,8 +695,9 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
         // Calculate offsets based on measured pixels
         val halfHeightPx = parentHeightState.value / 2f
-        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET.toPx() }
-        val bottomOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET.toPx() }
+        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET_MAX.toPx() }
+        val bottomOffsetPx =
+            with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
         val maxScrollOffsetTop = (-halfHeightPx + topOffsetPx).coerceAtMost(0f)
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
@@ -813,8 +829,9 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
         // Calculate offsets based on measured pixels
         val halfHeightPx = parentHeightState.value / 2f
-        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET.toPx() }
-        val bottomOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET.toPx() }
+        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET_MAX.toPx() }
+        val bottomOffsetPx =
+            with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
         val maxScrollOffsetTop = (-halfHeightPx + topOffsetPx).coerceAtMost(0f)
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
@@ -946,8 +963,9 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
         // Calculate offsets based on measured pixels
         val halfHeightPx = parentHeightState.value / 2f
-        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET.toPx() }
-        val bottomOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET.toPx() }
+        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET_MAX.toPx() }
+        val bottomOffsetPx =
+            with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
         val maxScrollOffsetTop = (-halfHeightPx + topOffsetPx).coerceAtMost(0f)
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
@@ -1079,8 +1097,9 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
         // Calculate the valid vertical drag range in pixels
         val halfHeightPx = parentHeightState.value / 2f
-        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET.toPx() }
-        val bottomOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET.toPx() }
+        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET_MAX.toPx() }
+        val bottomOffsetPx =
+            with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
         val maxScrollOffsetTop = (-halfHeightPx + topOffsetPx).coerceAtMost(0f)
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
 
@@ -1159,8 +1178,9 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
         // Calculate the valid vertical drag range in pixels (kept for parity with other tests)
         val halfHeightPx = parentHeightState.value / 2f
-        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET.toPx() }
-        val bottomOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET.toPx() }
+        val topOffsetPx = with(composeTestRule.density) { DATE_SCRUBBER_TOP_OFFSET_MAX.toPx() }
+        val bottomOffsetPx =
+            with(composeTestRule.density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
         val maxScrollOffsetTop = (-halfHeightPx + topOffsetPx).coerceAtMost(0f)
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
 

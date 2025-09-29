@@ -39,7 +39,6 @@ import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
-import com.android.photopicker.core.features.FeatureRegistration
 import com.android.photopicker.data.MediaProviderClient
 import com.android.photopicker.data.TestMediaProvider
 import com.android.photopicker.data.TestPrefetchDataService
@@ -48,6 +47,7 @@ import com.android.photopicker.data.model.MediaPageKey
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.data.paging.MediaPagingSource
+import com.android.photopicker.features.datescrubber.DateScrubberFeature
 import com.android.photopicker.tests.HiltTestActivity
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertThat
@@ -114,7 +114,6 @@ class MediaPagingSourceTest {
                 provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
                 this.backgroundScope,
                 TestPrefetchDataService(),
-                emptySet<FeatureRegistration>(),
             )
         val events =
             Events(
@@ -123,6 +122,7 @@ class MediaPagingSourceTest {
                 featureManager,
             )
 
+        val isDateScrubberEnabled = featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
         val pageSize: Int = 10
         val mediaPagingSource =
             MediaPagingSource(
@@ -131,6 +131,7 @@ class MediaPagingSourceTest {
                 mediaProviderClient = mockMediaProviderClient,
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
+                featureManager,
                 events,
                 pageSize,
             )
@@ -155,8 +156,7 @@ class MediaPagingSourceTest {
                 availableProviders,
                 testPhotopickerConfiguration,
                 shouldEnableItemsBeforeCount = true,
-                shouldEnableItemsAfterCount =
-                    testPhotopickerConfiguration.flags.PICKER_DATESCRUBBER_ENABLED,
+                shouldEnableItemsAfterCount = isDateScrubberEnabled,
             )
     }
 
@@ -175,7 +175,6 @@ class MediaPagingSourceTest {
                 provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
                 this.backgroundScope,
                 TestPrefetchDataService(),
-                emptySet<FeatureRegistration>(),
             )
         val events =
             Events(
@@ -192,6 +191,7 @@ class MediaPagingSourceTest {
                 mediaProviderClient = mockMediaProviderClient,
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
+                featureManager,
                 events,
                 pageSize,
             )
@@ -229,7 +229,6 @@ class MediaPagingSourceTest {
                 provideTestConfigurationFlow(this.backgroundScope, testPhotopickerConfiguration),
                 this.backgroundScope,
                 TestPrefetchDataService(),
-                emptySet<FeatureRegistration>(),
             )
 
         val events =
@@ -247,6 +246,7 @@ class MediaPagingSourceTest {
                 mediaProviderClient = mockMediaProviderClient,
                 dispatcher = StandardTestDispatcher(this.testScheduler),
                 testPhotopickerConfiguration,
+                featureManager,
                 events,
                 pageSize,
             )

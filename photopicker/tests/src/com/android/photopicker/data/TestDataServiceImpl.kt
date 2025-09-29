@@ -20,6 +20,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.paging.PagingSource
 import com.android.photopicker.core.configuration.provideTestConfigurationFlow
+import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group.Album
@@ -114,17 +115,22 @@ class TestDataServiceImpl() : DataService {
         throw NotImplementedError("This method is not implemented yet.")
 
     override fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media> {
-        val testConfig = provideTestConfigurationFlow(scope = TestScope().backgroundScope).value
+        val testFeatureManager =
+            FeatureManager(
+                provideTestConfigurationFlow(scope = TestScope().backgroundScope),
+                TestScope().backgroundScope,
+                TestPrefetchDataService(),
+            )
         return mediaList?.let {
             FakeInMemoryMediaPagingSource(
                 it,
-                testConfig = testConfig,
+                testFeatureManager = testFeatureManager,
                 nextPageSize = regularPageSize,
             )
         }
             ?: FakeInMemoryMediaPagingSource(
                 mediaSetSize,
-                testConfig = testConfig,
+                testFeatureManager = testFeatureManager,
                 nextPageSize = regularPageSize,
             )
     }

@@ -608,6 +608,7 @@ class DataServiceImpl(
                         mediaProviderClient,
                         dispatcher,
                         config.value,
+                        featureManager,
                         events,
                         regularPageSize,
                     )
@@ -638,6 +639,7 @@ class DataServiceImpl(
                     mediaProviderClient,
                     dispatcher,
                     config.value,
+                    featureManager,
                     events,
                     regularPageSize,
                     /* is_preview_request */ true,

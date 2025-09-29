@@ -27,10 +27,10 @@ import androidx.paging.cachedIn
 import com.android.photopicker.core.banners.BannerDefinitions
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.components.MediaGridItem
-import com.android.photopicker.core.configuration.ConfigurationManager
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.Telemetry
+import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureToken.PHOTO_GRID
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.selection.SelectionModifiedResult.FAILURE_SELECTION_LIMIT_EXCEEDED
@@ -38,6 +38,7 @@ import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.insertMonthSeparators
 import com.android.photopicker.extensions.toMediaGridItemFromMedia
+import com.android.photopicker.features.datescrubber.DateScrubberFeature
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +61,7 @@ constructor(
     private val dataService: DataService,
     private val events: Events,
     private val bannerManager: BannerManager,
-    private val configurationManager: ConfigurationManager,
+    private val featureManager: FeatureManager,
 ) : ViewModel() {
 
     companion object {
@@ -90,7 +91,7 @@ constructor(
 
     // If date scrubber is enabled in PhotoPicker
     private val isDateScrubberEnabled =
-        configurationManager.configuration.value.flags.PICKER_DATESCRUBBER_ENABLED
+        featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
 
     /**
      * Jump Threshold to support jumping in Photos grid. If the user scrolls more than 3 pages away
