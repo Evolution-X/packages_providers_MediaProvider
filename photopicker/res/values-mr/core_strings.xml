@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"तुमच्या कॅमेरा ॲपद्वारे कॅप्चर केलेले, सेव्ह केलेले किंवा शेअर केलेले व्हिडिओ इथे दिसतील"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"मागे जा"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"डिसमिस करा"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"मीडिया ग्रिड"</string>
 </resources>

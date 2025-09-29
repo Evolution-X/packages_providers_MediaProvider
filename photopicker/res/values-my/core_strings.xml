@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"သင့်ကင်မရာအက်ပ်က ရိုက်ကူးထားပြီး သိမ်းထား (သို့) မျှဝေထားသော ဗီဒီယိုများကို ဤနေရာတွင် တွေ့ရမည်"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"နောက်သို့"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"ပယ်ရန်"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"မီဒီယာဇယားကွက်"</string>
 </resources>

@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"మీ కెమెరా యాప్ ద్వారా క్యాప్చర్ చేసిన, సేవ్ చేసిన లేదా షేర్ చేసిన వీడియోలు ఇక్కడ కనిపిస్తాయి"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"వెనుకకు"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"విస్మరించండి"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"మీడియా గ్రిడ్"</string>
 </resources>

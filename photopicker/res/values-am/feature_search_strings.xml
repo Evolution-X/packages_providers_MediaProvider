@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"ተመሳሳይ ቃላትን ለመፈለግ ይሞክሩ።\n\nምትኬ የተቀመጠላቸው ንጥሎች ብቻ በእርስዎ የፍለጋ ውጤቶች ውስጥ ይታያሉ።"</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>ን ይፈልጉ"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"በ<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> ይፈልጉ"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"የፍለጋ ውጤቶች ፍርግርግ"</string>
 </resources>

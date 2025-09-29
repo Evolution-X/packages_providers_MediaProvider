@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Попробуйте найти похожие слова.\n\nВ результатах поиска появятся только резервные копии объектов."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Поиск (<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>)"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Поиск через сервис \"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>\""</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Результаты поиска в виде сетки"</string>
 </resources>

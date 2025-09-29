@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"આના જેવા શબ્દો શોધવાનો પ્રયાસ કરો.\n\nતમારા શોધ પરિણામોમાં માત્ર તે જ આઇટમ દેખાશે કે જેનું બૅકઅપ લેવામાં આવ્યું છે."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> શોધો"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>થી શોધો"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"શોધ પરિણામોની ગ્રિડ"</string>
 </resources>

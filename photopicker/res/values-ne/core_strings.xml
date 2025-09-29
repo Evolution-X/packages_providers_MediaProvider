@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"तपाईंको क्यामेरा एपले खिचेका, सेभ गरेका वा सेयर गरेका भिडियोहरू यहाँ देखिने छन्"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"पछाडि"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"हटाउनुहोस्"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"मिडियाको ग्रिड"</string>
 </resources>
