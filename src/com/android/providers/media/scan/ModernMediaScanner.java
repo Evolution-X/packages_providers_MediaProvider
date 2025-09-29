@@ -1110,6 +1110,7 @@ public class ModernMediaScanner implements MediaScanner {
                     Log.v(TAG, "Fetched OEM metadata successfully");
                 } catch (Exception e) {
                     Log.w(TAG, "Failure in fetching OEM metadata", e);
+                    op.withValue(FileColumns.OEM_METADATA, null);
                 }
             } catch (Exception e) {
                 Log.w(TAG, "Failure in connecting to OEM metadata service", e);
