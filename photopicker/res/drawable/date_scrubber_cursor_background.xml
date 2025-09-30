@@ -17,21 +17,13 @@
 
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:autoMirrored="true"
-    android:width="48dp"
-    android:height="64dp"
+    android:width="55dp"
+    android:height="77dp"
     android:viewportWidth="48"
     android:viewportHeight="64">
 
   <path
-      android:fillColor="#F0EEE1"
+      android:fillColor="@android:color/white"
       android:pathData="M48,14.455C44.503,12.56 40.396,11.487 36,11.487C23.255,11.487 12.923,20.669 12.923,32C12.923,43.329 23.255,52.513 36,52.513C40.396,52.513 44.503,51.41 48,49.525V14.455Z"/>
-
-  <path
-      android:fillColor="#1B1C14"
-      android:pathData="M27.692,28.718L32.308,24.615L36.923,28.718L27.692,28.718Z"/>
-
-  <path
-      android:fillColor="#1B1C14"
-      android:pathData="M36.923,35.282L32.308,39.385L27.692,35.282L36.923,35.282Z"/>
 
 </vector>
