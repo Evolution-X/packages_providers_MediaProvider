@@ -46,6 +46,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.core.net.toUri
 import androidx.test.filters.SdkSuppress
 import com.android.photopicker.R
 import com.android.photopicker.core.ActivityModule
@@ -65,7 +66,9 @@ import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.data.DataService
+import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.TestSearchDataServiceImpl
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
@@ -889,5 +892,126 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
                     )
                 )
                 .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchSuggestionBadge_onlyCloudProviderWithIcon_isDisplayed() =
+        testScope.runTest {
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.setSearchableProviders(listOf(cloudProvider))
+            val testDataService = dataService as TestDataServiceImpl
+            val testIcon = Icon("icon_uri".toUri(), MediaSource.LOCAL)
+            testDataService.setProviderToIconMap(mapOf(cloudProvider to testIcon))
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(
+                    hasText(
+                        getTestableContext()
+                            .resources
+                            .getString(
+                                R.string.photopicker_search_provider_placeholder_text,
+                                cloudProviderName,
+                            )
+                    )
+                )
+                .performClick()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify the cloud provider icon is displayed
+            composeTestRule.onNode(hasContentDescription(cloudProviderName)).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchSuggestionBadge_onlyCloudProviderWithoutIcon_isNotDisplayed() =
+        testScope.runTest {
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.setSearchableProviders(listOf(cloudProvider))
+            val testDataService = dataService as TestDataServiceImpl
+            testDataService.setProviderToIconMap(emptyMap())
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(
+                    hasText(
+                        getTestableContext()
+                            .resources
+                            .getString(
+                                R.string.photopicker_search_provider_placeholder_text,
+                                cloudProviderName,
+                            )
+                    )
+                )
+                .performClick()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify the cloud provider icon is NOT displayed
+            composeTestRule.onNode(hasContentDescription(cloudProviderName)).assertDoesNotExist()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchSuggestionBadge_withLocalAndCloudProvider_isNotDisplayed() =
+        testScope.runTest {
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.setSearchableProviders(listOf(cloudProvider, localProvider))
+            val testDataService = dataService as TestDataServiceImpl
+            val testIcon = Icon("icon_uri".toUri(), MediaSource.LOCAL)
+            testDataService.setProviderToIconMap(mapOf(cloudProvider to testIcon))
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(
+                    hasText(
+                        getTestableContext()
+                            .resources
+                            .getString(R.string.photopicker_search_placeholder_text)
+                    )
+                )
+                .performClick()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify no provider icon is displayed
+            composeTestRule
+                .onNode(hasContentDescription(localProvider.displayName))
+                .assertDoesNotExist()
+            composeTestRule
+                .onNode(hasContentDescription(cloudProvider.displayName))
+                .assertDoesNotExist()
         }
 }

@@ -171,7 +171,8 @@ class CloudMediaFeature : PhotopickerUiFeature {
         val collectionInfo: CollectionInfo? =
             cloudProvider?.let { dataService.getCollectionInfo(it) }
 
-        val providerIcon: Icon? = cloudProvider?.let { dataService.getProviderToIconMap()[it] }
+        val providerIcon: Icon? =
+            cloudProvider?.let { dataService.providerToIconMap.value.getOrDefault(it, null) }
 
         return when (banner) {
             BannerDefinitions.CLOUD_CHOOSE_PROVIDER -> cloudChooseProviderBanner

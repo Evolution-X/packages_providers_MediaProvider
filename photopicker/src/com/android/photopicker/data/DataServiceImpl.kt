@@ -50,9 +50,9 @@ import com.android.photopicker.features.datescrubber.DateScrubberFeature
 import java.util.Collections.emptyList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
@@ -202,21 +202,10 @@ class DataServiceImpl(
             _availableProviders.value,
         )
 
-    /**
-     * The internal map used to update [providerToIconMap]'s value.
-     *
-     * This holds the current mapping of a [Provider] to its icon.
-     */
-    private val _providerToIconMap: MutableMap<Provider, Deferred<Icon?>> = mutableMapOf()
-
-    override suspend fun getProviderToIconMap(): Map<Provider, Icon> {
-        return _providerToIconMap
-            .mapNotNull { (provider, deferredIcon) ->
-                // Await the result and create a mapping if the icon is not null.
-                deferredIcon.await()?.let { icon -> provider to icon }
-            }
-            .toMap()
-    }
+    /** The internal map used to update [providerToIconMap]'s value. */
+    private val _providerToIconMap: MutableStateFlow<Map<Provider, Icon>> =
+        MutableStateFlow(emptyMap())
+    override val providerToIconMap: StateFlow<Map<Provider, Icon>> = _providerToIconMap
 
     // Contains collection info cache
     private val collectionInfoState =
@@ -338,10 +327,22 @@ class DataServiceImpl(
                     albumMediaPagingSources.clear()
                 }
 
-                _providerToIconMap.clear()
-                for (provider in providers) {
-                    _providerToIconMap[provider] =
-                        scope.async(dispatcher) { getIconForProvider(provider) }
+                scope.launch(dispatcher) {
+                    val finalIconMap =
+                        providers
+                            .map { provider ->
+                                // For each provider, create a Deferred<Pair<Provider, Icon?>>
+                                async(dispatcher) { provider to getIconForProvider(provider) }
+                            }
+                            .awaitAll() // Wait for all async jobs to complete
+                            .mapNotNull { (provider: Provider, icon: Icon?) ->
+                                // If the icon is not null, create a new pair. Otherwise, filter it
+                                // out.
+                                icon?.let { provider to it }
+                            }
+                            .toMap()
+
+                    _providerToIconMap.value = finalIconMap
                 }
             }
         }
