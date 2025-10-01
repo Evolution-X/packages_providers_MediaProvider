@@ -184,6 +184,8 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
     private val DISPLAYED_DATE_CONTENT_DESCRIPTION_SUBSTRING = "Currently showing:"
 
+    private val DATE_SCRUBBER_CURSOR_DESCRIPTION = "Date Scrubber Cursor"
+
     val sessionId = generatePickerSessionId()
 
     val testDateScrubberDataService = TestDateScrubberDataServiceImpl()
@@ -288,11 +290,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Find the date scrubber cursor and displayed date nodes
             val cursorImage =
-                composeTestRule.onNode(
-                    hasContentDescription(
-                        DateScrubberViewModel.Companion.DATE_SCRUBBER_CURSOR_DESCRIPTION
-                    )
-                )
+                composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
             val displayDate =
                 composeTestRule.onNode(
@@ -355,11 +353,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Locate the date scrubber cursor node
             val cursorImage =
-                composeTestRule.onNode(
-                    hasContentDescription(
-                        DateScrubberViewModel.Companion.DATE_SCRUBBER_CURSOR_DESCRIPTION
-                    )
-                )
+                composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
             // Initially, cursor should not be visible
             cursorImage.assertIsNotDisplayed()
@@ -416,11 +410,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Locate the date scrubber cursor node
             val cursorImage =
-                composeTestRule.onNode(
-                    hasContentDescription(
-                        DateScrubberViewModel.Companion.DATE_SCRUBBER_CURSOR_DESCRIPTION
-                    )
-                )
+                composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
             // Initially cursor should be hidden
             cursorImage.assertIsNotDisplayed()
 
@@ -496,11 +486,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Locate the date scrubber cursor node
             val cursorImage =
-                composeTestRule.onNode(
-                    hasContentDescription(
-                        DateScrubberViewModel.Companion.DATE_SCRUBBER_CURSOR_DESCRIPTION
-                    )
-                )
+                composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
             // Initially cursor should be hidden
             cursorImage.assertIsNotDisplayed()
 
@@ -585,9 +571,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
 
         val cursorImage =
-            composeTestRule.onNode(
-                hasContentDescription(DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION)
-            )
+            composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
         val displayDate =
             composeTestRule.onNode(
@@ -703,9 +687,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
 
         val cursorImage =
-            composeTestRule.onNode(
-                hasContentDescription(DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION)
-            )
+            composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
         val displayDate =
             composeTestRule.onNode(
@@ -837,9 +819,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
 
         val cursorImage =
-            composeTestRule.onNode(
-                hasContentDescription(DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION)
-            )
+            composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
         val displayDate =
             composeTestRule.onNode(
@@ -971,9 +951,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         val totalScrollableRange = maxScrollOffsetBottom - maxScrollOffsetTop
 
         val cursorImage =
-            composeTestRule.onNode(
-                hasContentDescription(DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION)
-            )
+            composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
         val displayDate =
             composeTestRule.onNode(
@@ -1104,9 +1082,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
 
         val cursorImage =
-            composeTestRule.onNode(
-                hasContentDescription(DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION)
-            )
+            composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
         // Initially, cursor should not be visible
         cursorImage.assertIsNotDisplayed()
@@ -1185,9 +1161,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         val maxScrollOffsetBottom = (halfHeightPx - bottomOffsetPx).coerceAtLeast(0f)
 
         val cursorImage =
-            composeTestRule.onNode(
-                hasContentDescription(DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION)
-            )
+            composeTestRule.onNode(hasContentDescription(DATE_SCRUBBER_CURSOR_DESCRIPTION))
 
         // In Embedded + Collapsed mode the cursor should not be visible by default
         cursorImage.assertIsNotDisplayed()

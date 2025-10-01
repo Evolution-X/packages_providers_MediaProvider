@@ -40,10 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
@@ -333,7 +335,7 @@ fun DateScrubber(
 @Composable
 fun ScrollableCursor(selectedDate: String?, modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier.height(64.dp), // cursor defines row height
+        modifier = modifier.height(77.dp), // cursor defines row height
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.End,
     ) {
@@ -342,18 +344,24 @@ fun ScrollableCursor(selectedDate: String?, modifier: Modifier = Modifier) {
             Box(
                 modifier =
                     Modifier.background(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
                         shape = RoundedCornerShape(16.dp),
                     ),
                 contentAlignment = Alignment.Center,
             ) {
+                val dateDescription =
+                    stringResource(
+                        R.string.photopicker_date_scrubber_current_date_desc,
+                        selectedDate,
+                    )
+
                 Text(
                     text = selectedDate,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier =
                         Modifier.padding(horizontal = 16.dp, vertical = 8.dp).semantics {
-                            contentDescription = "Currently showing: $selectedDate"
+                            contentDescription = dateDescription
                         },
                 )
             }
@@ -361,12 +369,23 @@ fun ScrollableCursor(selectedDate: String?, modifier: Modifier = Modifier) {
 
         // Cursor image
         Box(
-            modifier = Modifier.size(width = 48.dp, height = 64.dp),
+            modifier = Modifier.size(width = 55.dp, height = 77.dp),
             contentAlignment = Alignment.Center,
         ) {
+            val cursorDescription = stringResource(R.string.photopicker_date_scrubber_cursor_desc)
+
             Image(
-                painter = painterResource(id = R.drawable.date_scrubber_cursor),
-                contentDescription = DateScrubberViewModel.DATE_SCRUBBER_CURSOR_DESCRIPTION,
+                painter = painterResource(id = R.drawable.date_scrubber_cursor_background),
+                contentDescription = cursorDescription,
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.surfaceContainerLowest),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.Center,
+            )
+            Image(
+                painter = painterResource(id = R.drawable.date_scrubber_cursor_arrows),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.Center,
