@@ -607,7 +607,13 @@ open class Session(
 
     private fun callClosedSessionError() {
         try {
-            clientCallback.onSessionError(ParcelableException(IllegalStateException()))
+            clientCallback.onSessionError(
+                ParcelableException(
+                    IllegalStateException(
+                        "Attempted to use a session that has already been closed."
+                    )
+                )
+            )
         } catch (e: RemoteException) {
             Log.e(TAG, "onSessionError failed: client binder is likely dead.", e)
         }
