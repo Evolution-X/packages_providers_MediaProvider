@@ -43,7 +43,6 @@
 #include "utils/text.h"
 
 #define LOG_TAG "page"
-#define INTMAX std::numeric_limits<int>::max()
 
 using pdfClient::Rectangle_f;
 using std::vector;
@@ -765,7 +764,7 @@ SelectionBoundary Page::GetBoundaryAtIndex(const int index, bool is_rtl) {
 
 SelectionBoundary Page::GetBoundaryAtPoint(const Point_i& point) {
     SelectionBoundary best_boundary(0, point.x, point.y, false);
-    std::pair<int, int> best_distance_sq = {INTMAX, INTMAX};
+    int best_distance_sq = std::numeric_limits<int>::max();
 
     bool prev_char_is_word_char = false;
     bool is_rtl = false;
@@ -783,7 +782,7 @@ SelectionBoundary Page::GetBoundaryAtPoint(const Point_i& point) {
             SelectionBoundary boundary = GetBoundaryAtIndex(index, is_rtl);
             int dx = boundary.point.x - point.x;
             int dy = boundary.point.y - point.y;
-            std::pair<int, int> distance_sq = {dy * dy, dx * dx + dy * dy};
+            int distance_sq = dx * dx + dy * dy;
             if (distance_sq < best_distance_sq) {
                 best_boundary = boundary;
                 best_distance_sq = distance_sq;
