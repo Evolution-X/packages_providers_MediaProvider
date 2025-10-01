@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"カメラアプリで撮影、保存、共有した動画がここに表示されます"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"戻る"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"閉じる"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"メディアのグリッド"</string>
 </resources>

@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Pokušajte pretražiti slične riječi.\n\nU rezultatima pretraživanja prikazivat će se samo sigurnosno kopirane stavke."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Pretražite <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Pretražite uz <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Rešetka rezultata pretraživanja"</string>
 </resources>

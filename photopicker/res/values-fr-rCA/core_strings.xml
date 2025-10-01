@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"Les vidéos capturées par votre appli Appareil photo, enregistrées ou partagées s\'afficheront ici"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"Retour"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Fermer"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Grille des contenus multimédias"</string>
 </resources>

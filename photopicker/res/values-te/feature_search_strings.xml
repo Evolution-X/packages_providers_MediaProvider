@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"ఒకే రకమైన పదాలను సెర్చ్ చేసి చూడండి.\n\nబ్యాకప్ అయిన ఐటెమ్‌లు మాత్రమే మీ సెర్చ్ ఫలితాల్లో కనిపిస్తాయి."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>‌ను వెతకండి"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>‌తో సెర్చ్ చేయండి"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"సెర్చ్ ఫలితాల గ్రిడ్"</string>
 </resources>

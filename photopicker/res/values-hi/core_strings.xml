@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"यहां वे वीडियो दिखेंगे जिन्हें सेव/शेयर किया गया है या कैमरा ऐप्लिकेशन से रिकॉर्ड किया गया है"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"वापस जाएं"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"खारिज करें"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"मीडिया ग्रिड"</string>
 </resources>

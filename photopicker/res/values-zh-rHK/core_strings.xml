@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"你的相機應用程式拍攝的影片，以及已儲存或分享的影片將在這裡顯示"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"返回"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"關閉"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"媒體網格"</string>
 </resources>

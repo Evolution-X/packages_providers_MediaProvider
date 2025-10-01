@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"मिलते-जुलते शब्द खोजें.\n\nआपके खोज के नतीजों में सिर्फ़ वे आइटम दिखेंगे जिनका बैक अप लिया गया है."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> खोजें"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> का इस्तेमाल करके खोजें"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"खोज के नतीजे की ग्रिड"</string>
 </resources>

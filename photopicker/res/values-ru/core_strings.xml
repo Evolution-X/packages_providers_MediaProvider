@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"Здесь появятся видео, которые вы запишете в приложении камеры, сохраните или от кого-то получите."</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"Назад"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Закрыть"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Сетка медиаконтента"</string>
 </resources>

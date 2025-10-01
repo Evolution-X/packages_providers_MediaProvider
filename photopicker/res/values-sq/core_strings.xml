@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"Videot e regjistruara nga aplikacioni i kamerës, të ruajtura ose të ndara do të shfaqen këtu"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"Prapa"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Hiq"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Rrjeta e medias"</string>
 </resources>

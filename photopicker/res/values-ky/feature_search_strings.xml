@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Окшош сөздөрдү издеп көрүңүз.\n\nТабылган нерселерде камдык көчүрмөсү сакталган нерселер гана көрүнөт."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> издөө"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> аркылуу издөө"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Табылган нерселер торчо катары"</string>
 </resources>

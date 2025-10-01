@@ -29,4 +29,5 @@
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Zama ukusesha amagama afanayo.\n\nYizinto ezenzelwe ikhophi kuphela ezizovela emiphumeleni yakho yosesho."</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Sesha okuthi <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Sesha ngokuthi <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Igridi yemiphumela yosesho"</string>
 </resources>

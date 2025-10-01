@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"আপনার ক্যামেরা অ্যাপের মাধ্যমে ক্যাপচার করা, সেভ এবং শেয়ার করা ভিডিও এখানে দেখা যাবে"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"ফিরে যান"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"বাতিল করুন"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"মিডিয়া গ্রিড"</string>
 </resources>

@@ -44,4 +44,5 @@
     <string name="photopicker_videos_empty_state_body" msgid="6940271544640894270">"ನಿಮ್ಮ ಕ್ಯಾಮರಾ ಆ್ಯಪ್‌ನಿಂದ ಕ್ಯಾಪ್ಚರ್ ಮಾಡಲಾದ, ಸೇವ್ ಮಾಡಿದ ಅಥವಾ ಹಂಚಿಕೊಂಡ ವೀಡಿಯೊಗಳು ಇಲ್ಲಿ ಗೋಚರಿಸುತ್ತವೆ"</string>
     <string name="photopicker_back_option" msgid="986374743479020214">"ಹಿಂದಕ್ಕೆ"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"ವಜಾಗೊಳಿಸಿ"</string>
+    <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"ಮೀಡಿಯಾ ಗ್ರಿಡ್"</string>
 </resources>
