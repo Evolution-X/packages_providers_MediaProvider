@@ -25,6 +25,7 @@ import android.hardware.display.DisplayManager
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
+import android.os.IBinder
 import android.os.Process
 import android.os.UserManager
 import android.platform.test.annotations.RequiresFlagsEnabled
@@ -35,6 +36,7 @@ import android.view.SurfaceView
 import android.view.WindowManager
 import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import android.widget.photopicker.IEmbeddedPhotoPickerClient
+import android.widget.photopicker.ParcelableException
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -114,6 +116,7 @@ import org.mockito.Captor
 import org.mockito.Mock
 import org.mockito.Mockito.any
 import org.mockito.Mockito.clearInvocations
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.never
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
@@ -181,6 +184,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     @Captor lateinit var uriCaptor2: ArgumentCaptor<Uri>
 
     @Captor lateinit var uriCaptor3: ArgumentCaptor<Uri>
+
+    @Captor lateinit var exceptionCaptor: ArgumentCaptor<ParcelableException>
 
     private lateinit var mockTextContextWrapper: FakeTestContextWrapper
 
@@ -909,6 +914,68 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
 
             composeTestRule.onNodeWithText(photosTabLabel).assertExists().assertIsDisplayed()
+        }
+
+    @Test
+    fun testApiCallOnClosedSession_callsOnSessionError() =
+        testScope.runTest {
+            val component = embeddedServiceComponentBuilder.build()
+            val session = getSessionUnderTest(component)
+
+            // Mock the binder to be alive to ensure the error callback is triggered.
+            val mockBinder = mock(IBinder::class.java)
+            whenever(mockClient.asBinder()).thenReturn(mockBinder)
+            whenever(mockBinder.isBinderAlive()).thenReturn(true)
+
+            // Close the session, which should make it inactive.
+            session.close()
+            advanceTimeBy(100)
+
+            // Clear any invocations on the mock client that may have occurred during session.close()
+            clearInvocations(mockClient)
+
+            // Attempt to call another method on the now-closed session.
+            session.notifyVisibilityChanged(true)
+
+            // Verify that the client was notified of an error.
+            verify(mockClient).onSessionError(exceptionCaptor.capture())
+
+            // Assert that the correct exception type and message were passed.
+            val capturedException = exceptionCaptor.value
+            assertThat(capturedException.cause).isInstanceOf(IllegalStateException::class.java)
+            assertThat(capturedException.cause?.message)
+                .isEqualTo("Attempted to use a session that has already been closed.")
+        }
+
+    @Test
+    fun testCloseOnClosedSession_callsOnSessionError() =
+        testScope.runTest {
+            val component = embeddedServiceComponentBuilder.build()
+            val session = getSessionUnderTest(component)
+
+            // Mock the binder to be alive to ensure the error callback is triggered.
+            val mockBinder = mock(IBinder::class.java)
+            whenever(mockClient.asBinder()).thenReturn(mockBinder)
+            whenever(mockBinder.isBinderAlive()).thenReturn(true)
+
+            // Close the session, which should make it inactive.
+            session.close()
+            advanceTimeBy(100)
+
+            // Clear any invocations on the mock client that may have occurred during session.close()
+            clearInvocations(mockClient)
+
+            // Attempt to call close() again on the now-closed session.
+            session.close()
+
+            // Verify that the client was notified of an error.
+            verify(mockClient).onSessionError(exceptionCaptor.capture())
+
+            // Assert that the correct exception type and message were passed.
+            val capturedException = exceptionCaptor.value
+            assertThat(capturedException.cause).isInstanceOf(IllegalStateException::class.java)
+            assertThat(capturedException.cause?.message)
+                .isEqualTo("Attempted to use a session that has already been closed.")
         }
 
     /** Gets the correct nodes of media item for given indices and performs click. */
