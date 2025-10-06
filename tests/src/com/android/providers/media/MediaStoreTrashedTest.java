@@ -26,6 +26,7 @@ import static org.junit.Assert.assertTrue;
 
 import android.Manifest;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -53,8 +54,6 @@ import java.io.File;
 
 @RunWith(AndroidJUnit4.class)
 public class MediaStoreTrashedTest {
-
-    private static final String TAG = "MediaStoreTrashedTest";
 
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
@@ -87,9 +86,14 @@ public class MediaStoreTrashedTest {
     public void tearDown() {
         if (mTestDir != null) {
             FileUtils.deleteContents(mTestDir);
+            mTestDir.delete();
             if (mTrashedDir != null) {
-                File testFolderUnderTrash = new File(mTrashedDir, mTestDir.getName());
+                final File downloadDir = Environment
+                        .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                File testFolderUnderTrash = new File(mTrashedDir,
+                        downloadDir.getName() + File.separator + mTestDir.getName());
                 FileUtils.deleteContents(testFolderUnderTrash);
+                testFolderUnderTrash.delete();
             }
         }
         InstrumentationRegistry.getInstrumentation()
@@ -106,7 +110,13 @@ public class MediaStoreTrashedTest {
     public void testTrashFile_movesToTrashStorageDirectory() throws Exception {
         final String originalName = "image.jpg";
         File file = stage(R.raw.lg_g4_iso_800_jpg, new File(mTestDir, originalName));
-        final Uri uri = MediaStore.scanFile(sIsolatedResolver, file);
+        final Uri imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, originalName);
+        values.put(MediaStore.MediaColumns.DATA, file.getAbsolutePath());
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        values.put(MediaStore.MediaColumns.OWNER_PACKAGE_NAME, "com.android.providers.media.test");
+        final Uri uri = sIsolatedResolver.insert(imageUri, values);
 
         try (Cursor c = sIsolatedResolver.query(uri, null, null, null)) {
             assertNotNull(c);
@@ -250,6 +260,321 @@ public class MediaStoreTrashedTest {
         assertFalse("Original file should also not exist", file.exists());
     }
 
+    /**
+     * Verifies that when a file is trashed, its metadata is preserved.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashFile_preservesMetadata() throws Exception {
+        final String originalFileName = "image.jpg";
+        final File file = stage(R.raw.lg_g4_iso_800_jpg, new File(mTestDir, originalFileName));
+        final Uri fileUri = insertToMediaStore(file);
+        assertNotNull("Uri should not be null after insert", fileUri);
+        final long originalFileId;
+        final String originalOwnerPackageName;
+        final int originalIsFavorite;
+        try (Cursor c = sIsolatedResolver.query(fileUri, null, null, null)) {
+            assertNotNull(c);
+            assertEquals("Should have one entry for the new file", 1, c.getCount());
+            assertTrue(c.moveToFirst());
+            originalFileId = c.getLong(c.getColumnIndexOrThrow(MediaColumns._ID));
+            originalOwnerPackageName = c.getString(
+                    c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME));
+            originalIsFavorite = c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE));
+        }
+
+        // Perform the trash action.
+        String trashedFilePath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            trashedFilePath = MediaStore.trashFile(sIsolatedResolver, file.getPath());
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+        // Trigger a full scan to ensure that background operations (like metadata extraction)
+        // are completed and the database reflects the final, persisted state of the trashed
+        // item before we verify its metadata.
+        MediaStore.waitForIdle(sIsolatedResolver);
+        MediaStore.scanVolume(sIsolatedResolver, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+
+        // Verify the trashed file state.
+        assertTrue("Trashed path should be in trash directory",
+                trashedFilePath.startsWith(mTrashedDir.getPath()));
+        assertFalse("Original file should not exist", file.exists());
+        final File trashedFile = new File(trashedFilePath);
+        assertTrue("Trashed file should exist", trashedFile.exists());
+        // Verify the file is trashed and preserve the selected metadata.
+        Bundle fileQueryArgs = new Bundle();
+        fileQueryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, MediaColumns._ID + "=?");
+        fileQueryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
+                new String[]{String.valueOf(originalFileId)});
+        fileQueryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
+        try (Cursor c = sIsolatedResolver.query(MediaStore.Files.EXTERNAL_CONTENT_URI,
+                null, fileQueryArgs, null)) {
+            assertNotNull(c);
+            assertEquals("Should find the trashed file by ID", 1, c.getCount());
+            assertTrue(c.moveToFirst());
+            assertEquals("IS_TRASHED should be 1 for file", 1,
+                    c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_TRASHED)));
+            assertEquals("Owner package name should be preserved", originalOwnerPackageName,
+                    c.getString(c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME)));
+            assertEquals("IS_FAVORITE should be preserved", originalIsFavorite,
+                    c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE)));
+        }
+    }
+
+    /**
+     * Verifies that when a file is restored, its metadata is preserved.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testRestoreFile_preservesMetadata() throws Exception {
+        final String originalFileName = "image.jpg";
+        final File file = stage(R.raw.lg_g4_iso_800_jpg, new File(mTestDir, originalFileName));
+        final Uri fileUri = insertToMediaStore(file);
+        assertNotNull("Uri should not be null after insert", fileUri);
+        final long originalFileId;
+        final String originalOwnerPackageName;
+        final int originalIsFavorite;
+        try (Cursor c = sIsolatedResolver.query(fileUri, null, null, null)) {
+            assertNotNull(c);
+            assertEquals("Should have one entry for the new file", 1, c.getCount());
+            assertTrue(c.moveToFirst());
+            originalFileId = c.getLong(c.getColumnIndexOrThrow(MediaColumns._ID));
+            originalOwnerPackageName = c.getString(
+                    c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME));
+            originalIsFavorite = c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE));
+        }
+
+        String restoredFilePath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            String trashedFilePath = MediaStore.trashFile(sIsolatedResolver, file.getPath());
+            restoredFilePath = MediaStore.restoreFileFromTrash(sIsolatedResolver,
+                    trashedFilePath, null);
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+        // Trigger a full scan to ensure that background operations (like metadata extraction)
+        // are completed and the database reflects the final, persisted state of the trashed
+        // item before we verify its metadata.
+        MediaStore.waitForIdle(sIsolatedResolver);
+        MediaStore.scanVolume(sIsolatedResolver, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+
+        // Verify the restored state.
+        assertEquals("Restored path should match original file path", file.getPath(),
+                restoredFilePath);
+        assertTrue("Restored file should exist", file.exists());
+        // Verify the file is restored and preserve the selected metadata.
+        try (Cursor c = sIsolatedResolver.query(fileUri, null, null, null)) {
+            assertNotNull(c);
+            assertTrue(c.moveToFirst());
+            assertEquals("File ID should be unchanged after restore", originalFileId,
+                    c.getLong(c.getColumnIndexOrThrow(MediaColumns._ID)));
+            assertEquals("Owner package name should be preserved after restore",
+                    originalOwnerPackageName,
+                    c.getString(c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME)));
+            assertEquals("IS_FAVORITE should be preserved after restore", originalIsFavorite,
+                    c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE)));
+        }
+        assertTrue("Restored file should exist on disk", file.exists());
+    }
+
+
+    /**
+     * Verifies that when a folder is trashed, its children's metadata is preserved.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashFolder_preservesMetadata() throws Exception {
+        final File folder = new File(mTestDir, "TestFolder");
+        assertTrue("Failed to create test folder", folder.mkdirs());
+        final String originalFileName = "my_image.jpg";
+        final File file = stage(R.raw.lg_g4_iso_800_jpg, new File(folder, originalFileName));
+        final Uri fileUri = insertToMediaStore(file);
+        assertNotNull("Uri should not be null after insert", fileUri);
+        final long originalFileId;
+        final String originalOwnerPackageName;
+        final int originalIsFavorite;
+        try (Cursor c = sIsolatedResolver.query(fileUri, null, null, null)) {
+            assertNotNull(c);
+            assertTrue(c.moveToFirst());
+            originalFileId = c.getLong(c.getColumnIndexOrThrow(MediaColumns._ID));
+            originalOwnerPackageName = c.getString(
+                    c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME));
+            originalIsFavorite = c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE));
+        }
+
+        String trashedFolderPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            trashedFolderPath = MediaStore.trashFile(sIsolatedResolver, folder.getPath());
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+        // Trigger a full scan to ensure that background operations (like metadata extraction)
+        // are completed and the database reflects the final, persisted state of the trashed
+        // item before we verify its metadata.
+        MediaStore.waitForIdle(sIsolatedResolver);
+        MediaStore.scanVolume(sIsolatedResolver, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+
+        // Verify the trashed folder state.
+        assertTrue("Trashed path should be in trash directory",
+                trashedFolderPath.startsWith(mTrashedDir.getPath()));
+        assertFalse("Original folder should not exist", folder.exists());
+        final File trashedFolder = new File(trashedFolderPath);
+        assertTrue("Trashed folder should exist", trashedFolder.exists());
+        // Verify the file is trashed and preserve the selected metadata.
+        Bundle fileQueryArgs = new Bundle();
+        fileQueryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, MediaColumns._ID + "=?");
+        fileQueryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS,
+                new String[]{String.valueOf(originalFileId)});
+        fileQueryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
+        try (Cursor c = sIsolatedResolver.query(MediaStore.Files.EXTERNAL_CONTENT_URI,
+                null, fileQueryArgs, null)) {
+            assertNotNull(c);
+            assertTrue(c.moveToFirst());
+            assertEquals("Owner package name should be preserved", originalOwnerPackageName,
+                    c.getString(c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME)));
+            assertEquals("IS_FAVORITE should be preserved", originalIsFavorite,
+                    c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE)));
+            assertFalse("Original file should not exist on disk", file.exists());
+        }
+    }
+
+    /**
+     * Verifies that when a folder is restored, its metadata is preserved.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testRestoreFolder_preservesMetadata() throws Exception {
+        final File folder = new File(mTestDir, "TestFolder");
+        assertTrue("Failed to create test folder", folder.mkdirs());
+        final String originalFileName = "my_image.jpg";
+        final File file = stage(R.raw.lg_g4_iso_800_jpg, new File(folder, originalFileName));
+        final Uri fileUri = insertToMediaStore(file);
+        assertNotNull("Uri should not be null after insert", fileUri);
+        final long originalFileId;
+        final String originalOwnerPackageName;
+        final int originalIsFavorite;
+        try (Cursor c = sIsolatedResolver.query(fileUri, null, null, null)) {
+            assertNotNull(c);
+            assertEquals("Should have one entry for the new file", 1, c.getCount());
+            assertTrue(c.moveToFirst());
+            originalFileId = c.getLong(c.getColumnIndexOrThrow(MediaColumns._ID));
+            originalOwnerPackageName = c.getString(
+                    c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME));
+            originalIsFavorite = c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE));
+        }
+
+        String restoredFolderPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            String trashedFolderPath = MediaStore.trashFile(sIsolatedResolver, folder.getPath());
+            restoredFolderPath = MediaStore.restoreFileFromTrash(sIsolatedResolver,
+                    trashedFolderPath, null);
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+        // Trigger a full scan to ensure that background operations (like metadata extraction)
+        // are completed and the database reflects the final, persisted state of the trashed
+        // item before we verify its metadata.
+        MediaStore.waitForIdle(sIsolatedResolver);
+        MediaStore.scanVolume(sIsolatedResolver, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+
+        // Verify the restored state.
+        assertEquals("Restored path should match original folder path", folder.getPath(),
+                restoredFolderPath);
+        assertTrue("Restored folder should exist", folder.exists());
+        // Verify the file is restored and preserve the selected metadata.
+        try (Cursor c = sIsolatedResolver.query(fileUri, null, null, null)) {
+            assertNotNull(c);
+            assertTrue(c.moveToFirst());
+            assertEquals("File ID should be unchanged after restore", originalFileId,
+                    c.getLong(c.getColumnIndexOrThrow(MediaColumns._ID)));
+            assertEquals("Owner package name should be preserved after restore",
+                    originalOwnerPackageName,
+                    c.getString(c.getColumnIndexOrThrow(MediaColumns.OWNER_PACKAGE_NAME)));
+            assertEquals("IS_FAVORITE should be preserved after restore", originalIsFavorite,
+                    c.getInt(c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE)));
+        }
+        assertTrue("Restored file should exist on disk", file.exists());
+    }
+
+    /**
+     * Verifies that when a directory with a legacy trashed file is trashed, the legacy file is
+     * moved to its corresponding location in the trash, and the now-empty directory is trashed
+     * separately.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashFolderWithLegacyTrashedFile_movesFileSeparately() throws Exception {
+        // Create a directory with a legacy trashed file inside.
+        final File folderToTrash = new File(mTestDir, "Hello");
+        assertTrue("Test folder should be created", folderToTrash.mkdirs());
+        final File legacyTrashedFile = new File(folderToTrash, ".trashed-12345-image.jpg");
+        final File file = stage(R.raw.lg_g4_iso_800_jpg, legacyTrashedFile);
+        final Uri fileUri = insertToMediaStore(file);
+        assertNotNull("Uri should not be null after insert", fileUri);
+
+        // Trash the directory.
+        String trashedFolderPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            trashedFolderPath = MediaStore.trashFile(sIsolatedResolver, folderToTrash.getPath());
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+        // Trigger a full scan to ensure that background operations (like metadata extraction)
+        // are completed and the database reflects the final, persisted state of the trashed
+        // item before we verify its metadata.
+        MediaStore.waitForIdle(sIsolatedResolver);
+        MediaStore.scanVolume(sIsolatedResolver, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+
+        // Verify original items are gone.
+        assertFalse("Original folder should not exist after being trashed", folderToTrash.exists());
+        assertFalse("Legacy trashed file should not exist in its original location",
+                legacyTrashedFile.exists());
+
+        // Verify the folder was moved to the trash and is now empty.
+        File trashedFolder = new File(trashedFolderPath);
+        assertTrue("Trashed folder should exist in the trash directory", trashedFolder.exists());
+        assertTrue("Trashed folder path should be in the trash storage directory",
+                trashedFolderPath.startsWith(mTrashedDir.getPath()));
+        assertEquals("Trashed folder should now be empty", 0, trashedFolder.list().length);
+
+        // Verify the legacy file was moved separately, preserving its directory structure.
+        final String relativePath = folderToTrash.getPath().substring(
+                Environment.getExternalStorageDirectory().getPath().length());
+        final File expectedLegacyFileParentInTrash = new File(mTrashedDir, relativePath);
+        final File expectedLegacyFileInTrash = new File(expectedLegacyFileParentInTrash,
+                legacyTrashedFile.getName());
+
+        assertTrue("Parent directory for legacy file should be created in trash",
+                expectedLegacyFileParentInTrash.exists());
+        assertTrue("Legacy trashed file should exist separately in trash",
+                expectedLegacyFileInTrash.exists());
+
+        // Verify MediaStore records for both items.
+        try (Cursor c = getCursorByPath(trashedFolderPath)) {
+            assertNotNull(c);
+            assertEquals(1, c.getCount());
+            assertTrue(c.moveToFirst());
+            assertEquals("Folder should be marked as trashed", 1, c.getInt(c.getColumnIndexOrThrow(
+                    MediaColumns.IS_TRASHED)));
+        }
+
+        try (Cursor c = getCursorByPath(expectedLegacyFileInTrash.getPath())) {
+            assertNotNull(c);
+            assertEquals(1, c.getCount());
+            assertTrue(c.moveToFirst());
+            assertEquals("Legacy file should be marked as trashed", 1,
+                    c.getInt(c.getColumnIndexOrThrow(
+                            MediaColumns.IS_TRASHED)));
+            assertEquals("Legacy file path should be updated", expectedLegacyFileInTrash.getPath(),
+                    c.getString(c.getColumnIndexOrThrow(MediaColumns.DATA)));
+        }
+    }
 
     /**
      * Queries for a media item by its file path, including trashed items.
@@ -268,7 +593,7 @@ public class MediaStoreTrashedTest {
 
         return sIsolatedResolver
                 .query(
-                        MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
+                        MediaStore.Files.EXTERNAL_CONTENT_URI,
                         null,
                         queryArgs,
                         null);
@@ -284,5 +609,22 @@ public class MediaStoreTrashedTest {
         Context context = InstrumentationRegistry.getTargetContext();
         sIsolatedContext = new IsolatedContext(context, "modern", /*asFuseThread*/ false);
         sIsolatedResolver = sIsolatedContext.getContentResolver();
+    }
+
+    /**
+     * Inserts a file into the MediaStore and returns its URI.
+     *
+     * @param file The file to insert.
+     * @return The URI of the newly inserted item.
+     */
+    private Uri insertToMediaStore(File file) {
+        final Uri imageUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, file.getName());
+        values.put(MediaStore.MediaColumns.DATA, file.getAbsolutePath());
+        values.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        values.put(MediaStore.MediaColumns.OWNER_PACKAGE_NAME, "com.android.providers.media.test");
+        values.put(MediaStore.MediaColumns.IS_FAVORITE, 1);
+        return sIsolatedResolver.insert(imageUri, values);
     }
 }

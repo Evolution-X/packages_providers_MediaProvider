@@ -1269,7 +1269,7 @@ public class MediaProvider extends ContentProvider {
                 if (Flags.enableTrashAndRestoreByFilePathApi()
                         && FileUtils.isTrashedFileInTrashDirectory(deletedRow.getPath())) {
                     FileRestoreManager.deleteAllParentIfNonTrashed(new File(deletedRow.getPath()),
-                            parentFile -> scanFileAsMediaProvider(parentFile));
+                            (file) -> scanFileAsMediaProvider(file));
                 }
             });
         }
@@ -3557,9 +3557,17 @@ public class MediaProvider extends ContentProvider {
         final String[] selectionArgs = new String[] {DatabaseUtils.escapeForLike(oldPath) + "/%"};
         ArrayList<String> fileList = new ArrayList<>();
 
+        final Bundle queryArgs = new Bundle();
+        queryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection);
+        queryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs);
+        if (isFileTrashRestoreEnabled()) {
+            // Explicitly include trashed items in the query results
+            queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
+        }
+
         final LocalCallingIdentity token = clearLocalCallingIdentity();
         try (final Cursor c = query(FileUtils.getContentUriForPath(oldPath),
-                new String[] {MediaColumns.DATA}, selection, selectionArgs, null)) {
+                new String[] {MediaColumns.DATA}, queryArgs, null)) {
             while (c.moveToNext()) {
                 String filePath = c.getString(0);
                 filePath = filePath.replaceFirst(Pattern.quote(oldPath + "/"), "");
@@ -3703,17 +3711,69 @@ public class MediaProvider extends ContentProvider {
                     + oldPath, e);
         }
 
+        boolean isTrashed = false;
+        boolean isRestored = false;
+        Optional<Long> dateExpiresOptional = Optional.empty();
+        if (isFileTrashRestoreEnabled()) {
+            final Matcher newPathMatcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(
+                    new File(newPath).getName());
+
+            isTrashed = FileUtils.isTrashedFileInTrashDirectory(newPath);
+            isRestored = FileUtils.isTrashedFileInTrashDirectory(oldPath);
+
+            if (isTrashed && isRestored) {
+                throw new IllegalStateException(
+                        "Cannot move a directory from one trash location to another. oldPath: "
+                                + oldPath + ", newPath: " + newPath);
+            }
+
+            if (isTrashed && newPathMatcher.matches()) {
+                dateExpiresOptional = Optional.of(Long.parseLong(newPathMatcher.group(2)));
+            }
+        }
+
+        // When trashing a folder that contains files already trashed via a legacy flow,
+        // these in-trash files are moved to the trash location separately, maintaining their own
+        // state independent of the folder being trashed.
+        if (isFileTrashRestoreEnabled() && isTrashed) {
+            for (String filePath : fileList) {
+                String oldFilePath = oldPath + "/" + filePath;
+                if (FileUtils.isTrashFileInPlace(oldFilePath)) {
+                    FileTrashManager.moveInPlaceTrashFileToTrashLocation(oldFilePath,
+                            this::renameUncheckedForFuse);
+                }
+            }
+        }
+
         helper.beginTransaction();
         try {
             final boolean wasHidden = FileUtils.shouldDirBeHidden(new File(oldPath));
             final boolean isHidden = FileUtils.shouldDirBeHidden(new File(newPath));
             for (String filePath : fileList) {
-                final String newFilePath = newPath + "/" + filePath;
+                String oldFilePath = oldPath + "/" + filePath;
+                final String newFilePath;
+
+                if (isFileTrashRestoreEnabled() && isTrashed && dateExpiresOptional.isPresent()) {
+                    if (FileUtils.isTrashFileInPlace(oldFilePath)) {
+                        continue;
+                    }
+                    newFilePath = FileTrashManager.getTrashedPath(newPath, filePath,
+                            dateExpiresOptional.get());
+                } else if (isFileTrashRestoreEnabled() && isRestored) {
+                    newFilePath = FileRestoreManager.getRestoredPath(newPath, filePath);
+                } else {
+                    newFilePath = newPath + "/" + filePath;
+                }
+
+                Bundle extras = new Bundle();
+                if (isFileTrashRestoreEnabled()) {
+                    extras.putInt(QUERY_ARG_MATCH_TRASHED, MATCH_INCLUDE);
+                }
                 final String mimeType = MimeUtils.resolveMimeType(new File(newFilePath));
-                if(!updateDatabaseForFuseRename(helper, oldPath + "/" + filePath, newFilePath,
+                if (!updateDatabaseForFuseRename(helper, oldFilePath, newFilePath,
                         getContentValuesForFuseRename(newFilePath, mimeType, wasHidden, isHidden,
                                 /* isSameMimeType */ true),
-                        new Bundle(), Optional.of(getIncludedDefaultDirectories()))) {
+                        extras, Optional.of(getIncludedDefaultDirectories()))) {
                     Log.e(TAG, "Calling package doesn't have write permission to rename file.");
                     return OsConstants.EPERM;
                 }
@@ -3721,6 +3781,16 @@ public class MediaProvider extends ContentProvider {
 
             // Rename the directory in lower file system.
             int errno = renameInLowerFs(oldPath, newPath);
+            if (isFileTrashRestoreEnabled()) {
+                if (isTrashed) {
+                    errno |= FileTrashManager.trashChildrenOnDisk(new File(newPath),
+                            dateExpiresOptional.get());
+                } else if (isRestored) {
+                    errno |= FileRestoreManager.restoreChildrenOnDisk(new File(oldPath),
+                            new File(newPath));
+                }
+            }
+
             if (errno == 0) {
                 helper.setTransactionSuccessful();
             } else {
@@ -3781,7 +3851,12 @@ public class MediaProvider extends ContentProvider {
             final boolean isSameMimeType = newMimeType.equalsIgnoreCase(oldMimeType);
             ContentValues contentValues = getContentValuesForFuseRename(newPath, newMimeType,
                     wasHidden, isHidden, isSameMimeType);
-            if (!updateDatabaseForFuseRename(helper, oldPath, newPath, contentValues)) {
+            Bundle extras = new Bundle();
+            if (isFileTrashRestoreEnabled()) {
+                extras.putInt(QUERY_ARG_MATCH_TRASHED, MATCH_INCLUDE);
+            }
+            if (!updateDatabaseForFuseRename(helper, oldPath, newPath, contentValues, extras,
+                    /* includedDefaultDirectoriesOptional */ Optional.empty())) {
                 if (!bypassRestrictions) {
                     // Check for other URI format grants for oldPath only. Check right before
                     // returning EPERM, to leave positive case performance unaffected.
@@ -5331,7 +5406,7 @@ public class MediaProvider extends ContentProvider {
         values.put(FileColumns.RELATIVE_PATH, extractRelativePath(path));
         values.put(FileColumns.DISPLAY_NAME, displayName);
         values.put(FileColumns.IS_DOWNLOAD, isDownload(path) ? 1 : 0);
-        if (Flags.enableTrashAndRestoreByFilePathApi()) {
+        if (isFileTrashRestoreEnabled()) {
             final Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(displayName);
             if (matcher.matches() && matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
                 values.put(MediaColumns.IS_TRASHED, 1);
@@ -7529,11 +7604,8 @@ public class MediaProvider extends ContentProvider {
         String path = null;
         try {
             path = extras.getString(MediaStore.FILE_PATH);
-
-            FileTrashManager.MediaScannerCallback mediaScannerCallback =
-                    this::scanFileAsMediaProvider;
             String trashedPath = FileTrashManager.trashFile(path,
-                    mediaScannerCallback);
+                    this::renameUncheckedForFuse);
 
             // Since the trash operation involves low-level file rename and move operations,
             // need to invalidate the dentry cache for the affected paths.
@@ -7557,18 +7629,14 @@ public class MediaProvider extends ContentProvider {
         verifyCallerHasManageExternalStoragePermission();
 
         Bundle result = new Bundle();
-        String trashedPath = null;
+        String trashedPath;
         String targetPath;
         try {
             trashedPath = extras.getString(MediaStore.FILE_PATH);
             targetPath = extras.getString(MediaStore.PARENT_FILE_PATH); // This can be null
-
-            FileRestoreManager.MediaScannerCallback mediaScannerCallback =
-                    this::scanFileAsMediaProvider;
-
             String restoredPath = FileRestoreManager.restoreFile(trashedPath,
-                    Optional.ofNullable(targetPath),
-                    mediaScannerCallback);
+                    Optional.ofNullable(targetPath), this::renameUncheckedForFuse,
+                    this::scanFileAsMediaProvider);
 
             // Since the restore operation involves low-level file rename and move operations,
             // need to invalidate the dentry cache for the affected paths.

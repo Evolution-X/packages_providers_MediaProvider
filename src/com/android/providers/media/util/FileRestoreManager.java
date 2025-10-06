@@ -16,14 +16,20 @@
 
 package com.android.providers.media.util;
 
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for handling file restore operation
@@ -31,19 +37,6 @@ import java.util.regex.Matcher;
 public final class FileRestoreManager {
 
     private static final String TAG = "FileRestoreManager";
-
-    /**
-     * Interface for providing media scanning capabilities.
-     * This allows the restore logic to be decoupled from the specific MediaStore implementation.
-     */
-    public interface MediaScannerCallback {
-        /**
-         * Scans a given file to add or update it in the media store db.
-         *
-         * @param file The file to be scanned
-         */
-        void scanFile(File file);
-    }
 
     /**
      * Restores a file or directory from the trash location to its original or specified target
@@ -57,6 +50,7 @@ public final class FileRestoreManager {
      * @param targetParentPath     The desired target path for restoration. If null, the original
      *                             path
      *                             (derived from the trash structure) will be used.
+     * @param fileRenameCallback   A callback to rename the file.
      * @param mediaScannerCallback A callback to inform the MediaStore about file changes.
      * @return The absolute path of the restored item at its new location.
      * @throws IllegalArgumentException If `trashedFilePath` is null or empty.
@@ -65,7 +59,9 @@ public final class FileRestoreManager {
      *                                  or original name cannot be derived.
      */
     public static String restoreFile(String trashedFilePath,
-            Optional<String> targetParentPath, MediaScannerCallback mediaScannerCallback)
+            Optional<String> targetParentPath,
+            FileTrashManager.FileRenameCallback fileRenameCallback,
+            FileTrashManager.MediaScannerCallback mediaScannerCallback)
             throws IllegalArgumentException, FileNotFoundException, IllegalStateException {
 
         if (trashedFilePath == null || trashedFilePath.isEmpty()) {
@@ -79,20 +75,12 @@ public final class FileRestoreManager {
         }
 
         String trashedFileName = trashedFile.getName();
-        String prefixToUnprefix = "";
         String originalFileName;
 
         // Extract the prefix and original name using the defined pattern
         Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(trashedFileName);
         if (matcher.matches() && matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
-            // Group 1 is "trashed"
-            // Group 2 is the timestamp
-            // Group 3 is the original file name
-            prefixToUnprefix = trashedFileName.substring(0,
-                    matcher.start(3)); // Get the ".trashed-TIMESTAMP-" part
-            originalFileName = matcher.group(3); // Get the original file name part
-            Log.d(TAG, "Extracted prefix '" + prefixToUnprefix + "', original name '"
-                    + originalFileName + "'");
+            originalFileName = matcher.group(3);
         } else {
             throw new IllegalArgumentException(
                     "File name does not indicate a trashed item: " + trashedFileName);
@@ -123,31 +111,41 @@ public final class FileRestoreManager {
 
         // method to avoid file name collisions with suffix (1), (2) etc.
         File originalLocation = FileUtils.buildUniqueFile(targetParent, originalFileName);
+        boolean isRenameSuccess = fileRenameCallback.renameFile(trashedFilePath,
+                originalLocation.getAbsolutePath()) == 0;
 
-        if (!trashedFile.renameTo(originalLocation)) {
+        if (!isRenameSuccess) {
             Log.e(TAG, "Failed to rename during restore: " + trashedFilePath + " -> "
                     + originalLocation.getAbsolutePath());
             throw new IllegalStateException("Failed to restore: Could not move file.");
         }
 
-        // If the restored item is a directory and we successfully extracted a prefix,
-        // unprefix its children recursively.
-        if (originalLocation.isDirectory() && !prefixToUnprefix.isEmpty()) {
-            unprefixChildrenOnDisk(originalLocation, prefixToUnprefix);
-        }
-
         // Clean up empty parent directories in trash location
         deleteAllParentIfNonTrashed(trashedFile, mediaScannerCallback);
 
-        // Notify MediaStore about the changes
-        if (mediaScannerCallback != null) {
-            mediaScannerCallback.scanFile(trashedFile); // Old trashed location removed
-            mediaScannerCallback.scanFile(originalLocation); // New restored location added
-        } else {
-            Log.w(TAG, "MediaScannerCallback is null. MediaStore might not be updated.");
-        }
-
         return originalLocation.getAbsolutePath();
+    }
+
+    /**
+     * Reconstructs the restored path by cleaning trash prefixes from each component of the relative
+     * path.
+     *
+     * @param parentPath   The absolute parent path.
+     * @param relativePath The relative path containing trashed components.
+     * @return The combined path with trashed components restored to their original names.
+     */
+    public static String getRestoredPath(String parentPath, String relativePath) {
+        String newRelativePath = Arrays.stream(relativePath.split("/"))
+                .map(component -> {
+                    Matcher componentMatcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(component);
+                    if (componentMatcher.matches() && componentMatcher.group(1).equals(
+                            FileUtils.PREFIX_TRASHED)) {
+                        return componentMatcher.group(3);
+                    }
+                    return component;
+                })
+                .collect(Collectors.joining("/"));
+        return parentPath + "/" + newRelativePath;
     }
 
     /**
@@ -160,7 +158,7 @@ public final class FileRestoreManager {
      * @param mediaScannerCallback Callback to update MediaStore for deleted directories.
      */
     public static void deleteAllParentIfNonTrashed(File trashedFile,
-            MediaScannerCallback mediaScannerCallback) {
+            FileTrashManager.MediaScannerCallback mediaScannerCallback) {
         if (trashedFile == null || trashedFile.getParentFile() == null) {
             return;
         }
@@ -199,6 +197,39 @@ public final class FileRestoreManager {
         if (directoryToBeScanned != null && mediaScannerCallback != null) {
             mediaScannerCallback.scanFile(directoryToBeScanned);
         }
+    }
+
+    /**
+     * Renames descendants of a restored directory to remove their trash prefix.
+     * When a directory is restored, its own name is unprefixed (e.g., from
+     * ".trashed-123-foo" to "foo"). This method ensures that its descendants are also
+     * renamed to remove the same trash prefix (e.g., from ".trashed-123-bar" to "bar")
+     * recursively.
+     *
+     * @param trashedFolder The file object for the directory as it existed in the trash, used to
+     *                      determine the prefix that needs to be removed.
+     * @param restoreFolder The file object for the directory after it has been restored.
+     * @return {@code 0} on success, or an errno value on failure to rename a child.
+     */
+    public static int restoreChildrenOnDisk(File trashedFolder, File restoreFolder) {
+        String prefixToUnprefix = null;
+        String trashedFileName = trashedFolder.getName();
+        // Extract the prefix and original name using the defined pattern
+        Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(trashedFolder.getName());
+        if (matcher.matches() && matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
+            // Group 1 is "trashed"
+            // Group 2 is the timestamp
+            // Group 3 is the original file name
+            prefixToUnprefix = trashedFileName.substring(0,
+                    matcher.start(3)); // Get the ".trashed-TIMESTAMP-" part
+        }
+
+        if (TextUtils.isEmpty(prefixToUnprefix)) {
+            // Returning the errno value to indicate failure
+            return OsConstants.EACCES;
+        }
+
+        return restoreChildrenOnDisk(restoreFolder, prefixToUnprefix);
     }
 
     /**
@@ -316,36 +347,40 @@ public final class FileRestoreManager {
         return defaultRestoreParent.getAbsolutePath();
     }
 
-
     /**
-     * Recursively unprefixes the names of all children (files and directories)
-     * within a given directory on disk, effectively restoring their original names.
+     * Recursively removes a prefix from the names of all children in a directory.
      *
-     * @param dir            The directory whose children need to be unprefixed.
-     * @param originalPrefix The exact prefix to remove (e.g., ".trashed-TIMESTAMP-").
+     * @param dir            the directory whose children need to be unprefixed.
+     * @param originalPrefix the prefix to remove (e.g., ".trashed-TIMESTAMP-").
+     * @return 0 on success, or an errno value on failure.
      */
-    private static void unprefixChildrenOnDisk(File dir, String originalPrefix) {
+    private static int restoreChildrenOnDisk(File dir, String originalPrefix) {
         File[] children = dir.listFiles();
         if (children == null) {
-            return;
+            return 0;
         }
-
         for (File child : children) {
             String childName = child.getName();
             if (childName.startsWith(originalPrefix)) {
                 String newName = childName.substring(originalPrefix.length());
-                File renamed = new File(child.getParent(), newName);
-
-                if (child.renameTo(renamed)) {
-                    if (renamed.isDirectory()) {
+                File updatedFile = new File(child.getParent(), newName);
+                try {
+                    Os.rename(child.getAbsolutePath(), updatedFile.getAbsolutePath());
+                    if (updatedFile.isDirectory()) {
                         // Recurse for subdirectories
-                        unprefixChildrenOnDisk(renamed, originalPrefix);
+                        int errNo = restoreChildrenOnDisk(updatedFile, originalPrefix);
+                        if (errNo != 0) {
+                            return errNo;
+                        }
                     }
-                } else {
-                    Log.w(TAG, "Failed to unprefix child: " + child.getAbsolutePath());
+                } catch (ErrnoException e) {
+                    Log.e(TAG, "Failed to unprefix child: " + child.getAbsolutePath(), e);
+                    return e.errno;
                 }
             }
         }
+
+        return 0;
     }
 
 }
