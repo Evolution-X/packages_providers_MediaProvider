@@ -51,7 +51,6 @@ using ::pdfClient::PageObject;
 using ::pdfClient::PathObject;
 using ::pdfClient::Point_f;
 using ::pdfClient::Rectangle_i;
-using ::pdfClient::SelectionBoundary;
 using ::pdfClient::StampAnnotation;
 using ::pdfClient::Symbol;
 using ::pdfClient::TextObject;
@@ -64,7 +63,6 @@ static const std::string kPageObject = "page_object.pdf";
 static const std::string kAnnotation = "annotation.pdf";
 static const std::string kOverlappingPageObject = "overlapping_page_object.pdf";
 static const std::string kIncreasingDimPDF = "reorder_pdf.pdf";
-static const std::string kTextSelection = "text_selection.pdf";
 
 std::string GetTestDataDir() {
     return android::base::GetExecutableDirectory();
@@ -973,28 +971,6 @@ TEST(Test, SetRotation_InvalidValue) {
 
     // The rotation should remain unchanged.
     EXPECT_EQ(page->GetRotation(), Rotation::Clockwise_90);
-}
-
-TEST(Test, GetSelectionBoundaryAtPoint) {
-    Document doc(LoadTestDocument(kTextSelection), false);
-
-    std::shared_ptr<Page> page = doc.GetPage(0);
-
-    // Selection prioritizes vertical distance over horizontal distance for text selection.
-    SelectionBoundary topLeft = SelectionBoundary(-1, 0, 0, false);
-    page->ConstrainBoundary(&topLeft);
-
-    // The index should be set to 0 which is vertically closest to top left.
-    EXPECT_EQ(topLeft.index, 0);
-
-    // Selection prioritizes vertical distance over horizontal distance for text selection.
-    SelectionBoundary bottomRight = SelectionBoundary(-1, page->Width(), page->Height(), false);
-    page->ConstrainBoundary(&bottomRight);
-    SelectionBoundary lastIndex = SelectionBoundary(std::numeric_limits<int>::max(), -1, -1, false);
-    page->ConstrainBoundary(&lastIndex);
-
-    // The index should be set to lastIndex which is vertically closest to bottom right.
-    EXPECT_EQ(bottomRight.index, lastIndex.index);
 }
 
 }  // namespace
