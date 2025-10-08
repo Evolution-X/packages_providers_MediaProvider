@@ -1931,4 +1931,27 @@ public class FileUtils {
     public static boolean isFileAlbumArt(@NonNull File file) {
         return PATTERN_ALBUM_ART.matcher(file.getName()).matches();
     }
+
+    /**
+     * Checks if the given file path represents a trashed item by verifying if it's located
+     * within the trash directory and its name matches the trashed file format.
+     *
+     * @param filePath The file path to check.
+     * @return {@code true} if the path represents a trashed file, {@code false} otherwise.
+     */
+    public static boolean isTrashedFileInTrashDirectory(@NonNull String filePath) {
+        final String displayName = extractDisplayName(filePath);
+        final Matcher matcher = PATTERN_EXPIRES_FILE.matcher(displayName);
+        if (!matcher.matches() || !FileUtils.PREFIX_TRASHED.equals(matcher.group(1))) {
+            return false;
+        }
+
+        String relativePath = extractRelativePath(filePath);
+        if (relativePath == null) {
+            return false;
+        }
+        String trashDirPrefix = DIRECTORY_TRASH_STORAGE + File.separator;
+        return relativePath.startsWith(trashDirPrefix);
+    }
+
 }
