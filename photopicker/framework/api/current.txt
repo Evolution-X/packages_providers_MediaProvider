@@ -29,9 +29,9 @@ package android.widget.photopicker {
     ctor public EmbeddedPhotoPickerFeatureInfo.Builder();
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo build();
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setAccentColor(@ColorLong long);
-    method @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightAlbumId(@android.provider.MediaStore.PickImagesHighlightAlbum @NonNull String);
+    method @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightAlbumId(@NonNull String);
     method @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightSearchMediaTextQuery(@NonNull String);
-    method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightType(@android.provider.MediaStore.PickImagesHighlightType int);
+    method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightType(int);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setMaxSelectionLimit(@IntRange(from=1) int);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setMimeTypes(@NonNull java.util.List<java.lang.String>);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setOrderedSelection(boolean);
