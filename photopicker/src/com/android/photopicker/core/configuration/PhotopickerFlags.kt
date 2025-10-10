@@ -53,7 +53,6 @@ data class PhotopickerFlags(
     val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean =
         Flags.enablePickerHighlightSearchResultsApis() && Flags.highlightSearchResultsFeature(),
     val OWNED_PHOTOS_ENABLED: Boolean = Flags.revokeAccessOwnedPhotos(),
-    val MEDIA_GRID_TOUCH_FEATURES_ENABLED: Boolean = Flags.enableMediaGridTouchFeatures(),
     val PICKER_THUMBNAIL_PRELOAD_ENABLED: Boolean = Flags.enablePhotopickerThumbnailPreload(),
     val POLAROID_ENABLED: Boolean = Flags.photopickerPolaroid(),
     val MODERN_CLOUD_SETTINGS_ENABLED: Boolean = Flags.enableModernPhotopickerCloudSettingsPage(),
@@ -73,8 +72,6 @@ data class PhotopickerFlags(
         if (PICKER_SEARCH_ENABLED != other.PICKER_SEARCH_ENABLED) return false
         if (PICKER_DATESCRUBBER_ENABLED != other.PICKER_DATESCRUBBER_ENABLED) return false
         if (PICKER_TRANSCODING_ENABLED != other.PICKER_TRANSCODING_ENABLED) return false
-        if (MEDIA_GRID_TOUCH_FEATURES_ENABLED != other.MEDIA_GRID_TOUCH_FEATURES_ENABLED)
-            return false
         if (PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED != other.PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED)
             return false
         if (OWNED_PHOTOS_ENABLED != other.OWNED_PHOTOS_ENABLED) return false
@@ -98,7 +95,6 @@ data class PhotopickerFlags(
             PICKER_SEARCH_ENABLED,
             PICKER_DATESCRUBBER_ENABLED,
             PICKER_TRANSCODING_ENABLED,
-            MEDIA_GRID_TOUCH_FEATURES_ENABLED,
             PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED,
             OWNED_PHOTOS_ENABLED,
             PICKER_THUMBNAIL_PRELOAD_ENABLED,

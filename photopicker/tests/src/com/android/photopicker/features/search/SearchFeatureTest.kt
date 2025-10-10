@@ -600,10 +600,7 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
-    @RequiresFlagsEnabled(
-        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-        Flags.FLAG_ENABLE_MEDIA_GRID_TOUCH_FEATURES,
-    )
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testSearchGridDragSelect() =
         testScope.runTest {
 

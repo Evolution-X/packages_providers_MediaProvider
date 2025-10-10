@@ -25,7 +25,6 @@ import android.os.Build
 import android.os.UserManager
 import android.platform.test.annotations.DisableFlags
 import android.platform.test.annotations.EnableFlags
-import android.platform.test.annotations.RequiresFlagsEnabled
 import android.platform.test.flag.junit.CheckFlagsRule
 import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.platform.test.flag.junit.SetFlagsRule
@@ -449,7 +448,6 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
-    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_GRID_TOUCH_FEATURES)
     fun testPhotoGridDragSelect() =
         testScope.runTest {
 

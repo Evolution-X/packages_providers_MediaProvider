@@ -1510,10 +1510,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
-    @RequiresFlagsEnabled(
-        Flags.FLAG_ENABLE_MEDIA_GRID_TOUCH_FEATURES,
-        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-    )
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testAlbumMediaGridDragSelect() =
         testScope.runTest {
             val videosAlbum =
@@ -1617,10 +1614,7 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
-    @RequiresFlagsEnabled(
-        Flags.FLAG_ENABLE_MEDIA_GRID_TOUCH_FEATURES,
-        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-    )
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testMediaSetGridDragSelect() =
         testScope.runTest {
             val testMediaSet =

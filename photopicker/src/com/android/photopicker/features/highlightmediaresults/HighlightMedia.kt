@@ -637,8 +637,7 @@ private fun HighlightMediaGrid(
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
     val description = stringResource(R.string.photopicker_hsr_media_text)
     val configuration = LocalPhotopickerConfiguration.current
-    val dragSelectionEnabled =
-        configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED && configuration.selectionLimit > 1
+    val dragSelectionEnabled = configuration.selectionLimit > 1
 
     val dateFormat =
         LocalLocalizationHelper.current.getLocalizedDateTimeFormatter(

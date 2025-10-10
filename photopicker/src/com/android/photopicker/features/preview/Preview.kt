@@ -100,7 +100,6 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.navigateToPreviewSelection
 import com.android.photopicker.util.HierarchicalFocusCoordinator
 import com.android.photopicker.util.LocalLocalizationHelper
-import com.android.photopicker.util.applyWhen
 import com.android.photopicker.util.getMediaContentDescription
 import com.android.photopicker.util.rememberActiveFocusRequester
 import java.text.DateFormat
@@ -204,29 +203,24 @@ fun PreviewSelection(
                 Box(
                     modifier =
                         Modifier.weight(1f)
-                            .applyWhen(
-                                config.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
-                                {
-                                    pinchToZoom(
-                                        PointerEventPass.Initial,
-                                        onZoomEvent = pinchToZoomHandler@{ event ->
-                                                return@pinchToZoomHandler when (event) {
-                                                    is PinchToZoomEvent.Changed -> {
+                            .pinchToZoom(
+                                PointerEventPass.Initial,
+                                onZoomEvent = pinchToZoomHandler@{ event ->
+                                        return@pinchToZoomHandler when (event) {
+                                            is PinchToZoomEvent.Changed -> {
 
-                                                        // If the user zooms out, navigate backwards
-                                                        // and exit the preview screen.
-                                                        if (event.value < 1f) {
-                                                            navController.popBackStack()
-                                                            true
-                                                        } else {
-                                                            false
-                                                        }
-                                                    }
-                                                    else -> false
+                                                // If the user zooms out, navigate backwards
+                                                // and exit the preview screen.
+                                                if (event.value < 1f) {
+                                                    navController.popBackStack()
+                                                    true
+                                                } else {
+                                                    false
                                                 }
-                                            },
-                                    )
-                                },
+                                            }
+                                            else -> false
+                                        }
+                                    },
                             )
                 ) {
                     if (selection.itemCount > 0) {
