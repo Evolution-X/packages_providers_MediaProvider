@@ -490,3 +490,11 @@ flag {
     description: "This flag will enable expanded highlight type for the embedded picker."
     bug: "435395584"
 }
+
+flag {
+    name: "enable_modern_photopicker_cloud_settings_page"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables cloud settings page implementation in modern photopicker"
+    bug: "445045054"
+}

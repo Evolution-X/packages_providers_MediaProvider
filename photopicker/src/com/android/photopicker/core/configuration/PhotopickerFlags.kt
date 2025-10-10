@@ -56,6 +56,7 @@ data class PhotopickerFlags(
     val MEDIA_GRID_TOUCH_FEATURES_ENABLED: Boolean = Flags.enableMediaGridTouchFeatures(),
     val PICKER_THUMBNAIL_PRELOAD_ENABLED: Boolean = Flags.enablePhotopickerThumbnailPreload(),
     val POLAROID_ENABLED: Boolean = Flags.photopickerPolaroid(),
+    val MODERN_CLOUD_SETTINGS_ENABLED: Boolean = Flags.enableModernPhotopickerCloudSettingsPage(),
 ) {
     /**
      * Implement a custom equals method to correctly check the equality of the Array member
@@ -79,6 +80,7 @@ data class PhotopickerFlags(
         if (OWNED_PHOTOS_ENABLED != other.OWNED_PHOTOS_ENABLED) return false
         if (PICKER_THUMBNAIL_PRELOAD_ENABLED != other.PICKER_THUMBNAIL_PRELOAD_ENABLED) return false
         if (POLAROID_ENABLED != other.POLAROID_ENABLED) return false
+        if (MODERN_CLOUD_SETTINGS_ENABLED != other.MODERN_CLOUD_SETTINGS_ENABLED) return false
         return true
     }
 
@@ -101,5 +103,6 @@ data class PhotopickerFlags(
             OWNED_PHOTOS_ENABLED,
             PICKER_THUMBNAIL_PRELOAD_ENABLED,
             POLAROID_ENABLED,
+            MODERN_CLOUD_SETTINGS_ENABLED,
         )
 }
