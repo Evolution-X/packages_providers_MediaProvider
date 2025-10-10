@@ -84,7 +84,8 @@ public class NextGenerationNumberTest {
         FileUtils.deleteContents(mDownloadsDir);
         InstrumentationRegistry.getInstrumentation().getUiAutomation()
                 .adoptShellPermissionIdentity(Manifest.permission.LOG_COMPAT_CHANGE,
-                        Manifest.permission.READ_COMPAT_CHANGE_CONFIG);
+                        Manifest.permission.READ_COMPAT_CHANGE_CONFIG,
+                        Manifest.permission.WRITE_MEDIA_STORAGE);
     }
 
     @Test
