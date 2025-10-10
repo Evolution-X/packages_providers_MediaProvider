@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -86,7 +85,6 @@ private val MEASUREMENT_HORIZONTAL_CELL_SPACING_CATEGORY_GRID = 16.dp
 fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
     val itemsFlow = remember { viewModel.getCategoriesAndAlbums() }
     val items = itemsFlow.collectAsLazyPagingItems()
-    val state = rememberLazyGridState()
     val navController = LocalNavController.current
     val featureManager = LocalFeatureManager.current
     val configuration = LocalPhotopickerConfiguration.current
@@ -175,7 +173,6 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
                     navController.navigateToMediaSetGrid(category = item.category)
                 }
             },
-            onItemLongPress = {},
             isExpandedScreen = isExpandedScreen,
             initialColumns =
                 when (isExpandedScreen) {
@@ -185,7 +182,6 @@ fun CategoryGrid(viewModel: CategoryGridViewModel = obtainViewModel()) {
             selection = emptySet(),
             gridCellPadding = MEASUREMENT_HORIZONTAL_CELL_SPACING_CATEGORY_GRID,
             contentPadding = PaddingValues(MEASUREMENT_HORIZONTAL_CELL_SPACING_CATEGORY_GRID),
-            state = state,
         )
         LaunchedEffect(Unit) {
             // Dispatch UI event to denote loading of media categories and albums

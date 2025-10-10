@@ -163,20 +163,6 @@ fun HighlightMedia(
     if (!checkHighlightParamsValidity(highlightParams)) {
         return
     }
-    val longClickActionParams = params as? LocationParams.WithLongClickAction
-    val onItemLongClick: (item: MediaGridItem) -> Unit = { item ->
-        longClickActionParams?.onLongClick(item)
-        scope.launch {
-            events.dispatch(
-                Event.LogPhotopickerUIEvent(
-                    FeatureToken.HIGHLIGHT_MEDIA_RESULTS.token,
-                    configuration.sessionId,
-                    configuration.callingPackageUid ?: -1,
-                    Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
-                )
-            )
-        }
-    }
 
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
     val selectionLimitExceededMessage =
@@ -207,7 +193,6 @@ fun HighlightMedia(
                                 ),
                             isSearchHighlight = true,
                             highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
-                            onItemLongClick = onItemLongClick,
                             onClick = {
                                 setSearchParametersForHighlightMedia(
                                     highlightQuery.searchQuery,
@@ -266,7 +251,6 @@ fun HighlightMedia(
                             highlightQuery = highlightBaseAlbum.displayName,
                             isSearchHighlight = false,
                             highlightMediaItems = pagingItems.collectAsLazyPagingItems(),
-                            onItemLongClick = onItemLongClick,
                             onClick = {
                                 navController.navigateToAlbumMediaGridForCategories(
                                     album = highlightBaseAlbum
@@ -313,7 +297,6 @@ fun HighlightMedia(
  * @param isSearchHighlight A boolean indicating if the highlight is of type search or not in which
  *   case it is an album highlight.
  * @param highlightMediaItems The items to be displayed in the grid as [LazyPagingItems]
- * @param onItemLongClick Callback triggered when a media item is long-pressed.
  * @param onClick Defines the onClick behaviour of the See All button.
  * @param modifier The modifier to be applied if any
  * @param dispatcher Background Coroutine dispatcher.
@@ -325,7 +308,6 @@ fun HighlightSectionContent(
     highlightQuery: String,
     isSearchHighlight: Boolean,
     highlightMediaItems: LazyPagingItems<MediaGridItem>,
-    onItemLongClick: (item: MediaGridItem) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     dispatcher: CoroutineDispatcher,
@@ -376,7 +358,6 @@ fun HighlightSectionContent(
             // Show the horizontal highlight grid
             HighlightMediaGrid(
                 highlightItems = highlightMediaItems,
-                onItemLongClick = onItemLongClick,
                 onGridItemSelection = onGridItemSelection,
             )
         }
@@ -645,13 +626,11 @@ private fun HighlightText(highlightText: String) {
  * items based on the query, whichever is lower. The items in the grid are selectable.
  *
  * @param highlightItems The items to be displayed in the grid as [LazyPagingItems]
- * @param onItemLongClick Defines long click action on the item.
  * @param onGridItemSelection Defines click action on the item.
  */
 @Composable
 private fun HighlightMediaGrid(
     highlightItems: LazyPagingItems<MediaGridItem>,
-    onItemLongClick: (item: MediaGridItem) -> Unit,
     onGridItemSelection: (item: MediaGridItem.MediaItem) -> Unit,
 ) {
     val state = rememberGridDragSelectState()
@@ -704,7 +683,6 @@ private fun HighlightMediaGrid(
                     isSelected = selection.contains(highlightMediaItem.media),
                     selectedPosition = selection.indexOf(highlightMediaItem.media),
                     onClick = { onGridItemSelection(highlightMediaItem) },
-                    onLongPress = { onItemLongClick(highlightMediaItem) },
                     dragSelectionEnabled = dragSelectionEnabled,
                     dateFormat = dateFormat,
                     focusItem = null,

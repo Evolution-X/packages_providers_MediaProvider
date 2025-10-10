@@ -49,7 +49,6 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
@@ -362,7 +361,6 @@ class MediaGridTest {
     private fun grid(
         selection: SelectionImpl<Media>,
         onItemClick: (MediaGridItem) -> Unit,
-        onItemLongPress: (MediaGridItem) -> Unit = {},
         bannerContent: (@Composable () -> Unit)? = null,
     ) {
         val items = flow.collectAsLazyPagingItems()
@@ -376,7 +374,6 @@ class MediaGridTest {
                 items = items,
                 selection = selected,
                 onItemClick = onItemClick,
-                onItemLongPress = onItemLongPress,
                 bannerContent = bannerContent,
                 modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG),
             )
@@ -421,7 +418,7 @@ class MediaGridTest {
                     // Reduce default padding to ensure more items are visible for testing layout
                     // changes.
                     contentPadding = PaddingValues(0.dp),
-                    contentItemFactory = { item, _, onClick, _, _ ->
+                    contentItemFactory = { item, _, onClick, _ ->
                         when (item) {
                             is MediaGridItem.MediaItem -> {
                                 Box(
@@ -525,7 +522,7 @@ class MediaGridTest {
                         dragSelectState = dragSelectState, // Provides the LazyGridState
                         modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG).fillMaxSize(),
                         contentPadding = PaddingValues(0.dp), // Minimal padding
-                        contentItemFactory = { item, _, _, _, _ ->
+                        contentItemFactory = { item, _, _, _ ->
                             when (item) {
                                 is MediaGridItem.MediaItem -> {
                                     Box(Modifier.fillMaxSize()) { Text(item.media.mediaId) }
@@ -638,7 +635,6 @@ class MediaGridTest {
                     grid(
                         selection = selection,
                         onItemClick = {},
-                        onItemLongPress = {},
                         bannerContent = {
                             Text(
                                 text = "bannerContent",
@@ -965,70 +961,6 @@ class MediaGridTest {
         }
     }
 
-    /** Ensures that items have the correct semantic information before and after selection */
-    @Test
-    fun testMediaGridLongPressItem() {
-        runTest {
-            val selection =
-                SelectionImpl<Media>(
-                    scope = backgroundScope,
-                    configuration = provideTestConfigurationFlow(scope = backgroundScope),
-                    preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
-                )
-
-            composeTestRule.setContent {
-                CompositionLocalProvider(
-                    LocalPhotopickerConfiguration provides
-                        TestPhotopickerConfiguration.build {
-                            action("TEST_ACTION")
-                            intent(Intent("TEST_ACTION"))
-                        }
-                ) {
-                    PhotopickerTheme(
-                        isDarkTheme = false,
-                        config =
-                            TestPhotopickerConfiguration.build {
-                                action("TEST_ACTION")
-                                intent(Intent("TEST_ACTION"))
-                            },
-                    ) {
-                        grid(
-                            /* selection= */ selection,
-                            /* onItemClick= */ {},
-                            /* onItemLongPress=*/ { item ->
-                                launch {
-                                    if (item is MediaGridItem.MediaItem)
-                                        selection.toggle(item.media)
-                                }
-                            },
-                        )
-                    }
-                }
-            }
-
-            composeTestRule
-                .onNode(hasTestTag(MEDIA_GRID_TEST_TAG))
-                .onChildren()
-                // Remove the separators
-                .filter(
-                    hasContentDescription(
-                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
-                        substring = true,
-                    )
-                )
-                .onFirst()
-                .performTouchInput { longClick() }
-
-            advanceTimeBy(100)
-            composeTestRule.waitForIdle()
-
-            // Ensure the click handler correctly ran by checking the selection snapshot.
-            assertWithMessage("Expected long press handler to have executed.")
-                .that(selection.snapshot())
-                .isNotEmpty()
-        }
-    }
-
     /** Ensures that Separators are correctly inserted into the MediaGrid. */
     @Test
     fun testMediaGridSeparator() {
@@ -1112,8 +1044,7 @@ class MediaGridTest {
                             items = items,
                             selection = selected,
                             onItemClick = {},
-                            onItemLongPress = {},
-                            contentItemFactory = { item, _, onClick, _, _ ->
+                            contentItemFactory = { item, _, onClick, _ ->
                                 customContentItemFactory(item, onClick)
                             },
                         )

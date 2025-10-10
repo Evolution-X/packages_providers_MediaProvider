@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -326,96 +325,45 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     }
                 }
 
-                when (
-                    // Drag-to-select is enabled only when the flag and multi-selection is enabled.
-                    configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED &&
-                        configuration.selectionLimit > 1
-                ) {
-                    // LongPress + drag will start a drag-to-select action
-                    true -> {
-                        val stateDragSelect = rememberGridDragSelectState()
-                        mediaGrid(
-                            modifier = Modifier.fillMaxSize(),
-                            items = items,
-                            isExpandedScreen = isExpandedScreen,
-                            selection = selection,
-                            dragSelectionEnabled = true,
-                            /* index offset for banner and highlight content */
-                            dragSelectIndexOffset = 2,
-                            bannerContent = {
-                                hideWhenState(selector = bannerContentSelector) {
-                                    AnimatedBannerWrapper(currentBanner)
-                                }
-                            },
-                            highlightMediaContent = {
-                                hideWhenState(selector = highlightContentSelector) {
-                                    // onLongItemClick behavior for Highlight content should be
-                                    // same as decided for mediaGrid()
-                                    featureManager.composeLocation(
-                                        Location.HIGHLIGHT_MEDIA_CAROUSEL,
-                                        maxSlots = 1,
-                                    )
-                                }
-                            },
-                            pinchToZoomEnabled = true,
-                            onZoomAtMaxZoom = onPreviewItem,
-                            onItemClick = onItemClick,
-                            initialColumns = cellsPerRow,
-                            selectionTransform = {
-                                Media.withSelectable(
-                                    item = it,
-                                    selectionSource = Telemetry.MediaLocation.MAIN_GRID,
-                                    album = null,
-                                )
-                            },
-                            dragSelectState = stateDragSelect,
-                            arePlaceholdersEnabled = viewModel.ARE_PLACEHOLDERS_ENABLED,
+                // LongPress + drag will start a drag-to-select action
+                val stateDragSelect = rememberGridDragSelectState()
+                mediaGrid(
+                    modifier = Modifier.fillMaxSize(),
+                    items = items,
+                    isExpandedScreen = isExpandedScreen,
+                    selection = selection,
+                    dragSelectionEnabled = configuration.selectionLimit > 1,
+                    /* index offset for banner and highlight content */
+                    dragSelectIndexOffset = 2,
+                    bannerContent = {
+                        hideWhenState(selector = bannerContentSelector) {
+                            AnimatedBannerWrapper(currentBanner)
+                        }
+                    },
+                    highlightMediaContent = {
+                        hideWhenState(selector = highlightContentSelector) {
+                            featureManager.composeLocation(
+                                Location.HIGHLIGHT_MEDIA_CAROUSEL,
+                                maxSlots = 1,
+                            )
+                        }
+                    },
+                    pinchToZoomEnabled = true,
+                    onZoomAtMaxZoom = onPreviewItem,
+                    onItemClick = onItemClick,
+                    initialColumns = cellsPerRow,
+                    selectionTransform = {
+                        Media.withSelectable(
+                            item = it,
+                            selectionSource = Telemetry.MediaLocation.MAIN_GRID,
+                            album = null,
                         )
-                        PhotoGridDateScrubber(
-                            featureManager,
-                            photoGridBoxHeight,
-                            stateDragSelect.gridState,
-                        )
-                    }
+                    },
+                    dragSelectState = stateDragSelect,
+                    arePlaceholdersEnabled = viewModel.ARE_PLACEHOLDERS_ENABLED,
+                )
+                PhotoGridDateScrubber(featureManager, photoGridBoxHeight, stateDragSelect.gridState)
 
-                    // Regular mediaGrid where users can LongPress to preview items.
-                    false -> {
-                        val state = rememberLazyGridState()
-                        mediaGrid(
-                            items = items,
-                            isExpandedScreen = isExpandedScreen,
-                            selection = selection,
-                            bannerContent = {
-                                hideWhenState(selector = bannerContentSelector) {
-                                    AnimatedBannerWrapper(currentBanner)
-                                }
-                            },
-                            highlightMediaContent = {
-                                hideWhenState(selector = highlightContentSelector) {
-                                    // onLongItemClick behavior for Highlight content should be
-                                    // same as decided for mediaGrid()
-                                    featureManager.composeLocation(
-                                        Location.HIGHLIGHT_MEDIA_CAROUSEL,
-                                        maxSlots = 1,
-                                        params =
-                                            LocationParams.WithLongClickAction { item ->
-                                                onPreviewItem(item)
-                                            },
-                                    )
-                                }
-                            },
-                            onItemClick = onItemClick,
-                            onItemLongPress = onPreviewItem,
-                            pinchToZoomEnabled =
-                                configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
-                            onZoomAtMaxZoom = onPreviewItem,
-                            initialColumns = cellsPerRow,
-                            state = state,
-                            arePlaceholdersEnabled = viewModel.ARE_PLACEHOLDERS_ENABLED,
-                        )
-                        PhotoGridDateScrubber(featureManager, photoGridBoxHeight, state)
-                    }
-                }
                 LaunchedEffect(Unit) {
                     // Log loading of photos in the photo grid
                     events.dispatch(

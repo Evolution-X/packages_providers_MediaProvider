@@ -20,7 +20,6 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.Text
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -75,7 +74,6 @@ private val MEASUREMENT_HORIZONTAL_CELL_SPACING_ALBUM_GRID = 16.dp
 fun AlbumGrid(viewModel: AlbumGridViewModel = obtainViewModel()) {
     val itemsFlow = remember { viewModel.getAlbums() }
     val items = itemsFlow.collectAsLazyPagingItems()
-    val state = rememberLazyGridState()
     val navController = LocalNavController.current
     val featureManager = LocalFeatureManager.current
     val configuration = LocalPhotopickerConfiguration.current
@@ -151,7 +149,6 @@ fun AlbumGrid(viewModel: AlbumGridViewModel = obtainViewModel()) {
                     navController.navigateToAlbumMediaGrid(album = item.album)
                 }
             },
-            onItemLongPress = {},
             isExpandedScreen = isExpandedScreen,
             initialColumns =
                 when (isExpandedScreen) {
@@ -161,7 +158,6 @@ fun AlbumGrid(viewModel: AlbumGridViewModel = obtainViewModel()) {
             selection = emptySet(),
             gridCellPadding = MEASUREMENT_HORIZONTAL_CELL_SPACING_ALBUM_GRID,
             contentPadding = PaddingValues(MEASUREMENT_HORIZONTAL_CELL_SPACING_ALBUM_GRID),
-            state = state,
         )
         LaunchedEffect(Unit) {
             // Dispatch UI event to denote loading of media albums

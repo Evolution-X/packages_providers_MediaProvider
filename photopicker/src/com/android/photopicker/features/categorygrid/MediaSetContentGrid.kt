@@ -247,57 +247,31 @@ private fun MediasetContentGrid(
                     }
                 }
 
-                when (
-                    configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED &&
-                        configuration.selectionLimit > 1
-                ) {
-                    true -> { // Drag-to-select enabled
-                        mediaGrid(
-                            modifier = Modifier.fillMaxSize(),
-                            items = items,
-                            isExpandedScreen = isExpandedScreen,
-                            selection = selection,
-                            dragSelectionEnabled = true,
-                            dragSelectIndexOffset = 0, // by default, which is suitable here.
-                            pinchToZoomEnabled = true,
-                            onZoomAtMaxZoom = onItemPreview,
-                            onItemClick = { item ->
-                                if (item is MediaGridItem.MediaItem) {
-                                    viewModel.handleMediaSetItemSelection(
-                                        item.media,
-                                        selectionLimitExceededMessage,
-                                    )
-                                }
-                            },
-                            selectionTransform = { mediaItem: Media ->
-                                Media.withSelectable(
-                                    item = mediaItem,
-                                    selectionSource = Telemetry.MediaLocation.CATEGORY,
-                                    album = null, // MediaSet is not an album
-                                )
-                            },
+                mediaGrid(
+                    modifier = Modifier.fillMaxSize(),
+                    items = items,
+                    isExpandedScreen = isExpandedScreen,
+                    selection = selection,
+                    dragSelectionEnabled = configuration.selectionLimit > 1,
+                    dragSelectIndexOffset = 0, // by default, which is suitable here.
+                    pinchToZoomEnabled = true,
+                    onZoomAtMaxZoom = onItemPreview,
+                    onItemClick = { item ->
+                        if (item is MediaGridItem.MediaItem) {
+                            viewModel.handleMediaSetItemSelection(
+                                item.media,
+                                selectionLimitExceededMessage,
+                            )
+                        }
+                    },
+                    selectionTransform = { mediaItem: Media ->
+                        Media.withSelectable(
+                            item = mediaItem,
+                            selectionSource = Telemetry.MediaLocation.CATEGORY,
+                            album = null, // MediaSet is not an album
                         )
-                    }
-                    false -> { // Drag-to-select disabled
-                        mediaGrid(
-                            items = items,
-                            isExpandedScreen = isExpandedScreen,
-                            selection = selection,
-                            onItemClick = { item ->
-                                if (item is MediaGridItem.MediaItem) {
-                                    viewModel.handleMediaSetItemSelection(
-                                        item.media,
-                                        selectionLimitExceededMessage,
-                                    )
-                                }
-                            },
-                            onItemLongPress = onItemPreview,
-                            pinchToZoomEnabled =
-                                configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
-                            onZoomAtMaxZoom = onItemPreview,
-                        )
-                    }
-                }
+                    },
+                )
                 LaunchedEffect(Unit) {
                     // Dispatch UI event to log loading of media set contents
                     events.dispatch(
