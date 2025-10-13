@@ -91,8 +91,6 @@ import com.android.providers.media.MediaProvider.VolumeNotFoundException;
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.data.ItemsProvider;
-import com.android.providers.media.scan.MediaScanner;
-import com.android.providers.media.scan.ModernMediaScanner;
 import com.android.providers.media.util.FileUtils;
 import com.android.providers.media.util.FileUtilsTest;
 import com.android.providers.media.util.SQLiteQueryBuilder;
@@ -2334,13 +2332,12 @@ public class MediaProviderTest {
 
         for (int i = 0; i < projections.length; i++) {
             String[] projection = projections[i];
-            String testFileName = "test_file";
-            final File downloads = new File(Environment.getExternalStorageDirectory(),
+            String testFileName = "test" + System.nanoTime() + ".jpg";
+            final File downloads = Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS);
             File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, testFileName));
-            ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sContext,
-                    new TestConfigStore());
-            Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+            Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
+
             try (Cursor cursor = sContentResolver.query(testFileUri, projection, null, null,
                     null)) {
                 assertNotNull(cursor);
@@ -2366,12 +2363,11 @@ public class MediaProviderTest {
     @RequiresFlagsEnabled(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
     public void testQueryingMediaGeolocationDataInSelectionShouldReturnEmptyCursor()
             throws Exception {
-        final File downloads = new File(Environment.getExternalStorageDirectory(),
+        final File downloads = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
-        File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, "test"));
-        ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sContext,
-                new TestConfigStore());
-        Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+        File file = stage(R.raw.lg_g4_iso_800_jpg,
+                new File(downloads, "test" + System.nanoTime() + ".jpg"));
+        Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
 
         String[] projection = new String[] {
                 ImageColumns._ID,
@@ -2394,13 +2390,11 @@ public class MediaProviderTest {
     @RequiresFlagsEnabled(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
     public void testQueryingMediaGeolocationDataInOrderByShouldReturnNonEmptyCursor()
             throws Exception {
-        String testFileName = "test";
-        final File downloads = new File(Environment.getExternalStorageDirectory(),
+        String testFileName = "test" + System.nanoTime() + ".jpg";
+        final File downloads = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
         File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, testFileName));
-        ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sContext,
-                new TestConfigStore());
-        Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+        Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
 
         String[] projection = new String[] {
                 ImageColumns._ID,
@@ -2425,13 +2419,11 @@ public class MediaProviderTest {
     @RequiresFlagsEnabled(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
     public void testQueryingMediaGeolocationDataInGroupByAndHavingShouldReturnEmptyCursor()
             throws Exception {
-        String testFileName = "test";
-        final File downloads = new File(Environment.getExternalStorageDirectory(),
+        String testFileName = "test" + System.nanoTime() + ".jpg";
+        final File downloads = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
         File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, testFileName));
-        ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sContext,
-                new TestConfigStore());
-        Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+        Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
 
         String[] projection = new String[] {
                 ImageColumns._ID,
