@@ -402,7 +402,11 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
                 .assert(hasClickAction())
                 .performClick()
             composeTestRule.waitForIdle()
-            advanceTimeBy(1000)
+            advanceTimeBy(300)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(300)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(300)
 
             // Search bar with Search text placeholder is displayed
             composeTestRule
