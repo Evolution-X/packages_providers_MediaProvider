@@ -19,10 +19,9 @@ package com.android.photopicker.core.components
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.data.model.Media
@@ -76,6 +75,13 @@ class GridDragSelectState(
 
     /** The current auto-scroll speed, typically non-zero when dragging near grid edges. */
     val autoScrollSpeed = mutableStateOf(0f)
+
+    /**
+     * A cold flow that emits a false when autoScrollSpeed is zero, and true otherwise. It tells us
+     * if the grid should be auto scrolling at a moment in time
+     */
+    val shouldAutoScroll = snapshotFlow { autoScrollSpeed.value != 0f }
+
     /** The dominant direction of the current drag (e.g., Up, Down, Left, Right). */
     val direction = mutableStateOf(DragDirection.UNSET)
 

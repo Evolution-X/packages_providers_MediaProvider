@@ -19,8 +19,6 @@ package com.android.photopicker.core.components
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -43,7 +41,6 @@ import com.android.photopicker.extensions.getItemPosition
 import com.android.photopicker.extensions.itemIndexAtPosition
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -289,18 +286,22 @@ class GridDragSelectNode(
     val delegateNode = delegate(SuspendingPointerInputModifierNode(pointerInputEventHandler))
 
     /**
-     * Called when the node is attached to a composable. If auto-scroll is enabled, it launches a
-     * coroutine to continuously scroll the grid based on [GridDragSelectState.autoScrollSpeed].
+     * Called when the node is attached to a composable. It launches a coroutine which collects the
+     * shouldAutoScroll flow.
+     *
+     * When shouldAutoScroll is true, the coroutine enters a loop to continuously scroll the grid by
+     * the calculated autoScrollSpeed. When shouldAutoScroll is false, the scroll loop will
+     * (eventually) terminate and the coroutine will suspend on the collect call.
      */
     override fun onAttach() {
         if (enableAutoScroll) {
             coroutineScope.launch {
-                while (isActive) { // Loop while the coroutine is active.
-                    if (state.autoScrollSpeed.value != 0f) {
+                state.shouldAutoScroll.collect {
+                    while (state.autoScrollSpeed.value != 0f) {
                         // Scroll the grid by the calculated auto-scroll speed.
                         state.gridState.scrollBy(state.autoScrollSpeed.value)
+                        delay(10) // Delay to control scroll frequency
                     }
-                    delay(10) // Delay to control scroll frequency.
                 }
             }
         }

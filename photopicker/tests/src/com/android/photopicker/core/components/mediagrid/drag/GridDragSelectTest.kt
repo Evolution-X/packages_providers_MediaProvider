@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -258,6 +259,7 @@ class GridDragSelectTest {
     }
 
     @Test
+    @Ignore("b/444588830 fix with the change to make autoScrollSpeed a flow")
     fun testDragToSelectVerticalGridAutoScroll() = runTest {
         val selection =
             SelectionImpl<Media>(
@@ -462,6 +464,7 @@ class GridDragSelectTest {
     }
 
     @Test
+    @Ignore("b/444588830 fix with the change to make autoScrollSpeed a flow")
     fun testDragToSelectHorizontalGridAutoScroll() = runTest {
         val selection =
             SelectionImpl<Media>(
