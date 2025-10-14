@@ -93,7 +93,8 @@ public class NextGenerationNumberTest {
         List<File> files = new ArrayList<>();
         try {
             for (int i = 0; i < 3; i++) {
-                File f = new File(mDownloadsDir, "testFile_" + i + ".jpg");
+                File f = new File(mDownloadsDir, "testFile_" + i + System.currentTimeMillis()
+                        + ".jpg");
                 stageNewFile(R.raw.test_image, f);
                 files.add(f);
             }
@@ -141,7 +142,8 @@ public class NextGenerationNumberTest {
         List<File> files = new ArrayList<>();
         try {
             for (int i = 0; i < 3; i++) {
-                File f = new File(mDownloadsDir, "testFile_" + i + ".jpg");
+                File f = new File(mDownloadsDir, "testFile_" + i + System.currentTimeMillis()
+                        + ".jpg");
                 stageNewFile(R.raw.test_image, f);
                 files.add(f);
             }
