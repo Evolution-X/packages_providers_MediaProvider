@@ -19,7 +19,6 @@ package com.android.photopicker.features.photogrid
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -33,7 +32,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PlayCircle
@@ -114,7 +112,6 @@ private val RECENTS_ROW_COUNT = 3
  * @param viewModel - A viewModel override for the composable. Normally, this is fetched via hilt
  *   from the backstack entry by using obtainViewModel()
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
     val navController = LocalNavController.current
@@ -247,16 +244,6 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
             }
             // Only show the grid when there is at least one item in the page set.
             isNotEmpty -> {
-                val localConfig = LocalConfiguration.current
-                val maxScreenDim =
-                    remember(localConfig) {
-                        maxOf(localConfig.screenWidthDp, localConfig.screenHeightDp).dp
-                    }
-                val dpCacheWindow =
-                    remember(maxScreenDim) {
-                        LazyLayoutCacheWindow(ahead = maxScreenDim / 2, behind = maxScreenDim / 4)
-                    }
-                val cacheState = rememberLazyGridState(cacheWindow = dpCacheWindow)
 
                 // When the PhotoGrid is ready to show, also collect the latest banner
                 // data from [BannerManager] so it can be placed inside of the mediaGrid's
@@ -344,8 +331,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                 ) {
                     // LongPress + drag will start a drag-to-select action
                     true -> {
-                        val stateDragSelect =
-                            rememberGridDragSelectState(lazyGridState = cacheState)
+                        val stateDragSelect = rememberGridDragSelectState()
                         mediaGrid(
                             modifier = Modifier.fillMaxSize(),
                             items = items,
@@ -392,6 +378,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
 
                     // Regular mediaGrid where users can LongPress to preview items.
                     false -> {
+                        val state = rememberLazyGridState()
                         mediaGrid(
                             items = items,
                             isExpandedScreen = isExpandedScreen,
@@ -421,10 +408,10 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                                 configuration.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
                             onZoomAtMaxZoom = onPreviewItem,
                             initialColumns = cellsPerRow,
-                            state = cacheState,
+                            state = state,
                             arePlaceholdersEnabled = viewModel.ARE_PLACEHOLDERS_ENABLED,
                         )
-                        PhotoGridDateScrubber(featureManager, photoGridBoxHeight, cacheState)
+                        PhotoGridDateScrubber(featureManager, photoGridBoxHeight, state)
                     }
                 }
                 LaunchedEffect(Unit) {

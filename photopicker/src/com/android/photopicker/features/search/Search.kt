@@ -23,7 +23,6 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,9 +36,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -111,7 +108,6 @@ import com.android.photopicker.core.components.EmptyState
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.components.getCellsPerRow
 import com.android.photopicker.core.components.mediaGrid
-import com.android.photopicker.core.components.rememberGridDragSelectState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.embedded.LocalEmbeddedState
@@ -1060,7 +1056,6 @@ fun ShowSuggestionIcon(suggestion: SearchSuggestion, modifier: Modifier) {
 }
 
 /** Composable for drawing the search results Grid */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ResultMediaGrid(
     resultItems: Flow<PagingData<MediaGridItem>>,
@@ -1076,14 +1071,6 @@ private fun ResultMediaGrid(
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
     val configuration = LocalPhotopickerConfiguration.current
-    val localConfig = LocalConfiguration.current
-    val maxScreenDim =
-        remember(localConfig) { maxOf(localConfig.screenWidthDp, localConfig.screenHeightDp).dp }
-    val dpCacheWindow =
-        remember(maxScreenDim) {
-            LazyLayoutCacheWindow(ahead = maxScreenDim / 2, behind = maxScreenDim / 4)
-        }
-    val cacheState = rememberLazyGridState(cacheWindow = dpCacheWindow)
     val searchGridDescription =
         stringResource(R.string.photopicker_search_results_grid_content_description)
 
@@ -1219,14 +1206,11 @@ private fun ResultMediaGrid(
                 ) {
                     // LongPress + drag will start a drag-to-select action
                     true -> {
-                        val dragSelectState =
-                            rememberGridDragSelectState(lazyGridState = cacheState)
                         mediaGrid(
                             items = items,
                             isExpandedScreen = isExpandedScreen,
                             selection = selection,
                             dragSelectionEnabled = true,
-                            dragSelectState = dragSelectState,
                             pinchToZoomEnabled = true,
                             onZoomAtMaxZoom = onPreviewItem,
                             onItemClick = onItemClick,
@@ -1245,7 +1229,6 @@ private fun ResultMediaGrid(
                     false -> {
                         mediaGrid(
                             items = items,
-                            state = cacheState,
                             isExpandedScreen = isExpandedScreen,
                             selection = selection,
                             onItemClick = onItemClick,
