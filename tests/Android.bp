@@ -12,6 +12,7 @@ android_test_helper_app {
     ],
     static_libs: [
         "cts-install-lib",
+        "cts-install-lib",
     ],
     sdk_version: "test_current",
     target_sdk_version: "30",
@@ -257,6 +258,7 @@ android_test {
         "android-support-test",
         "mockito-target-minus-junit4",
         "platform-compat-test-rules",
+        "dynamiccolors",
     ],
 
     certificate: "media",

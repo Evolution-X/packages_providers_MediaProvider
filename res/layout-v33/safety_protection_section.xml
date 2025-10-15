@@ -29,6 +29,6 @@
         android:paddingStart="8dp"
         android:paddingEnd="0dp"
         android:paddingTop="3dp"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textColor="@color/materialColorOnSurfaceVariant"
         android:textSize="12sp" />
 </merge>
