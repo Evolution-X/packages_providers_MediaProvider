@@ -547,7 +547,7 @@ private fun HighlightQueryAndSeeAllButton(
                         PlainTooltip(
                             // This adds the caret(the small arrow pointing to the anchor button)
                             // to the tooltip.
-                            caretSize = TooltipDefaults.caretSize,
+                            caretShape = TooltipDefaults.caretShape(),
                             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                             shape = RoundedCornerShape(TOOLTIP_ROUNDED_CORNERS_MEASURE),
                             modifier = Modifier.width(TOOLTIP_WIDTH),
