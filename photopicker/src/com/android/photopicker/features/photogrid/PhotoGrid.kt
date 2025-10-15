@@ -50,10 +50,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
@@ -117,6 +119,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
     val navController = LocalNavController.current
     val featureManager = LocalFeatureManager.current
     val isPreviewEnabled = remember { featureManager.isFeatureEnabled(PreviewFeature::class.java) }
+    val layoutDirection = LocalLayoutDirection.current
 
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
 
@@ -155,11 +158,10 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
         Modifier.fillMaxSize().pointerInput(Unit) {
             detectHorizontalDragGestures(
                 onHorizontalDrag = { _, dragAmount ->
-                    // This may need some additional fine tuning by looking at a certain
-                    // distance in dragAmount, but initial testing suggested this worked
-                    // pretty well as is.
-                    if (dragAmount < 0) {
-                        // Negative is a left swipe
+                    val adjustedDragAmount =
+                        if (layoutDirection == LayoutDirection.Rtl) -dragAmount else dragAmount
+                    if (adjustedDragAmount < 0) {
+                        // Negative adjusted drag amount indicates navigate to album/category grid
                         if (featureManager.isFeatureEnabled(AlbumGridFeature::class.java)) {
                             // Dispatch UI event to indicate switching to albums tab
                             scope.launch {
