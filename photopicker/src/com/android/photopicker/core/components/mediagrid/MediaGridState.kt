@@ -19,32 +19,31 @@ package com.android.photopicker.core.components
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.setValue
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.data.model.Media
 
 /**
- * Creates and remembers a [GridDragSelectState] instance.
+ * Creates and remembers a [MediaGridState] for a media grid.
  *
- * This composable handles the state management for drag selection within a lazy grid. It integrates
- * with the provided [LazyGridState] and [Selection] controller.
+ * This function manages the state of the media grid, including its scroll position, selection, and
+ * drag-to-select gestures.
  *
- * @param lazyGridState The state object of the `LazyVerticalGrid` or `LazyHorizontalGrid`. Defaults
- *   to a new remembered state.
- * @param selection The selection controller responsible for managing selected items. Defaults to
- *   the ambient [LocalSelection] controller.
- * @return A remembered [GridDragSelectState] instance, keyed to [lazyGridState] and [selection].
+ * @param lazyGridState The [LazyGridState] for the underlying grid composable.
+ * @param selection The [Selection] model to use for tracking selected items.
+ * @return A remembered [MediaGridState] instance.
  */
 @Composable
-public fun rememberGridDragSelectState(
+public fun rememberMediaGridState(
     lazyGridState: LazyGridState = rememberLazyGridState(),
     selection: Selection<Media> = LocalSelection.current,
-): GridDragSelectState {
+): MediaGridState {
     return remember(lazyGridState, selection) {
-        GridDragSelectState(
+        MediaGridState(
             gridState = lazyGridState,
             selection = selection,
             dragState = DragState.create(),
@@ -53,21 +52,14 @@ public fun rememberGridDragSelectState(
 }
 
 /**
- * Holds the state for drag-to-select functionality within a composable.
+ * A state holder for the media grid, which wraps the [LazyGridState] for the underlying grid
+ * composable and manages drag-to-select operations.
  *
- * This state class manages the drag gesture lifecycle (start, update, stop) and holds the relevant
- * state for the current Drag gesture.
- *
- * Use [rememberGridDragSelectState] to create and remember an instance of this class within your
- * composable.
- *
- * @property gridState The state object of the `LazyVerticalGrid` or `LazyHorizontalGrid` being
- *   used.
- * @property selection The selection controller responsible for managing selected items.
- * @property dragState The internal state representing the current drag operation (initial and
- *   current index).
+ * @param gridState The state of the underlying [LazyGridState].
+ * @param selection The selection for the current session.
+ * @param dragState The state of the drag-to-select operation.
  */
-class GridDragSelectState(
+class MediaGridState(
     val gridState: LazyGridState,
     val selection: Selection<Media>,
     var dragState: DragState,
@@ -75,30 +67,23 @@ class GridDragSelectState(
 
     /** The current auto-scroll speed, typically non-zero when dragging near grid edges. */
     val autoScrollSpeed = mutableStateOf(0f)
-
-    /**
-     * A cold flow that emits a false when autoScrollSpeed is zero, and true otherwise. It tells us
-     * if the grid should be auto scrolling at a moment in time
-     */
-    val shouldAutoScroll = snapshotFlow { autoScrollSpeed.value != 0f }
-
     /** The dominant direction of the current drag (e.g., Up, Down, Left, Right). */
     val direction = mutableStateOf(DragDirection.UNSET)
 
     /**
-     * Executes the provided [block] within the [DragSelectScope] if a drag operation
+     * Executes the provided [block] within the [MediaGridState] if a drag operation
      * (`dragState.isDragging`) is currently active.
      *
      * This function is intended to be called repeatedly while the user's pointer is moving during a
      * drag gesture (e.g., within a `pointerInput` modifier's drag event handler).
      *
-     * The [block] receives a [DragSelectScope] receiver, providing access to the current drag state
+     * The [block] receives a [MediaGridState] receiver, providing access to the current drag state
      * ([dragState]), grid state ([gridState]), selection controller ([selection]), and allows
-     * updating the drag position via [DragSelectScope.updateDrag].
+     * updating the drag position via [updateDrag].
      *
-     * @param block The lambda to execute within the [GridDragSelectState].
+     * @param block The lambda to execute within the [MediaGridState].
      */
-    fun whenDragging(block: GridDragSelectState.() -> Unit) {
+    fun whenDragging(block: MediaGridState.() -> Unit) {
         if (dragState.isDragging) {
             block(this)
         }
@@ -106,8 +91,7 @@ class GridDragSelectState(
 
     /**
      * Updates the current item index being dragged over. This modifies the [dragState]'s `current`
-     * value. This method is typically called from within the [whenDragging] block via
-     * [DragSelectScope.updateDrag].
+     * value. This method is typically called from within the [whenDragging] block.
      *
      * @param current The index of the item currently under the drag pointer.
      */
@@ -117,18 +101,12 @@ class GridDragSelectState(
 
     /**
      * Starts a new drag operation by setting the [dragState] with the initial and current index.
-     * Executes the provided [block] immediately after initializing the drag state.
      *
      * @param index The initial index where the drag gesture started (e.g., the item first pressed).
-     * @param block A suspend lambda to execute immediately after starting the drag. This is
-     *   typically used for applying the initial selection change based on the starting item (e.g.,
-     *   selecting the first item if it wasn't selected).
      */
-    fun startDrag(index: Int, block: GridDragSelectState.() -> Unit) {
+    fun startDrag(index: Int) {
         // Initialize drag state: initial and current index are the same at the start.
         dragState = DragState(initial = index, current = index)
-        // Execute the provided block, e.g., for initial selection.
-        block()
     }
 
     /**

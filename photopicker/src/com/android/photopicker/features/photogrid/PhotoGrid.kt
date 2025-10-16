@@ -69,7 +69,7 @@ import com.android.photopicker.core.components.EmptyState
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.components.getCellsPerRow
 import com.android.photopicker.core.components.mediaGrid
-import com.android.photopicker.core.components.rememberGridDragSelectState
+import com.android.photopicker.core.components.rememberMediaGridState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.embedded.LocalEmbeddedState
@@ -324,10 +324,9 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                         }
                     }
                 }
-
-                // LongPress + drag will start a drag-to-select action
-                val stateDragSelect = rememberGridDragSelectState()
+                val state = rememberMediaGridState()
                 mediaGrid(
+                    state = state,
                     modifier = Modifier.fillMaxSize(),
                     items = items,
                     isExpandedScreen = isExpandedScreen,
@@ -359,11 +358,9 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                             album = null,
                         )
                     },
-                    dragSelectState = stateDragSelect,
                     arePlaceholdersEnabled = viewModel.ARE_PLACEHOLDERS_ENABLED,
                 )
-                PhotoGridDateScrubber(featureManager, photoGridBoxHeight, stateDragSelect.gridState)
-
+                PhotoGridDateScrubber(featureManager, photoGridBoxHeight, state.gridState)
                 LaunchedEffect(Unit) {
                     // Log loading of photos in the photo grid
                     events.dispatch(

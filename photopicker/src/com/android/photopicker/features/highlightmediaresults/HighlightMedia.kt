@@ -85,7 +85,7 @@ import com.android.photopicker.core.components.ScrollOrientation
 import com.android.photopicker.core.components.defaultBuildMediaItem
 import com.android.photopicker.core.components.defaultBuildSeparator
 import com.android.photopicker.core.components.onGridDragSelect
-import com.android.photopicker.core.components.rememberGridDragSelectState
+import com.android.photopicker.core.components.rememberMediaGridState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.events.Event
@@ -633,7 +633,7 @@ private fun HighlightMediaGrid(
     highlightItems: LazyPagingItems<MediaGridItem>,
     onGridItemSelection: (item: MediaGridItem.MediaItem) -> Unit,
 ) {
-    val state = rememberGridDragSelectState()
+    val state = rememberMediaGridState()
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
     val description = stringResource(R.string.photopicker_hsr_media_text)
     val configuration = LocalPhotopickerConfiguration.current

@@ -52,7 +52,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -211,12 +210,11 @@ val MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE = 12.dp
  * interaction logic. It handles item rendering, selection, drag-to-select, pinch-to-zoom, and other
  * grid behaviors.
  *
+ * @param state The [MediaGridState] holder which manages state for this composable.
  * @param items The [LazyPagingItems] representing the data to display.
  * @param focusItem Optional [MediaGridItem] that should request focus.
  * @param selection The current set of selected [Media] items.
  * @param dragSelectionEnabled Whether drag-to-select functionality is enabled.
- * @param dragSelectState The state object for managing drag-to-select behavior. Required if
- *   [dragSelectionEnabled] is true.
  * @param dragSelectIndexOffset An offset applied to indices reported by [dragSelectState].
  * @param pinchToZoomEnabled Whether pinch-to-zoom functionality for changing column count is
  *   enabled.
@@ -239,16 +237,15 @@ val MEASUREMENT_DEFAULT_ALBUM_LABEL_SPACER_SIZE = 12.dp
  * @param bannerContent Optional composable banner content.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid
- * @param state The [LazyGridState] to use with the [LazyVerticalGrid].
  * @Param arePlaceholdersEnabled Whether placeholders are enabled in the grid.
  */
 @Composable
 fun mediaGrid(
+    state: MediaGridState = rememberMediaGridState(),
     items: LazyPagingItems<MediaGridItem>,
     focusItem: MediaGridItem? = null,
     selection: Set<Media>,
     dragSelectionEnabled: Boolean = false,
-    dragSelectState: GridDragSelectState = rememberGridDragSelectState(),
     dragSelectIndexOffset: Int = 0,
     pinchToZoomEnabled: Boolean = false,
     pinchToZoomMaxColumns: Int = 5,
@@ -291,7 +288,6 @@ fun mediaGrid(
     bannerContent: (@Composable () -> Unit)? = null,
     highlightMediaContent: (@Composable () -> Unit)? = null,
 ) {
-    val state = dragSelectState.gridState
     // To know whether the request in coming from Embedded or PhotoPicker
     val isEmbedded =
         LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
@@ -325,7 +321,8 @@ fun mediaGrid(
                 val headerElementCount =
                     listOf(bannerContent, highlightMediaContent).count { it != null }
                 val pinchIndex =
-                    state.itemIndexAtPosition(event.offset)?.minus(headerElementCount) ?: 0
+                    state.gridState.itemIndexAtPosition(event.offset)?.minus(headerElementCount)
+                        ?: 0
                 return@pinchToZoomHandler !(pinchIndex >= 0)
             }
             is PinchToZoomEvent.Changed -> {
@@ -340,7 +337,7 @@ fun mediaGrid(
                 if (zoomCanPreview && event.value > 1f) {
                     // positive zoom
                     if (currentColumns == pinchToZoomMinColumns) {
-                        state
+                        state.gridState
                             .itemIndexAtPosition(event.offset)
                             ?.minus(dragSelectIndexOffset)
                             ?.let { index ->
@@ -400,7 +397,7 @@ fun mediaGrid(
                             // block being run.
                             @SuppressLint("NewApi")
                             transferScrollableTouchesToHostInEmbedded(
-                                state,
+                                state.gridState,
                                 isExpanded,
                                 checkNotNull(host) { "surfaceHost cannot be null" },
                             )
@@ -412,10 +409,7 @@ fun mediaGrid(
                             onGridDragSelect(
                                 config = LocalPhotopickerConfiguration.current,
                                 items = items,
-                                state =
-                                    checkNotNull(dragSelectState) {
-                                        "GridDragSelectState cannot be null"
-                                    },
+                                state = state,
                                 windowRect = if (isEmbedded) null else calculateWindowRect(),
                                 indexOffset = dragSelectIndexOffset,
                                 autoScrollThreshold = GridDragSelectDefaults.autoScrollThreshold,
@@ -424,7 +418,7 @@ fun mediaGrid(
                             )
                         },
                     ),
-            state = state,
+            state = state.gridState,
             contentPadding = contentPadding,
             userScrollEnabled = userScrollEnabled,
             horizontalArrangement = Arrangement.spacedBy(gridCellPadding),
@@ -479,9 +473,9 @@ fun mediaGrid(
 
                 // Only animate if going from Expanded -> Collapsed
                 if (wasPreviouslyExpanded.value && isCollapsed) {
-                    if (state.firstVisibleItemScrollOffset > 0) {
-                        state.animateScrollBy(
-                            value = -state.firstVisibleItemScrollOffset.toFloat(),
+                    if (state.gridState.firstVisibleItemScrollOffset > 0) {
+                        state.gridState.animateScrollBy(
+                            value = -state.gridState.firstVisibleItemScrollOffset.toFloat(),
                             animationSpec = tween(durationMillis = 500),
                         )
                     }

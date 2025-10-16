@@ -400,11 +400,12 @@ class MediaGridTest {
             // though PagingData.from is simple.
             val lazyPagingItems = itemsFlow.collectAsLazyPagingItems()
             val selected by selection.flow.collectAsStateWithLifecycle()
-            val dragSelectState = rememberGridDragSelectState()
+            val state = rememberMediaGridState()
 
             // Provide a fixed size Box for predictable gesture coordinates and grid layout.
             Box(modifier = Modifier.size(300.dp, 500.dp)) {
                 mediaGrid(
+                    state = state,
                     items = lazyPagingItems,
                     selection = selected,
                     onItemClick = onItemClick,
@@ -413,7 +414,6 @@ class MediaGridTest {
                     pinchToZoomMinColumns = minColumns,
                     pinchToZoomMaxColumns = maxColumns,
                     onZoomAtMaxZoom = onZoomAtMaxZoom,
-                    dragSelectState = dragSelectState, // Provides the LazyGridState
                     modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG).fillMaxSize(),
                     // Reduce default padding to ensure more items are visible for testing layout
                     // changes.
@@ -507,10 +507,11 @@ class MediaGridTest {
                 val itemsFlow = flowOf(PagingData.from(pinchToZoomTestData))
                 val lazyPagingItems = itemsFlow.collectAsLazyPagingItems()
                 val selected by selection.flow.collectAsStateWithLifecycle()
-                val dragSelectState = rememberGridDragSelectState()
+                val state = rememberMediaGridState()
 
                 Box(modifier = Modifier.size(300.dp, 500.dp)) { // Fixed size for predictable layout
                     mediaGrid(
+                        state = state,
                         items = lazyPagingItems,
                         selection = selected,
                         onItemClick = {},
@@ -519,7 +520,6 @@ class MediaGridTest {
                         pinchToZoomMinColumns = 2, // Min columns to trigger callback
                         pinchToZoomMaxColumns = 5,
                         onZoomAtMaxZoom = { callbackInvoked.complete(true) },
-                        dragSelectState = dragSelectState, // Provides the LazyGridState
                         modifier = Modifier.testTag(MEDIA_GRID_TEST_TAG).fillMaxSize(),
                         contentPadding = PaddingValues(0.dp), // Minimal padding
                         contentItemFactory = { item, _, _, _ ->

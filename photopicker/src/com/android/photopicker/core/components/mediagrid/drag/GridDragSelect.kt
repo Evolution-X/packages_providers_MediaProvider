@@ -53,7 +53,7 @@ import kotlinx.coroutines.runBlocking
  *
  * @param config The current [PhotopickerConfiguration].
  * @param items The [LazyPagingItems] source for the grid.
- * @param state The [GridDragSelectState] to manage and observe the selection state.
+ * @param state The [MediaGridState] to manage and observe the selection state.
  * @param windowRect Optional [Rect] defining the window bounds. If provided, auto-scroll
  *   calculations will be relative to these bounds. If null, calculations are based on the grid's
  *   viewport.
@@ -72,7 +72,7 @@ import kotlinx.coroutines.runBlocking
 fun Modifier.onGridDragSelect(
     config: PhotopickerConfiguration,
     items: LazyPagingItems<MediaGridItem>,
-    state: GridDragSelectState,
+    state: MediaGridState,
     windowRect: Rect? = null,
     enableAutoScroll: Boolean = true,
     autoScrollThreshold: Float,
@@ -104,7 +104,7 @@ fun Modifier.onGridDragSelect(
  *
  * @property config The [PhotopickerConfiguration] for the photopicker.
  * @property items The [LazyPagingItems] containing the grid items.
- * @property state The [GridDragSelectState] that manages the state of the drag selection.
+ * @property state The [MediaGridState] that manages the state of the drag selection.
  * @property windowRect The [Rect] representing the window's bounds, used for auto-scroll
  *   calculations. If null, auto-scroll will use the grid's viewport.
  * @property enableAutoScroll Whether to enable auto-scrolling when dragging near the edges.
@@ -122,7 +122,7 @@ fun Modifier.onGridDragSelect(
 class GridDragSelectNode(
     var config: PhotopickerConfiguration,
     var items: LazyPagingItems<MediaGridItem>,
-    var state: GridDragSelectState,
+    var state: MediaGridState,
     var windowRect: Rect?,
     var enableAutoScroll: Boolean,
     var autoScrollThreshold: Float,
@@ -353,7 +353,7 @@ class GridDragSelectNode(
  *
  * @property config The current [PhotopickerConfiguration].
  * @property items The [LazyPagingItems] containing the grid items.
- * @property state The [GridDragSelectState] that manages the state of the drag selection.
+ * @property state The [MediaGridState] that manages the state of the drag selection.
  * @property windowRect The [Rect] representing the window's bounds for auto-scroll.
  * @property enableAutoScroll Whether auto-scrolling is enabled.
  * @property autoScrollThreshold The threshold for triggering auto-scroll.
@@ -369,7 +369,7 @@ class GridDragSelectNode(
 data class GridDragSelectElement(
     val config: PhotopickerConfiguration,
     val items: LazyPagingItems<MediaGridItem>,
-    val state: GridDragSelectState,
+    val state: MediaGridState,
     val windowRect: Rect?,
     val enableAutoScroll: Boolean,
     val autoScrollThreshold: Float,

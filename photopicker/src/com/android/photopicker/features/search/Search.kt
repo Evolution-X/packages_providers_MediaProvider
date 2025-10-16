@@ -108,6 +108,7 @@ import com.android.photopicker.core.components.EmptyState
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.components.getCellsPerRow
 import com.android.photopicker.core.components.mediaGrid
+import com.android.photopicker.core.components.rememberMediaGridState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.embedded.LocalEmbeddedState
@@ -1198,7 +1199,9 @@ private fun ResultMediaGrid(
                 modifier =
                     Modifier.fillMaxSize().semantics { contentDescription = searchGridDescription }
             ) {
+                val state = rememberMediaGridState()
                 mediaGrid(
+                    state = state,
                     items = items,
                     isExpandedScreen = isExpandedScreen,
                     selection = selection,
