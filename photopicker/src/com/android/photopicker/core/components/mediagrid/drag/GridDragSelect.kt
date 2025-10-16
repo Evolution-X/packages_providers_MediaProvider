@@ -40,7 +40,9 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.getItemPosition
 import com.android.photopicker.extensions.itemIndexAtPosition
 import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -141,6 +143,10 @@ class GridDragSelectNode(
      */
     lateinit var currentCoordinates: AtomicReference<LayoutCoordinates>
 
+    // Holder for the Job that is started at the beginning of a drag operation. This is later
+    // cancelled when the drag completes. (After the last pointer is up, or gesture cancel).
+    private var dragJob: Job? = null
+
     /**
      * Handles pointer input events to detect drag gestures after a long press. This is the core
      * logic for initiating and processing the drag-to-select gesture.
@@ -162,18 +168,30 @@ class GridDragSelectNode(
                         when (it) {
                             is MediaGridItem.MediaItem -> {
                                 // Start the drag operation.
-                                coroutineScope.launch {
-                                    state.startDrag(startIndex) {
+                                dragJob?.cancel()
+                                dragJob =
+                                    coroutineScope.launch {
+                                        state.startDrag(startIndex)
                                         // Perform haptic feedback if enabled.
                                         hapticFeedback?.performHapticFeedback(
                                             HapticFeedbackType.LongPress
                                         )
                                         // Add the initially selected item.
-                                        runBlocking {
-                                            state.selection.add(selectionTransform(it.media))
+                                        state.selection.add(selectionTransform(it.media))
+
+                                        // Start the auto-scroll loop, which will run until the
+                                        // job is cancelled in onDragEnd or onDragCancel.
+                                        if (enableAutoScroll) {
+                                            while (isActive) {
+                                                if (state.autoScrollSpeed.value != 0f) {
+                                                    state.gridState.scrollBy(
+                                                        state.autoScrollSpeed.value
+                                                    )
+                                                }
+                                                delay(10) // Delay to control scroll frequency
+                                            }
                                         }
                                     }
-                                }
                             }
                             // Do nothing for non-media items (e.g., headers, placeholders).
                             else -> {}
@@ -181,8 +199,14 @@ class GridDragSelectNode(
                     }
                 }
             },
-            onDragCancel = state::stopDrag, // Stop drag on cancellation.
-            onDragEnd = state::stopDrag, // Stop drag on gesture end.
+            onDragCancel = {
+                state.stopDrag()
+                dragJob?.cancel()
+            },
+            onDragEnd = {
+                state.stopDrag()
+                dragJob?.cancel()
+            },
             onDrag = { change, _ ->
                 state.whenDragging { // Execute only if a drag is in progress.
 
@@ -284,28 +308,6 @@ class GridDragSelectNode(
 
     /** Delegates pointer input handling to [SuspendingPointerInputModifierNode]. */
     val delegateNode = delegate(SuspendingPointerInputModifierNode(pointerInputEventHandler))
-
-    /**
-     * Called when the node is attached to a composable. It launches a coroutine which collects the
-     * shouldAutoScroll flow.
-     *
-     * When shouldAutoScroll is true, the coroutine enters a loop to continuously scroll the grid by
-     * the calculated autoScrollSpeed. When shouldAutoScroll is false, the scroll loop will
-     * (eventually) terminate and the coroutine will suspend on the collect call.
-     */
-    override fun onAttach() {
-        if (enableAutoScroll) {
-            coroutineScope.launch {
-                state.shouldAutoScroll.collect {
-                    while (state.autoScrollSpeed.value != 0f) {
-                        // Scroll the grid by the calculated auto-scroll speed.
-                        state.gridState.scrollBy(state.autoScrollSpeed.value)
-                        delay(10) // Delay to control scroll frequency
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * Called when the global position of the composable changes. Updates [currentCoordinates] with
