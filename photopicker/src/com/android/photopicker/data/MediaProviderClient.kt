@@ -24,8 +24,8 @@ import android.os.Bundle
 import android.os.CancellationSignal
 import android.util.Log
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.outlined.FolderCopy
+import androidx.compose.material.icons.outlined.SdCard
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.paging.PagingSource.LoadResult
@@ -88,6 +88,11 @@ open class MediaProviderClient {
     /** Contains all optional and mandatory keys required to make a Media page key query */
     private enum class MediaPageKeyQuery(val key: String) {
         ITEM_POSITION("item_position")
+    }
+
+    /** Contains all optional and mandatory keys required to make a Media page key List query */
+    private enum class MediaPageKeyListQuery(val key: String) {
+        ITEM_INDEX_INTERVAL("item_index_interval")
     }
 
     /**
@@ -294,6 +299,7 @@ open class MediaProviderClient {
         shouldEnableItemsAfterCount: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -352,6 +358,7 @@ open class MediaProviderClient {
         shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -410,6 +417,7 @@ open class MediaProviderClient {
         isFirstPage: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -461,6 +469,7 @@ open class MediaProviderClient {
         config: PhotopickerConfiguration,
     ): LoadResult<MediaPageKey, Group.Album> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -511,6 +520,7 @@ open class MediaProviderClient {
         shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 AlbumMediaQuery.ALBUM_AUTHORITY.key to albumAuthority,
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
@@ -605,7 +615,9 @@ open class MediaProviderClient {
         }
         // Create a Bundle containing the calling package's UID. This is used as a selection
         // argument for the query.
-        val input: Bundle = bundleOf(Intent.EXTRA_UID to callingPackageUid)
+        val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
+            bundleOf(Intent.EXTRA_UID to callingPackageUid)
 
         try {
             contentResolver.query(MEDIA_GRANTS_COUNT_URI, /* projection */ null, input, null).use {
@@ -634,6 +646,7 @@ open class MediaProviderClient {
         uris: List<Uri>,
     ): List<Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -676,6 +689,7 @@ open class MediaProviderClient {
     ): List<SearchSuggestion> {
         try {
             val input: Bundle =
+                @Suppress("DEPRECATION") // bundleOf is deprecated
                 bundleOf(
                     SearchSuggestionsQuery.PREFIX.key to prefix,
                     SearchSuggestionsQuery.LIMIT.key to limit,
@@ -709,6 +723,7 @@ open class MediaProviderClient {
         providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
@@ -768,6 +783,7 @@ open class MediaProviderClient {
         providerToIconMap: Map<Provider, Icon>,
     ): LoadResult<GroupPageKey, Group.MediaSet> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.CURRENT_PAGE_SIZE.key to pageSize,
@@ -820,6 +836,7 @@ open class MediaProviderClient {
         shouldEnableItemsBeforeAndAfterCounts: Boolean = false,
     ): LoadResult<MediaPageKey, Media> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaQuery.PICKER_ID.key to pageKey.pickerId,
                 MediaQuery.DATE_TAKEN.key to pageKey.dateTakenMillis,
@@ -918,6 +935,7 @@ open class MediaProviderClient {
         providers: List<Provider>,
     ) {
         val extras =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 MediaSetsQuery.PARENT_CATEGORY_ID.key to category.id,
@@ -952,6 +970,7 @@ open class MediaProviderClient {
         providers: List<Provider>,
     ) {
         val extras =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 MediaSetContentsQuery.PARENT_MEDIA_SET_PICKER_ID.key to mediaSet.pickerId,
@@ -1057,6 +1076,7 @@ open class MediaProviderClient {
         config: PhotopickerConfiguration,
     ): Bundle {
         val extras =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_MIME_TYPES to config.mimeTypes,
                 EXTRA_INTENT_ACTION to config.action,
@@ -1144,12 +1164,13 @@ open class MediaProviderClient {
      *   the corresponding item count (all in local time)
      * @throws RuntimeException if an error occurs during the query or fetching the items counts
      */
-    fun fetchItemsPerMonth(
+    open suspend fun fetchItemsPerMonth(
         contentResolver: ContentResolver,
         availableProviders: List<Provider>,
         config: PhotopickerConfiguration,
     ): List<ItemsPerMonth> {
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_PROVIDERS to
                     ArrayList<String>().apply {
@@ -1200,6 +1221,7 @@ open class MediaProviderClient {
             throw IllegalArgumentException("Received invalid itemPosition $itemPosition ")
         }
         val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 MediaPageKeyQuery.ITEM_POSITION.key to itemPosition,
                 EXTRA_PROVIDERS to
@@ -1224,6 +1246,81 @@ open class MediaProviderClient {
                             "from Content Provider"
                     )
             }
+    }
+
+    /**
+     * Fetches the list of [MediaPageKey] for all the items coming at the given
+     * [mediaPageKeyCacheInterval] interval in MediaProvider.
+     *
+     * @param contentResolver The ContentResolver used to interact with the MediaProvider.
+     * @param mediaPageKeyCacheInterval The interval between the item indexes to fetch
+     *   [MediaPageKey]s.
+     * @param availableProviders Available providers to get the media items
+     * @param config Given photopicker configurations
+     * @return The List of [MediaPageKey] for all the items coming at the given
+     *   [mediaPageKeyCacheInterval] interval. For example if [itemIndexInterval] = 100, then the
+     *   returned list will contain all the [MediaPageKey] of items available at 0th, 100th 200th ..
+     *   etc positions
+     * @throws IllegalArgumentException If invalid [mediaPageKeyCacheInterval] is given in the input
+     * @throws IllegalStateException If the Content Provider returns a null Cursor or if the Cursor
+     *   does not contain a valid list of MediaPageKeys.
+     */
+    open suspend fun fetchMediaPageKeyList(
+        contentResolver: ContentResolver,
+        mediaPageKeyCacheInterval: Int,
+        availableProviders: List<Provider>,
+        config: PhotopickerConfiguration,
+    ): List<MediaPageKey> {
+        if (mediaPageKeyCacheInterval < 1) {
+            throw IllegalArgumentException(
+                "Received invalid itemIndexInterval $mediaPageKeyCacheInterval "
+            )
+        }
+        val input: Bundle =
+            @Suppress("DEPRECATION") // bundleOf is deprecated
+            bundleOf(
+                MediaPageKeyListQuery.ITEM_INDEX_INTERVAL.key to mediaPageKeyCacheInterval,
+                EXTRA_PROVIDERS to
+                    ArrayList<String>().apply {
+                        availableProviders.forEach { provider -> add(provider.authority) }
+                    },
+                EXTRA_MIME_TYPES to config.mimeTypes,
+                EXTRA_INTENT_ACTION to config.action,
+                Intent.EXTRA_UID to config.callingPackageUid,
+            )
+        return contentResolver
+            .query(
+                MEDIA_PAGE_KEY_LIST_URI,
+                /* projection= */ null,
+                input,
+                /* cancellationSignal= */ null, // TODO(b/405340486)
+            )
+            .use { cursor ->
+                cursor?.getMediaPageKeyList()
+                    ?: throw IllegalStateException(
+                        "Received a null response for MediaPageKeyList from Content Provider"
+                    )
+            }
+    }
+
+    /**
+     * Parses this Cursor to create a list of [MediaPageKey]s, sampling one key at a specified
+     * regular interval.
+     *
+     * @param mediaPageKeyCacheInterval The interval at which to select rows (e.g., 100 selects rows
+     *   0, 100, 200, etc.).
+     * @return A [List] of the sampled [MediaPageKey]s.
+     */
+    private fun Cursor.getMediaPageKeyList(): List<MediaPageKey> {
+        val result: MutableList<MediaPageKey> = mutableListOf()
+        if (this.moveToFirst()) {
+            do {
+                val pickerId = getLong(getColumnIndexOrThrow(MediaResponse.PICKER_ID.key))
+                val dateTaken = getLong(getColumnIndexOrThrow(MediaResponse.DATE_TAKEN.key))
+                result.add(MediaPageKey(pickerId = pickerId, dateTakenMillis = dateTaken))
+            } while (moveToNext())
+        }
+        return result
     }
 
     /** Creates a list of [Provider] from the given [Cursor]. */
@@ -1826,6 +1923,7 @@ open class MediaProviderClient {
         return when (categoryType) {
             CategoryType.DEVICE_FOLDERS -> Icon(Icons.Outlined.FolderCopy)
             CategoryType.APP_FOLDERS -> null
+            CategoryType.SD_CARD -> Icon(Icons.Outlined.SdCard)
             else -> providerToIconMap.getOrDefault(provider, null)
         }
     }

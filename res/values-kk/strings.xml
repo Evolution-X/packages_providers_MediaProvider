@@ -25,6 +25,7 @@
     <string name="root_videos" msgid="8792703517064649453">"Бейнелер"</string>
     <string name="root_audio" msgid="3505830755201326018">"Aудио"</string>
     <string name="root_documents" msgid="3829103301363849237">"Құжаттар"</string>
+    <string name="root_files" msgid="810859400391992870">"Файлдар"</string>
     <string name="permission_required" msgid="1460820436132943754">"Бұл элементті өзгерту немесе жою үшін рұқсат қажет."</string>
     <string name="permission_required_action" msgid="706370952366113539">"Жалғастыру"</string>
     <string name="grant_dialog_button_allow" msgid="1644287024501033471">"Рұқсат беру"</string>
@@ -169,9 +170,11 @@
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"Қолданба барлық қолжетімді мультимедиа файл иесіне арналған пакеттің атауларын пайдалануға рұқсат алады."</string>
     <string name="device_folders_collection_display_name" msgid="3792747330533159857">"Осы құрылғыдан"</string>
     <string name="app_folders_collection_display_name" msgid="2606436050952788816">"Қолданбаларыңыздан"</string>
+    <string name="sd_card_collection_display_name" msgid="8216393762576543130">"SD картасынан"</string>
     <string name="camera_album_display_name" msgid="1093891161978593789">"Камера"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"Скриншоттар"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"Жүктеп алынғандар"</string>
     <string name="favorites_album_display_name" msgid="3533041926539268094">"Таңдаулылар"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"Бейнелер"</string>
+    <string name="sd_card_album_display_name" msgid="8772277114579657928">"SD картасы"</string>
 </resources>

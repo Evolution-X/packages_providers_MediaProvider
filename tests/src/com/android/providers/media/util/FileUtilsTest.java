@@ -53,6 +53,7 @@ import static com.android.providers.media.util.FileUtils.isDirectoryHidden;
 import static com.android.providers.media.util.FileUtils.isExternalMediaDirectory;
 import static com.android.providers.media.util.FileUtils.isFileHidden;
 import static com.android.providers.media.util.FileUtils.isObbOrChildRelativePath;
+import static com.android.providers.media.util.FileUtils.isTrashedFileInTrashDirectory;
 import static com.android.providers.media.util.FileUtils.toFuseFile;
 import static com.android.providers.media.util.FileUtils.translateModeAccessToPosix;
 import static com.android.providers.media.util.FileUtils.translateModePfdToPosix;
@@ -1386,6 +1387,40 @@ public class FileUtilsTest {
 
         assertDefaultIgnorablesFiltered(pathWithZws, pathWithZwsFiltered);
         assertDefaultIgnorablesFiltered(emojiForNumber4, emojiForNUmber4Filtered);
+    }
+
+    @Test
+    public void isTrashedFile_whenPathIsValid_shouldReturnTrue() {
+        final long dateExpires =
+                (System.currentTimeMillis() + FileUtils.DEFAULT_DURATION_TRASHED) / 1000;
+        final String displayName = String.format(
+                Locale.US, ".%s-%d-%s", FileUtils.PREFIX_TRASHED, dateExpires, "document.txt");
+        final String validPath =
+                "/storage/emulated/0/" + FileUtils.DIRECTORY_TRASH_STORAGE + File.separator
+                        + displayName;
+        assertTrue("Should return true for a valid trashed file in the trash directory.",
+                isTrashedFileInTrashDirectory(validPath));
+    }
+
+    @Test
+    public void isTrashedFile_whenNotInTrashDirectory_shouldReturnFalse() {
+        final long dateExpires =
+                (System.currentTimeMillis() + FileUtils.DEFAULT_DURATION_TRASHED) / 1000;
+        final String displayName = String.format(
+                Locale.US, ".%s-%d-%s", FileUtils.PREFIX_TRASHED, dateExpires, "document.txt");
+        final String pathOutsideTrash = "/storage/emulated/0/Documents/" + displayName;
+        assertFalse("Should return false for a file not located in the trash directory.",
+                isTrashedFileInTrashDirectory(pathOutsideTrash));
+    }
+
+    @Test
+    public void isTrashedFile_whenFilenameDoesNotMatchPattern_shouldReturnFalse() {
+        final String displayName = "document.txt";
+        final String regularFileInTrash =
+                "/storage/emulated/0/" + FileUtils.DIRECTORY_TRASH_STORAGE + File.separator
+                        + displayName;
+        assertFalse("Should return false for a filename that doesn't match the required pattern.",
+                isTrashedFileInTrashDirectory(regularFileInTrash));
     }
 
     private static void assertDefaultIgnorablesFiltered(String pathWithIgnorables,

@@ -25,6 +25,7 @@
     <string name="root_videos" msgid="8792703517064649453">"ଭିଡିଓ"</string>
     <string name="root_audio" msgid="3505830755201326018">"ଅଡିଓ"</string>
     <string name="root_documents" msgid="3829103301363849237">"ଡକ୍ୟୁମେଣ୍ଟଗୁଡ଼ିକ"</string>
+    <string name="root_files" msgid="810859400391992870">"ଫାଇଲ"</string>
     <string name="permission_required" msgid="1460820436132943754">"ଏହି ଆଇଟମ୍‌କୁ ସଂଶୋଧନ କିମ୍ବା ଡିଲିଟ୍‌ କରିବାକୁ ଅନୁମତି ଆବଶ୍ୟକ।"</string>
     <string name="permission_required_action" msgid="706370952366113539">"ଜାରି ରଖନ୍ତୁ"</string>
     <string name="grant_dialog_button_allow" msgid="1644287024501033471">"ଅନୁମତି ଦିଅନ୍ତୁ"</string>
@@ -169,9 +170,11 @@
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"ସମସ୍ତ ଆକ୍ସେସ ଯୋଗ୍ୟ ମିଡିଆ ଫାଇଲର ମାଲିକଙ୍କ ପେକେଜ ନାମକୁ ଆକ୍ସେସ କରିବା ପାଇଁ ଆପକୁ ଅନୁମତି ଦିଏ।"</string>
     <string name="device_folders_collection_display_name" msgid="3792747330533159857">"ଏହି ଡିଭାଇସରୁ"</string>
     <string name="app_folders_collection_display_name" msgid="2606436050952788816">"ଆପଣଙ୍କ ଆପ୍ସରୁ"</string>
+    <string name="sd_card_collection_display_name" msgid="8216393762576543130">"ଆପଣଙ୍କ SD କାର୍ଡରୁ"</string>
     <string name="camera_album_display_name" msgid="1093891161978593789">"କେମେରା"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"ସ୍କ୍ରିନସଟ"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"ଡାଉନଲୋଡ"</string>
     <string name="favorites_album_display_name" msgid="3533041926539268094">"ପସନ୍ଦ"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"ଭିଡିଓ"</string>
+    <string name="sd_card_album_display_name" msgid="8772277114579657928">"SD କାର୍ଡ"</string>
 </resources>

@@ -45,6 +45,7 @@ public class PickerSQLConstants {
     public static String EXTRA_SEARCH_REQUEST_ID = "search_request_id";
     public static String EXTRA_SEARCH_PROVIDER_AUTHORITIES = "search_provider_authorities";
     static final String COUNT_COLUMN = "Count";
+    public static final String ROW_NUM_ALIAS = "row_num";
 
     /**
      * An enum that holds the table names in Picker DB

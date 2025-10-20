@@ -12,6 +12,7 @@ android_test_helper_app {
     ],
     static_libs: [
         "cts-install-lib",
+        "cts-install-lib",
     ],
     sdk_version: "test_current",
     target_sdk_version: "30",
@@ -203,12 +204,15 @@ android_test {
     ],
 
     libs: [
+        "mediaprovider_flags_java_lib",
         "android.test.base.stubs.system",
         "android.test.mock.stubs.system",
         "android.test.runner.stubs.system",
         "unsupportedappusage",
         "framework-mediaprovider.impl",
         "keepanno-annotations",
+        "framework",
+        "framework-res",
     ],
 
     jni_libs: [
@@ -254,6 +258,7 @@ android_test {
         "android-support-test",
         "mockito-target-minus-junit4",
         "platform-compat-test-rules",
+        "dynamiccolors",
     ],
 
     certificate: "media",
@@ -279,7 +284,8 @@ android_test {
         ":MediaProviderTestAppWithUserSelectedPerms",
     ],
     per_testcase_directory: true,
-
+    jarjar_rules: "jarjar-rules.txt",
+    sdk_version: "core_current",
     min_sdk_version: "30",
 }
 

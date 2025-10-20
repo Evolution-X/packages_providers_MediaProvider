@@ -100,7 +100,6 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.navigateToPreviewSelection
 import com.android.photopicker.util.HierarchicalFocusCoordinator
 import com.android.photopicker.util.LocalLocalizationHelper
-import com.android.photopicker.util.applyWhen
 import com.android.photopicker.util.getMediaContentDescription
 import com.android.photopicker.util.rememberActiveFocusRequester
 import java.text.DateFormat
@@ -127,35 +126,38 @@ fun PreviewSelection(
             else -> true
         }
 
-    val selection =
+    val config = LocalPhotopickerConfiguration.current
+
+    val selectionFlow =
         when (previewSingleItem) {
             true -> {
                 checkNotNull(previewItemFlow) { "Flow cannot be null for previewSingleItem" }
                 val media by previewItemFlow.collectAsStateWithLifecycle()
                 val localMedia = media
                 if (localMedia != null) {
-                    viewModel
-                        .getPreviewMediaIncludingPreGrantedItems(
+                    remember(localMedia) {
+                        viewModel.getPreviewMediaIncludingPreGrantedItems(
                             setOf(localMedia),
-                            LocalPhotopickerConfiguration.current,
+                            SelectionStrategy.determineSelectionStrategy(config),
                             /* isSingleItemPreview */ true,
                         )
-                        .collectAsLazyPagingItems()
+                    }
                 } else {
                     null
                 }
             }
             false -> {
                 val selectionSnapshot by viewModel.selectionSnapshot.collectAsStateWithLifecycle()
-                viewModel
-                    .getPreviewMediaIncludingPreGrantedItems(
+                remember(selectionSnapshot) {
+                    viewModel.getPreviewMediaIncludingPreGrantedItems(
                         selectionSnapshot,
-                        LocalPhotopickerConfiguration.current,
+                        SelectionStrategy.determineSelectionStrategy(config),
                         /* isSingleItemPreview */ false,
                     )
-                    .collectAsLazyPagingItems()
+                }
             }
         }
+    val selection = selectionFlow?.collectAsLazyPagingItems()
 
     if (selection != null) {
         val dateFormat =
@@ -201,29 +203,24 @@ fun PreviewSelection(
                 Box(
                     modifier =
                         Modifier.weight(1f)
-                            .applyWhen(
-                                config.flags.MEDIA_GRID_TOUCH_FEATURES_ENABLED,
-                                {
-                                    pinchToZoom(
-                                        PointerEventPass.Initial,
-                                        onZoomEvent = pinchToZoomHandler@{ event ->
-                                                return@pinchToZoomHandler when (event) {
-                                                    is PinchToZoomEvent.Changed -> {
+                            .pinchToZoom(
+                                PointerEventPass.Initial,
+                                onZoomEvent = pinchToZoomHandler@{ event ->
+                                        return@pinchToZoomHandler when (event) {
+                                            is PinchToZoomEvent.Changed -> {
 
-                                                        // If the user zooms out, navigate backwards
-                                                        // and exit the preview screen.
-                                                        if (event.value < 1f) {
-                                                            navController.popBackStack()
-                                                            true
-                                                        } else {
-                                                            false
-                                                        }
-                                                    }
-                                                    else -> false
+                                                // If the user zooms out, navigate backwards
+                                                // and exit the preview screen.
+                                                if (event.value < 1f) {
+                                                    navController.popBackStack()
+                                                    true
+                                                } else {
+                                                    false
                                                 }
-                                            },
-                                    )
-                                },
+                                            }
+                                            else -> false
+                                        }
+                                    },
                             )
                 ) {
                     if (selection.itemCount > 0) {
@@ -321,12 +318,19 @@ fun PreviewSelection(
                     } else {
                         SelectionButton(currentSelection = currentSelection)
                     }
+                    val scope = rememberCoroutineScope()
+                    val events = LocalEvents.current
 
                     FilledTonalButton(
                         onClick = {
                             if (config.selectionLimit == 1) {
                                 val media = selection.get(state.currentPage)
                                 media?.let { viewModel.toggleInSelection(it, {}) }
+                                scope.launch {
+                                    events.dispatch(
+                                        Event.MediaSelectionConfirmed(FeatureToken.PREVIEW.token)
+                                    )
+                                }
                             } else {
                                 navController.popBackStack()
                             }

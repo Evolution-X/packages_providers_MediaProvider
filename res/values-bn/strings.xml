@@ -25,6 +25,7 @@
     <string name="root_videos" msgid="8792703517064649453">"ভিডিও"</string>
     <string name="root_audio" msgid="3505830755201326018">"অডিও"</string>
     <string name="root_documents" msgid="3829103301363849237">"ডকুমেন্ট"</string>
+    <string name="root_files" msgid="810859400391992870">"ফাইল"</string>
     <string name="permission_required" msgid="1460820436132943754">"এই আইটেম মুছতে বা পরিবর্তন করার জন্য অনুমতি প্রয়োজন।"</string>
     <string name="permission_required_action" msgid="706370952366113539">"চালিয়ে যান"</string>
     <string name="grant_dialog_button_allow" msgid="1644287024501033471">"অনুমতি দিন"</string>
@@ -169,9 +170,11 @@
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"কোনও অ্যাপকে সব অ্যাক্সেসযোগ্য মিডিয়া ফাইলের মালিকের প্যাকেজ নাম অ্যাক্সেস করতে দেয়।"</string>
     <string name="device_folders_collection_display_name" msgid="3792747330533159857">"এই ডিভাইস থেকে"</string>
     <string name="app_folders_collection_display_name" msgid="2606436050952788816">"আপনার অ্যাপ থেকে"</string>
+    <string name="sd_card_collection_display_name" msgid="8216393762576543130">"আপনার এসডি কার্ড থেকে"</string>
     <string name="camera_album_display_name" msgid="1093891161978593789">"ক্যামেরা"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"স্ক্রিনশট"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"ডাউনলোড"</string>
     <string name="favorites_album_display_name" msgid="3533041926539268094">"পছন্দসই"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"ভিডিও"</string>
+    <string name="sd_card_album_display_name" msgid="8772277114579657928">"এসডি কার্ড"</string>
 </resources>

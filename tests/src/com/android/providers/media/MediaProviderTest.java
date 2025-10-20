@@ -91,8 +91,6 @@ import com.android.providers.media.MediaProvider.VolumeNotFoundException;
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.data.ItemsProvider;
-import com.android.providers.media.scan.MediaScanner;
-import com.android.providers.media.scan.ModernMediaScanner;
 import com.android.providers.media.util.FileUtils;
 import com.android.providers.media.util.FileUtilsTest;
 import com.android.providers.media.util.SQLiteQueryBuilder;
@@ -137,6 +135,7 @@ public class MediaProviderTest {
 
     private static ItemsProvider sItemsProvider;
     private static Context sContext;
+    private static ContentResolver sContentResolver;
     private static ContentResolver sIsolatedResolver;
 
     @Before
@@ -829,20 +828,96 @@ public class MediaProviderTest {
     }
 
     @Test
-    public void testSpecialFormatDefaultValue() throws Exception {
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+    public void testSpecialFormatDefaultValue() {
         final Uri uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         final ContentValues values = new ContentValues();
-        values.put(MediaColumns.DISPLAY_NAME, "test_specialFormat");
+        String testFile = "test_specialFormat";
+        values.put(MediaColumns.DISPLAY_NAME, testFile);
         values.put(MediaColumns.MIME_TYPE, "image/png");
-        Uri result = sIsolatedResolver.insert(uri, values);
-        try (Cursor c = sIsolatedResolver.query(result,
-                new String[]{MediaColumns.DISPLAY_NAME, FileColumns._SPECIAL_FORMAT},
-                null, null)) {
+        Uri result = sContentResolver.insert(uri, values);
+        try (Cursor c = sContentResolver.query(result,
+                new String[]{MediaColumns.DISPLAY_NAME, FileColumns._SPECIAL_FORMAT}, null, null)) {
             assertNotNull(c);
             assertEquals(1, c.getCount());
             assertTrue(c.moveToFirst());
-            assertEquals("test_specialFormat.png", c.getString(0));
+            assertEquals(testFile + ".png", c.getString(0));
             assertEquals(FileColumns._SPECIAL_FORMAT_NONE, c.getInt(1));
+        } finally {
+            sContentResolver.delete(result, null);
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+    public void testQuerySpecialFormatColumn_returnsNonEmptyCursor() throws Exception {
+        // Arrange
+        String[][] projections = new String[][]{
+                new String[]{
+                        MediaColumns.DISPLAY_NAME,
+                        MediaColumns.MIME_TYPE,
+                        FileColumns._SPECIAL_FORMAT
+                },
+                new String[]{
+                        MediaColumns.DISPLAY_NAME,
+                        MediaColumns.MIME_TYPE,
+                        "_SPECIAL_FORMAT"
+                }
+        };
+
+        final File downloads = new File(Environment.getExternalStorageDirectory(),
+                Environment.DIRECTORY_DOWNLOADS);
+        final Uri uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+
+        for (int i = 0; i < projections.length; i++) {
+            // Arrange test file and query
+            String testFileName = "test_file_" + System.nanoTime() + ".jpg";
+            File file = new File(downloads, testFileName);
+            stage(R.raw.test_motion_photo, file);
+            MediaStore.scanFile(sContentResolver, file);
+
+            String[] projection = projections[i];
+            String selection = MediaColumns.DATA + " LIKE ?";
+            String[] selectionArgs = new String[]{file.getAbsolutePath()};
+
+            // Act
+            try (Cursor cursor = sContentResolver.query(uri, projection, selection, selectionArgs,
+                    null)) {
+                // Assert
+                assertNotNull(cursor);
+                assertThat(cursor.getCount()).isEqualTo(1);
+
+                assertTrue(cursor.moveToFirst());
+                // _SPECIAL_FORMAT value should be a motion photo
+                assertThat(cursor.getString(1)).isEqualTo("image/jpeg");
+                assertThat(cursor.getInt(2)).isEqualTo(FileColumns._SPECIAL_FORMAT_MOTION_PHOTO);
+            } finally {
+                // Cleanup
+                file.delete();
+            }
+        }
+    }
+
+
+    @Test
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+    public void testSpecialFormat_returnsNull() {
+        final Uri uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        final ContentValues values = new ContentValues();
+        String testFile = "test_specialFormat";
+        values.put(MediaColumns.DISPLAY_NAME, testFile);
+        values.put(MediaColumns.MIME_TYPE, "image/png");
+        Uri result = sContentResolver.insert(uri, values);
+
+        try (Cursor c = sContentResolver.query(result,
+                new String[]{MediaColumns.DISPLAY_NAME, FileColumns._SPECIAL_FORMAT}, null, null)) {
+            assertNotNull(c);
+            assertEquals(1, c.getCount());
+            assertTrue(c.moveToFirst());
+            assertEquals(testFile + ".png", c.getString(0));
+            assertTrue(c.isNull(1));
+        } finally {
+            sContentResolver.delete(result, null);
         }
     }
 
@@ -2252,25 +2327,19 @@ public class MediaProviderTest {
                         ImageColumns.DISPLAY_NAME,
                         "LATITUDE",
                         "LONGITUDE"
-                },
-                new String[] {
-                        ImageColumns.DISPLAY_NAME,
-                        ImageColumns.LATITUDE + " AS LAT",
-                        ImageColumns.LONGITUDE + " AS LONG"
                 }
         };
 
         for (int i = 0; i < projections.length; i++) {
             String[] projection = projections[i];
-            String testFileName = "test_file";
-            final File downloads = new File(Environment.getExternalStorageDirectory(),
+            String testFileName = "test" + System.nanoTime() + ".jpg";
+            final File downloads = Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS);
             File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, testFileName));
-            ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sIsolatedContext,
-                    new TestConfigStore());
-            Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
-            try (Cursor cursor = sIsolatedContext.getContentResolver()
-                    .query(testFileUri, projection, null, null, null);) {
+            Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
+
+            try (Cursor cursor = sContentResolver.query(testFileUri, projection, null, null,
+                    null)) {
                 assertNotNull(cursor);
                 int nameIndex = cursor.getColumnIndex(ImageColumns.DISPLAY_NAME);
                 int latitudeIndex = cursor.getColumnIndex(ImageColumns.LATITUDE);
@@ -2294,12 +2363,11 @@ public class MediaProviderTest {
     @RequiresFlagsEnabled(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
     public void testQueryingMediaGeolocationDataInSelectionShouldReturnEmptyCursor()
             throws Exception {
-        final File downloads = new File(Environment.getExternalStorageDirectory(),
+        final File downloads = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
-        File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, "test"));
-        ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sIsolatedContext,
-                new TestConfigStore());
-        Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+        File file = stage(R.raw.lg_g4_iso_800_jpg,
+                new File(downloads, "test" + System.nanoTime() + ".jpg"));
+        Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
 
         String[] projection = new String[] {
                 ImageColumns._ID,
@@ -2307,8 +2375,8 @@ public class MediaProviderTest {
         };
         String selection = ImageColumns.LATITUDE + " = ?";
         String[] selectionArgs = new String[] { "67.8" };
-        try (Cursor cursor = sIsolatedContext.getContentResolver()
-                .query(testFileUri, projection, selection, selectionArgs, null);) {
+        try (Cursor cursor = sContentResolver.query(testFileUri, projection, selection,
+                selectionArgs, null)) {
             assertNotNull(cursor);
             // Should no return any results
             assertThat(cursor.getCount()).isEqualTo(0);
@@ -2322,20 +2390,18 @@ public class MediaProviderTest {
     @RequiresFlagsEnabled(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
     public void testQueryingMediaGeolocationDataInOrderByShouldReturnNonEmptyCursor()
             throws Exception {
-        String testFileName = "test";
-        final File downloads = new File(Environment.getExternalStorageDirectory(),
+        String testFileName = "test" + System.nanoTime() + ".jpg";
+        final File downloads = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
         File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, testFileName));
-        ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sIsolatedContext,
-                new TestConfigStore());
-        Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+        Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
 
         String[] projection = new String[] {
                 ImageColumns._ID,
                 ImageColumns.DISPLAY_NAME
         };
-        try (Cursor cursor = sIsolatedContext.getContentResolver()
-                .query(testFileUri, projection, null, null, ImageColumns.LONGITUDE);) {
+        try (Cursor cursor = sContentResolver.query(testFileUri, projection, null, null,
+                ImageColumns.LONGITUDE);) {
             assertNotNull(cursor);
             // Should return non-empty results
             assertThat(cursor.getCount()).isEqualTo(1);
@@ -2353,13 +2419,11 @@ public class MediaProviderTest {
     @RequiresFlagsEnabled(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
     public void testQueryingMediaGeolocationDataInGroupByAndHavingShouldReturnEmptyCursor()
             throws Exception {
-        String testFileName = "test";
-        final File downloads = new File(Environment.getExternalStorageDirectory(),
+        String testFileName = "test" + System.nanoTime() + ".jpg";
+        final File downloads = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS);
         File file = stage(R.raw.lg_g4_iso_800_jpg, new File(downloads, testFileName));
-        ModernMediaScanner modernMediaScanner = new ModernMediaScanner(sIsolatedContext,
-                new TestConfigStore());
-        Uri testFileUri = modernMediaScanner.scanFile(file, MediaScanner.REASON_UNKNOWN);
+        Uri testFileUri = MediaStore.scanFile(sContentResolver, file);
 
         String[] projection = new String[] {
                 ImageColumns._ID,
@@ -2368,8 +2432,7 @@ public class MediaProviderTest {
         Bundle queryArgs = new Bundle();
         queryArgs.putString(QUERY_ARG_SQL_GROUP_BY, ImageColumns.LATITUDE);
         queryArgs.putString(QUERY_ARG_SQL_HAVING, ImageColumns.LONGITUDE + " > 100");
-        try (Cursor cursor = sIsolatedContext.getContentResolver()
-                .query(testFileUri, projection, queryArgs, null);) {
+        try (Cursor cursor = sContentResolver.query(testFileUri, projection, queryArgs, null);) {
             assertNotNull(cursor);
             // Should not return any results
             assertThat(cursor.getCount()).isEqualTo(0);
@@ -2378,7 +2441,6 @@ public class MediaProviderTest {
             file.delete();
         }
     }
-
 
     private void testRedactionForFileExtension(int resId, String extension) throws Exception {
         final File dir = Environment
@@ -2418,6 +2480,7 @@ public class MediaProviderTest {
         }
 
         sContext = InstrumentationRegistry.getTargetContext();
+        sContentResolver = sContext.getContentResolver();
         sIsolatedContext = new IsolatedContext(sContext, "modern", /*asFuseThread*/ false);
         sIsolatedResolver = sIsolatedContext.getContentResolver();
         sItemsProvider = new ItemsProvider(sIsolatedContext);

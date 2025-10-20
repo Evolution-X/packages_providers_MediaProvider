@@ -52,6 +52,8 @@ class MetricLogger {
         auto now = std::chrono::system_clock::now();
         start = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch());
         fuse_op_type = fuse_op_type_;
+        volume = VolumeType::UNKNOWN;
+        calling_package_uid = -10;
         log_metric = true;
     }
 
@@ -79,8 +81,6 @@ class MetricLogger {
             auto now = std::chrono::system_clock::now();
             auto end = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch());
             long op_execution_time = end.count() - start.count();
-
-            log_fuse_op_reported(op_execution_time);
         }
     }
 

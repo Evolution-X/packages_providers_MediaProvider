@@ -37,7 +37,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.android.photopicker.core.configuration.ConfigurationManager
-import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.Telemetry
@@ -152,13 +151,13 @@ constructor(
      */
     fun getPreviewMediaIncludingPreGrantedItems(
         selectionSet: Set<Media>,
-        photopickerConfiguration: PhotopickerConfiguration,
+        selectionStrategy: SelectionStrategy,
         isSingleItemPreview: Boolean = false,
     ): Flow<PagingData<Media>> {
         val flow =
             if (isSingleItemPreview) flowOf(PagingData.from(selectionSet.toList()))
             else {
-                when (SelectionStrategy.determineSelectionStrategy(photopickerConfiguration)) {
+                when (selectionStrategy) {
                     SelectionStrategy.DEFAULT -> flowOf(PagingData.from(selectionSet.toList()))
                     SelectionStrategy.GRANTS_AWARE_SELECTION -> {
                         val deselectAllEnabled =
@@ -282,6 +281,7 @@ constructor(
                 .build()
 
         val extras =
+        @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_LOOPING_PLAYBACK_ENABLED to true,
                 EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true,

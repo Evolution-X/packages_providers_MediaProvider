@@ -93,7 +93,9 @@ class GridDragSelectTest {
     @Before
     fun setup() {
         pager =
-            Pager(PagingConfig(pageSize = 50, maxSize = 500)) { FakeInMemoryMediaPagingSource() }
+            Pager(PagingConfig(pageSize = 50, maxSize = 500)) {
+                FakeInMemoryMediaPagingSource(nextPageSize = 50)
+            }
         flow = pager.flow.toMediaGridItemFromMedia()
     }
 
@@ -114,7 +116,7 @@ class GridDragSelectTest {
      */
     @Composable
     private fun verticalGrid(
-        state: GridDragSelectState,
+        state: MediaGridState,
         config: PhotopickerConfiguration = LocalPhotopickerConfiguration.current,
         enableAutoScroll: Boolean = true,
         autoScrollThreshold: Float = GridDragSelectDefaults.autoScrollThreshold,
@@ -171,7 +173,7 @@ class GridDragSelectTest {
      */
     @Composable
     private fun horizontalGrid(
-        state: GridDragSelectState,
+        state: MediaGridState,
         config: PhotopickerConfiguration = LocalPhotopickerConfiguration.current,
         enableAutoScroll: Boolean = true,
         autoScrollThreshold: Float = GridDragSelectDefaults.autoScrollThreshold,
@@ -224,10 +226,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 verticalGrid(state = state)
             }
@@ -268,10 +270,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 verticalGrid(state = state)
             }
@@ -316,10 +318,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 verticalGrid(state = state, enableAutoScroll = false)
             }
@@ -364,10 +366,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 // Disable auto-scrolling to make the items landing in the selection more
                 // predictable.
@@ -426,10 +428,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 horizontalGrid(state = state)
             }
@@ -472,10 +474,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 horizontalGrid(state = state)
             }
@@ -519,10 +521,10 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
 
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 horizontalGrid(state = state, enableAutoScroll = false)
             }
@@ -567,9 +569,9 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 verticalGrid(
                     state = state,
@@ -624,9 +626,9 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 verticalGrid(state = state)
             }
@@ -674,9 +676,9 @@ class GridDragSelectTest {
                 preSelectedMedia = MutableStateFlow(emptyList()),
             )
 
-        lateinit var state: GridDragSelectState
+        lateinit var state: MediaGridState
         composeTestRule.setContent {
-            state = rememberGridDragSelectState(selection = selection)
+            state = rememberMediaGridState(selection = selection)
             CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
                 verticalGrid(state = state, hapticFeedback = mockHapticFeedback)
             }

@@ -150,6 +150,66 @@ public final class FileRestoreManager {
         return originalLocation.getAbsolutePath();
     }
 
+    /**
+     * Recursively deletes empty parent directories in the trash location after a file is restored.
+     * It stops when it encounters the `.trash-storage` root or a directory that is not empty
+     * or does not follow the trashed naming pattern.
+     *
+     * @param trashedFile          The file that was just restored. Its parent directories will be
+     *                             checked.
+     * @param mediaScannerCallback Callback to update MediaStore for deleted directories.
+     */
+    public static void deleteAllParentIfNonTrashed(File trashedFile,
+            MediaScannerCallback mediaScannerCallback) {
+        if (trashedFile == null || trashedFile.getParentFile() == null) {
+            return;
+        }
+
+        File nextParentToBeChecked = trashedFile.getParentFile();
+        final File trashBase = new File(
+                FileUtils.extractVolumePath(trashedFile.getAbsolutePath()),
+                FileUtils.DIRECTORY_TRASH_STORAGE);
+        File directoryToBeScanned = null;
+        while (nextParentToBeChecked != null && !nextParentToBeChecked.equals(trashBase)) {
+            // Stop if the parent is not an empty directory.
+            String[] children = nextParentToBeChecked.list();
+            if (children == null || children.length > 0) {
+                break;
+            }
+
+            // Stop if the directory name matches the standard trashed item pattern. This prevents
+            // deleting actual trashed folders that happen to be empty.
+            if (isTrashedItem(nextParentToBeChecked)) {
+                break;
+            }
+
+            // This directory is an empty, non-standard parent created for path preservation.
+            // It's safe to delete it.
+            directoryToBeScanned = nextParentToBeChecked.getParentFile();
+            if (!nextParentToBeChecked.delete()) {
+                Log.w(TAG, "Failed to delete empty trash parent: "
+                        + nextParentToBeChecked.getAbsolutePath());
+                // If deletion fails, we can't safely proceed up the directory tree.
+                break;
+            }
+            nextParentToBeChecked = directoryToBeScanned;
+        }
+
+        // Notify MediaStore of deletion
+        if (directoryToBeScanned != null && mediaScannerCallback != null) {
+            mediaScannerCallback.scanFile(directoryToBeScanned);
+        }
+    }
+
+    /**
+     * Checks if a file's name matches the standard pattern for a trashed item.
+     * e.g., ".trashed-1695886782000-..."
+     */
+    private static boolean isTrashedItem(File file) {
+        Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(file.getName());
+        return matcher.matches() && FileUtils.PREFIX_TRASHED.equals(matcher.group(1));
+    }
+
     private static boolean isFileAllowedToRestore(File trashedFile, File targetParent) {
         String trashedFileVolumePath = FileUtils.extractVolumePath(trashedFile.getAbsolutePath());
         String targetParentVolumePath = FileUtils.extractVolumePath(targetParent.getAbsolutePath());
@@ -285,55 +345,6 @@ public final class FileRestoreManager {
                     Log.w(TAG, "Failed to unprefix child: " + child.getAbsolutePath());
                 }
             }
-        }
-    }
-
-    /**
-     * Recursively deletes empty parent directories in the trash location after a file is restored.
-     * It stops when it encounters the `.trash-storage` root or a directory that is not empty
-     * or does not follow the trashed naming pattern.
-     *
-     * @param trashedFile          The file that was just restored. Its parent directories will be
-     *                             checked.
-     * @param mediaScannerCallback Callback to update MediaStore for deleted directories.
-     */
-    private static void deleteAllParentIfNonTrashed(File trashedFile,
-            MediaScannerCallback mediaScannerCallback) {
-        if (trashedFile == null) {
-            return;
-        }
-
-        File parent = trashedFile.getParentFile();
-        File trashBase = new File(FileUtils.extractVolumePath(trashedFile.getAbsolutePath()),
-                FileUtils.DIRECTORY_TRASH_STORAGE);
-        File latestDeleteParentDir = null;
-        while (parent != null && !parent.equals(trashBase)) { // Stop at .trash-storage root
-            // If directory is empty and its name does not matches matches the trash pattern,
-            // delete it
-            if (parent.isDirectory() && parent.list().length == 0) {
-                // Check if the directory name does not matches the trash pattern.
-                // This implies it was created to hold trashed files and is now empty.
-                Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(parent.getName());
-                if (!matcher.matches() || !matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
-                    latestDeleteParentDir = parent;
-                    File nextParent = parent.getParentFile();
-                    if (!parent.delete()) {
-                        Log.w(TAG, "Failed to delete empty trash parent: "
-                                        + parent.getAbsolutePath());
-                    }
-                    parent = nextParent; // Continue to the next parent
-                } else {
-                    // This parent is empty but doesn't have the trash prefix, stop here
-                    break;
-                }
-            } else {
-                // Parent is not empty or not a directory; stop traversing.
-                break;
-            }
-        }
-
-        if (latestDeleteParentDir != null && mediaScannerCallback != null) {
-            mediaScannerCallback.scanFile(latestDeleteParentDir); // Notify MediaStore of deletion
         }
     }
 

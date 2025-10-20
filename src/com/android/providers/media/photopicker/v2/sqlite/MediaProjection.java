@@ -258,6 +258,17 @@ public class MediaProjection {
                 + PickerSQLConstants.ItemsPerMonthResponse.ITEM_COUNT.getProjectedName();
     }
 
+    /**
+     * Returns a SQL string that creates a window function to number rows.
+     *
+     * @param sortOrder The SQL sort order string to be used in the OVER clause.
+     * @return SQL string for the ROW_NUMBER() window function.
+     */
+    public String getRowNumberProjection(@NonNull String sortOrder) {
+        return "ROW_NUMBER() OVER (ORDER BY " + sortOrder + ") AS "
+                + PickerSQLConstants.ROW_NUM_ALIAS;
+    }
+
     private String getIsPreGranted(String intentAction) {
         if (MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP.equals(intentAction)) {
             if (isOwnedPhotosEnabled(mCallingPackageUid) && mCallingPackageNames != null) {

@@ -25,9 +25,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.UserManager
-import android.platform.test.annotations.RequiresFlagsEnabled
-import android.platform.test.flag.junit.CheckFlagsRule
-import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.provider.CloudMediaProvider.CloudMediaSurfaceStateChangedCallback.PLAYBACK_STATE_ERROR_PERMANENT_FAILURE
 import android.provider.CloudMediaProvider.CloudMediaSurfaceStateChangedCallback.PLAYBACK_STATE_ERROR_RETRIABLE_FAILURE
 import android.provider.CloudMediaProvider.CloudMediaSurfaceStateChangedCallback.PLAYBACK_STATE_PAUSED
@@ -75,9 +72,11 @@ import com.android.photopicker.core.ViewModelModule
 import com.android.photopicker.core.configuration.ConfigurationManager
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.TestPhotopickerConfiguration
+import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.features.FeatureManager
+import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.glide.GlideTestRule
 import com.android.photopicker.core.navigation.LocalNavController
@@ -98,7 +97,6 @@ import com.android.photopicker.util.test.MockContentProviderWrapper
 import com.android.photopicker.util.test.capture
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
-import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Lazy
 import dagger.Module
@@ -116,6 +114,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -152,8 +152,6 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule(activityClass = HiltTestActivity::class.java)
     @get:Rule(order = 2) val glideRule = GlideTestRule()
-    @get:Rule(order = 3)
-    val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
 
     /* Setup dependencies for the UninstallModules for the test class. */
     @Module @InstallIn(SingletonComponent::class) class TestModule : PhotopickerTestModule()
@@ -650,6 +648,9 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
     @Test
     fun testPreviewSelectInSingleSelect() =
         testScope.runTest {
+            val emittedEvents = mutableListOf<Event>()
+            val job = mainScope.launch(testDispatcher) { events.flow.toList(emittedEvents) }
+
             composeTestRule.setContent {
                 // Set an explicit size to prevent errors in glide being unable to measure
                 Column(modifier = Modifier.defaultMinSize(minHeight = 100.dp, minWidth = 100.dp)) {
@@ -696,11 +697,19 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("Expected route to be the initial route")
                 .that(selection.snapshot())
                 .contains(TEST_MEDIA_VIDEO)
+
+            assertWithMessage("MediaSelectionConfirmed event was not emitted")
+                .that(emittedEvents)
+                .contains(Event.MediaSelectionConfirmed(FeatureToken.PREVIEW.token))
+
+            job.cancel()
         }
 
     @Test
     fun testPreviewDoneNavigatesBack() =
         testScope.runTest {
+            val emittedEvents = mutableListOf<Event>()
+            val job = mainScope.launch(testDispatcher) { events.flow.toList(emittedEvents) }
 
             // Ensure multi select
             configurationManager
@@ -755,6 +764,12 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("Expected route to be the initial route")
                 .that(navController.currentBackStackEntry?.destination?.route)
                 .isEqualTo(initialRoute)
+
+            assertWithMessage("MediaSelectionConfirmed event was emitted incorrectly")
+                .that(emittedEvents)
+                .doesNotContain(Event.MediaSelectionConfirmed(FeatureToken.PREVIEW.token))
+
+            job.cancel()
         }
 
     /** Ensures the VideoUi creates a RemoteSurfaceController */
@@ -1260,11 +1275,8 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
 
     /** Ensures that a pinch-out gesture on the preview screen navigates backwards. */
     @Test
-    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_GRID_TOUCH_FEATURES)
     fun testPinchToZoomOutNavigatesBack() =
         testScope.runTest {
-            // This test requires the MEDIA_GRID_TOUCH_FEATURES_ENABLED flag to be enabled to pass.
-
             composeTestRule.setContent {
                 // Set an explicit size to prevent errors in glide being unable to measure
                 Column(modifier = Modifier.defaultMinSize(minHeight = 100.dp, minWidth = 100.dp)) {

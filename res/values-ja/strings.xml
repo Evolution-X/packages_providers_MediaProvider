@@ -25,6 +25,7 @@
     <string name="root_videos" msgid="8792703517064649453">"動画"</string>
     <string name="root_audio" msgid="3505830755201326018">"オーディオ"</string>
     <string name="root_documents" msgid="3829103301363849237">"ドキュメント"</string>
+    <string name="root_files" msgid="810859400391992870">"ファイル"</string>
     <string name="permission_required" msgid="1460820436132943754">"このアイテムの変更や削除を行うには権限が必要です。"</string>
     <string name="permission_required_action" msgid="706370952366113539">"続行"</string>
     <string name="grant_dialog_button_allow" msgid="1644287024501033471">"許可"</string>
@@ -169,9 +170,11 @@
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"アクセス可能なすべてのメディア ファイルの所有者パッケージ名へのアクセスをアプリに許可します。"</string>
     <string name="device_folders_collection_display_name" msgid="3792747330533159857">"このデバイスから"</string>
     <string name="app_folders_collection_display_name" msgid="2606436050952788816">"アプリから"</string>
+    <string name="sd_card_collection_display_name" msgid="8216393762576543130">"SD カードから"</string>
     <string name="camera_album_display_name" msgid="1093891161978593789">"カメラ"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"スクリーンショット"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"ダウンロード"</string>
     <string name="favorites_album_display_name" msgid="3533041926539268094">"お気に入り"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"動画"</string>
+    <string name="sd_card_album_display_name" msgid="8772277114579657928">"SD カード"</string>
 </resources>

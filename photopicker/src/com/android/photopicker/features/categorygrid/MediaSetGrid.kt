@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Group
@@ -141,7 +140,6 @@ fun MediaSetGrid(
         null -> {}
         else -> {
             val items = remember(category) { viewModel.getMediaSets(category) }
-            val state = rememberLazyGridState()
             val navController = LocalNavController.current
             val scope = rememberCoroutineScope()
             val events = LocalEvents.current
@@ -241,19 +239,12 @@ fun MediaSetGrid(
                                     )
                                 }
                             },
-                            onItemLongPress = {},
                             isExpandedScreen = isExpandedScreen,
                             initialColumns = cellsPerRow,
                             selection = emptySet(),
                             gridCellPadding = gridCellPadding,
                             contentPadding = contentPadding,
-                            state = state,
-                            contentItemFactory = {
-                                item,
-                                isSelected,
-                                onClick,
-                                onLongPress,
-                                dateFormat ->
+                            contentItemFactory = { item, isSelected, onClick, dateFormat ->
                                 when (item) {
                                     is MediaGridItem.MediaSetItem ->
                                         mediaSetContentFactory(item, onClick, badgeIconModifier)

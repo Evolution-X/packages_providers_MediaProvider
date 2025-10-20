@@ -16,7 +16,8 @@
 
 package com.android.photopicker.core.features
 
-import com.android.photopicker.core.components.MediaGridItem
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.runtime.State
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.features.preparemedia.PrepareMediaResult
 import kotlinx.coroutines.CompletableDeferred
@@ -51,17 +52,6 @@ sealed interface LocationParams {
     }
 
     /**
-     * A generic long click handler parameter. Including this as a parameter doesn't attach the
-     * click handler to anything, the implementer must call this method in response to the long
-     * click action.
-     *
-     * @param item MediaGridItem which is long pressed
-     */
-    fun interface WithLongClickAction : LocationParams {
-        fun onLongClick(item: MediaGridItem)
-    }
-
-    /**
      * Parameter passed to Location.NAVIGATION_BAR_NAV_BUTTON to indicate if icon should to be shown
      * in the navigation bar button.
      */
@@ -78,5 +68,15 @@ sealed interface LocationParams {
 
         // Flow to trigger the start of media prepares.
         val prepareMedia: Flow<Set<Media>>
+    }
+
+    /** Requirements for attaching the Date Scrubber to the compose UI. */
+    interface WithDateScrubber : LocationParams {
+        // Height of the UI container (as State), used to define
+        // the scrollable range for the date scrubber cursor
+        val parentHeight: State<Float>
+
+        // Grid state for the grid that supports fast scrolling through the date scrubber
+        val gridState: LazyGridState
     }
 }

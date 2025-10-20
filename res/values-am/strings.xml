@@ -25,6 +25,7 @@
     <string name="root_videos" msgid="8792703517064649453">"ቪዲዮዎች"</string>
     <string name="root_audio" msgid="3505830755201326018">"ኦዲዮ"</string>
     <string name="root_documents" msgid="3829103301363849237">"ሰነዶች"</string>
+    <string name="root_files" msgid="810859400391992870">"ፋይሎች"</string>
     <string name="permission_required" msgid="1460820436132943754">"ይህን ንጥል ለማሻሻል ወይም ለመሰረዝ ፈቃድ ያስፈልጋል።"</string>
     <string name="permission_required_action" msgid="706370952366113539">"ቀጥል"</string>
     <string name="grant_dialog_button_allow" msgid="1644287024501033471">"ፍቀድ"</string>
@@ -169,9 +170,11 @@
     <string name="permdesc_accessMediaOwnerPackageName" msgid="7381563109363105371">"መተግበሪያው የሁሉም ተደራሽ የሚዲያ ፋይሎች የባለቤት ጥቅል ስሞችን እንዲደርስ ይፈቅድለታል።"</string>
     <string name="device_folders_collection_display_name" msgid="3792747330533159857">"ከዚህ መሣሪያ"</string>
     <string name="app_folders_collection_display_name" msgid="2606436050952788816">"ከእርስዎ መተግበሪያዎች"</string>
+    <string name="sd_card_collection_display_name" msgid="8216393762576543130">"ከእርስዎ ኤስዲ ካርድ"</string>
     <string name="camera_album_display_name" msgid="1093891161978593789">"ካሜራ"</string>
     <string name="screenshots_album_display_name" msgid="3614860974116695364">"ቅጽበታዊ ገፅ እይታዎች"</string>
     <string name="downloads_album_display_name" msgid="3297383597164642280">"ውርዶች"</string>
     <string name="favorites_album_display_name" msgid="3533041926539268094">"ተወዳጆች"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"ቪድዮዎች"</string>
+    <string name="sd_card_album_display_name" msgid="8772277114579657928">"ኤስዲ ካርድ"</string>
 </resources>

@@ -1182,7 +1182,7 @@ public abstract class CloudMediaProvider extends ContentProvider {
      */
     public static final class CloudMediaSurfaceStateChangedCallback {
 
-        /** {@hide} */
+        /** @hide */
         @IntDef(flag = true, prefix = { "PLAYBACK_STATE_" }, value = {
                 PLAYBACK_STATE_BUFFERING,
                 PLAYBACK_STATE_READY,

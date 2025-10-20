@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.PhotoCamera
@@ -63,12 +62,10 @@ import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Group
-import com.android.photopicker.extensions.navigateToPreviewMedia
 import com.android.photopicker.features.preview.PreviewFeature
 import com.android.photopicker.util.LocalLocalizationHelper
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 
 /**
  * Primary composable for drawing the Album content grid on
@@ -133,7 +130,6 @@ private fun AlbumMediaGrid(
             else -> false
         }
 
-    val state = rememberLazyGridState()
     val isEmbedded =
         LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
 
@@ -168,7 +164,6 @@ private fun AlbumMediaGrid(
                 )
             }
             else -> {
-
                 mediaGrid(
                     // Album content grid
                     items = items,
@@ -183,35 +178,6 @@ private fun AlbumMediaGrid(
                             )
                         }
                     },
-                    onItemLongPress = { item ->
-                        // If the [PreviewFeature] is enabled, launch the preview route.
-                        if (isPreviewEnabled && item is MediaGridItem.MediaItem) {
-                            // Dispatch UI event to log long pressing the media item
-                            scope.launch {
-                                events.dispatch(
-                                    Event.LogPhotopickerUIEvent(
-                                        FeatureToken.PREVIEW.token,
-                                        configuration.sessionId,
-                                        configuration.callingPackageUid ?: -1,
-                                        Telemetry.UiEvent.PICKER_LONG_SELECT_MEDIA_ITEM,
-                                    )
-                                )
-                            }
-                            // Dispatch UI event to log entry into preview mode
-                            scope.launch {
-                                events.dispatch(
-                                    Event.LogPhotopickerUIEvent(
-                                        FeatureToken.PREVIEW.token,
-                                        configuration.sessionId,
-                                        configuration.callingPackageUid ?: -1,
-                                        Telemetry.UiEvent.ENTER_PICKER_PREVIEW_MODE,
-                                    )
-                                )
-                            }
-                            navController.navigateToPreviewMedia(item.media)
-                        }
-                    },
-                    state = state,
                 )
                 LaunchedEffect(Unit) {
                     // Dispatch UI event to log loading of album contents

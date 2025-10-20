@@ -353,7 +353,7 @@ public class FileUtils {
         return false;
     }
 
-    /** {@hide} */
+    /** @hide */
     public static boolean contains(Collection<File> dirs, File file) {
         for (File dir : dirs) {
             if (contains(dir, file)) {
@@ -550,7 +550,7 @@ public class FileUtils {
         return res.toString();
     }
 
-    /** {@hide} */
+    /** @hide */
     // @VisibleForTesting
     public static String trimFilename(String str, int maxBytes) {
         final StringBuilder res = new StringBuilder(str);
@@ -558,7 +558,7 @@ public class FileUtils {
         return res.toString();
     }
 
-    /** {@hide} */
+    /** @hide */
     private static void trimFilename(StringBuilder res, int maxBytes) {
         byte[] raw = res.toString().getBytes(StandardCharsets.UTF_8);
         if (raw.length > maxBytes) {
@@ -571,7 +571,7 @@ public class FileUtils {
         }
     }
 
-    /** {@hide} */
+    /** @hide */
     private static File buildUniqueFileWithExtension(File parent, String name, String ext)
             throws FileNotFoundException {
         final Iterator<String> names = buildUniqueNameIterator(parent, name);
@@ -679,7 +679,7 @@ public class FileUtils {
         return buildUniqueFileWithExtension(parent, parts[0], parts[1]);
     }
 
-    /** {@hide} */
+    /** @hide */
     public static File buildNonUniqueFile(File parent, String mimeType, String displayName) {
         final String[] parts = splitFileName(mimeType, displayName);
         return buildFile(parent, parts[0], parts[1]);
@@ -765,7 +765,7 @@ public class FileUtils {
         return new String[] { name, ext };
     }
 
-    /** {@hide} */
+    /** @hide */
     private static File buildFile(File parent, String name, String ext) {
         if (TextUtils.isEmpty(ext)) {
             return new File(parent, name);
@@ -1543,7 +1543,7 @@ public class FileUtils {
                 sanitizeDisplayName(displayName, rewriteHiddenFileName));
     }
 
-    /** {@hide} **/
+    /** @hide **/
     @Nullable
     public static String getAbsoluteSanitizedPath(String path) {
         final String[] pathSegments = sanitizePath(path);
@@ -1554,7 +1554,7 @@ public class FileUtils {
                 Arrays.copyOfRange(pathSegments, 1, pathSegments.length));
     }
 
-    /** {@hide} */
+    /** @hide */
     public static @NonNull String[] sanitizePath(@Nullable String path) {
         if (path == null) {
             return new String[0];
@@ -1931,4 +1931,27 @@ public class FileUtils {
     public static boolean isFileAlbumArt(@NonNull File file) {
         return PATTERN_ALBUM_ART.matcher(file.getName()).matches();
     }
+
+    /**
+     * Checks if the given file path represents a trashed item by verifying if it's located
+     * within the trash directory and its name matches the trashed file format.
+     *
+     * @param filePath The file path to check.
+     * @return {@code true} if the path represents a trashed file, {@code false} otherwise.
+     */
+    public static boolean isTrashedFileInTrashDirectory(@NonNull String filePath) {
+        final String displayName = extractDisplayName(filePath);
+        final Matcher matcher = PATTERN_EXPIRES_FILE.matcher(displayName);
+        if (!matcher.matches() || !FileUtils.PREFIX_TRASHED.equals(matcher.group(1))) {
+            return false;
+        }
+
+        String relativePath = extractRelativePath(filePath);
+        if (relativePath == null) {
+            return false;
+        }
+        String trashDirPrefix = DIRECTORY_TRASH_STORAGE + File.separator;
+        return relativePath.startsWith(trashDirPrefix);
+    }
+
 }

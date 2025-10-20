@@ -120,6 +120,7 @@ import androidx.work.WorkManager;
 
 import com.android.providers.media.MediaProvider;
 import com.android.providers.media.PickerUriResolver;
+import com.android.providers.media.TestConfigStore;
 import com.android.providers.media.cloudproviders.CloudProviderPrimary;
 import com.android.providers.media.cloudproviders.SearchProvider;
 import com.android.providers.media.flags.Flags;
@@ -202,6 +203,7 @@ public class PickerDataLayerV2Test {
     private MockContentResolver mMockContentResolver;
     private TestContentProvider mLocalProvider;
     private TestContentProvider mCloudProvider;
+    private TestConfigStore mTestConfigStore;
 
     @Rule
     public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
@@ -258,6 +260,8 @@ public class PickerDataLayerV2Test {
         doReturn(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
                     .getTargetContext().getResources())
                 .when(mMockContext).getResources();
+
+        mTestConfigStore = new TestConfigStore();
 
         androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
                 .getUiAutomation()
@@ -1079,6 +1083,240 @@ public class PickerDataLayerV2Test {
             // Items order in data tables are:-
             // LOCAL_ID_4 (latest item added), LOCAL_ID_1, LOCAL_ID_3
             assertMediaPageKeyCursor(cr, 3L, DATE_TAKEN_MS);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryWithInvalidProviders() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1);
+
+
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        new ArrayList<>(Arrays.asList("invalid.provider")), 2))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(0);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryWithCloudQueryDisabled() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS + 2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS + 3, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1); // picker_id = 1
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor2, 1); // picker_id = 2
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1); // picker_id = 3
+
+
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        // Item position is based on zero indexed
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)), 2))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(1);
+
+            cr.moveToFirst();
+            assertMediaPageKeyListCursor(cr, 3L, DATE_TAKEN_MS + 3);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryWithCloudQueryEnabled() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS - 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1); // picker_id = 1
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor2, 1); // picker_id = 2
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1); // picker_id = 3
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        // Item position is based on zero indexed
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)), 2))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(2);
+
+            cr.moveToFirst();
+            assertMediaPageKeyListCursor(cr, 1L, DATE_TAKEN_MS + 1);
+
+            cr.moveToNext();
+            assertMediaPageKeyListCursor(cr, 3L, DATE_TAKEN_MS - 1);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryWithLargeInterval() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(CLOUD_ID, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS - 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1); // picker_id = 1
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor2, 1); // picker_id = 2
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1); // picker_id = 3
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        // Item position is based on zero indexed
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)), 5))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(1);
+
+            cr.moveToFirst();
+            assertMediaPageKeyListCursor(cr, 1L, DATE_TAKEN_MS + 1);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryDedupe() {
+        Cursor cursor1 = getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS - 1);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1,
+                GENERATION_MODIFIED, /* mediaStoreUri */ null, /* sizeBytes */ 1,
+                MP4_VIDEO_MIME_TYPE, STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(CLOUD_ID_2, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor1, 1); // picker_id = 1
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1); // picker_id = 2
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1); // picker_id = 3
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)), 1))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(2);
+
+            // Items in data tables are:-  LOCAL_ID_1 (latest item added) , CLOUD_ID_2
+
+            cr.moveToFirst();
+            assertMediaPageKeyListCursor(cr, 2L, DATE_TAKEN_MS + 1);
+
+            cr.moveToNext();
+            assertMediaPageKeyListCursor(cr, 3L, DATE_TAKEN_MS);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryAllVideoMimeTypeFilter() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, JPEG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_3, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, PNG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor4 = getMediaCursor(LOCAL_ID_4, DATE_TAKEN_MS + 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1); //picker_id = 1
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1); //picker_id = 2
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1); //picker_id = 3
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor4, 1); //picker_id = 4
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)), 2,
+                        new ArrayList<>(Arrays.asList("video/*"))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(1);
+
+            // Items order in media tables are:-  LOCAL_ID_4 (latest item added) , LOCAL_ID_2
+            cr.moveToFirst();
+            assertMediaPageKeyListCursor(cr, 4L, DATE_TAKEN_MS + 1);
+        }
+    }
+
+    @Test
+    public void testMediaPageKeyListQueryAllImageMimeTypeFilter() {
+        Cursor cursor1 = getMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 1, JPEG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor2 = getMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, MP4_VIDEO_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor3 = getMediaCursor(LOCAL_ID_3, DATE_TAKEN_MS, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, PNG_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+        Cursor cursor4 = getMediaCursor(LOCAL_ID_4, DATE_TAKEN_MS + 2, GENERATION_MODIFIED,
+                /* mediaStoreUri */ null, /* sizeBytes */ 2, GIF_IMAGE_MIME_TYPE,
+                STANDARD_MIME_TYPE_EXTENSION, /* isFavorite */ false);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1); //picker_id = 1
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1); //picker_id = 2
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor3, 1); //picker_id = 3
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, cursor4, 1); //picker_id = 4
+
+        try (Cursor cr = PickerDataLayerV2.queryMediaPageKeyList(
+                mMockContext, getMediaPageKeyListQueryExtras(
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)), 2,
+                        new ArrayList<>(Arrays.asList("image/*"))))) {
+            assertWithMessage(
+                    "Unexpected number of rows in media page key list query result")
+                    .that(cr.getCount()).isEqualTo(2);
+
+            // Items order in data tables are:-
+            // LOCAL_ID_4 (latest item added), LOCAL_ID_1, LOCAL_ID_3
+
+            cr.moveToFirst();
+            assertMediaPageKeyListCursor(cr, 4L, DATE_TAKEN_MS + 2);
+
+            cr.moveToNext();
+            assertMediaPageKeyListCursor(cr, 3L, DATE_TAKEN_MS);
         }
     }
 
@@ -3694,7 +3932,8 @@ public class PickerDataLayerV2Test {
                 mContext,
                 getMediaQueryExtras(Long.MAX_VALUE, Long.MAX_VALUE, 100,
                         new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, SearchProvider.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
                     .isEqualTo(5);
@@ -3812,7 +4051,8 @@ public class PickerDataLayerV2Test {
                         new ArrayList<>(Arrays.asList(
                                 LOCAL_PROVIDER,
                                 CloudProviderPrimary.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
                     .isEqualTo(5);
@@ -3921,22 +4161,27 @@ public class PickerDataLayerV2Test {
                 CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS);
         final Cursor cursor2 = getMediaCategoriesCursor(
                 CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS);
-        final Cursor localCategoryCursor = new MergeCursor(new Cursor[]{cursor1, cursor2});
+        final Cursor cursor3 = getMediaCategoriesCursor(
+                CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD);
+        final Cursor localCategoryCursor = new MergeCursor(new Cursor[]{cursor1, cursor2, cursor3});
         mLocalProvider.setQueryResult(localCategoryCursor);
 
         doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
         doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
-        Cursor cursor3 = getAlbumCursor("CloudAlbum", DATE_TAKEN_MS, CLOUD_ID_1, CLOUD_PROVIDER);
-        mCloudProvider.setQueryResult(cursor3);
+        final Cursor cursor4 = getAlbumCursor("CloudAlbum", DATE_TAKEN_MS, CLOUD_ID_1,
+                CLOUD_PROVIDER);
+        mCloudProvider.setQueryResult(cursor4);
 
+        mTestConfigStore.setSdCardCategoryInPhotoPickerEnabled(true);
         try (Cursor cursor = PickerDataLayerV2.queryCategoriesAndAlbums(
                 mMockContext,
                 getMediaQueryExtras(Long.MAX_VALUE, Long.MAX_VALUE, 100,
                         new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, SearchProvider.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
-                    .isEqualTo(6);
+                    .isEqualTo(7);
 
             cursor.moveToFirst();
             // Assert for Favorites album
@@ -4029,6 +4274,24 @@ public class PickerDataLayerV2Test {
                     .isEqualTo(4L);
 
             cursor.moveToNext();
+            // Assert that the next media group is "Sd card" category
+            assertWithMessage("Unexpected media group")
+                    .that(MediaGroup.valueOf(
+                            cursor.getString(cursor.getColumnIndexOrThrow(
+                                    PickerSQLConstants.MediaGroupResponseColumns
+                                            .MEDIA_GROUP.getColumnName()))))
+                    .isEqualTo(MediaGroup.CATEGORY);
+            assertWithMessage("Unexpected group id")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName())))
+                    .isEqualTo(CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD);
+            assertWithMessage("Unexpected picker id")
+                    .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaGroupResponseColumns
+                                    .PICKER_ID.getColumnName())))
+                    .isEqualTo(5L);
+
+            cursor.moveToNext();
             // Assert that the next media group is a cloud album
             assertWithMessage("Unexpected media group")
                     .that(MediaGroup.valueOf(
@@ -4047,7 +4310,7 @@ public class PickerDataLayerV2Test {
                     .that(cursor.getLong(cursor.getColumnIndexOrThrow(
                             PickerSQLConstants.MediaGroupResponseColumns
                                     .PICKER_ID.getColumnName())))
-                    .isEqualTo(5L);
+                    .isEqualTo(6L);
         }
 
     }
@@ -4083,7 +4346,8 @@ public class PickerDataLayerV2Test {
                         new ArrayList<>(Arrays.asList(
                                 LOCAL_PROVIDER,
                                 CloudProviderPrimary.AUTHORITY))),
-                /* cancellationSignal */ null)) {
+                /* cancellationSignal */ null,
+                mTestConfigStore)) {
             assertWithMessage("Unexpected count of albums and categories")
                     .that(cursor.getCount())
                     .isEqualTo(5);
@@ -4261,6 +4525,18 @@ public class PickerDataLayerV2Test {
                 .isEqualTo(dateTaken);
     }
 
+    private static void assertMediaPageKeyListCursor(Cursor cursor, Long pickerId, Long dateTaken) {
+        assertWithMessage("Unexpected value of id in the media page key cursor.")
+                .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                        PickerSQLConstants.MediaResponse.PICKER_ID.getProjectedName())))
+                .isEqualTo(pickerId);
+
+        assertWithMessage("Unexpected value of date taken in the media page key cursor.")
+                .that(cursor.getLong(cursor.getColumnIndexOrThrow(
+                        PickerSQLConstants.MediaResponse.DATE_TAKEN_MS.getProjectedName())))
+                .isEqualTo(dateTaken);
+    }
+
     private static void assertAlbumCursor(Cursor cursor, String albumId, String authority,
             Long dateTaken, String coverMediaId) {
         final MediaSource mediaSource = LOCAL_PROVIDER.equals(authority)
@@ -4347,6 +4623,21 @@ public class PickerDataLayerV2Test {
     private Bundle getMediaPageKeyQueryExtras(
             List<String> providers, int itemPosition, List<String> mimeTypes) {
         Bundle extras = getMediaPageKeyQueryExtras(providers, itemPosition);
+        extras.putStringArrayList("mime_types", new ArrayList<>(mimeTypes));
+        return extras;
+    }
+
+    private Bundle getMediaPageKeyListQueryExtras(List<String> providers, int itemIndexInterval) {
+        Bundle extras = new Bundle();
+        extras.putStringArrayList("providers", new ArrayList<>(providers));
+        extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+        extras.putInt("item_index_interval", itemIndexInterval);
+        return extras;
+    }
+
+    private Bundle getMediaPageKeyListQueryExtras(
+            List<String> providers, int itemIndexInterval, List<String> mimeTypes) {
+        Bundle extras = getMediaPageKeyListQueryExtras(providers, itemIndexInterval);
         extras.putStringArrayList("mime_types", new ArrayList<>(mimeTypes));
         return extras;
     }

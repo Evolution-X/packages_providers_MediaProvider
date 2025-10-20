@@ -274,7 +274,11 @@ open class Session(
         _host = createSurfaceControlViewHost(context, displayId, hostToken)
         // This initialization should happen only after receiving the [_host]
         _stateManager =
-            EmbeddedStateManager(host = _host, themeNightMode = featureInfo.themeNightMode)
+            EmbeddedStateManager(
+                host = _host,
+                themeNightMode = featureInfo.themeNightMode,
+                initialExpandedState = featureInfo.isPickerLaunchedInExpandedState,
+            )
         runBlocking(_main) { _host.setView(_view, width, height) }
 
         // Log the picker launch details
@@ -603,7 +607,13 @@ open class Session(
 
     private fun callClosedSessionError() {
         try {
-            clientCallback.onSessionError(ParcelableException(IllegalStateException()))
+            clientCallback.onSessionError(
+                ParcelableException(
+                    IllegalStateException(
+                        "Attempted to use a session that has already been closed."
+                    )
+                )
+            )
         } catch (e: RemoteException) {
             Log.e(TAG, "onSessionError failed: client binder is likely dead.", e)
         }

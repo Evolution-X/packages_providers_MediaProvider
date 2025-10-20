@@ -68,6 +68,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.work.WorkManager;
 
+import com.android.providers.media.ConfigStore;
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.PickerSyncController;
 import com.android.providers.media.photopicker.SearchState;
@@ -81,6 +82,7 @@ import com.android.providers.media.photopicker.v2.model.AlbumMediaQuery;
 import com.android.providers.media.photopicker.v2.model.AlbumsCursorWrapper;
 import com.android.providers.media.photopicker.v2.model.MediaGroup;
 import com.android.providers.media.photopicker.v2.model.MediaInMediaSetSyncRequestParams;
+import com.android.providers.media.photopicker.v2.model.MediaPageKeyListQuery;
 import com.android.providers.media.photopicker.v2.model.MediaPageKeyQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQuery;
 import com.android.providers.media.photopicker.v2.model.MediaQueryForPreSelection;
@@ -153,7 +155,8 @@ public class PickerDataLayerV2 {
             new Pair<>(CATEGORY, CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS),
             new Pair<>(ALBUM, AlbumColumns.ALBUM_ID_DOWNLOADS),
             new Pair<>(ALBUM, AlbumColumns.ALBUM_ID_SCREENSHOTS),
-            new Pair<>(ALBUM, AlbumColumns.ALBUM_ID_VIDEOS)
+            new Pair<>(ALBUM, AlbumColumns.ALBUM_ID_VIDEOS),
+            new Pair<>(CATEGORY, CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD)
     );
 
     // Set of known merged albums.
@@ -184,6 +187,13 @@ public class PickerDataLayerV2 {
     public static final Set<String> LOCAL_CATEGORIES = Set.of(
             CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
             CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS
+    );
+
+    // Set of known local categories if SD card flag is enabled.
+    public static final Set<String> LOCAL_CATEGORIES_WITH_SD_CARD = Set.of(
+            CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_DEVICE_FOLDERS,
+            CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+            CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD
     );
 
     /**
@@ -233,6 +243,14 @@ public class PickerDataLayerV2 {
             return CLOUD_CATEGORIES;
         }
         return CLOUD_PEOPLE_CATEGORY;
+    }
+
+    private static Set<String> getValidLocalCategoriesSet(
+            boolean isSdCardCategoryEnabled) {
+        if (isSdCardCategoryEnabled) {
+            return LOCAL_CATEGORIES_WITH_SD_CARD;
+        }
+        return LOCAL_CATEGORIES;
     }
 
     /**
@@ -474,6 +492,40 @@ public class PickerDataLayerV2 {
     }
 
     /**
+     * Returns a cursor having picker id and date taken for all the items at given
+     * [MediaPageKeyListQuery.getItemIndexInterval] interval in Picker DB.
+     * This cursor will be used to form a list of valid instances of MediaPageKey.
+     *
+     * @param appContext The application context.
+     * @param queryArgs The arguments help us filter on the media query to yield the desired
+     *                  results.
+     */
+    public static Cursor queryMediaPageKeyList(
+            @NonNull Context appContext, @NonNull Bundle queryArgs) {
+        Log.d(TAG, "Received query for media page key list");
+        final MediaPageKeyListQuery query = new MediaPageKeyListQuery(queryArgs);
+        final PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
+        final String effectiveLocalAuthority =
+                query.getProviders().contains(syncController.getLocalProvider())
+                        ? syncController.getLocalProvider()
+                        : null;
+        final String cloudAuthority = syncController
+                .getCloudProviderOrDefault(/* defaultValue */ null);
+        final String effectiveCloudAuthority =
+                syncController.shouldQueryCloudMedia(query.getProviders(), cloudAuthority)
+                        ? cloudAuthority
+                        : null;
+
+        return PickerMediaDatabaseUtil.queryMediaPageKeyList(
+                appContext,
+                syncController,
+                query,
+                effectiveLocalAuthority,
+                effectiveCloudAuthority
+        );
+    }
+
+    /**
      * Returns a cursor with the Photo Picker albums and categories in response.
      *
      * @param appContext The application context.
@@ -481,12 +533,15 @@ public class PickerDataLayerV2 {
      *                  results.
      * @param cancellationSignal CancellationSignal object that notifies if the request has been
      *                           cancelled.
+     * @param configStore The configuration used to access feature flags that determine
+     *                    the query's behavior, such as including the SD card media category.
      */
     @Nullable
     public static Cursor queryCategoriesAndAlbums(
             @NonNull Context appContext,
             @NonNull Bundle queryArgs,
-            @Nullable CancellationSignal cancellationSignal) {
+            @Nullable CancellationSignal cancellationSignal,
+            @NonNull ConfigStore configStore) {
         final MediaQuery query = new MediaQuery(queryArgs);
         final PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
         final String localAuthority = syncController.getLocalProvider();
@@ -515,14 +570,17 @@ public class PickerDataLayerV2 {
         final Cursor localCategories = getCategoriesForProvider(
                 appContext, query, effectiveLocalAuthority, syncController, cancellationSignal);
 
+        // Get flag states for features
         final boolean isCloudAlbumsAsCategoriesEnabled = effectiveCloudAuthority != null
                 && syncController.getCategoriesState()
                 .isCloudAlbumsAsCategoryEnabled(appContext, effectiveCloudAuthority);
+        final boolean isSdCardCategoryEnabled = configStore.isSdCardCategoryInPhotoPickerEnabled();
 
         final Map<String, Cursor> categoryToCursorMap = new HashMap<>();
         extractCategoriesFromCursor(cloudCategories, categoryToCursorMap,
                 getValidCloudCategoriesSet(isCloudAlbumsAsCategoriesEnabled));
-        extractCategoriesFromCursor(localCategories, categoryToCursorMap, LOCAL_CATEGORIES);
+        extractCategoriesFromCursor(localCategories, categoryToCursorMap,
+                getValidLocalCategoriesSet(isSdCardCategoryEnabled));
 
         final Map<String, String> categoryToAuthorityMap = getCategoryToAuthorityMap(
                 effectiveCloudAuthority, effectiveLocalAuthority);
@@ -632,6 +690,9 @@ public class PickerDataLayerV2 {
                     effectiveLocalAuthority);
             categoryToAuthorityMap.put(
                     CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_APP_FOLDERS,
+                    effectiveLocalAuthority);
+            categoryToAuthorityMap.put(
+                    CloudMediaProviderContract.MEDIA_CATEGORY_TYPE_SD_CARD,
                     effectiveLocalAuthority);
         }
         return categoryToAuthorityMap;

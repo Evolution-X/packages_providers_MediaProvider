@@ -46,17 +46,21 @@ import com.android.photopicker.data.paging.AlbumPagingSource
 import com.android.photopicker.data.paging.MediaPagingSource
 import com.android.photopicker.extensions.throttleTakeLatest
 import com.android.photopicker.features.cloudmedia.CloudMediaFeature
+import com.android.photopicker.features.datescrubber.DateScrubberFeature
 import java.util.Collections.emptyList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
@@ -123,6 +127,9 @@ class DataServiceImpl(
     // An internal lock to allow thread-safe updates to the [MediaPagingSource] and
     // [AlbumPagingSource].
     private val mediaPagingSourceMutex = Mutex()
+
+    // An internal lock to allow thread-safe updates to the [MediaPageKeyCache]
+    private val mediaPageKeyCacheMutex = Mutex()
 
     // An internal lock to allow thread-safe updates to the [AlbumMediaPagingSource].
     private val albumMediaPagingSourceMutex = Mutex()
@@ -229,6 +236,70 @@ class DataServiceImpl(
      */
     override val preSelectionMediaData: StateFlow<List<Media>?> = _preSelectionMediaData
 
+    // It's used internally to send a signal when the data needs to be refreshed.
+    private val _mediaInvalidationFlow =
+        MutableSharedFlow<Unit>(
+            replay = 1, // New collectors receive the most recent signal immediately.
+            extraBufferCapacity = 0, // No additional buffer; only the latest value is stored.
+            onBufferOverflow =
+                BufferOverflow
+                    .DROP_OLDEST, // If a new signal comes before the previous is collected, the old
+            // one is dropped.
+        )
+
+    // Public read-only SharedFlow exposing media invalidation signals to external collectors.
+    override val mediaInvalidationFlow: SharedFlow<Unit> = _mediaInvalidationFlow
+
+    private val isDateScrubberEnabled =
+        featureManager.isFeatureEnabled(DateScrubberFeature::class.java)
+
+    /**
+     * A cache of [MediaPageKey]s for items at a regular interval.
+     *
+     * This list acts as a sparse index of the entire media dataset, used specifically for items in
+     * the PhotoGrid. It is pre-fetched and used by [MediaPagingSource.getRefreshKey] to quickly
+     * find the starting key for a page. This is needed when the user jumps to a new position, such
+     * as via the date scrubber or during a media invalidation, and it avoids a slow database
+     * lookup.
+     *
+     * The interval between keys is defined by [mediaPageKeyCacheInterval].
+     */
+    private val mediaPageKeyCache = MutableStateFlow<List<MediaPageKey>>(emptyList())
+
+    /**
+     * The interval used to populate the [mediaPageKeyCache].
+     *
+     * For example, if the interval is 100, the cache will store [MediaPageKey]s for items at
+     * indices 0, 100, 200, 300, and so on.
+     *
+     * Initialization:
+     * - [mediaPageKeyCacheInterval] is initialized as (initialLoadSize - regularPageSize).
+     * - This ensures the target item index is included in the very first load, without depending on
+     *   an additional append operation by LazyGrid.
+     *
+     * Example: initialLoadSize = 150, pageSize = 50
+     * - Cache stores keys at positions [0, 100, 200, 300, ...]
+     * - targetItemIndex = 301, state.anchorPosition = 298
+     * - [MediaPagingSource.getRefreshKey] returns the nearest lower cached key of
+     *   'state.anchorPosition' that is (200)
+     * - First load covers [200–350], ensuring the target item is included.
+     *
+     * Special Case:
+     * - When initialLoadSize == regularPageSize, set [mediaPageKeyCacheInterval] to
+     *   regularPageSize.
+     * - here, in some edge cases, one append may still be required. Example: state.anchorPosition =
+     *   98, targetItemIndex = 101
+     * - First load covers [50–100], so one append is needed from LazyGrid to fetch the target item.
+     *   Though Lazy grid will handle this itself
+     *
+     * TODO(b/448816209): Hoist the paging constants (InitialLoadSize and PageSize) to a higher
+     *   level so they can be accessed directly by both PhotoGridViewModel and DataServiceImpl.
+     *   Currently, paging constants are defined in [PhotoGridViewModel], making them inaccessible
+     *   here during initialization. As a temporary workaround, [mediaPageKeyCacheInterval] is set
+     *   to a constant value of 100 (initialLoadSize - pageSize).
+     */
+    private var mediaPageKeyCacheInterval = 100
+
     companion object {
         const val FLOW_TIMEOUT_MILLI_SECONDS: Long = 5000
         const val UPDATE_FLOW_THROTTLE_MILLIS: Long = 2000
@@ -239,10 +310,17 @@ class DataServiceImpl(
             availableProviders.collect { providers: List<Provider> ->
                 Log.d(DataService.TAG, "Available providers have changed to $providers.")
 
+                mediaPageKeyCacheMutex.withLock {
+                    mediaPageKeyCache.value = refreshMediaPageKeyCache()
+                }
+
                 mediaPagingSourceMutex.withLock {
                     mediaPagingSources.forEach { mediaPagingSource ->
                         mediaPagingSource.invalidate()
                     }
+
+                    _mediaInvalidationFlow.emit(Unit)
+
                     albumPagingSources.forEach { albumPagingSource ->
                         albumPagingSource.invalidate()
                     }
@@ -297,10 +375,16 @@ class DataServiceImpl(
                     scope.launch(dispatcher) {
                         mediaUpdateCallbackFlow?.collect {
                             Log.d(DataService.TAG, "Media update notification received")
+
+                            mediaPageKeyCacheMutex.withLock {
+                                mediaPageKeyCache.value = refreshMediaPageKeyCache()
+                            }
+
                             mediaPagingSourceMutex.withLock {
                                 mediaPagingSources.forEach { mediaPagingSource ->
                                     mediaPagingSource.invalidate()
                                 }
+                                _mediaInvalidationFlow.emit(Unit)
                             }
                         }
                     }
@@ -334,6 +418,40 @@ class DataServiceImpl(
             userStatus.collect { userStatusValue: UserStatus ->
                 activeContentResolver.update { userStatusValue.activeContentResolver }
             }
+        }
+    }
+
+    /**
+     * Fetches the sparse list of [MediaPageKey]s from the media provider and returns the updated
+     * [mediaPageKeyCache].
+     *
+     * This is an asynchronous operation used to pre-populate the cache that enables fast jumping in
+     * the photo grid.
+     */
+    private suspend fun refreshMediaPageKeyCache(): List<MediaPageKey> {
+        if (!isDateScrubberEnabled) return emptyList()
+
+        try {
+            if (availableProviders.value.isEmpty()) {
+                throw IllegalArgumentException("No available providers found.")
+            }
+
+            val newMediaPageKeyCache =
+                mediaProviderClient.fetchMediaPageKeyList(
+                    activeContentResolver.value,
+                    mediaPageKeyCacheInterval,
+                    availableProviders.value,
+                    config.value,
+                )
+            Log.d(
+                DataService.TAG,
+                "Received ${newMediaPageKeyCache.size} values inside media " +
+                    "page key list for all items at $mediaPageKeyCacheInterval interval.",
+            )
+            return newMediaPageKeyCache
+        } catch (e: Exception) {
+            Log.e(DataService.TAG, "Could not fetch Media Page cache List from Media Provider", e)
+            return emptyList()
         }
     }
 
@@ -587,8 +705,11 @@ class DataServiceImpl(
                         mediaProviderClient,
                         dispatcher,
                         config.value,
+                        isDateScrubberEnabled,
                         events,
                         regularPageSize,
+                        mediaPageKeyCache = mediaPageKeyCache.value,
+                        mediaPageKeyCacheInterval = mediaPageKeyCacheInterval,
                     )
 
                 Log.v(
@@ -617,6 +738,7 @@ class DataServiceImpl(
                     mediaProviderClient,
                     dispatcher,
                     config.value,
+                    false,
                     events,
                     regularPageSize,
                     /* is_preview_request */ true,

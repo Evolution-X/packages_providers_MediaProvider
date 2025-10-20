@@ -20,6 +20,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import androidx.paging.PagingSource
 import com.android.photopicker.core.configuration.provideTestConfigurationFlow
+import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.data.model.CloudMediaProviderDetails
 import com.android.photopicker.data.model.CollectionInfo
 import com.android.photopicker.data.model.Group.Album
@@ -34,6 +35,7 @@ import com.android.photopicker.data.paging.FakeInMemoryMediaPagingSource
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.TestScope
@@ -74,6 +76,9 @@ class TestDataServiceImpl() : DataService {
 
     private var _preGrantsCount = MutableStateFlow(/* default value */ 0)
 
+    override val mediaInvalidationFlow: SharedFlow<Unit>
+        get() = TODO("Not yet implemented")
+
     fun setAvailableProviders(newProviders: List<Provider>) {
         _availableProviders.update { newProviders }
         _providerToIconMap = newProviders.associateWith { Icon(Uri.EMPTY, MediaSource.LOCAL) }
@@ -94,8 +99,9 @@ class TestDataServiceImpl() : DataService {
         album: BaseAlbum,
         regularPageSize: Int,
     ): PagingSource<MediaPageKey, Media> {
-        return albumMediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(albumMediaSetSize)
+        return albumMediaList?.let {
+            FakeInMemoryMediaPagingSource(it, nextPageSize = regularPageSize)
+        } ?: FakeInMemoryMediaPagingSource(albumMediaSetSize, nextPageSize = regularPageSize)
     }
 
     override fun albumPagingSource(): PagingSource<MediaPageKey, Album> {
@@ -109,9 +115,24 @@ class TestDataServiceImpl() : DataService {
         throw NotImplementedError("This method is not implemented yet.")
 
     override fun mediaPagingSource(regularPageSize: Int): PagingSource<MediaPageKey, Media> {
-        val testConfig = provideTestConfigurationFlow(scope = TestScope().backgroundScope).value
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it, testConfig = testConfig) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize, testConfig = testConfig)
+        val testFeatureManager =
+            FeatureManager(
+                provideTestConfigurationFlow(scope = TestScope().backgroundScope),
+                TestScope().backgroundScope,
+                TestPrefetchDataService(),
+            )
+        return mediaList?.let {
+            FakeInMemoryMediaPagingSource(
+                it,
+                testFeatureManager = testFeatureManager,
+                nextPageSize = regularPageSize,
+            )
+        }
+            ?: FakeInMemoryMediaPagingSource(
+                mediaSetSize,
+                testFeatureManager = testFeatureManager,
+                nextPageSize = regularPageSize,
+            )
     }
 
     override fun previewMediaPagingSource(
@@ -120,8 +141,8 @@ class TestDataServiceImpl() : DataService {
         currentDeselection: Set<Media>,
     ): PagingSource<MediaPageKey, Media> {
         // re-using the media source, modify as per future test usage.
-        return mediaList?.let { FakeInMemoryMediaPagingSource(it) }
-            ?: FakeInMemoryMediaPagingSource(mediaSetSize)
+        return mediaList?.let { FakeInMemoryMediaPagingSource(it, nextPageSize = regularPageSize) }
+            ?: FakeInMemoryMediaPagingSource(mediaSetSize, nextPageSize = regularPageSize)
     }
 
     override suspend fun refreshMedia() =

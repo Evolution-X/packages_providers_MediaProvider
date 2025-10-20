@@ -336,7 +336,7 @@ std::unique_ptr<FileOpenResult> MediaProviderWrapper::OnFileOpen(const string& p
     JNIEnv* env = MaybeAttachCurrentThread();
     if (shouldBypassMediaProvider(uid)) {
         return std::make_unique<FileOpenResult>(0, uid, /* transforms_uid */ 0, /* nativeFd */ -1,
-                                                new RedactionInfo());
+                                                std::make_unique<RedactionInfo>());
     }
 
     ScopedLocalRef<jstring> j_path(env, env->NewStringUTF(path.c_str()));
@@ -373,10 +373,10 @@ std::unique_ptr<FileOpenResult> MediaProviderWrapper::OnFileOpen(const string& p
             ri = std::make_unique<RedactionInfo>();
         }
         return std::make_unique<FileOpenResult>(status, original_uid, transforms_uid, fd,
-                                                ri.release());
+                                                std::move(ri));
     } else {
         return std::make_unique<FileOpenResult>(status, original_uid, transforms_uid, fd,
-                                                new RedactionInfo());
+                                                std::make_unique<RedactionInfo>());
     }
 }
 
