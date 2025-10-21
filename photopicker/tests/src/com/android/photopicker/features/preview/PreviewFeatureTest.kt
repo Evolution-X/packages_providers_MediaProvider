@@ -1509,9 +1509,12 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
 
             // The content description is composed of multiple parts, so we do a substring match.
             // We target the image itself to perform the pinch gesture on.
+            // By scoping the search to descendants of the dialog, we avoid finding items in
+            // the background.
             composeTestRule
                 .onNode(
-                    hasContentDescription("Photo taken on", substring = true),
+                    hasAnyAncestor(isDialog()) and
+                        hasContentDescription("taken on", substring = true),
                     useUnmergedTree = true,
                 )
                 .assertIsDisplayed()

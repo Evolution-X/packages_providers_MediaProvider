@@ -51,12 +51,20 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CollectionItemInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.android.modules.utils.build.SdkLevel
@@ -84,7 +92,6 @@ import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.hideWhenState
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations
-import com.android.photopicker.core.navigation.PhotopickerDestinations.PHOTO_GRID
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
@@ -437,7 +444,11 @@ fun BoxScope.PhotoGridDateScrubber(
  * [Location.NAVIGATION_BAR_NAV_BUTTON]
  */
 @Composable
-fun PhotoGridNavButton(modifier: Modifier, params: LocationParams) {
+fun PhotoGridNavButton(
+    modifier: Modifier,
+    params: LocationParams,
+    iconModifier: Modifier = Modifier,
+) {
     val navController = LocalNavController.current
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
@@ -447,24 +458,48 @@ fun PhotoGridNavButton(modifier: Modifier, params: LocationParams) {
         if (isVideoOnlyMimeType) stringResource(R.string.photopicker_videos_nav_button_label)
         else stringResource(R.string.photopicker_photos_nav_button_label)
     val showButtonIcon = params as? LocationParams.WithNavButtonIcon
+    val selectActionLabel = stringResource(R.string.photopicker_select_action_description)
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val isCurrentRouteSelected = currentRoute == PhotopickerDestinations.PHOTO_GRID.route
+
+    val onTabClick: () -> Unit = {
+        // Log switching tab to the photos tab
+        scope.launch {
+            events.dispatch(
+                Event.LogPhotopickerUIEvent(
+                    FeatureToken.PHOTO_GRID.token,
+                    configuration.sessionId,
+                    configuration.callingPackageUid ?: -1,
+                    Telemetry.UiEvent.SWITCH_PICKER_TAB,
+                )
+            )
+        }
+        navController.navigateToPhotoGrid()
+    }
 
     NavigationBarButton(
-        onClick = {
-            // Log switching tab to the photos tab
-            scope.launch {
-                events.dispatch(
-                    Event.LogPhotopickerUIEvent(
-                        FeatureToken.PHOTO_GRID.token,
-                        configuration.sessionId,
-                        configuration.callingPackageUid ?: -1,
-                        Telemetry.UiEvent.SWITCH_PICKER_TAB,
-                    )
+        onClick = onTabClick,
+        modifier =
+            modifier.clearAndSetSemantics {
+                role = Role.Tab
+                selected = isCurrentRouteSelected
+                collectionItemInfo =
+                    CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = 0, columnSpan = 1)
+                contentDescription = buttonText
+                onClick(
+                    // Providing a custom label here changes the TalkBack usage hint.
+                    // This makes TalkBack announce "Double tap to Select" instead of the default
+                    // "Double tap to Activate".
+                    label = selectActionLabel,
+                    action = {
+                        onTabClick()
+                        true
+                    },
                 )
-            }
-            navController.navigateToPhotoGrid()
-        },
-        modifier = modifier,
-        isCurrentRoute = { route -> route == PHOTO_GRID.route },
+            },
+        isCurrentRouteSelected = isCurrentRouteSelected,
     ) {
         when (showButtonIcon?.showButtonIcon()) {
             true -> {
@@ -473,12 +508,13 @@ fun PhotoGridNavButton(modifier: Modifier, params: LocationParams) {
                         imageVector =
                             if (isVideoOnlyMimeType) Icons.Outlined.PlayCircle
                             else Icons.Outlined.Image,
-                        contentDescription = buttonText,
-                        modifier = Modifier.size(18.dp),
+                        // Set this to null to prevent double announcement
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp).then(iconModifier),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        buttonText,
+                        text = buttonText,
                         maxLines = 1, // Limit the text to a single line
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -486,7 +522,7 @@ fun PhotoGridNavButton(modifier: Modifier, params: LocationParams) {
             }
             else ->
                 Text(
-                    buttonText,
+                    text = buttonText,
                     maxLines = 1, // Limit the text to a single line
                     overflow = TextOverflow.Ellipsis,
                 )

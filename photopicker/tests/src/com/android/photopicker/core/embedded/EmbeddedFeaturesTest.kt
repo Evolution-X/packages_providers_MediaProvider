@@ -52,6 +52,7 @@ import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -360,7 +361,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testNavigationBarIsDisplayedInEmbeddedWhenExpanded_searchFlagOn() =
         testScope.runTest {
-            val resources = getTestableContext().getResources()
+            val resources = getTestableContext().resources
             val photosGridNavButtonLabel =
                 resources.getString(R.string.photopicker_photos_nav_button_label)
             val categoryGridNavButtonLabel =
@@ -380,11 +381,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             // Photos Grid Nav Button and Category Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNodeWithContentDescription(photosGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
             composeTestRule
-                .onNode(hasText(categoryGridNavButtonLabel))
+                .onNodeWithContentDescription(categoryGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
