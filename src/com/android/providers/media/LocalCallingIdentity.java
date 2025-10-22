@@ -26,6 +26,7 @@ import static com.android.providers.media.util.PermissionUtils.checkPermissionAc
 import static com.android.providers.media.util.PermissionUtils.checkPermissionAccessOemMetadata;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionDelegator;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionInstallPackages;
+import static com.android.providers.media.util.PermissionUtils.checkPermissionManageDocuments;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionManager;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionQueryAllPackages;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionReadAudio;
@@ -326,6 +327,7 @@ public class LocalCallingIdentity {
     public static final int PERMISSION_IS_SHELL = 1 << 1;
     public static final int PERMISSION_IS_MANAGER = 1 << 2;
     public static final int PERMISSION_IS_DELEGATOR = 1 << 3;
+    public static final int PERMISSION_IS_DOCUMENTS_MANAGER = 1 << 4;
 
     public static final int PERMISSION_IS_REDACTION_NEEDED = 1 << 8;
     public static final int PERMISSION_IS_LEGACY_GRANTED = 1 << 9;
@@ -444,6 +446,8 @@ public class LocalCallingIdentity {
                 return checkPermissionManager(context, pid, uid, getPackageName(), attributionTag);
             case PERMISSION_IS_DELEGATOR:
                 return checkPermissionDelegator(context, pid, uid);
+            case PERMISSION_IS_DOCUMENTS_MANAGER:
+                return checkPermissionManageDocuments(context, pid, uid);
 
             case PERMISSION_IS_REDACTION_NEEDED:
                 return isRedactionNeededInternal(targetSdkIsAtLeastT);
