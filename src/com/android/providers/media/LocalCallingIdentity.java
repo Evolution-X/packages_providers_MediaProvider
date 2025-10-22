@@ -372,8 +372,11 @@ public class LocalCallingIdentity {
      * @param appop appop permission to check for the given uid
      * @return {@code true} if appop checked for the first time for given uid
      */
-    public static boolean shouldNoteAppOp(int uid, String appop) {
-        if (!Flags.enableAppopPermissionChecksCache()) {
+    public static boolean shouldNoteAppOp(Context context, int uid, String appop) {
+        boolean disableAppopOptimisations = context.getResources().getBoolean(
+                R.bool.config_disable_appop_optimisations);
+
+        if (disableAppopOptimisations || !Flags.enableAppopPermissionChecksCache()) {
             return true;
         }
 

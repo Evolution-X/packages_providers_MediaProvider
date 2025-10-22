@@ -364,28 +364,29 @@ public class PermissionUtilsTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
     @EnableFlags(Flags.FLAG_ENABLE_APPOP_PERMISSION_CHECKS_CACHE)
     public void testShouldNoteOpWithCacheEnabled() throws Exception {
+        final Context context = getContext();
         String packageName = TEST_APP_WITHOUT_PERMS.getPackageName();
-        int testAppUid = getContext().getPackageManager().getPackageUid(packageName, 0);
+        int testAppUid = context.getPackageManager().getPackageUid(packageName, 0);
         adoptShellPermission(UPDATE_APP_OPS_STATS);
 
         try {
-            assertThat(shouldNoteAppOp(testAppUid, MANAGE_MEDIA)).isTrue();
+            assertThat(shouldNoteAppOp(context, testAppUid, MANAGE_MEDIA)).isTrue();
             assertThat(
                     checkPermissionManageMedia(getContext(), TEST_APP_PID, testAppUid, packageName,
                             null)).isFalse();
-            assertThat(shouldNoteAppOp(testAppUid, MANAGE_MEDIA)).isFalse();
+            assertThat(shouldNoteAppOp(context, testAppUid, MANAGE_MEDIA)).isFalse();
 
-            assertThat(shouldNoteAppOp(testAppUid, WRITE_EXTERNAL_STORAGE)).isTrue();
+            assertThat(shouldNoteAppOp(context, testAppUid, WRITE_EXTERNAL_STORAGE)).isTrue();
             assertThat(
                     checkPermissionWriteStorage(getContext(), TEST_APP_PID, testAppUid, packageName,
                             null)).isFalse();
-            assertThat(shouldNoteAppOp(testAppUid, WRITE_EXTERNAL_STORAGE)).isFalse();
+            assertThat(shouldNoteAppOp(context, testAppUid, WRITE_EXTERNAL_STORAGE)).isFalse();
 
-            assertThat(shouldNoteAppOp(testAppUid, READ_EXTERNAL_STORAGE)).isTrue();
+            assertThat(shouldNoteAppOp(context, testAppUid, READ_EXTERNAL_STORAGE)).isTrue();
             assertThat(
                     checkPermissionReadStorage(getContext(), TEST_APP_PID, testAppUid, packageName,
                             null)).isFalse();
-            assertThat(shouldNoteAppOp(testAppUid, READ_EXTERNAL_STORAGE)).isFalse();
+            assertThat(shouldNoteAppOp(context, testAppUid, READ_EXTERNAL_STORAGE)).isFalse();
 
             clearAppOpsResolvedCache();
         } finally {
@@ -397,19 +398,20 @@ public class PermissionUtilsTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
     @EnableFlags(Flags.FLAG_ENABLE_APPOP_PERMISSION_CHECKS_CACHE)
     public void testClearAppOpsResolvedCacheForUid() throws Exception {
+        final Context context = getContext();
         String packageName = TEST_APP_WITHOUT_PERMS.getPackageName();
-        int testAppUid = getContext().getPackageManager().getPackageUid(packageName, 0);
+        int testAppUid = context.getPackageManager().getPackageUid(packageName, 0);
         adoptShellPermission(UPDATE_APP_OPS_STATS);
 
         try {
-            assertThat(shouldNoteAppOp(testAppUid, MANAGE_MEDIA)).isTrue();
+            assertThat(shouldNoteAppOp(context, testAppUid, MANAGE_MEDIA)).isTrue();
             assertThat(
-                    checkPermissionManageMedia(getContext(), TEST_APP_PID, testAppUid, packageName,
+                    checkPermissionManageMedia(context, TEST_APP_PID, testAppUid, packageName,
                             null)).isFalse();
-            assertThat(shouldNoteAppOp(testAppUid, MANAGE_MEDIA)).isFalse();
+            assertThat(shouldNoteAppOp(context, testAppUid, MANAGE_MEDIA)).isFalse();
 
             clearAppOpsResolvedCacheForUid(testAppUid);
-            assertThat(shouldNoteAppOp(testAppUid, MANAGE_MEDIA)).isTrue();
+            assertThat(shouldNoteAppOp(context, testAppUid, MANAGE_MEDIA)).isTrue();
 
             clearAppOpsResolvedCache();
         } finally {

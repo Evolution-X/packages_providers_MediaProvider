@@ -15,6 +15,9 @@
 -->
 
 <resources>
+    <!-- Config to disable AppOp optimisations -->
+    <bool name="config_disable_appop_optimisations">false</bool>
+
     <string-array name="config_supported_transcoding_relative_paths" translatable="false">
       <item>DCIM/Camera/</item>
     </string-array>
