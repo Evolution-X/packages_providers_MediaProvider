@@ -228,6 +228,9 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                 val localConfig = LocalConfiguration.current
                 val emptyStatePadding =
                     remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
+                val isVideoOnlyMimeType =
+                    LocalPhotopickerConfiguration.current.hasOnlyVideoMimeTypes()
+
                 EmptyState(
                     modifier =
                         if (SdkLevel.isAtLeastU() && isEmbedded && host != null) {
@@ -239,7 +242,12 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                             Modifier.fillMaxWidth().padding(top = emptyStatePadding)
                         },
                     icon = Icons.Outlined.Image,
-                    title = stringResource(R.string.photopicker_photos_empty_state_title),
+                    title =
+                        when {
+                            isVideoOnlyMimeType ->
+                                stringResource(R.string.photopicker_videos_empty_state_title)
+                            else -> stringResource(R.string.photopicker_photos_empty_state_title)
+                        },
                     body = stringResource(R.string.photopicker_photos_empty_state_body),
                 )
             }

@@ -147,7 +147,8 @@ private fun AlbumMediaGrid(
                 val localConfig = LocalConfiguration.current
                 val emptyStatePadding =
                     remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
-                val (title, body, icon) = getEmptyStateContentForAlbum(album)
+                val isVideoOnlyMime = LocalPhotopickerConfiguration.current.hasOnlyVideoMimeTypes()
+                val (title, body, icon) = getEmptyStateContentForAlbum(album, isVideoOnlyMime)
                 EmptyState(
                     modifier =
                         if (SdkLevel.isAtLeastU() && isEmbedded && host != null) {
@@ -202,7 +203,10 @@ private fun AlbumMediaGrid(
  * @return a [Triple] that contains the [Title, Body, Icon] for the empty state.
  */
 @Composable
-private fun getEmptyStateContentForAlbum(album: Group.Album): Triple<String, String, ImageVector> {
+private fun getEmptyStateContentForAlbum(
+    album: Group.Album,
+    videoOnlyMime: Boolean,
+): Triple<String, String, ImageVector> {
     return when (album.id) {
         ALBUM_ID_FAVORITES ->
             Triple(
@@ -218,14 +222,20 @@ private fun getEmptyStateContentForAlbum(album: Group.Album): Triple<String, Str
             )
         ALBUM_ID_CAMERA ->
             Triple(
-                stringResource(R.string.photopicker_photos_empty_state_title),
+                when {
+                    videoOnlyMime -> stringResource(R.string.photopicker_videos_empty_state_title)
+                    else -> stringResource(R.string.photopicker_photos_empty_state_title)
+                },
                 stringResource(R.string.photopicker_camera_empty_state_body),
                 Icons.Outlined.PhotoCamera,
             )
         // Use the empty state messages of the main photo grid in all other cases.
         else ->
             Triple(
-                stringResource(R.string.photopicker_photos_empty_state_title),
+                when {
+                    videoOnlyMime -> stringResource(R.string.photopicker_videos_empty_state_title)
+                    else -> stringResource(R.string.photopicker_photos_empty_state_title)
+                },
                 stringResource(R.string.photopicker_photos_empty_state_body),
                 Icons.Outlined.Image,
             )

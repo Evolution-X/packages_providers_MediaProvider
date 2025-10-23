@@ -641,6 +641,73 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
     }
 
+    fun testAlbumMediaShowsEmptyStateWhenEmpty_videoOnlyMimeType() {
+
+        val dataService = dataService as? TestDataServiceImpl
+        val testCategoryDataService = categoryDataService as? TestCategoryDataServiceImpl
+        checkNotNull(testCategoryDataService) { "Expected a TestCategoryDataServiceImpl" }
+        checkNotNull(dataService) { "Expected a TestDataServiceImpl" }
+
+        // Force the data service to return no data for all test sources during this test.
+        dataService.albumMediaSetSize = 0
+
+        val resources = getTestableContext().getResources()
+
+        testScope.runTest {
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(Intent.EXTRA_MIME_TYPES, arrayListOf("video/*", "video/mpeg"))
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                // Set an explicit size to prevent errors in glide being unable to measure
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({ navController.navigateToCategoryGrid() })
+
+            assertWithMessage("Expected route to be category albumgrid")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            advanceTimeBy(100)
+
+            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
+            // In the [FakeInMemoryPagingSource] the albums are names using TEST_ALBUM_NAME_PREFIX
+            // appended by a count in their sequence. Verify that an album with the name exists
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).assertIsDisplayed()
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
+
+            composeTestRule.waitForIdle()
+
+            // Allow the PreviewViewModel to collect flows
+            advanceTimeBy(100)
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_videos_empty_state_title)))
+                .assertIsDisplayed()
+
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_photos_empty_state_body)))
+                .assertIsDisplayed()
+        }
+    }
+
     @Test
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testEmptyStateContentForFavorites() {
