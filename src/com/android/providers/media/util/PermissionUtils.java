@@ -20,6 +20,7 @@ import static android.Manifest.permission.ACCESS_MEDIA_LOCATION;
 import static android.Manifest.permission.ACCESS_MTP;
 import static android.Manifest.permission.BACKUP;
 import static android.Manifest.permission.INSTALL_PACKAGES;
+import static android.Manifest.permission.MANAGE_DOCUMENTS;
 import static android.Manifest.permission.MANAGE_EXTERNAL_STORAGE;
 import static android.Manifest.permission.MANAGE_MEDIA;
 import static android.Manifest.permission.QUERY_ALL_PACKAGES;
@@ -116,6 +117,12 @@ public class PermissionUtils {
         return checkPermissionForDataDelivery(context, MANAGE_EXTERNAL_STORAGE, pid, uid,
                 packageName, attributionTag,
                 generateAppOpMessage(packageName,sOpDescription.get()));
+    }
+
+    /** Check if the given package has been granted the "manage documents" permission. */
+    public static boolean checkPermissionManageDocuments(
+            @NonNull Context context, int pid, int uid) {
+        return context.checkPermission(MANAGE_DOCUMENTS, pid, uid) == PERMISSION_GRANTED;
     }
 
     /**

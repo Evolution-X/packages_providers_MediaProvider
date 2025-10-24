@@ -82,6 +82,7 @@ import static com.android.providers.media.LocalCallingIdentity.APPOP_REQUEST_INS
 import static com.android.providers.media.LocalCallingIdentity.PERMISSION_ACCESS_MTP;
 import static com.android.providers.media.LocalCallingIdentity.PERMISSION_INSTALL_PACKAGES;
 import static com.android.providers.media.LocalCallingIdentity.PERMISSION_IS_DELEGATOR;
+import static com.android.providers.media.LocalCallingIdentity.PERMISSION_IS_DOCUMENTS_MANAGER;
 import static com.android.providers.media.LocalCallingIdentity.PERMISSION_IS_LEGACY_GRANTED;
 import static com.android.providers.media.LocalCallingIdentity.PERMISSION_IS_LEGACY_READ;
 import static com.android.providers.media.LocalCallingIdentity.PERMISSION_IS_LEGACY_WRITE;
@@ -7950,7 +7951,9 @@ public class MediaProvider extends ContentProvider {
         long getDocumentUriStartTime = SystemClock.elapsedRealtimeNanos();
 
         final Uri mediaUri = extras.getParcelable(MediaStore.EXTRA_URI);
-        enforceCallingPermission(mediaUri, extras, false);
+        if (!isCallingPackageDocumentsManager()) {
+            enforceCallingPermission(mediaUri, extras, false);
+        }
 
         final Uri fileUri;
         final LocalCallingIdentity token = clearLocalCallingIdentity();
@@ -12986,6 +12989,11 @@ public class MediaProvider extends ContentProvider {
     @Deprecated
     private boolean isCallingPackageDelegator() {
         return mCallingIdentity.get().hasPermission(PERMISSION_IS_DELEGATOR);
+    }
+
+    @Deprecated
+    private boolean isCallingPackageDocumentsManager() {
+        return mCallingIdentity.get().hasPermission(PERMISSION_IS_DOCUMENTS_MANAGER);
     }
 
     @Deprecated
