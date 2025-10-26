@@ -74,6 +74,7 @@ import android.content.OperationApplicationException;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteBlobTooBigException;
 import android.database.sqlite.SQLiteDatabase;
@@ -105,6 +106,8 @@ import android.provider.MediaStore.MediaColumns;
 import android.provider.MediaStore.Video.VideoColumns;
 import android.provider.OemMetadataService;
 import android.provider.OemMetadataServiceWrapper;
+import android.provider.mediaprocessingservice.IMediaProcessingService;
+import android.provider.mediaprocessingservice.MediaProcessingService;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
@@ -225,6 +228,7 @@ public class ModernMediaScanner implements MediaScanner {
     private final Context mContext;
     private final DrmManagerClient mDrmClient;
     private OemMetadataServiceWrapper mOemMetadataServiceWrapper;
+    private IMediaProcessingService mMediaProcessingService;
     @GuardedBy("mPendingCleanDirectories")
     private final Set<String> mPendingCleanDirectories = new ArraySet<>();
 
@@ -275,10 +279,22 @@ public class ModernMediaScanner implements MediaScanner {
      */
     private CountDownLatch mCountDownLatchForOemMetadataConnection = new CountDownLatch(1);
 
+    /**
+     * Default MediaProcessingService implementation package.
+     */
+    private final Optional<String> mDefaultMediaProcessingServicePackage;
+
+    /**
+     * Count down latch to process delay in connection to MediaProcessingService.
+     */
+    private CountDownLatch mCountDownLatchForProcessingServiceConnection = new CountDownLatch(1);
+
     public ModernMediaScanner(@NonNull Context context, @NonNull ConfigStore configStore) {
         mContext = requireNonNull(context);
         mDrmClient = new DrmManagerClient(context);
         mDefaultOemMetadataServicePackage = configStore.getDefaultOemMetadataServicePackage();
+        mDefaultMediaProcessingServicePackage =
+                configStore.getDefaultMediaProcessingServicePackage();
 
         // Dynamically collect the set of MIME types that should be considered
         // to be DRM, as this can vary between devices
@@ -288,6 +304,8 @@ public class ModernMediaScanner implements MediaScanner {
                 mDrmMimeTypes.add(mimeTypes.next());
             }
         }
+
+        connectMediaProcessingService();
     }
 
     @Override
@@ -381,6 +399,75 @@ public class ModernMediaScanner implements MediaScanner {
     @VisibleForTesting
     public ServiceConnection getOemMetadataServiceConnection() {
         return mServiceConnection;
+    }
+
+    private synchronized void connectMediaProcessingService() {
+        try {
+            if (!Flags.enableMediaProcessingService()) {
+                return;
+            }
+
+            if (mDefaultMediaProcessingServicePackage.isEmpty()) {
+                Log.v(TAG, "No default package listed for MediaProcessingService");
+                return;
+            }
+
+            if (mMediaProcessingService != null) {
+                Log.i(TAG, "MediaProcessingService already connected");
+                return;
+            }
+
+            Intent intent = new Intent(MediaProcessingService.SERVICE_INTERFACE);
+            ResolveInfo resolveInfo = mContext.getPackageManager().resolveService(intent,
+                    PackageManager.MATCH_ALL);
+            if (resolveInfo == null || resolveInfo.serviceInfo == null
+                    || resolveInfo.serviceInfo.packageName == null
+                    || !mDefaultMediaProcessingServicePackage.get().equalsIgnoreCase(
+                    resolveInfo.serviceInfo.packageName)
+                    || resolveInfo.serviceInfo.permission == null
+                    || !resolveInfo.serviceInfo.permission.equalsIgnoreCase(
+                    MediaProcessingService.BIND_MEDIA_PROCESSING_SERVICE_PERMISSION)) {
+                Log.v(TAG, "No valid package found for MediaProcessingService");
+                return;
+            }
+
+            ServiceInfo serviceInfo = resolveInfo.serviceInfo;
+            intent.setComponent(new ComponentName(serviceInfo.packageName, serviceInfo.name));
+            mContext.bindService(intent, mMediaProcessingServiceConnection,
+                    Context.BIND_AUTO_CREATE);
+            mCountDownLatchForProcessingServiceConnection.await(5, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            Log.e(TAG, "Exception in connecting MediaProcessingService", e);
+        }
+    }
+
+    private final ServiceConnection mMediaProcessingServiceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.i(TAG, "MediaProcessingService connected: " + name);
+            mMediaProcessingService = IMediaProcessingService.Stub.asInterface(service);
+            mCountDownLatchForProcessingServiceConnection.countDown();
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.w(TAG, "MediaProcessingService disconnected: " + name);
+            mMediaProcessingService = null;
+            mCountDownLatchForProcessingServiceConnection = new CountDownLatch(1);
+        }
+
+        @Override
+        public void onBindingDied(ComponentName name) {
+            Log.e(TAG, "MediaProcessingService binding died: " + name);
+            mContext.unbindService(this);
+            mMediaProcessingService = null;
+            mCountDownLatchForProcessingServiceConnection = new CountDownLatch(1);
+        }
+    };
+
+    @VisibleForTesting
+    public IMediaProcessingService getMediaProcessingService() {
+        return mMediaProcessingService;
     }
 
     @Override

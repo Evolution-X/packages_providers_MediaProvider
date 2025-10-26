@@ -497,3 +497,11 @@ flag {
     description: "This flag enables removal of xattr recovery data for removed users"
     bug: "424426960"
 }
+
+flag {
+    name: "enable_media_processing_service"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "This flag exposes the API contract for abstract Media Processing Service"
+    bug: "428139451"
+}

@@ -50,6 +50,9 @@
     <!-- Permission required to bind to MediaCognitionService. Declared by us -->
     <uses-permission android:name="com.android.providers.media.permission.BIND_MEDIA_COGNITION_SERVICE" />
 
+    <!-- Permission required to bind to MediaProcessingService -->
+    <uses-permission android:name="com.android.providers.media.permission.BIND_MEDIA_PROCESSING_SERVICE" />
+
     <!-- Permission required to access OEM metadata. Declared by us -->
     <uses-permission
         android:name="com.android.providers.media.permission.ACCESS_OEM_METADATA" />
@@ -76,6 +79,9 @@
                 android:protectionLevel="signature" />
 
     <permission android:name="com.android.providers.media.permission.BIND_MEDIA_COGNITION_SERVICE"
+                android:protectionLevel="signature"/>
+
+    <permission android:name="com.android.providers.media.permission.BIND_MEDIA_PROCESSING_SERVICE"
                 android:protectionLevel="signature"/>
 
     <permission android:name="com.android.providers.media.permission.ACCESS_OEM_METADATA"
