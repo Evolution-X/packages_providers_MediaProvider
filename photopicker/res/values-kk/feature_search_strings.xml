@@ -18,7 +18,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="photopicker_search_placeholder_text" msgid="2056650487029735317">"Іздеу"</string>
-    <string name="photopicker_search_photos_placeholder_text" msgid="4193624269605283280">"Фотосуреттерді іздеу"</string>
+    <string name="photopicker_search_photos_placeholder_text" msgid="4193624269605283280">"Фотосурет іздеу"</string>
     <string name="photopicker_search_videos_placeholder_text" msgid="6373176950925263103">"Бейнелерді іздеу"</string>
     <string name="photopicker_search_clear_text" msgid="864128584605615045">"Іздеу мәтінін өшіру"</string>
     <string name="photopicker_search_voice_search_button_description" msgid="6125285733831487821">"Дауыспен енгізу"</string>
