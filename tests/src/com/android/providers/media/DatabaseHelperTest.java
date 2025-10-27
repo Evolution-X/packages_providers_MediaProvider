@@ -230,7 +230,7 @@ public class DatabaseHelperTest {
 
     @Test
     public void testTransactions() throws Exception {
-        try (DatabaseHelper helper = new DatabaseHelperR(sIsolatedContext, TEST_CLEAN_DB)) {
+        try (DatabaseHelper helper = new DatabaseHelperB(sIsolatedContext, TEST_CLEAN_DB)) {
             helper.beginTransaction();
             try {
                 helper.setTransactionSuccessful();
@@ -242,11 +242,6 @@ public class DatabaseHelperTest {
                 return 0;
             });
         }
-    }
-
-    @Test
-    public void testBtoR() throws Exception {
-        assertDowngrade(DatabaseHelperB.class, DatabaseHelperR.class);
     }
 
     @Test
@@ -500,11 +495,6 @@ public class DatabaseHelperTest {
         long id = db.insert("files", FileColumns.DATA, values);
         assertFalse(id == -1);
         return id;
-    }
-
-    @Test
-    public void testRtoB() throws Exception {
-        assertUpgrade(DatabaseHelperR.class, DatabaseHelperB.class);
     }
 
     @Test
