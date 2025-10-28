@@ -364,7 +364,6 @@ public class PermissionUtilsTest {
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-    @EnableFlags(Flags.FLAG_ENABLE_APPOP_PERMISSION_CHECKS_CACHE)
     public void testShouldNoteOpWithCacheEnabled() throws Exception {
         final Context context = getContext();
         String packageName = TEST_APP_WITHOUT_PERMS.getPackageName();
@@ -398,7 +397,6 @@ public class PermissionUtilsTest {
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-    @EnableFlags(Flags.FLAG_ENABLE_APPOP_PERMISSION_CHECKS_CACHE)
     public void testClearAppOpsResolvedCacheForUid() throws Exception {
         final Context context = getContext();
         String packageName = TEST_APP_WITHOUT_PERMS.getPackageName();
