@@ -1750,7 +1750,7 @@ class DataServiceImplTest {
         assertThat(emissions.count()).isEqualTo(1)
         // Initially only local provider is present and a provider with local media source should
         // not have an icon
-        var iconMap = dataService.getProviderToIconMap()
+        var iconMap = dataService.providerToIconMap.value
         assertThat(iconMap[testContentProvider.providers[0]]).isNull()
 
         // Simulate an update to the available providers
@@ -1765,7 +1765,7 @@ class DataServiceImplTest {
         assertThat(emissions).hasSize(2)
         // The local provider does not have an icon, so the map should only contain the cloud
         // provider.
-        iconMap = dataService.getProviderToIconMap()
+        iconMap = dataService.providerToIconMap.value
         assertThat(iconMap[localProvider]).isNull()
         assertThat(iconMap[cloudProvider])
             .isEqualTo(
@@ -1812,7 +1812,7 @@ class DataServiceImplTest {
 
         // Assert provider's icon for Primary User
         assertThat(emissions).hasSize(1)
-        assertThat(dataService.getProviderToIconMap()[remoteProvider])
+        assertThat(dataService.providerToIconMap.value[remoteProvider])
             .isEqualTo(getProviderIcon(providerInfo, userProfilePrimary.identifier))
 
         val managedContentProvider = TestMediaProvider()
@@ -1842,7 +1842,7 @@ class DataServiceImplTest {
         assertThat(emissions.count()).isEqualTo(2)
 
         // Assert provider's icon for Managed User
-        assertThat(dataService.getProviderToIconMap()[remoteProviderManaged])
+        assertThat(dataService.providerToIconMap.value[remoteProviderManaged])
             .isEqualTo(getProviderIcon(providerInfo, userProfileManaged.identifier))
     }
 
@@ -1862,7 +1862,7 @@ class DataServiceImplTest {
         notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
         advanceTimeBy(100)
 
-        assertThat(dataService.getProviderToIconMap()[testProvider]).isNull()
+        assertThat(dataService.providerToIconMap.value[testProvider]).isNull()
     }
 
     @Test
@@ -1883,7 +1883,7 @@ class DataServiceImplTest {
         notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
         advanceTimeBy(100)
 
-        assertThat(dataService.getProviderToIconMap()[testProvider]).isNull()
+        assertThat(dataService.providerToIconMap.value[testProvider]).isNull()
     }
 
     @Test
@@ -1903,7 +1903,7 @@ class DataServiceImplTest {
         notificationService.dispatchChangeToObservers(availableProvidersUpdateUri)
         advanceTimeBy(100)
 
-        assertThat(dataService.getProviderToIconMap()[testProvider]).isNull()
+        assertThat(dataService.providerToIconMap.value[testProvider]).isNull()
     }
 
     @Test

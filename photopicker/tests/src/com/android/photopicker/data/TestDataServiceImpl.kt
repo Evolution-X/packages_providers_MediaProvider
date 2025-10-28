@@ -28,7 +28,6 @@ import com.android.photopicker.data.model.Group.BaseAlbum
 import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaPageKey
-import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.data.paging.FakeInMemoryAlbumPagingSource
 import com.android.photopicker.data.paging.FakeInMemoryMediaPagingSource
@@ -64,10 +63,11 @@ class TestDataServiceImpl() : DataService {
     val _availableProviders = MutableStateFlow<List<Provider>>(emptyList())
     override val availableProviders: StateFlow<List<Provider>> = _availableProviders
 
-    var _providerToIconMap: Map<Provider, Icon> = emptyMap()
+    private var _providerToIconMap = MutableStateFlow<Map<Provider, Icon>>(emptyMap())
+    override val providerToIconMap: StateFlow<Map<Provider, Icon>> = _providerToIconMap
 
-    override suspend fun getProviderToIconMap(): Map<Provider, Icon> {
-        return _providerToIconMap
+    fun setProviderToIconMap(newMap: Map<Provider, Icon>) {
+        _providerToIconMap.value = newMap
     }
 
     var allowedProviders: List<Provider> = emptyList()
@@ -81,7 +81,6 @@ class TestDataServiceImpl() : DataService {
 
     fun setAvailableProviders(newProviders: List<Provider>) {
         _availableProviders.update { newProviders }
-        _providerToIconMap = newProviders.associateWith { Icon(Uri.EMPTY, MediaSource.LOCAL) }
     }
 
     override val activeContentResolver: StateFlow<ContentResolver>

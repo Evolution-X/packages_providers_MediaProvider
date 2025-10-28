@@ -34,6 +34,7 @@ import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.selection.SelectionModifiedResult
 import com.android.photopicker.data.DataService
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.extensions.insertMonthSeparators
@@ -143,6 +144,8 @@ constructor(
 
     /** The state of the searchable cloud provider. */
     val searchableProviders: StateFlow<List<Provider>> = searchDataService.searchableProviders
+
+    val providerToIconMap: StateFlow<Map<Provider, Icon?>> = dataService.providerToIconMap
 
     private val suggestionCache = SearchSuggestionCache()
 

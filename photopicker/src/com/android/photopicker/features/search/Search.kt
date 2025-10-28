@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -118,12 +119,14 @@ import com.android.photopicker.core.events.Telemetry
 import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.features.LocationParams
+import com.android.photopicker.core.glide.GlideLoadable
 import com.android.photopicker.core.glide.Resolution
 import com.android.photopicker.core.glide.loadMedia
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.extensions.fadingEdge
@@ -133,6 +136,7 @@ import com.android.photopicker.features.preview.PreviewFeature
 import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
 import com.android.photopicker.features.search.model.UserSearchState
+import com.android.photopicker.util.applyChoice
 import com.android.photopicker.util.applyWhen
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -146,8 +150,8 @@ private val MEASUREMENT_SEARCH_BAR_PADDING =
 
 private val FETCH_SUGGESTION_DEBOUNCE_DELAY = 50L // in milliseconds
 
-private val SUGGESTION_TITLE_PADDING =
-    PaddingValues(start = 32.dp, end = 32.dp, top = 12.dp, bottom = 12.dp)
+private val SUGGESTION_TITLE_ROW_PADDING =
+    PaddingValues(start = 16.dp, end = 32.dp, top = 12.dp, bottom = 12.dp)
 private val MEASUREMENT_LARGE_PADDING = 16.dp
 private val MEASUREMENT_MEDIUM_PADDING = 8.dp
 private val MEASUREMENT_SMALL_PADDING = 4.dp
@@ -211,6 +215,8 @@ fun SearchBarEnabled(params: LocationParams, viewModel: SearchViewModel, modifie
     val searchTerm by viewModel.searchBarTextState.collectAsStateWithLifecycle()
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
     val suggestionLists by viewModel.searchSuggestions.collectAsStateWithLifecycle()
+    val searchableProviders by viewModel.searchableProviders.collectAsStateWithLifecycle()
+    val providerToIconMap by viewModel.providerToIconMap.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
     val configuration = LocalPhotopickerConfiguration.current
@@ -284,6 +290,11 @@ fun SearchBarEnabled(params: LocationParams, viewModel: SearchViewModel, modifie
                 SearchState.Inactive -> {
                     if (suggestionLists.totalSuggestions > 0) {
                         val focusManager = LocalFocusManager.current
+                        val cloudProvider =
+                            searchableProviders.singleOrNull()?.takeIf {
+                                it.mediaSource == MediaSource.REMOTE
+                            }
+
                         ShowSuggestions(
                             searchSuggestions = suggestionLists,
                             isZeroSearchState = searchTerm.isEmpty(),
@@ -293,6 +304,8 @@ fun SearchBarEnabled(params: LocationParams, viewModel: SearchViewModel, modifie
                                 viewModel.performSearch(suggestion = suggestion)
                             },
                             modifier = modifier,
+                            cloudProviderIcon = providerToIconMap.getOrDefault(cloudProvider, null),
+                            cloudProviderName = cloudProvider?.displayName,
                         )
                     }
                 }
@@ -814,6 +827,8 @@ fun EmptySearchResult(modifier: Modifier = Modifier) {
  *   suggestions to be displayed.
  * @param isZeroSearchState A boolean value indicating if the search query is empty.
  * @param modifier A Modifier that can be applied to the suggestions list.
+ * @param cloudProviderIcon [Icon] of the cloud provider providing the suggestions
+ * @param cloudProviderName Name of the cloud provider providing the suggestions
  * @param onSuggestionClick A callback function to be invoked when a suggestion is clicked.
  */
 @Composable
@@ -821,6 +836,8 @@ private fun ShowSuggestions(
     searchSuggestions: SearchSuggestions,
     isZeroSearchState: Boolean,
     modifier: Modifier,
+    cloudProviderIcon: Icon?,
+    cloudProviderName: String?,
     onSuggestionClick: (SearchSuggestion) -> Unit,
 ) {
     val isEmbedded =
@@ -861,10 +878,32 @@ private fun ShowSuggestions(
             }
             if (faceSuggestions.isNotEmpty() || otherSuggestions.isNotEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.photopicker_search_suggestions_text),
-                        modifier = Modifier.padding(SUGGESTION_TITLE_PADDING),
-                    )
+                    Row(
+                        modifier = Modifier.padding(SUGGESTION_TITLE_ROW_PADDING),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        cloudProviderIcon?.let {
+                            loadMedia(
+                                media = cloudProviderIcon as GlideLoadable,
+                                resolution = Resolution.THUMBNAIL,
+                                modifier = Modifier.size(24.dp).clip(CircleShape),
+                                contentDescription = cloudProviderName,
+                            )
+                        }
+                        Spacer(
+                            modifier =
+                                // Using applyChoice directly on Modifier causes compile time error
+                                Modifier.semantics {}
+                                    .applyChoice(
+                                        condition = cloudProviderIcon != null,
+                                        trueBlock = { width(MEASUREMENT_MEDIUM_PADDING) },
+                                        // If the icon is absent, padding from left should add up to
+                                        // 32.dp
+                                        falseBlock = { width(MEASUREMENT_LARGE_PADDING) },
+                                    )
+                        )
+                        Text(text = stringResource(R.string.photopicker_search_suggestions_text))
+                    }
                 }
             }
             if (faceSuggestions.size > 0) {

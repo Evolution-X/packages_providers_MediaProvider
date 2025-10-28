@@ -16,6 +16,7 @@
 
 package com.android.photopicker.features.search
 
+import android.net.Uri
 import android.platform.test.annotations.EnableFlags
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
@@ -31,6 +32,7 @@ import com.android.photopicker.core.selection.SelectionImpl
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.TestPrefetchDataService
 import com.android.photopicker.data.TestSearchDataServiceImpl
+import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
@@ -528,8 +530,50 @@ class SearchViewModelTest {
         assertWithMessage("searchable providers should update when a cloud provider is added")
             .that(viewModel.searchableProviders.value)
             .containsExactly(cloudProvider)
+    }
 
-        job.cancel()
+    @Test
+    fun testProvidersToIconMapUpdatesOnProviderChange() = runTest {
+        provideSelectionEvents(this.backgroundScope)
+        val configurationManager =
+            ConfigurationManager(
+                runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                scope = this.backgroundScope,
+                dispatcher = StandardTestDispatcher(this.testScheduler),
+                deviceConfigProxy,
+                generatePickerSessionId(),
+            )
+        val testDataService = TestDataServiceImpl()
+        val viewModel =
+            SearchViewModel(
+                this.backgroundScope,
+                StandardTestDispatcher(this.testScheduler),
+                TestSearchDataServiceImpl(),
+                testDataService,
+                selection,
+                events,
+                configurationManager,
+            )
+
+        val job = backgroundScope.launch { viewModel.providerToIconMap.collect {} }
+        advanceTimeBy(100)
+
+        assertWithMessage("providerToIconMap should initially be an empty map")
+            .that(viewModel.providerToIconMap.value)
+            .isEmpty()
+
+        // Add a cloud provider
+        val cloudProvider = Provider("cloud_authority", MediaSource.REMOTE, 1, "Cloud")
+        val icon = Icon(Uri.EMPTY, MediaSource.REMOTE)
+        testDataService.setAvailableProviders(listOf(cloudProvider))
+        testDataService.setProviderToIconMap(mapOf(cloudProvider to icon))
+
+        // Wait for the flow to emit the new value.
+        withTimeout(1000) { viewModel.providerToIconMap.first { it.isNotEmpty() } }
+
+        assertWithMessage("providerToIconMap should update when a cloud provider is added")
+            .that(viewModel.providerToIconMap.value)
+            .containsExactly(cloudProvider, icon)
     }
 
     private fun provideSelectionEvents(scope: CoroutineScope) {
