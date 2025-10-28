@@ -172,8 +172,13 @@ fun MediaSetGrid(
                         val localConfig = LocalConfiguration.current
                         val emptyStatePadding =
                             remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
+                        val isVideoOnlyMimeType =
+                            LocalPhotopickerConfiguration.current.hasOnlyVideoMimeTypes()
                         val (title, body, icon) =
-                            getEmptyStateContentForMediaset(category.categoryType)
+                            getEmptyStateContentForMediaset(
+                                category.categoryType,
+                                isVideoOnlyMimeType,
+                            )
                         EmptyState(
                             modifier =
                                 if (SdkLevel.isAtLeastU() && isEmbedded && host != null) {
@@ -279,7 +284,8 @@ fun MediaSetGrid(
  */
 @Composable
 private fun getEmptyStateContentForMediaset(
-    categoryType: CategoryType
+    categoryType: CategoryType,
+    isVideoOnlyMime: Boolean,
 ): Triple<String, String, ImageVector> {
     return if (categoryType == CategoryType.PEOPLE_AND_PETS) {
         Triple(
@@ -289,7 +295,10 @@ private fun getEmptyStateContentForMediaset(
         )
     } else {
         Triple(
-            stringResource(R.string.photopicker_photos_empty_state_title),
+            when {
+                isVideoOnlyMime -> stringResource(R.string.photopicker_videos_empty_state_title)
+                else -> stringResource(R.string.photopicker_photos_empty_state_title)
+            },
             stringResource(R.string.photopicker_photos_empty_state_body),
             Icons.Outlined.Group,
         )

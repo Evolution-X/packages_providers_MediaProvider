@@ -144,7 +144,9 @@ private fun AlbumMediaGrid(
                 val localConfig = LocalConfiguration.current
                 val emptyStatePadding =
                     remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
-                val (title, body, icon) = getEmptyStateContentForAlbum(album)
+                val isVideoOnlyMimeType =
+                    LocalPhotopickerConfiguration.current.hasOnlyVideoMimeTypes()
+                val (title, body, icon) = getEmptyStateContentForAlbum(album, isVideoOnlyMimeType)
                 EmptyState(
                     modifier =
                         if (SdkLevel.isAtLeastU() && isEmbedded && host != null) {
@@ -240,7 +242,8 @@ private fun AlbumMediaGrid(
  */
 @Composable
 private fun getEmptyStateContentForAlbum(
-    album: Group.BaseAlbum
+    album: Group.BaseAlbum,
+    videoOnlyMimeType: Boolean,
 ): Triple<String, String, ImageVector> {
     return when (album.id) {
         ALBUM_ID_FAVORITES ->
@@ -257,14 +260,22 @@ private fun getEmptyStateContentForAlbum(
             )
         ALBUM_ID_CAMERA ->
             Triple(
-                stringResource(R.string.photopicker_photos_empty_state_title),
+                when {
+                    videoOnlyMimeType ->
+                        stringResource(R.string.photopicker_videos_empty_state_title)
+                    else -> stringResource(R.string.photopicker_photos_empty_state_title)
+                },
                 stringResource(R.string.photopicker_camera_empty_state_body),
                 Icons.Outlined.PhotoCamera,
             )
         // Use the empty state messages of the main photo grid in all other cases.
         else ->
             Triple(
-                stringResource(R.string.photopicker_photos_empty_state_title),
+                when {
+                    videoOnlyMimeType ->
+                        stringResource(R.string.photopicker_videos_empty_state_title)
+                    else -> stringResource(R.string.photopicker_photos_empty_state_title)
+                },
                 stringResource(R.string.photopicker_photos_empty_state_body),
                 Icons.Outlined.Image,
             )

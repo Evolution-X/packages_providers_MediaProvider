@@ -411,6 +411,46 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
+    fun testShowsEmptyStateWhenEmpty_VideoOnlyMimeType() {
+
+        val testDataService = dataService.get() as? TestDataServiceImpl
+        checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+
+        // Force the data service to return no data for all test sources during this test.
+        testDataService.mediaSetSize = 0
+
+        val resources = getTestableContext().getResources()
+
+        testScope.runTest {
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(Intent.EXTRA_MIME_TYPES, arrayListOf("video/*", "video/mpeg"))
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_videos_empty_state_title)))
+                .assertIsDisplayed()
+
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_photos_empty_state_body)))
+                .assertIsDisplayed()
+        }
+    }
+
+    @Test
     fun testShowsBannersInGrid() {
 
         testScope.runTest {
