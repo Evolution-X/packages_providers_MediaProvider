@@ -49,7 +49,7 @@
         <item name="pickerSelectedTabBackgroundColor">#3D8AB4F8</item>
         <item name="pickerSelectedTabTextColor">#8AB4F8</item>
         <item name="pickerTabBackgroundColor">@color/picker_background_color</item>
-        <item name="pickerTextColor">@color/materialColorOnSurfaceVariant</item>
+        <item name="pickerTextColor">?android:attr/textColorSecondary</item>
         <item name="pickerSelectedColor">?android:attr/colorAccent</item>
         <item name="pickerProfileDialogButtonAndIconColor">#669DF6</item>
         <item name="pickerProfileDialogTitleColor">#F1F3F4</item>
@@ -58,11 +58,11 @@
         <!-- TODO(b/195009152): Final banner colors to be updated once received -->
         <item name="pickerBannerBackgroundColor">@color/picker_background_color</item>
         <item name="pickerBannerStrokeColor">#444746</item>
-        <item name="pickerBannerPrimaryTextColor">@color/materialColorOnSurfaceVariant</item>
-        <item name="pickerBannerSecondaryTextColor">@color/materialColorOnSurfaceVariant</item>
+        <item name="pickerBannerPrimaryTextColor">?android:attr/textColorSecondary</item>
+        <item name="pickerBannerSecondaryTextColor">?android:attr/textColorSecondary</item>
         <item name="pickerBannerButtonTextColor">?android:attr/colorAccent</item>
         <item name="categoryDefaultThumbnailColor">?attr/colorOnSurfaceVariant</item>
-        <item name="categoryDefaultThumbnailCircleColor">@color/materialColorSurfaceContainerHigh</item>
+        <item name="categoryDefaultThumbnailCircleColor">?attr/colorSurfaceVariant</item>
     </style>
 
 </resources>
