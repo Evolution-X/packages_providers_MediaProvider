@@ -18,8 +18,10 @@ package com.android.providers.media.search;
 
 import android.annotation.NonNull;
 import android.os.Bundle;
-import android.provider.SearchMediaCallback;
+import android.os.OutcomeReceiver;
+import android.provider.SearchMediaException;
 import android.provider.SearchMediaResult;
+import android.provider.SearchMediaResultPage;
 import android.provider.SearchMediaService;
 
 import java.util.ArrayList;
@@ -29,21 +31,24 @@ public class TestSearchMediaService extends SearchMediaService {
 
     public static final String SHOULD_THROW_ERROR = "should_throw_error";
     public static final String DUMMY_SEARCH_RESULT_SIZE = "dummy_search_result_size";
-    public static final int DEFAULT_ERROR_CODE = -1;
+    public static final int DEFAULT_ERROR_CODE = SearchMediaException.ERROR_UNKNOWN;
     public static final String DEFAULT_ERROR_MESSAGE = "Failed to get search results";
 
     @Override
     public void onSearchMedia(@NonNull String searchText, @NonNull String searchId,
-            @NonNull Bundle searchParams, @NonNull SearchMediaCallback callback) {
+            @NonNull Bundle searchParams, @NonNull OutcomeReceiver<SearchMediaResultPage,
+                    SearchMediaException> outcomeReceiver) {
         boolean shouldThrowError =  searchParams.getBoolean(SHOULD_THROW_ERROR, false);
         if (shouldThrowError) {
-            callback.onSearchResultsFailure(searchId, DEFAULT_ERROR_CODE , DEFAULT_ERROR_MESSAGE,
-                    /* retryable */ false);
+            SearchMediaException searchMediaException = new SearchMediaException(
+                    searchId, DEFAULT_ERROR_MESSAGE, DEFAULT_ERROR_CODE, /* retryable */ false);
+            outcomeReceiver.onError(searchMediaException);
         } else {
-            List<SearchMediaResult> searchMediaResults = getSearchResults(searchParams);
             Bundle extras = new Bundle();
             extras.putBundle(EXTRA_NEXT_PAGE_TOKEN, new Bundle());
-            callback.onSearchResultsSuccess(searchId, searchMediaResults, extras);
+            SearchMediaResultPage searchMediaResultPage = new SearchMediaResultPage(searchId,
+                    getSearchResults(searchParams), extras);
+            outcomeReceiver.onResult(searchMediaResultPage);
         }
     }
 
