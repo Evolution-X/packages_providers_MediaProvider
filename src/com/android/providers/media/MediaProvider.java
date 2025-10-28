@@ -10315,6 +10315,15 @@ public class MediaProvider extends ContentProvider {
         return openFileAndEnforcePathPermissionsHelper(uri, match, mode, signal, opts);
     }
 
+    /**
+     * MediaProvider implementation of {@link ContentProvider openTypedAssetFile}
+     * @param uri the uri of the media file being opened.
+     * @param mimeTypeFilter mime type of the media file being opened.
+     * @param opts additional options from the client. For MediaProvider, if an optional size
+     *             param is specified while trying to open a media file requested as a thumbnail,
+     *             the requested size may or may not be honoured due to resource optimisation
+     *             constraints.
+     */
     @Override
     public AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts)
             throws FileNotFoundException {
@@ -10330,6 +10339,15 @@ public class MediaProvider extends ContentProvider {
         }
     }
 
+    /**
+     * MediaProvider implementation of {@link ContentProvider openTypedAssetFile}
+     * @param uri the uri of the media file being opened.
+     * @param mimeTypeFilter mime type of the media file being opened.
+     * @param opts additional options from the client. For MediaProvider, if an optional size
+     *             param is specified while trying to open a media file requested as a thumbnail,
+     *             the requested size may or may not be honoured due to resource optimisation
+     *             constraints.
+     */
     @Override
     public AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts,
             CancellationSignal signal) throws FileNotFoundException {
