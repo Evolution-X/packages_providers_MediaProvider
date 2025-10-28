@@ -142,6 +142,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
      * Returns the highlight type set by the app
      */
     @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+    @PickImagesHighlightType
     public int getHighlightType() {
         return mHighlightType;
     }
