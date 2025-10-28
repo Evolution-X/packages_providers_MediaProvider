@@ -1027,11 +1027,6 @@ public class FileUtils {
      * @return a normalized path string with ignorable characters removed
      */
     public static String normalizeAndFilterDefaultIgnorableCodepoints(String path) {
-        // Normalization is not enabled.
-        if (!Flags.enablePathSanitization()) {
-            return path;
-        }
-
         // Nothing to normalize.
         if (path == null || path.isEmpty()) {
             return path;
