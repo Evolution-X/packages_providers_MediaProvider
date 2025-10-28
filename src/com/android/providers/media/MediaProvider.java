@@ -998,10 +998,11 @@ public class MediaProvider extends ContentProvider {
                         Log.w(TAG, "Exception in reading DEVICE_DEMO_MODE setting", e);
                     }
 
-                    Log.i(TAG, "isDeviceInDemoMode: " + isDeviceInDemoMode);
+                    Log.v(TAG, "isDeviceInDemoMode: " + isDeviceInDemoMode);
                     // Only allow default system user 0 to update xattrs on /data/media/0 and
                     // only on retail demo devices
-                    if (sUserId == UserHandle.SYSTEM.getIdentifier() && isDeviceInDemoMode) {
+                    if (sUserId == UserHandle.SYSTEM.getIdentifier() && (isDeviceInDemoMode
+                            || Flags.enableXattrRemovalForRemovedUsers())) {
                         mDatabaseBackupAndRecovery.removeRecoveryDataForUserId(
                                 userToBeRemoved.getIdentifier());
                     }
@@ -1961,14 +1962,14 @@ public class MediaProvider extends ContentProvider {
             Log.w(TAG, "Exception in reading DEVICE_DEMO_MODE setting", e);
         }
 
-        Log.i(TAG, "isDeviceInDemoMode: " + isDeviceInDemoMode);
-        // Only allow default system user 0 to update xattrs on /data/media/0 and only when
-        // device is in retail mode
-        if (sUserId == UserHandle.SYSTEM.getIdentifier() && isDeviceInDemoMode) {
+        Log.v(TAG, "isDeviceInDemoMode: " + isDeviceInDemoMode);
+        // Only allow default system user 0 to update xattrs on /data/media/0
+        if (sUserId == UserHandle.SYSTEM.getIdentifier() && (isDeviceInDemoMode
+                || Flags.enableXattrRemovalForRemovedUsers())) {
             List<String> validUsers = mUserManager.getUserHandles(/* excludeDying */ true).stream()
                     .map(userHandle -> String.valueOf(userHandle.getIdentifier())).collect(
                             Collectors.toList());
-            Log.i(TAG, "Active user ids are:" + validUsers);
+            Log.v(TAG, "Active user ids are:" + validUsers);
             mDatabaseBackupAndRecovery.removeRecoveryDataExceptValidUsers(validUsers);
         }
     }
