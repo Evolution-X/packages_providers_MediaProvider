@@ -97,6 +97,7 @@ import com.android.photopicker.core.selection.SelectionStrategy.Companion.determ
 import com.android.photopicker.core.theme.CustomAccentColorScheme
 import com.android.photopicker.core.theme.LocalFixedAccentColors
 import com.android.photopicker.data.model.Media
+import com.android.photopicker.extensions.getOrNull
 import com.android.photopicker.extensions.navigateToPreviewSelection
 import com.android.photopicker.util.HierarchicalFocusCoordinator
 import com.android.photopicker.util.LocalLocalizationHelper
@@ -239,11 +240,15 @@ fun PreviewSelection(
                             IconButton(
                                 modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp),
                                 onClick = {
-                                    val media = selection.get(state.currentPage)
+                                    val media = selection.getOrNull(index = state.currentPage)
                                     media?.let { viewModel.toggleInSelection(it, {}) }
                                 },
                             ) {
-                                if (currentSelection.contains(selection.get(state.currentPage))) {
+                                if (
+                                    currentSelection.contains(
+                                        selection.getOrNull(index = state.currentPage)
+                                    )
+                                ) {
                                     val deselectActionLabel =
                                         stringResource(
                                             R.string.photopicker_deselect_action_description
@@ -324,7 +329,7 @@ fun PreviewSelection(
                     FilledTonalButton(
                         onClick = {
                             if (config.selectionLimit == 1) {
-                                val media = selection.get(state.currentPage)
+                                val media = selection.getOrNull(index = state.currentPage)
                                 media?.let { viewModel.toggleInSelection(it, {}) }
                                 scope.launch {
                                     events.dispatch(
