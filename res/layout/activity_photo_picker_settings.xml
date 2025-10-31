@@ -14,31 +14,25 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/settings_page_scroll_view"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true">
 
-    <LinearLayout
-        android:id="@+id/settings_activity_root"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_activity_root"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:text="@string/picker_settings_description"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:paddingBottom="@dimen/picker_settings_description_padding_bottom"
+        android:paddingTop="@dimen/picker_settings_description_padding_top"
+        android:paddingStart="@dimen/picker_settings_description_padding_start"
+        android:paddingEnd="@dimen/picker_settings_description_padding_end"
+        android:textAppearance="@style/PickerSettingsDescription" />
 
-        <TextView
-            android:text="@string/picker_settings_description"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingBottom="@dimen/picker_settings_description_padding_bottom"
-            android:paddingTop="@dimen/picker_settings_description_padding_top"
-            android:paddingStart="@dimen/picker_settings_description_padding_start"
-            android:paddingEnd="@dimen/picker_settings_description_padding_end"
-            android:textAppearance="@style/PickerSettingsDescription" />
-
-        <FrameLayout
-            android:id="@+id/settings_fragment_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </LinearLayout>
-</androidx.core.widget.NestedScrollView>
+    <FrameLayout
+        android:id="@+id/settings_fragment_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</LinearLayout>
