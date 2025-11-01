@@ -29,6 +29,8 @@
             <item type="string" name="config_default_search_media_service_package" />
 
             <item type="array" name="config_foldersToSkipInDefaultCreation" />
+
+            <item type="string" name="config_default_media_processing_service_package" />
         </policy>
     </overlayable>
 </resources>
