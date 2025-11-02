@@ -46,6 +46,7 @@ import static com.android.providers.media.util.PermissionUtils.checkPermissionAc
 import static com.android.providers.media.util.PermissionUtils.checkPermissionAccessMtp;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionDelegator;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionInstallPackages;
+import static com.android.providers.media.util.PermissionUtils.checkPermissionManageDocuments;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionManageMedia;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionManager;
 import static com.android.providers.media.util.PermissionUtils.checkPermissionReadAudio;
@@ -169,6 +170,7 @@ public class PermissionUtilsTest {
         assertThat(checkPermissionWriteImages(context, pid, uid, packageName, null,
                 /* forDataDelivery */ true)).isFalse();
         assertThat(checkPermissionInstallPackages(context, pid, uid, packageName, null)).isFalse();
+        assertThat(checkPermissionManageDocuments(context, pid, uid)).isFalse();
     }
 
     /**
