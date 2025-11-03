@@ -106,6 +106,7 @@ public final class BackupExecutorTest {
                         Manifest.permission.READ_COMPAT_CHANGE_CONFIG,
                         Manifest.permission.DUMP,
                         Manifest.permission.READ_DEVICE_CONFIG,
+                        Manifest.permission.CREATE_USERS,
                         Manifest.permission.INTERACT_ACROSS_USERS);
 
         mIsolatedContext = new IsolatedContext(context, "modern", /*asFuseThread*/ false);

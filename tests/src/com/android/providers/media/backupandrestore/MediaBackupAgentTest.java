@@ -101,6 +101,7 @@ public class MediaBackupAgentTest {
                 .adoptShellPermissionIdentity(Manifest.permission.LOG_COMPAT_CHANGE,
                         Manifest.permission.READ_COMPAT_CHANGE_CONFIG,
                         Manifest.permission.DUMP,
+                        Manifest.permission.CREATE_USERS,
                         Manifest.permission.READ_DEVICE_CONFIG);
 
         mIsolatedContext = new IsolatedContext(context, "modern", /*asFuseThread*/ false);
@@ -122,6 +123,8 @@ public class MediaBackupAgentTest {
     @After
     public void tearDown() {
         LevelDBManager.delete(mLevelDbPath);
+        InstrumentationRegistry.getInstrumentation()
+                .getUiAutomation().dropShellPermissionIdentity();
     }
 
     @Test
