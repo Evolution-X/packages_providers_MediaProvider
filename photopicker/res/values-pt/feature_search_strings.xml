@@ -30,8 +30,6 @@
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Pesquise no <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Pesquisar com <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Grade de resultados da pesquisa"</string>
-    <!-- no translation found for photopicker_banner_search_result_no_network_connection (1769836145678523602) -->
-    <skip />
-    <!-- no translation found for photopicker_banner_search_result_no_network_title (5432357373862633740) -->
-    <skip />
+    <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"Conecte-se para selecionar fotos e vídeos do app <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"É necessário ter uma conexão de internet"</string>
 </resources>

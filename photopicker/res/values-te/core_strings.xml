@@ -47,10 +47,7 @@
     <string name="photopicker_back_option" msgid="986374743479020214">"వెనుకకు"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"విస్మరించండి"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"మీడియా గ్రిడ్"</string>
-    <!-- no translation found for photopicker_banner_no_network_connection_message (4797953604806666542) -->
-    <skip />
-    <!-- no translation found for photopicker_banner_no_network_connection_title (2353038014035707061) -->
-    <skip />
-    <!-- no translation found for photopicker_offline_banner_go_to_settings_button_label (6642836558571072401) -->
-    <skip />
+    <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"<xliff:g id="APP_NAME">%1$s</xliff:g> నుండి ఫోటోలను, వీడియోలను ఎంచుకోవడానికి Wi-Fi లేదా మొబైల్ డేటాకు కనెక్ట్ చేయండి"</string>
+    <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"ఇంటర్నెట్ కనెక్షన్ అవసరం"</string>
+    <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"సెట్టింగ్‌లకు వెళ్లండి"</string>
 </resources>
