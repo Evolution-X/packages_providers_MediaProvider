@@ -373,23 +373,6 @@ flag {
 }
 
 flag {
-    name: "enable_versioning_for_backup_and_restore"
-    namespace: "mediaprovider"
-    description: "This flag will enable level db versioning for backup and restore feature"
-    bug: "411073246"
-    is_fixed_read_only: true
-}
-
-flag {
-    name: "enable_path_sanitization"
-    is_exported: false
-    namespace: "mediaprovider"
-    description: "This flag enables file path sanitization before regex checks"
-    is_fixed_read_only: true
-    bug: "377888957"
-}
-
-flag {
     name: "enable_trash_and_restore_by_file_path_api"
     namespace: "mediaprovider"
     description: "Enables new APIs for trashing and restoring files/folders by file path"
@@ -496,4 +479,20 @@ flag {
     namespace: "mediaprovider"
     description: "This flag enables cloud settings page implementation in modern photopicker"
     bug: "445045054"
+}
+
+flag {
+    name: "enable_xattr_removal_for_removed_users"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables removal of xattr recovery data for removed users"
+    bug: "424426960"
+}
+
+flag {
+    name: "enable_media_processing_service"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "This flag exposes the API contract for abstract Media Processing Service"
+    bug: "428139451"
 }

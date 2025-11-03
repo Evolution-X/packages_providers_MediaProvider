@@ -23,7 +23,6 @@ import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.LATEST_LEVEL_DB_VERSION;
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.RESTORE_COMPLETED;
 import static com.android.providers.media.backupandrestore.BackupAndRestoreUtils.SHARED_PREFERENCE_NAME;
-import static com.android.providers.media.flags.Flags.enableVersioningForBackupAndRestore;
 
 import android.content.Context;
 import android.provider.MediaStore;
@@ -90,13 +89,13 @@ public class BackupAndRestoreTestUtils {
         sColumnIdToKeyMap.put("40", MediaStore.Files.FileColumns.OWNER_PACKAGE_NAME);
 
         // added with version 2
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 2) {
+        if (LATEST_LEVEL_DB_VERSION >= 2) {
             sColumnIdToKeyMap.put("41", MediaStore.Files.FileColumns.DATE_ADDED);
             sColumnIdToKeyMap.put("42", MediaStore.Files.FileColumns.DATE_MODIFIED);
         }
 
         // added with version 3
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 3) {
+        if (LATEST_LEVEL_DB_VERSION >= 3) {
             sColumnIdToKeyMap.put("43", MediaStore.DownloadColumns.DOWNLOAD_URI);
         }
 
@@ -149,13 +148,13 @@ public class BackupAndRestoreTestUtils {
         sColumnNameToIdMap.put(MediaStore.Files.FileColumns.OWNER_PACKAGE_NAME, "40");
 
         // added with version 2
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 2) {
+        if (LATEST_LEVEL_DB_VERSION >= 2) {
             sColumnNameToIdMap.put(MediaStore.Files.FileColumns.DATE_ADDED, "41");
             sColumnNameToIdMap.put(MediaStore.Files.FileColumns.DATE_MODIFIED, "42");
         }
 
         // added with version 3
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 3) {
+        if (LATEST_LEVEL_DB_VERSION >= 3) {
             sColumnNameToIdMap.put(MediaStore.DownloadColumns.DOWNLOAD_URI, "43");
         }
 
@@ -204,10 +203,6 @@ public class BackupAndRestoreTestUtils {
     }
 
     static boolean isLevelDbAtLatestVersion(LevelDBInstance levelDBInstance) {
-        if (!enableVersioningForBackupAndRestore()) {
-            return true;
-        }
-
         LevelDBResult levelDBResult = levelDBInstance.query(CURRENT_LEVEL_DB_VERSION_KEY);
         String value = levelDBResult.getValue();
         long currentDbVersion;

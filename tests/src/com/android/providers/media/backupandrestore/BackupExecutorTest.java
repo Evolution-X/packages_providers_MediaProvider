@@ -78,8 +78,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
-@EnableFlags({com.android.providers.media.flags.Flags.FLAG_ENABLE_BACKUP_AND_RESTORE,
-        com.android.providers.media.flags.Flags.FLAG_ENABLE_VERSIONING_FOR_BACKUP_AND_RESTORE})
+@EnableFlags({com.android.providers.media.flags.Flags.FLAG_ENABLE_BACKUP_AND_RESTORE})
 public final class BackupExecutorTest {
 
     @Rule
@@ -223,7 +222,6 @@ public final class BackupExecutorTest {
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.BAKLAVA)
     public void testLevelDbRecreatedOnVersionChange() throws Exception {
         assumeTrue(isBackupAndRestoreSupported(mIsolatedContext));
-        assumeTrue(Flags.enableVersioningForBackupAndRestore());
 
         try {
             // Add all files in Downloads directory

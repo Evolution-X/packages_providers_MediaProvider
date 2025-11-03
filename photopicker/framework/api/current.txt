@@ -27,6 +27,7 @@ package android.widget.photopicker {
 
   public static final class EmbeddedPhotoPickerFeatureInfo.Builder {
     ctor public EmbeddedPhotoPickerFeatureInfo.Builder();
+    ctor @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") public EmbeddedPhotoPickerFeatureInfo.Builder(@NonNull android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo build();
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setAccentColor(@ColorLong long);
     method @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightAlbumId(@NonNull String);

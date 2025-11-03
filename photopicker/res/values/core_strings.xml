@@ -117,4 +117,15 @@
   <!-- Content description for Photos media grid-->
   <string name="photopicker_media_grid_content_description" translation_description="Text for describing the media grid">Media grid</string>
 
+  <!-- Description for offline banner in Photos grid notifying user to connect to network to select cloud photos and videos [CHAR LIMIT=120] -->
+  <string name="photopicker_banner_no_network_connection_message"
+      translation_description="Banner message informing the user there is no internet connection.">Connect to Wi-Fi or mobile data to select photos and videos from <xliff:g id="app_name" example="Cloud media provider">%1$s</xliff:g> </string>
+
+  <!-- Title for the offline banner notifying user network connecton required to select cloud photos and videos  [CHAR LIMIT=50] -->
+  <string name="photopicker_banner_no_network_connection_title"
+	  translation_description="Banner message informing the user there is no internet connection.">Internet connection required</string>
+
+  <!-- Label for the button in the offline banner, which navigates the user to the device's network settings. [CHAR LIMIT=50] -->
+  <string name="photopicker_offline_banner_go_to_settings_button_label"
+        translation_description="Button text for the banner shown in the photo grid page when offline to take to Settings page.">Go to Settings</string>
 </resources>

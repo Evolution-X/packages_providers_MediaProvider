@@ -142,6 +142,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
      * Returns the highlight type set by the app
      */
     @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+    @PickImagesHighlightType
     public int getHighlightType() {
         return mHighlightType;
     }
@@ -187,6 +188,31 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private boolean mLaunchedPickerInExpandedState = DEFAULT_EXPANDED_STATE;
 
         public Builder() {}
+
+        /**
+         *
+         * @param featureInfo {@link EmbeddedPhotoPickerFeatureInfo} object whose properties
+         *                     need to be copied to create a new object
+         */
+        @FlaggedApi(Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API)
+        public Builder(@NonNull EmbeddedPhotoPickerFeatureInfo featureInfo) {
+            requireNonNull(
+                    featureInfo,
+                    "EmbeddedPhotoPickerFeatureInfo object cannot be null in constructor call"
+            );
+
+            // Make a deep copy of all the properties
+            this.mMimeTypes = new ArrayList<>(featureInfo.getMimeTypes());
+            this.mAccentColor = featureInfo.getAccentColor();
+            this.mOrderedSelection = featureInfo.isOrderedSelection();
+            this.mMaxSelectionLimit = featureInfo.getMaxSelectionLimit();
+            this.mPreSelectedUris = new ArrayList<>(featureInfo.getPreSelectedUris());
+            this.mThemeNightMode = featureInfo.getThemeNightMode();
+            this.mHighlightSearchMediaTextQuery = featureInfo.getHighlightSearchMediaTextQuery();
+            this.mHighlightAlbumId = featureInfo.getHighlightAlbumId();
+            this.mHighlightType = featureInfo.getHighlightType();
+            this.mLaunchedPickerInExpandedState = featureInfo.isPickerLaunchedInExpandedState();
+        }
 
         /**
          * Sets the mime type to filter media items on.

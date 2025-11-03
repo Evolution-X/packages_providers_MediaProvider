@@ -699,6 +699,63 @@ class GridDragSelectTest {
         composeTestRule.waitForIdle() // Wait for coroutines
         verify(mockHapticFeedback, times(1)).performHapticFeedback(HapticFeedbackType.LongPress)
     }
+
+    @Test
+    fun testAutoScrollJobIsCancelledOnDragEnd() = runTest {
+        val selection =
+            SelectionImpl<Media>(
+                scope = backgroundScope,
+                configuration =
+                    provideTestConfigurationFlow(
+                        scope = backgroundScope,
+                        defaultConfiguration = MULTI_SELECT_CONFIG,
+                    ),
+                preSelectedMedia = MutableStateFlow(emptyList()),
+            )
+
+        lateinit var state: MediaGridState
+
+        composeTestRule.setContent {
+            state = rememberMediaGridState(selection = selection)
+            CompositionLocalProvider(LocalPhotopickerConfiguration provides MULTI_SELECT_CONFIG) {
+                verticalGrid(state = state)
+            }
+        }
+
+        val initialVisibleIndex = state.gridState.firstVisibleItemIndex
+
+        val grid = composeTestRule.onNode(hasTestTag(MEDIA_GRID_TEST_TAG))
+        with(grid) {
+            assertIsDisplayed()
+            performTouchInput {
+                down(center)
+                // Wait for the long press to register to enable drag-to-select
+                advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                // Drag to the bottom to trigger auto-scroll
+                dragInIncrements(totalOffset = getBoundsInRoot().bottom.toPx(), vertical = true)
+                // Allow time for auto-scroll to take effect
+                advanceEventTime(500)
+                up() // End the drag gesture
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        assertWithMessage("Expected grid to have scrolled during drag")
+            .that(state.gridState.firstVisibleItemIndex)
+            .isGreaterThan(initialVisibleIndex)
+
+        val scrollPositionAfterDrag = state.gridState.firstVisibleItemIndex
+
+        // Manually set a scroll speed. If the job was not cancelled, this would cause scrolling.
+        state.autoScrollSpeed.value = 100f
+        advanceTimeBy(1000) // Advance time to see if scrolling continues
+        composeTestRule.waitForIdle()
+
+        // Verify that the scroll position has not changed, proving the auto-scroll loop was stopped.
+        assertWithMessage("Expected scrolling to stop after drag ended")
+            .that(state.gridState.firstVisibleItemIndex)
+            .isEqualTo(scrollPositionAfterDrag)
+    }
 }
 
 /**

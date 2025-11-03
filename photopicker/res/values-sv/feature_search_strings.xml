@@ -27,7 +27,11 @@
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"Förslag"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"Sökning inaktiverad."</string>
     <string name="photopicker_search_result_empty_state_message" msgid="2834353361038395730">"Testa att söka efter liknande ord.\n\nEndast objekt som har säkerhetskopierats visas i sökresultaten."</string>
-    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Sök efter <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"Sök i <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"Sök med <xliff:g id="PROVIDER_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Rutnät med sökresultat"</string>
+    <!-- no translation found for photopicker_banner_search_result_no_network_connection (1769836145678523602) -->
+    <skip />
+    <!-- no translation found for photopicker_banner_search_result_no_network_title (5432357373862633740) -->
+    <skip />
 </resources>

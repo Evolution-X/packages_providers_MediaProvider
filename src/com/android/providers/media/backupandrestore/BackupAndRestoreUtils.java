@@ -19,7 +19,6 @@ package com.android.providers.media.backupandrestore;
 import static com.android.providers.media.backupandrestore.BackupExecutor.getBackupFilePath;
 import static com.android.providers.media.backupandrestore.RestoreExecutor.getRestoredFilePath;
 import static com.android.providers.media.flags.Flags.enableBackupAndRestore;
-import static com.android.providers.media.flags.Flags.enableVersioningForBackupAndRestore;
 
 import android.annotation.NonNull;
 import android.content.Context;
@@ -148,12 +147,12 @@ public final class BackupAndRestoreUtils {
         BACKUP_COLUMNS.add(MediaStore.Files.FileColumns.OWNER_PACKAGE_NAME);
 
         // add fields for subsequent versions here
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 2) {
+        if (LATEST_LEVEL_DB_VERSION >= 2) {
             BACKUP_COLUMNS.add(MediaStore.Files.FileColumns.DATE_ADDED);
             BACKUP_COLUMNS.add(MediaStore.Files.FileColumns.DATE_MODIFIED);
         }
 
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 3) {
+        if (LATEST_LEVEL_DB_VERSION >= 3) {
             BACKUP_COLUMNS.add(MediaStore.DownloadColumns.DOWNLOAD_URI);
         }
 
@@ -212,12 +211,12 @@ public final class BackupAndRestoreUtils {
         sIdToColumnBiMap.put("40", MediaStore.Files.FileColumns.OWNER_PACKAGE_NAME);
 
         // add fields for subsequent versions here
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 2) {
+        if (LATEST_LEVEL_DB_VERSION >= 2) {
             sIdToColumnBiMap.put("41", MediaStore.Files.FileColumns.DATE_ADDED);
             sIdToColumnBiMap.put("42", MediaStore.Files.FileColumns.DATE_MODIFIED);
         }
 
-        if (enableVersioningForBackupAndRestore() && LATEST_LEVEL_DB_VERSION >= 3) {
+        if (LATEST_LEVEL_DB_VERSION >= 3) {
             sIdToColumnBiMap.put("43", MediaStore.DownloadColumns.DOWNLOAD_URI);
         }
 

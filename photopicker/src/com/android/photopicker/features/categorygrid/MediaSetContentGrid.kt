@@ -178,7 +178,9 @@ private fun MediasetContentGrid(
                 val localConfig = LocalConfiguration.current
                 val emptyStatePadding =
                     remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
-                val (title, body, icon) = getEmptyStateContentForMediaset()
+                val isVideoOnlyMimeType =
+                    LocalPhotopickerConfiguration.current.hasOnlyVideoMimeTypes()
+                val (title, body, icon) = getEmptyStateContentForMediaset(isVideoOnlyMimeType)
                 EmptyState(
                     modifier =
                         if (SdkLevel.isAtLeastU() && isEmbedded && host != null) {
@@ -295,9 +297,14 @@ private fun MediasetContentGrid(
  * @return a [Triple] that contains the [Title, Body, Icon] for the empty state.
  */
 @Composable
-private fun getEmptyStateContentForMediaset(): Triple<String, String, ImageVector> {
+private fun getEmptyStateContentForMediaset(
+    isVideoOnlyMime: Boolean
+): Triple<String, String, ImageVector> {
     return Triple(
-        stringResource(R.string.photopicker_photos_empty_state_title),
+        when {
+            isVideoOnlyMime -> stringResource(R.string.photopicker_videos_empty_state_title)
+            else -> stringResource(R.string.photopicker_photos_empty_state_title)
+        },
         stringResource(R.string.photopicker_photos_empty_state_body),
         Icons.Outlined.Image,
     )

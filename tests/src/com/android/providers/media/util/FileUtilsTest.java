@@ -76,7 +76,6 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.SystemProperties;
 import android.os.UserHandle;
-import android.platform.test.annotations.EnableFlags;
 import android.platform.test.flag.junit.SetFlagsRule;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Audio.AudioColumns;
@@ -86,8 +85,6 @@ import android.text.TextUtils;
 import androidx.test.InstrumentationRegistry;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.AndroidJUnit4;
-
-import com.android.providers.media.flags.Flags;
 
 import com.google.common.collect.Range;
 
@@ -1378,7 +1375,6 @@ public class FileUtilsTest {
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-    @EnableFlags(Flags.FLAG_ENABLE_PATH_SANITIZATION)
     public void testNormalizeAndFilterDefaultIgnorableCodepoints() {
         String pathWithZws = "/storage/emulated/0/An\u200Bdroid/data/com.google.example/files";
         String pathWithZwsFiltered = "/storage/emulated/0/Android/data/com.google.example/files";
