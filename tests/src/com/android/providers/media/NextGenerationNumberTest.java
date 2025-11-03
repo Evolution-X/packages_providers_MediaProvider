@@ -162,7 +162,8 @@ public class NextGenerationNumberTest {
 
             // clear media provider. This will remove entries in db and also trigger recovery.
             // New entries will be created in files table
-            mUiDevice.executeShellCommand("pm clear " + getMediaProviderPackageName());
+            mUiDevice.executeShellCommand("pm clear --user " + mContext.getUserId() + " "
+                    + getMediaProviderPackageName());
             SystemClock.sleep(20_000); // wait for media provider to come up
 
             for (int i = 0; i < 3; i++) {
