@@ -19,11 +19,14 @@ package android.provider;
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.annotation.SdkConstant;
 import android.annotation.SystemApi;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.OutcomeReceiver;
+import android.os.RemoteException;
 import android.util.Log;
 
 import com.android.providers.media.flags.Flags;
@@ -128,6 +131,12 @@ public abstract class SearchMediaService extends Service {
      */
     public static final String EXTRA_NEXT_PAGE_TOKEN = "android.provider.extra.NEXT_PAGE_TOKEN";
 
+    /**
+     * The {@link Intent} that must be declared as handled by the service.
+     * To be supported, the service must also require the
+     * {@link SearchMediaService#BIND_SEARCH_MEDIA_SERVICE_PERMISSION}.
+     */
+    @SdkConstant(SdkConstant.SdkConstantType.SERVICE_ACTION)
     public static final String SERVICE_INTERFACE = "android.provider.SearchMediaService";
 
     @Nullable
@@ -147,7 +156,7 @@ public abstract class SearchMediaService extends Service {
     }
 
     /**
-     * Gets media results for a search based on the given text.
+     * Called when a media search is requested based on the given text.
      *
      * <p>
      * The {@code searchId} must be unique for every call to properly identify the response.
@@ -155,7 +164,8 @@ public abstract class SearchMediaService extends Service {
      *
      * <p>
      * Search results or error message are returned asynchronously via the provided
-     * {@code callback}.
+     * {@code callback}. The provided {@code callback} may be invoked on background thread and
+     * will be received on the calling app's thread that requested for search results.
      * </p>
      *
      * <p>
@@ -174,16 +184,17 @@ public abstract class SearchMediaService extends Service {
      * </ul>
      * </p>
      *
-     * @param searchText   the text string to search for within media metadata
-     * @param searchId     a unique ID to identify the search request
-     * @param searchParams a {@code Bundle} containing additional search parameters
-     * @param callback     the {@code ISearchMediaCallback} implementation
+     * @param searchText         the text string to search for within media metadata
+     * @param searchId           a unique ID to identify the search request
+     * @param searchParams       a {@code Bundle} containing additional search parameters
+     * @param outcomeReceiver    the {@code OutcomeReceiver} to send search results or errors
      */
     public abstract void onSearchMedia(@NonNull String searchText, @NonNull String searchId,
-            @NonNull Bundle searchParams, @NonNull SearchMediaCallback callback);
+            @NonNull Bundle searchParams, @NonNull OutcomeReceiver<SearchMediaResultPage,
+                    SearchMediaException> outcomeReceiver);
 
     /**
-     * Cancels on going search for given searchId
+     * Called when a request is made to cancel an ongoing search.
      *
      * <p>
      * The {@code searchId} must be unique for every call to properly identify the response.
@@ -198,8 +209,29 @@ public abstract class SearchMediaService extends Service {
         @Override
         public void searchMedia(String searchText, String searchId, Bundle searchParams,
                 ISearchMediaCallback callback) {
-            onSearchMedia(searchText, searchId, searchParams,
-                    new SearchMediaCallbackImpl(callback));
+            OutcomeReceiver<SearchMediaResultPage, SearchMediaException> receiver = new
+                    OutcomeReceiver<SearchMediaResultPage, SearchMediaException>() {
+                @Override
+                public void onResult(@NonNull SearchMediaResultPage result) {
+                    try {
+                        callback.onSearchResultsSuccess(result);
+                    } catch (RemoteException ex) {
+                        Log.e(TAG, "Unable to send back search results for searchId "
+                                + searchId, ex);
+                    }
+                }
+
+                @Override
+                public void onError(@NonNull SearchMediaException searchMediaException) {
+                    try {
+                        callback.onSearchResultsFailure(searchMediaException);
+                    } catch (RemoteException ex) {
+                        Log.e(TAG, "Unable to send back search error for searchId "
+                                + searchId, ex);
+                    }
+                }
+            };
+            onSearchMedia(searchText, searchId, searchParams, receiver);
         }
 
         @Override
@@ -207,4 +239,5 @@ public abstract class SearchMediaService extends Service {
             onCancelSearch(searchId);
         }
     };
+
 }

@@ -19,13 +19,16 @@ package android.provider;
 import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
+import android.database.CursorWindow;
 import android.os.Bundle;
+import android.os.OutcomeReceiver;
 
 import com.android.providers.media.flags.Flags;
 
-import java.util.List;
-
 /**
+ * <p> A callback interface passed to {@link SearchMediaService} functions which will be
+ * used to return results for the method
+ * {@link SearchMediaService#onSearchMedia(String, String, Bundle, OutcomeReceiver)} </p>
  * @hide
  */
 @SystemApi
@@ -35,33 +38,36 @@ public interface SearchMediaCallback {
      * Called when the search service successfully retrieves results for a given search request.
      *
      * <p>
-     * The results will be sorted by relevance score.
+     * The results will be sorted by relevance score by default if no sort order is provided.
+     * </p>
+     * <p>
+     * The returned {@link SearchMediaResultPage} object contains the original search ID,
+     * the list of {@link CursorWindow} containing search results, and an extras Bundle that
+     * may contain a {@link SearchMediaService#EXTRA_NEXT_PAGE_TOKEN}.
      * </p>
      *
      * <p>
-     * <b>Expected keys for the {@code extras} Bundle:</b>
+     * Each row in each {@link CursorWindow} represents a single media result.
+     * To access the data, iterate through the windows and rows and read the
+     * data using the column indices defined in {@link SearchMediaResultPage}:
      * <ul>
-     * <li><b>{@code EXTRA_NEXT_PAGE_TOKEN}</b> ({@code String}): A token required for
-     * fetching the next page of search results. The caller should pass this token
-     * as-is in the {@code searchParams} when querying for the next page.</li>
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_ID}: (long) The media ID.
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_DATE_TAKEN}: (long) The date taken.
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_SCORE}: (double) The associated score.
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_MEDIA_TYPE}: (long) The media type.
      * </ul>
      * </p>
      *
-     * @param searchId        the unique ID that identifies the search request
-     * @param searchResults   a list of results for the given search text
-     * @param extras          a {@code Bundle} containing additional information about the results
+     * @param searchMediaResultPage a search page of results
      */
-    void onSearchResultsSuccess(@NonNull String searchId,
-            @NonNull List<SearchMediaResult> searchResults, @NonNull Bundle extras);
+    void onSearchResultsSuccess(@NonNull SearchMediaResultPage searchMediaResultPage);
 
     /**
      * Called when the search service fails to retrieve results for a given search request.
      *
-     * @param searchId        the unique ID that identifies the search request
-     * @param errorCode       the error code for the failure
-     * @param errorMessage    a human-readable message describing the error
-     * @param retryable       a boolean indicating whether the caller should retry the query
+     * @param searchMediaException An exception object containing the
+     * error code, a human-readable message, and whether
+     * the query is retryable.
      */
-    void onSearchResultsFailure(@NonNull String searchId, int errorCode,
-            @NonNull  String errorMessage, boolean retryable);
+    void onSearchResultsFailure(@NonNull SearchMediaException searchMediaException);
 }

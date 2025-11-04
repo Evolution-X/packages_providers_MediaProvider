@@ -16,40 +16,52 @@
 
 package android.provider;
 
+import android.provider.SearchMediaResultPage;
+import android.provider.SearchMediaException;
+
 /**
 * @hide
 */
 oneway interface ISearchMediaCallback {
 
     /**
-     * Called when media search results is available.
-     * Search results will sorted by relevance score by default if no sort order is provided
-     * while querying.
+     * Called when the search service successfully retrieves results for a given search request.
      *
-     * @param searchId SearchId for which results are generated
-     * @param results An array of CursorWindow containing searchResults.
-     * Each row of CursorWindow would represent a single media items with following coloums.
-     * id (index 0):         Long, id of the media item.
-     * dateTaken (index 1):  Long, timestamp at which media item is created
-     * score (index 2):      Double, the relevance score of the document
-     * mediaType (index 3):  Long, mediaType of the file
-     * @param extras A bundle containing additional information regarding search results.
-     * Expected keys -
-     * EXTRA_NEXT_PAGE_TOKEN: String, required for fetching next page of search results. Caller
-     * should pass this string in the searchParams while querying for next page. If this key is
-     * absent, it implies there are no more search results.
+     * <p>
+     * The results will be sorted by relevance score by default if no sort order is provided.
+     * </p>
+     *
+     * <p>
+     * The returned {@link SearchMediaResultPage} object contains the original search ID,
+     * the list of {@link CursorWindow} containing search results, and an extras Bundle that
+     * may contain a {@link SearchMediaService#EXTRA_NEXT_PAGE_TOKEN}.
+     * </p>
+     *
+     * <p>
+     * Each row in each {@link CursorWindow} represents a single media result.
+     * To access the data, iterate through the windows and rows and read the
+     * data using the column indices defined in {@link SearchMediaResultPage}:
+     * <ul>
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_ID}: (long) The media ID.
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_DATE_TAKEN}: (long) The date taken.
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_SCORE}: (double) The associated score.
+     * <li>{@link SearchMediaResult#INDEX_COLUMN_MEDIA_TYPE}: (long) The media type.
+     * </ul>
+     * </p>
+     *
+     * @param searchMediaResultPage a search page of results
      */
-    void onSearchResultsSuccess(in String searchId, in CursorWindow[] results, in Bundle extras);
+    void onSearchResultsSuccess(in SearchMediaResultPage searchMediaResultPage);
 
     /**
-     * Called if an error occurs during the media search operation.
+     * Called when the search service fails to retrieve results for a given search request.
      *
-     * @param searchId SearchId for which results are generated
-     * @param errorCode An integer representing the type of error (e.g.,
-     * permission denied, invalid query).
-     * @param errorMessage A human-readable string describing the error.
-     * @param retryable Indicates whether the calling app should retry querying for results
+     * <p>
+     * The returned {@link SearchMediaException} object contains the original search ID,
+     * error code, a human-readable message, and whether the query is retryable.
+     * </p>
+     * @param searchMediaException the search error
      */
-    void onSearchResultsFailure(in String searchId, int errorCode, String errorMessage, boolean retryable);
+    void onSearchResultsFailure(in SearchMediaException searchMediaException);
 
 }

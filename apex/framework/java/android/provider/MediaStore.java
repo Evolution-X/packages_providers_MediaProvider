@@ -211,6 +211,14 @@ public final class MediaStore {
     public static final String GET_GENERATION_CALL = "get_generation";
 
     /** @hide */
+    public static final String GET_PACKAGE_FOR_SEARCH_MEDIA_SERVICE =
+            "get_package_for_search_media_service";
+
+    /** @hide */
+    public static final String PACKAGE_FOR_SEARCH_MEDIA_SERVICE =
+            "package_for_search_media_service";
+
+    /** @hide */
     public static final String START_LEGACY_MIGRATION_CALL = "start_legacy_migration";
     /** @hide */
     public static final String FINISH_LEGACY_MIGRATION_CALL = "finish_legacy_migration";
@@ -2085,6 +2093,16 @@ public final class MediaStore {
         extras.putParcelable(EXTRA_CLIP_DATA, clipData);
         extras.putBoolean(MediaColumns.IS_FAVORITE, areFavorites);
         resolver.call(AUTHORITY, MARK_MEDIA_AS_FAVORITE, null, extras);
+    }
+
+    /**
+     * Gets the package name of the Search Media Service that client apps use to connect.
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
+    @NonNull
+    public static String getPackageForSearchMediaService(@NonNull ContentResolver resolver) {
+        Bundle result = resolver.call(AUTHORITY, GET_PACKAGE_FOR_SEARCH_MEDIA_SERVICE, null, null);
+        return result.getString(PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
     }
 
 

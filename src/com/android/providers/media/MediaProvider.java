@@ -7388,6 +7388,9 @@ public class MediaProvider extends ContentProvider {
             case MediaStore.MARK_MEDIA_AS_FAVORITE: {
                 return markMediaAsFavorite(extras);
             }
+            case MediaStore.GET_PACKAGE_FOR_SEARCH_MEDIA_SERVICE: {
+                return getPackageForSearchMediaService();
+            }
             case MediaStore.CREATE_CANCELLATION_SIGNAL_CALL: {
                 return getResultForCreateCancellationSignal();
             }
@@ -8185,6 +8188,27 @@ public class MediaProvider extends ContentProvider {
                 markMediaAsFavoriteExecutionTime);
 
         return null;
+    }
+
+    @NonNull
+    private Bundle getPackageForSearchMediaService() {
+        if (!Flags.enableMediaSearch()) {
+            Log.d(TAG, "Enable media search flag not enabled");
+            return Bundle.EMPTY;
+        }
+
+        try {
+            Resources resources = getContext().getResources();
+            String packageName =
+                    resources.getString(R.string.config_default_search_media_service_package);
+            Bundle result = new Bundle();
+            result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, packageName);
+            return result;
+        } catch (Exception e) {
+            Log.e(TAG,
+                    "Could not get the default package name for search media service package", e);
+            return Bundle.EMPTY;
+        }
     }
 
     @NotNull
