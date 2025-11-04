@@ -98,6 +98,7 @@ data class PhotopickerConfiguration(
     val highlightQueryResultsParams: HighlightQueryResultsParams =
         DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS,
     val embeddedPickerLaunchedInExpandedState: Boolean = false,
+    val locationMetadataAccessRequested: Boolean = false,
     val deviceIsDebuggable: Boolean = buildIsDebuggable,
     val flags: PhotopickerFlags = PhotopickerFlags(),
     val sessionId: Int,

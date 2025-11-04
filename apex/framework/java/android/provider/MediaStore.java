@@ -1367,6 +1367,30 @@ public final class MediaStore {
             "android.provider.media.PICK_IMAGES_HIGHLIGHT_ALBUM_DOWNLOADS";
 
     /**
+     * The name of an optional intent-extra used to allow apps to request access to the location
+     * metadata of the media items selected by the user and returned by
+     * {@link MediaStore#ACTION_PICK_IMAGES}.
+     * The extra can only be specified in {@link MediaStore#ACTION_PICK_IMAGES}.
+     * <p>
+     * This is a boolean intent extra which when set to {@code true} informs the photopicker that
+     * the app is requesting location information for the media items selected by the user.
+     * The default value for this extra will always be {@code false} i.e. not sharing the
+     * location metadata of the selected media items with the calling app.
+     *
+     * <p>
+     * Using this intent extra does not guarantee that the calling app will get the location
+     * information. The media items selected by the user may not have any location metadata
+     * associated with them at all. The photopicker also reserves the right to inform the user of
+     * this request and the user's choice to share the location information will be final.
+     * The calling app will not be able to get the requested data in both these cases.
+     * However, if location access is granted, calling apps can then extract this metadata when the
+     * selected media files are opened using the returned picker URIs.
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    public static final String EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS =
+            "android.provider.extra.PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS";
+
+    /**
      * Specify that the caller wants to receive the original media format without transcoding.
      *
      * <b>Caution: using this flag can cause app
