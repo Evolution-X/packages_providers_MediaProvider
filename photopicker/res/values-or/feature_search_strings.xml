@@ -30,8 +30,6 @@
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> ସର୍ଚ୍ଚ କରନ୍ତୁ"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>ରେ ସର୍ଚ୍ଚ କରନ୍ତୁ"</string>
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"ସର୍ଚ୍ଚ ଫଳାଫଳ ଗ୍ରିଡ"</string>
-    <!-- no translation found for photopicker_banner_search_result_no_network_connection (1769836145678523602) -->
-    <skip />
-    <!-- no translation found for photopicker_banner_search_result_no_network_title (5432357373862633740) -->
-    <skip />
+    <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g>ରୁ ଆପଣଙ୍କ ଫଟୋ ଏବଂ ଭିଡିଓଗୁଡ଼ିକୁ ଚୟନ କରିବା ପାଇଁ କନେକ୍ଟ କରନ୍ତୁ"</string>
+    <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"ଇଣ୍ଟର୍ନେଟ କନେକ୍ସନ ଆବଶ୍ୟକ"</string>
 </resources>
