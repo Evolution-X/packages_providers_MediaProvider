@@ -22,6 +22,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.pm.UserProperties
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Parcel
 import android.os.UserHandle
@@ -48,6 +49,7 @@ import com.android.photopicker.core.events.Telemetry
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureToken.PHOTO_GRID
+import com.android.photopicker.core.network.NetworkMonitor
 import com.android.photopicker.core.selection.SelectionImpl
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.TestDataServiceImpl
@@ -87,6 +89,7 @@ class PhotoGridViewModelTest {
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
     @Mock lateinit var mockContentResolver: ContentResolver
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     init {
         val parcel1 = Parcel.obtain()
@@ -135,6 +138,7 @@ class PhotoGridViewModelTest {
         val resources = InstrumentationRegistry.getInstrumentation().getContext().getResources()
 
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
         whenever(mockContext.packageManager) { mockPackageManager }
         whenever(mockContext.packageName) { "" }
         whenever(mockContext.contentResolver) { mockContentResolver }
@@ -217,6 +221,8 @@ class PhotoGridViewModelTest {
                     USER_HANDLE_PRIMARY,
                 )
 
+            val networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
             val bannerManager =
                 BannerManagerImpl(
                     scope = this.backgroundScope,
@@ -226,6 +232,7 @@ class PhotoGridViewModelTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -328,6 +335,7 @@ class PhotoGridViewModelTest {
                     StandardTestDispatcher(this.testScheduler),
                     USER_HANDLE_PRIMARY,
                 )
+            val networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -338,6 +346,7 @@ class PhotoGridViewModelTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -418,6 +427,7 @@ class PhotoGridViewModelTest {
                 )
 
             val databaseManager = DatabaseManagerTestImpl()
+            val networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -428,6 +438,7 @@ class PhotoGridViewModelTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 

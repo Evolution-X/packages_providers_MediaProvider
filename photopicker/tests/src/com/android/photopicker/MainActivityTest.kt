@@ -24,6 +24,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.UserProperties
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Process
 import android.os.UserHandle
@@ -116,6 +117,7 @@ class MainActivityTest {
     @Inject lateinit var events: Lazy<Events>
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     @BindValue @ApplicationOwned val contentResolver: ContentResolver = MockContentResolver()
 
@@ -125,6 +127,7 @@ class MainActivityTest {
         hiltRule.inject()
         // Stubs for UserMonitor
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
         val resources = InstrumentationRegistry.getInstrumentation().getContext().getResources()
 
         if (SdkLevel.isAtLeastV()) {

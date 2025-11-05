@@ -22,9 +22,17 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.UserManager
+import android.platform.test.annotations.DisableFlags
+import android.platform.test.annotations.EnableFlags
+import android.platform.test.flag.junit.CheckFlagsRule
+import android.platform.test.flag.junit.DeviceFlagsValueProvider
+import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import androidx.activity.compose.setContent
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -70,8 +78,10 @@ import com.android.photopicker.features.PhotopickerFeatureBaseTest
 import com.android.photopicker.features.overflowmenu.OverflowMenuFeature
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
+import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
+import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Lazy
 import dagger.Module
@@ -85,6 +95,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -92,6 +103,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mock
 import org.mockito.Mockito.anyInt
 import org.mockito.MockitoAnnotations
@@ -110,7 +122,10 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule(activityClass = HiltTestActivity::class.java)
-    @get:Rule(order = 2) val glideRule = GlideTestRule()
+    @get:Rule(order = 2) var setFlagsRule = SetFlagsRule()
+    @get:Rule(order = 3)
+    val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
+    @get:Rule(order = 4) val glideRule = GlideTestRule()
 
     /* Setup dependencies for the UninstallModules for the test class. */
     @Module @InstallIn(SingletonComponent::class) class TestModule : PhotopickerTestModule()
@@ -141,6 +156,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var deviceConfig: DeviceConfigProxy
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     private val localProvider =
         Provider(
@@ -192,8 +208,8 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             )
         // Stub for MockContentResolver constructor
         whenever(mockContext.getApplicationInfo()) { getTestableContext().getApplicationInfo() }
-
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
     }
 
     @Test
@@ -405,6 +421,12 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             ) {
                 null
             }
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
 
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
@@ -437,11 +459,11 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                 )
             }
             bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+
             composeTestRule.waitForIdle()
             advanceTimeBy(500)
             composeTestRule.waitForIdle()
             advanceTimeBy(500)
-            composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
         }
@@ -476,6 +498,12 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     uid = 12345,
                 )
             }
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
 
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
@@ -500,6 +528,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     "abc@xyz.com",
                 )
 
+            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -512,7 +541,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             advanceTimeBy(500)
             composeTestRule.waitForIdle()
             advanceTimeBy(500)
-            composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsNotDisplayed()
         }
@@ -535,6 +563,13 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     uid = 12345,
                 )
             }
+
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
 
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
@@ -609,6 +644,13 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                 )
             }
 
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
             testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
@@ -664,6 +706,13 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     uid = 12345,
                 )
             }
+
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
 
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
@@ -724,6 +773,13 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                 )
             }
 
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+
             val testDataService = dataService.get() as? TestDataServiceImpl
             checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
             testDataService.allowedProviders = listOf(cloudProvider)
@@ -747,5 +803,126 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkUnavailable_whenFlagEnabled_bannerIsShown() =
+        testScope.runTest {
+            // No network available
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { null }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(R.string.photopicker_banner_no_network_connection_title)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkAvailable_whenFlagEnabled_bannerNotShown() =
+        testScope.runTest {
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            // network available
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(R.string.photopicker_banner_no_network_connection_title)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkUnavailable_whenFlagEnabledAndNoCloudProvider_offlineBannerNotDisplayed() =
+        testScope.runTest {
+            // No network available
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { null }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(emptyList())
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(R.string.photopicker_banner_no_network_connection_title)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
+        }
+
+    @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkUnavailable_whenFlagDisabled_bannerNotDisplayed() =
+        testScope.runTest {
+            // No network available
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { null }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(R.string.photopicker_banner_no_network_connection_title)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
         }
 }
