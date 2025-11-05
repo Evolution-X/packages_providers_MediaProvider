@@ -16,7 +16,6 @@
 
 package com.android.photopicker.features.photogrid
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -63,8 +62,8 @@ import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.R
 import com.android.photopicker.core.StateSelector
 import com.android.photopicker.core.animations.standardDecelerate
-import com.android.photopicker.core.banners.Banner
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.components.AnimatedBanner
 import com.android.photopicker.core.components.EmptyState
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.components.getCellsPerRow
@@ -344,7 +343,18 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     dragSelectIndexOffset = 2,
                     bannerContent = {
                         hideWhenState(selector = bannerContentSelector) {
-                            AnimatedBannerWrapper(currentBanner)
+                            AnimatedBanner(
+                                currentBanner,
+                                modifier = Modifier.padding(MEASUREMENT_BANNER_PADDING),
+                                onDismiss = { banner ->
+                                    // Coerce the type back to [BannerDefinitions]
+                                    // so that it can be dismissed.
+                                    val declaration = banner.declaration
+                                    if (declaration is BannerDefinitions) {
+                                        viewModel.markBannerAsDismissed(declaration)
+                                    }
+                                },
+                            )
                         }
                     },
                     highlightMediaContent = {
@@ -402,36 +412,6 @@ fun BoxScope.PhotoGridDateScrubber(
                 override val gridState = gridState
             },
     )
-}
-
-/**
- * A container that animates its size to show the banner if one is defined. It also handles the
- * banner's onDismiss action by sending the dismissal to the [PhotoGridViewModel].
- *
- * @param currentBanner The current banner that [BannerManager] is exposing.
- */
-@Composable
-private fun AnimatedBannerWrapper(
-    currentBanner: Banner?,
-    viewModel: PhotoGridViewModel = obtainViewModel(),
-) {
-    Box(modifier = Modifier.animateContentSize()) {
-        currentBanner?.let {
-            Banner(
-                it,
-                modifier = Modifier.padding(MEASUREMENT_BANNER_PADDING),
-                onDismiss = {
-                    val declaration = it.declaration
-
-                    // Coerce the type back to [BannerDefinitions]
-                    // so that it can be dismissed.
-                    if (declaration is BannerDefinitions) {
-                        viewModel.markBannerAsDismissed(declaration)
-                    }
-                },
-            )
-        }
-    }
 }
 
 /**

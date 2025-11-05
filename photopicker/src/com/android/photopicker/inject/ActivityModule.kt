@@ -31,6 +31,7 @@ import com.android.photopicker.core.database.DatabaseManagerImpl
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
+import com.android.photopicker.core.network.NetworkMonitor
 import com.android.photopicker.core.selection.GrantsAwareSelectionImpl
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.selection.SelectionImpl
@@ -123,6 +124,7 @@ class ActivityModule {
         featureManager: FeatureManager,
         dataService: DataService,
         userMonitor: UserMonitor,
+        @ApplicationOwned networkMonitor: NetworkMonitor,
         processOwnerHandle: UserHandle,
     ): BannerManager {
         if (::bannerManager.isInitialized) {
@@ -138,6 +140,7 @@ class ActivityModule {
                     featureManager,
                     dataService,
                     userMonitor,
+                    networkMonitor,
                     processOwnerHandle,
                 )
             return bannerManager

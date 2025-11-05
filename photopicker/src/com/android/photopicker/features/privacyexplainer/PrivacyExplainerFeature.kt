@@ -39,6 +39,7 @@ import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.features.PhotopickerUiFeature
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.features.Priority
+import com.android.photopicker.core.network.NetworkStatus
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.Icon
@@ -62,7 +63,11 @@ class PrivacyExplainerFeature : PhotopickerUiFeature {
 
     override val token = FeatureToken.PRIVACY_EXPLAINER.token
 
-    override val ownedBanners: Set<BannerDefinitions> = setOf(BannerDefinitions.PRIVACY_EXPLAINER)
+    private val ownedBannersByLocation: Map<BannerLocation, Set<BannerDefinitions>> =
+        mapOf(BannerLocation.PHOTO_GRID_BANNER to setOf(BannerDefinitions.PRIVACY_EXPLAINER))
+
+    override val ownedBanners: Set<BannerDefinitions> =
+        ownedBannersByLocation.values.flatten().toSet()
 
     override suspend fun getBannerPriority(
         banner: BannerDefinitions,
@@ -70,11 +75,15 @@ class PrivacyExplainerFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        networkStatus: NetworkStatus,
         bannerLocation: BannerLocation,
     ): Int {
+
         return when (banner) {
             BannerDefinitions.PRIVACY_EXPLAINER -> {
-                if (bannerState?.dismissed == true) {
+                val isValidForLocation =
+                    ownedBannersByLocation[bannerLocation]?.contains(banner) ?: false
+                if (bannerState?.dismissed == true || !isValidForLocation) {
                     Priority.DISABLED.priority
                 } else {
                     Priority.HIGH.priority
@@ -89,6 +98,7 @@ class PrivacyExplainerFeature : PhotopickerUiFeature {
         banner: BannerDefinitions,
         dataService: DataService,
         userMonitor: UserMonitor,
+        isEmbedded: Boolean,
     ): Banner {
         return when (banner) {
             BannerDefinitions.PRIVACY_EXPLAINER ->

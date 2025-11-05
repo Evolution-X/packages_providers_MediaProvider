@@ -24,6 +24,9 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.android.photopicker.core.Background
+import com.android.photopicker.core.banners.Banner
+import com.android.photopicker.core.banners.BannerLocation
+import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.configuration.ConfigurationManager
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
@@ -82,6 +85,7 @@ constructor(
     private val selection: Selection<Media>,
     private val events: Events,
     private val configurationManager: ConfigurationManager,
+    private val bannerManager: BannerManager,
 ) : ViewModel() {
 
     companion object {
@@ -461,6 +465,11 @@ constructor(
                 break // Early exit
         }
         return SearchSuggestions(history, face, other)
+    }
+
+    /** Get the [Banner] flow from BannerManager to the UI */
+    fun getBanners(): StateFlow<Banner?> {
+        return bannerManager.getBannerFlow(BannerLocation.SEARCH_GRID_BANNER)
     }
 
     @VisibleForTesting

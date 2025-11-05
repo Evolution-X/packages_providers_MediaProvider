@@ -37,6 +37,7 @@ import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.features.PhotopickerUiFeature
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.features.Priority
+import com.android.photopicker.core.network.NetworkStatus
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.core.user.UserProfile
 import com.android.photopicker.data.DataService
@@ -72,7 +73,11 @@ class ProfileSelectorFeature : PhotopickerUiFeature {
 
     override val token = FeatureToken.PROFILE_SELECTOR.token
 
-    override val ownedBanners: Set<BannerDefinitions> = setOf(BannerDefinitions.SWITCH_PROFILE)
+    private val ownedBannersByLocation: Map<BannerLocation, Set<BannerDefinitions>> =
+        mapOf(BannerLocation.PHOTO_GRID_BANNER to setOf(BannerDefinitions.SWITCH_PROFILE))
+
+    override val ownedBanners: Set<BannerDefinitions> =
+        ownedBannersByLocation.values.flatten().toSet()
 
     override suspend fun getBannerPriority(
         banner: BannerDefinitions,
@@ -80,10 +85,12 @@ class ProfileSelectorFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        networkStatus: NetworkStatus,
         bannerLocation: BannerLocation,
     ): Int {
 
-        if (bannerState?.dismissed == true) {
+        val isValidForLocation = ownedBannersByLocation[bannerLocation]?.contains(banner) ?: false
+        if (bannerState?.dismissed == true || !isValidForLocation) {
             return Priority.DISABLED.priority
         }
 
@@ -97,6 +104,7 @@ class ProfileSelectorFeature : PhotopickerUiFeature {
         banner: BannerDefinitions,
         dataService: DataService,
         userMonitor: UserMonitor,
+        isEmbedded: Boolean,
     ): Banner {
 
         val currentProfile = userMonitor.userStatus.value.activeUserProfile

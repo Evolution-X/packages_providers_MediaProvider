@@ -19,12 +19,18 @@ package com.android.photopicker.core.banners
 import android.os.UserHandle
 import android.util.Log
 import com.android.photopicker.core.configuration.ConfigurationManager
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.database.DatabaseManager
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.PhotopickerUiFeature
+import com.android.photopicker.core.network.NetworkMonitor
+import com.android.photopicker.core.network.NetworkStatus
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
+import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.extensions.pmap
+import com.android.photopicker.features.cloudmedia.CloudMediaFeature
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +39,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,6 +55,7 @@ class BannerManagerImpl(
     private val featureManager: FeatureManager,
     private val dataService: DataService,
     private val userMonitor: UserMonitor,
+    private val networkMonitor: NetworkMonitor,
     private val processOwnerHandle: UserHandle,
 ) : BannerManager {
 
@@ -57,6 +66,8 @@ class BannerManagerImpl(
 
     private val _bannerFlowBylocation =
         ConcurrentHashMap<BannerLocation, MutableStateFlow<Banner?>>()
+
+    private val networkStatus: StateFlow<NetworkStatus> = networkMonitor.networkStatus
 
     /**
      * Returns a [StateFlow] for the given [bannerLocation]. If a flow for the location does not yet
@@ -82,6 +93,27 @@ class BannerManagerImpl(
                 .map { it.activeUserProfile }
                 .distinctUntilChanged()
                 .collect { refreshBanners() }
+        }
+        if (
+            featureManager.isFeatureEnabled(CloudMediaFeature::class.java) &&
+                configurationManager.configuration.value.flags.PICKER_OFFLINE_BANNERS_ENABLED
+        ) {
+            scope.launch {
+                networkStatus
+                    .drop(1)
+                    .distinctUntilChanged()
+                    .filter { it != NetworkStatus.Unknown }
+                    .collect {
+                        val currentCloudProvider: Provider? =
+                            dataService.availableProviders.value.firstOrNull {
+                                it.mediaSource == MediaSource.REMOTE
+                            }
+                        if (currentCloudProvider != null) {
+                            refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+                            refreshBanner(BannerLocation.SEARCH_GRID_BANNER)
+                        }
+                    }
+            }
         }
     }
 
@@ -232,7 +264,7 @@ class BannerManagerImpl(
         ) {
             Log.d(
                 TAG,
-                "User profile has been changed and is no longer owner, banners will be cleared.",
+                "User profile has been changed and is no longer owner, banners will be cleared for all locations.",
             )
             hideBanners()
             return
@@ -275,9 +307,14 @@ class BannerManagerImpl(
      * cleared.
      */
     private suspend fun refreshBannerInternal(bannerLocation: BannerLocation) {
-
         // Force this work to the background
         withContext(backgroundDispatcher) {
+            val currentNetworkStatus =
+                if (configurationManager.configuration.value.flags.PICKER_OFFLINE_BANNERS_ENABLED) {
+                    networkStatus.value
+                } else {
+                    NetworkStatus.Unknown
+                }
 
             // Always ensure providers before requesting a banner refresh, banners depend on
             // having accurate provider information to generate the correct banners.
@@ -306,6 +343,7 @@ class BannerManagerImpl(
                                         configurationManager.configuration.value,
                                         dataService,
                                         userMonitor,
+                                        currentNetworkStatus,
                                         bannerLocation,
                                     )
                                 }
@@ -374,6 +412,7 @@ class BannerManagerImpl(
             },
             dataService,
             userMonitor,
+            configurationManager.configuration.value.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED,
         )
     }
 }
