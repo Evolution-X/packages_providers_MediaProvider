@@ -2527,7 +2527,7 @@ public class MediaProvider extends ContentProvider {
                 int.class, int.class);
             return (Boolean) isAppCloneUserPair.invoke(mStorageManager, userId1, userId2);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            Log.w(TAG, "isAppCloneUserPair failed. Users: " + userId1 + " and " + userId2);
+            Log.v(TAG, "isAppCloneUserPair failed. Users: " + userId1 + " and " + userId2);
             return false;
         }
     }
