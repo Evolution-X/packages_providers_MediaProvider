@@ -32,8 +32,9 @@ import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.platform.test.annotations.EnableFlags;
-import android.platform.test.flag.junit.SetFlagsRule;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.ISearchMediaService;
 import android.provider.MediaStore;
 import android.provider.SearchMediaResult;
@@ -58,10 +59,10 @@ import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-@EnableFlags(Flags.FLAG_ENABLE_MEDIA_SEARCH)
+@RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_SEARCH)
 public class SearchMediaServiceTest {
     @Rule
-    public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
 
     private final CountDownLatch mServiceLatch = new CountDownLatch(1);
     private ISearchMediaService mSearchMediaService;
