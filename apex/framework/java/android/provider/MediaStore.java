@@ -3091,17 +3091,16 @@ public final class MediaStore {
              * images of various formats like Motion Photos, GIFs etc, which
              * is not identifiable by {@link #MIME_TYPE}.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
-            @Column(value = Cursor.FIELD_TYPE_INTEGER)
             public static final String _SPECIAL_FORMAT = "_special_format";
 
             /**
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file doesn't have any special format associated with it.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_NONE =
                     CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_NONE;
 
@@ -3109,8 +3108,8 @@ public final class MediaStore {
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file is a GIF file.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_GIF =
                     CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_GIF;
 
@@ -3118,8 +3117,8 @@ public final class MediaStore {
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file is a Motion Photo.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_MOTION_PHOTO =
                     CloudMediaProviderContract.MediaColumns.
                             STANDARD_MIME_TYPE_EXTENSION_MOTION_PHOTO;
@@ -3128,11 +3127,62 @@ public final class MediaStore {
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file is an Animated Webp.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_ANIMATED_WEBP =
                     CloudMediaProviderContract.MediaColumns.
                             STANDARD_MIME_TYPE_EXTENSION_ANIMATED_WEBP;
+
+            /**
+             * Special format for a file.
+             *
+             * Applications require special format tagging for media files.
+             * This is essential as {@link Images} collection can include
+             * images of various formats like Motion Photos, GIFs etc, which
+             * is not identifiable by {@link #MIME_TYPE}.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            @Column(value = Cursor.FIELD_TYPE_INTEGER)
+            public static final String SPECIAL_FORMAT = "_special_format";
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file doesn't have any special format associated with it.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_NONE =
+                    CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_NONE;
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file is a GIF file.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_GIF =
+                    CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_GIF;
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file is a Motion Photo.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_MOTION_PHOTO =
+                    CloudMediaProviderContract.MediaColumns
+                            .STANDARD_MIME_TYPE_EXTENSION_MOTION_PHOTO;
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file is an Animated Webp.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_ANIMATED_WEBP =
+                    CloudMediaProviderContract.MediaColumns
+                            .STANDARD_MIME_TYPE_EXTENSION_ANIMATED_WEBP;
         }
     }
 
