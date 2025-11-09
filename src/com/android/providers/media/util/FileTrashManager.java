@@ -18,11 +18,15 @@ package com.android.providers.media.util;
 
 import static com.android.providers.media.util.FileUtils.PREFIX_TRASHED;
 
+import android.system.ErrnoException;
+import android.system.Os;
 import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.Arrays;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for handling file trash operation
@@ -46,11 +50,27 @@ public final class FileTrashManager {
     }
 
     /**
+     * Interface for providing file renaming capabilities.
+     * This allows the file operation logic to be decoupled from the specific MediaStore
+     * implementation.
+     */
+    public interface FileRenameCallback {
+        /**
+         * Renames a file from an old path to a new path.
+         *
+         * @param oldPath The original path of the file.
+         * @param newPath The new path for the file.
+         * @return 0 on success, errno on failure.
+         */
+        int renameFile(String oldPath, String newPath);
+    }
+
+    /**
      * Trashes a file or directory by moving it to a designated trash location
      * on external storage and updates MediaStore via the provided callback.
      *
      * @param filePath             The absolute path of the file or directory to be trashed.
-     * @param mediaScannerCallback A callback to inform about file changes.
+     * @param fileRenameCallback A callback to rename the file.
      * @return The absolute path of the trashed item in the trash directory.
      * @throws IllegalArgumentException if the file path is null or empty.
      * @throws FileNotFoundException    if the original file to be trashed does not exist.
@@ -58,7 +78,7 @@ public final class FileTrashManager {
      *                                  if the file cannot be trashed (renamed).
      */
     public static String trashFile(String filePath,
-            MediaScannerCallback mediaScannerCallback) throws IllegalArgumentException,
+            FileRenameCallback fileRenameCallback) throws IllegalArgumentException,
             FileNotFoundException, IllegalStateException {
         File originalFile = getValidatedFilePath(filePath);
 
@@ -70,18 +90,102 @@ public final class FileTrashManager {
         File destinationFile = prepareDestinationFile(originalFile, trashBaseDirectory,
                 dateExpires);
 
-        if (!originalFile.renameTo(destinationFile)) {
+        boolean isRenameSuccess = fileRenameCallback.renameFile(filePath,
+                destinationFile.getAbsolutePath()) == 0;
+        if (!isRenameSuccess) {
             throw new IllegalStateException("Failed to trash file: "
-                    + originalFile.getAbsolutePath() + " to " + destinationFile.getAbsolutePath());
+                    + filePath + " to " + destinationFile.getAbsolutePath());
         }
-
-        if (destinationFile.isDirectory()) {
-            prefixChildrenOnDisk(destinationFile, dateExpires);
-        }
-
-        rescanFile(originalFile, destinationFile, mediaScannerCallback);
 
         return destinationFile.getAbsolutePath();
+    }
+
+    /**
+     * Recursively prefixes the names of all children (files and directories)
+     * within a given directory on disk, ensuring they reflect the trashed state.
+     * This method is intended to be called on a directory that has just been
+     * moved to trash, and its children need consistent naming.
+     *
+     * @param parentDir                The directory whose children need to be prefixed.
+     * @param parentTrashedDateExpires The `dateExpires` timestamp (in seconds) of the parent
+     *                                 trashed directory. Children will inherit this expiration.
+     * @return 0 on success, or an errno value on failure.
+     */
+    public static int trashChildrenOnDisk(File parentDir, long parentTrashedDateExpires) {
+        File[] children = parentDir.listFiles();
+        if (children == null) {
+            return 0;
+        }
+
+        for (File child : children) {
+            final String newChildName = String.format(
+                    Locale.US, ".%s-%d-%s", PREFIX_TRASHED, parentTrashedDateExpires,
+                    child.getName());
+
+            File renamedChildFile = new File(parentDir, newChildName);
+            try {
+                Os.rename(child.getAbsolutePath(), renamedChildFile.getAbsolutePath());
+            } catch (ErrnoException e) {
+                final String errorMessage = "Rename " + child.getAbsolutePath() + " to "
+                        + renamedChildFile.getAbsolutePath() + " failed.";
+                Log.e(TAG, errorMessage, e);
+                return e.errno;
+            }
+            // If the renamedChildFile item is a directory, recurse into it
+            if (renamedChildFile.isDirectory()) {
+                int result = trashChildrenOnDisk(renamedChildFile, parentTrashedDateExpires);
+                if (result != 0) {
+                    // If a recursive call fails, propagate the error up
+                    return result;
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Generates a trashed path by prefixing each component of the relative path.
+     *
+     * @param parentPath   The parent path.
+     * @param relativePath The relative path from the parent.
+     * @param dateExpires  The expiration timestamp.
+     * @return The fully constructed trashed path.
+     */
+    public static String getTrashedPath(String parentPath, String relativePath, long dateExpires) {
+        String newRelativePath = Arrays.stream(relativePath.split("/"))
+                .map(component -> String.format(
+                        Locale.US, ".%s-%d-%s", FileUtils.PREFIX_TRASHED, dateExpires,
+                        component))
+                .collect(Collectors.joining("/"));
+        return parentPath + "/" + newRelativePath;
+    }
+
+    /**
+     * Moves a legacy in-place trashed file to the trash directory structure.
+     *
+     * @param legacyTrashFilePath The path of the legacy in-place trashed file.
+     * @param fileRenameCallback  A callback to perform the file rename operation.
+     * @return {@code true} if the move was successful, {@code false} otherwise.
+     * @throws IllegalStateException if the destination trash directory cannot be created.
+     */
+    public static boolean moveInPlaceTrashFileToTrashLocation(String legacyTrashFilePath,
+            FileRenameCallback fileRenameCallback) throws IllegalStateException {
+        File trashBaseDir = getOrCreateTrashBaseDirectory(new File(legacyTrashFilePath));
+        String volumeRoot = FileUtils.extractVolumePath(legacyTrashFilePath);
+        String relPath = legacyTrashFilePath.substring(volumeRoot.length());
+        if (relPath.startsWith(File.separator)) {
+            relPath = relPath.substring(1);
+        }
+        File destParent = new File(trashBaseDir, new File(relPath).getParent());
+        if (!destParent.mkdirs()) {
+            if (!destParent.exists()) {
+                throw new IllegalStateException(
+                        "Failed to create trash sub-directory: " + destParent.getAbsolutePath());
+            }
+        }
+        File newTrashFile = new File(destParent, new File(relPath).getName());
+        return fileRenameCallback.renameFile(legacyTrashFilePath, newTrashFile.getAbsolutePath())
+                == 0;
     }
 
     /**
@@ -146,21 +250,6 @@ public final class FileTrashManager {
     }
 
     /**
-     * Notifies the MediaStore about the file changes (original removed, trashed added).
-     *
-     * @param originalFile         The original file that was trashed.
-     * @param destinationFile      The file in the trash directory.
-     * @param mediaScannerCallback The callback to inform about file changes.
-     */
-    private static void rescanFile(File originalFile, File destinationFile,
-            MediaScannerCallback mediaScannerCallback) {
-        if (mediaScannerCallback != null) {
-            mediaScannerCallback.scanFile(originalFile); // Original file removed
-            mediaScannerCallback.scanFile(destinationFile); // New file (trashed) added
-        }
-    }
-
-    /**
      * Determines and creates the base trash directory for the given file's volume.
      *
      * @param originalFile The file to be trashed.
@@ -182,7 +271,6 @@ public final class FileTrashManager {
         return trashBase;
     }
 
-
     private static boolean isAllowedToTrash(File file) {
         String relativePath = FileUtils.extractRelativePath(file.getAbsolutePath());
         // "/" if file is top-level file/folder
@@ -198,40 +286,5 @@ public final class FileTrashManager {
         }
 
         return true;
-    }
-
-    /**
-     * Recursively prefixes the names of all children (files and directories)
-     * within a given directory on disk, ensuring they reflect the trashed state.
-     * This method is intended to be called on a directory that has just been
-     * moved to trash, and its children need consistent naming.
-     *
-     * @param parentDir                The directory whose children need to be prefixed.
-     * @param parentTrashedDateExpires The `dateExpires` timestamp (in seconds) of the parent
-     *                                 trashed directory. Children will inherit this expiration.
-     */
-    private static void prefixChildrenOnDisk(File parentDir, long parentTrashedDateExpires) {
-        File[] children = parentDir.listFiles();
-        if (children == null) {
-            return;
-        }
-
-        for (File child : children) {
-            final String newChildName = String.format(
-                    Locale.US, ".%s-%d-%s", PREFIX_TRASHED, parentTrashedDateExpires,
-                    child.getName());
-
-            File renamedChildFile = new File(parentDir, newChildName);
-
-            if (!child.renameTo(renamedChildFile)) {
-                Log.w(TAG, "Failed to rename child: " + child.getAbsolutePath() + " to "
-                        + renamedChildFile.getAbsolutePath());
-            }
-
-            // If the renamedChildFile item is a directory, recurse into it
-            if (renamedChildFile.isDirectory()) {
-                prefixChildrenOnDisk(renamedChildFile, parentTrashedDateExpires);
-            }
-        }
     }
 }
