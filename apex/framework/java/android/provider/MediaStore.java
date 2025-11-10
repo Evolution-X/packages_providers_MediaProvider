@@ -211,6 +211,14 @@ public final class MediaStore {
     public static final String GET_GENERATION_CALL = "get_generation";
 
     /** @hide */
+    public static final String GET_PACKAGE_FOR_SEARCH_MEDIA_SERVICE =
+            "get_package_for_search_media_service";
+
+    /** @hide */
+    public static final String PACKAGE_FOR_SEARCH_MEDIA_SERVICE =
+            "package_for_search_media_service";
+
+    /** @hide */
     public static final String START_LEGACY_MIGRATION_CALL = "start_legacy_migration";
     /** @hide */
     public static final String FINISH_LEGACY_MIGRATION_CALL = "finish_legacy_migration";
@@ -2087,6 +2095,16 @@ public final class MediaStore {
         resolver.call(AUTHORITY, MARK_MEDIA_AS_FAVORITE, null, extras);
     }
 
+    /**
+     * Gets the package name of the Search Media Service that client apps use to connect.
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
+    @NonNull
+    public static String getPackageForSearchMediaService(@NonNull ContentResolver resolver) {
+        Bundle result = resolver.call(AUTHORITY, GET_PACKAGE_FOR_SEARCH_MEDIA_SERVICE, null, null);
+        return result.getString(PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
+    }
+
 
     /**
      * Create a {@link PendingIntent} that will prompt the user to permanently
@@ -3073,17 +3091,16 @@ public final class MediaStore {
              * images of various formats like Motion Photos, GIFs etc, which
              * is not identifiable by {@link #MIME_TYPE}.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
-            @Column(value = Cursor.FIELD_TYPE_INTEGER)
             public static final String _SPECIAL_FORMAT = "_special_format";
 
             /**
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file doesn't have any special format associated with it.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_NONE =
                     CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_NONE;
 
@@ -3091,8 +3108,8 @@ public final class MediaStore {
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file is a GIF file.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_GIF =
                     CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_GIF;
 
@@ -3100,8 +3117,8 @@ public final class MediaStore {
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file is a Motion Photo.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_MOTION_PHOTO =
                     CloudMediaProviderContract.MediaColumns.
                             STANDARD_MIME_TYPE_EXTENSION_MOTION_PHOTO;
@@ -3110,11 +3127,62 @@ public final class MediaStore {
              * Constant for the {@link #_SPECIAL_FORMAT} column indicating
              * that the file is an Animated Webp.
              *
+             * @hide
              */
-            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
             public static final int _SPECIAL_FORMAT_ANIMATED_WEBP =
                     CloudMediaProviderContract.MediaColumns.
                             STANDARD_MIME_TYPE_EXTENSION_ANIMATED_WEBP;
+
+            /**
+             * Special format for a file.
+             *
+             * Applications require special format tagging for media files.
+             * This is essential as {@link Images} collection can include
+             * images of various formats like Motion Photos, GIFs etc, which
+             * is not identifiable by {@link #MIME_TYPE}.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            @Column(value = Cursor.FIELD_TYPE_INTEGER)
+            public static final String SPECIAL_FORMAT = "_special_format";
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file doesn't have any special format associated with it.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_NONE =
+                    CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_NONE;
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file is a GIF file.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_GIF =
+                    CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION_GIF;
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file is a Motion Photo.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_MOTION_PHOTO =
+                    CloudMediaProviderContract.MediaColumns
+                            .STANDARD_MIME_TYPE_EXTENSION_MOTION_PHOTO;
+
+            /**
+             * Constant for the {@link #SPECIAL_FORMAT} column indicating
+             * that the file is an Animated Webp.
+             *
+             */
+            @FlaggedApi(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
+            public static final int SPECIAL_FORMAT_ANIMATED_WEBP =
+                    CloudMediaProviderContract.MediaColumns
+                            .STANDARD_MIME_TYPE_EXTENSION_ANIMATED_WEBP;
         }
     }
 

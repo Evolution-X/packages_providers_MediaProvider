@@ -837,12 +837,12 @@ public class MediaProviderTest {
         values.put(MediaColumns.MIME_TYPE, "image/png");
         Uri result = sContentResolver.insert(uri, values);
         try (Cursor c = sContentResolver.query(result,
-                new String[]{MediaColumns.DISPLAY_NAME, FileColumns._SPECIAL_FORMAT}, null, null)) {
+                new String[]{MediaColumns.DISPLAY_NAME, FileColumns.SPECIAL_FORMAT}, null, null)) {
             assertNotNull(c);
             assertEquals(1, c.getCount());
             assertTrue(c.moveToFirst());
             assertEquals(testFile + ".png", c.getString(0));
-            assertEquals(FileColumns._SPECIAL_FORMAT_NONE, c.getInt(1));
+            assertEquals(FileColumns.SPECIAL_FORMAT_NONE, c.getInt(1));
         } finally {
             sContentResolver.delete(result, null);
         }
@@ -851,50 +851,34 @@ public class MediaProviderTest {
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SPECIAL_FORMAT_COLUMN)
     public void testQuerySpecialFormatColumn_returnsNonEmptyCursor() throws Exception {
-        // Arrange
-        String[][] projections = new String[][]{
-                new String[]{
-                        MediaColumns.DISPLAY_NAME,
-                        MediaColumns.MIME_TYPE,
-                        FileColumns._SPECIAL_FORMAT
-                },
-                new String[]{
-                        MediaColumns.DISPLAY_NAME,
-                        MediaColumns.MIME_TYPE,
-                        "_SPECIAL_FORMAT"
-                }
-        };
-
         final File downloads = new File(Environment.getExternalStorageDirectory(),
                 Environment.DIRECTORY_DOWNLOADS);
         final Uri uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        // Arrange test file and query
+        String testFileName = "test_file_" + System.nanoTime() + ".jpg";
+        File file = new File(downloads, testFileName);
+        stage(R.raw.test_motion_photo, file);
+        MediaStore.scanFile(sContentResolver, file);
 
-        for (int i = 0; i < projections.length; i++) {
-            // Arrange test file and query
-            String testFileName = "test_file_" + System.nanoTime() + ".jpg";
-            File file = new File(downloads, testFileName);
-            stage(R.raw.test_motion_photo, file);
-            MediaStore.scanFile(sContentResolver, file);
+        String[] projection = new String[]{MediaColumns.DISPLAY_NAME, MediaColumns.MIME_TYPE,
+                FileColumns.SPECIAL_FORMAT};
+        String selection = MediaColumns.DATA + " LIKE ?";
+        String[] selectionArgs = new String[]{file.getAbsolutePath()};
 
-            String[] projection = projections[i];
-            String selection = MediaColumns.DATA + " LIKE ?";
-            String[] selectionArgs = new String[]{file.getAbsolutePath()};
+        // Act
+        try (Cursor cursor = sContentResolver.query(uri, projection, selection, selectionArgs,
+                null)) {
+            // Assert
+            assertNotNull(cursor);
+            assertThat(cursor.getCount()).isEqualTo(1);
 
-            // Act
-            try (Cursor cursor = sContentResolver.query(uri, projection, selection, selectionArgs,
-                    null)) {
-                // Assert
-                assertNotNull(cursor);
-                assertThat(cursor.getCount()).isEqualTo(1);
-
-                assertTrue(cursor.moveToFirst());
-                // _SPECIAL_FORMAT value should be a motion photo
-                assertThat(cursor.getString(1)).isEqualTo("image/jpeg");
-                assertThat(cursor.getInt(2)).isEqualTo(FileColumns._SPECIAL_FORMAT_MOTION_PHOTO);
-            } finally {
-                // Cleanup
-                file.delete();
-            }
+            assertTrue(cursor.moveToFirst());
+            // _SPECIAL_FORMAT value should be a motion photo
+            assertThat(cursor.getString(1)).isEqualTo("image/jpeg");
+            assertThat(cursor.getInt(2)).isEqualTo(FileColumns.SPECIAL_FORMAT_MOTION_PHOTO);
+        } finally {
+            // Cleanup
+            file.delete();
         }
     }
 
@@ -910,7 +894,7 @@ public class MediaProviderTest {
         Uri result = sContentResolver.insert(uri, values);
 
         try (Cursor c = sContentResolver.query(result,
-                new String[]{MediaColumns.DISPLAY_NAME, FileColumns._SPECIAL_FORMAT}, null, null)) {
+                new String[]{MediaColumns.DISPLAY_NAME, FileColumns.SPECIAL_FORMAT}, null, null)) {
             assertNotNull(c);
             assertEquals(1, c.getCount());
             assertTrue(c.moveToFirst());

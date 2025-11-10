@@ -15,33 +15,28 @@
  */
 package com.android.providers.media.search;
 
-import static android.provider.SearchMediaResult.INDEX_COLUMN_DATE_TAKEN;
-import static android.provider.SearchMediaResult.INDEX_COLUMN_MEDIA_TYPE;
-import static android.provider.SearchMediaResult.INDEX_COLUMN_ID;
-import static android.provider.SearchMediaResult.INDEX_COLUMN_SCORE;
-
 import static com.android.providers.media.search.TestSearchMediaService.DEFAULT_ERROR_MESSAGE;
 import static com.android.providers.media.search.TestSearchMediaService.DUMMY_SEARCH_RESULT_SIZE;
 import static com.android.providers.media.search.TestSearchMediaService.SHOULD_THROW_ERROR;
 import static com.android.providers.media.search.TestSearchMediaService.getSearchResults;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeNotNull;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.database.CursorWindow;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.platform.test.annotations.EnableFlags;
-import android.platform.test.flag.junit.SetFlagsRule;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.ISearchMediaService;
+import android.provider.MediaStore;
 import android.provider.SearchMediaResult;
 import android.provider.SearchMediaService;
 
@@ -49,6 +44,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.providers.media.R;
 import com.android.providers.media.flags.Flags;
 
 import org.junit.After;
@@ -57,17 +53,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-@EnableFlags(Flags.FLAG_ENABLE_MEDIA_SEARCH)
+@RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_SEARCH)
 public class SearchMediaServiceTest {
     @Rule
-    public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
 
     private final CountDownLatch mServiceLatch = new CountDownLatch(1);
     private ISearchMediaService mSearchMediaService;
@@ -112,8 +107,8 @@ public class SearchMediaServiceTest {
                 callback);
         callback.await(3, TimeUnit.SECONDS);
 
-        assertFalse(callback.isErrored());
-        assertCursorWindowsNotNull(callback);
+        assertNull(callback.getSearchMediaException());
+        assertNotNull(callback.getSearchMediaResultPage().getSearchResults());
         assertCallbackHasAllSearchResults(callback, /* expectedRows */ 1000L, searchParams);
     }
 
@@ -127,38 +122,30 @@ public class SearchMediaServiceTest {
                 callback);
         callback.await(3, TimeUnit.SECONDS);
 
-        assertTrue(callback.isErrored());
-        assertEquals(DEFAULT_ERROR_MESSAGE, callback.getErrorMessage());
+        assertNotNull(callback.getSearchMediaException());
+        assertEquals(DEFAULT_ERROR_MESSAGE, callback.getSearchMediaException().getErrorMessage());
     }
 
-    private static void assertCursorWindowsNotNull(TestSearchMediaCallback callback) {
-        CursorWindow[] cursorWindows = callback.getCursorWindows();
-        assertNotNull(cursorWindows);
+    @Test
+    public void testGetPackageForSearchMediaServiceApiTest() {
+        String expectedPackage = mContext.getResources().getString(
+                R.string.config_default_search_media_service_package);
+
+        String packageFromApi = MediaStore.getPackageForSearchMediaService(
+                mContext.getContentResolver());
+
+        assertEquals(expectedPackage, packageFromApi);
     }
 
     private static void assertCallbackHasAllSearchResults(TestSearchMediaCallback callback,
             long expectedRows, Bundle searchParams) {
-        CursorWindow[] cursorWindows = callback.getCursorWindows();
-        int totalRows = 0;
-        List<SearchMediaResult> searchResults = new ArrayList<>();
+        List<SearchMediaResult> searchResults =
+                callback.getSearchMediaResultPage().getSearchResults();
 
-        for (CursorWindow cursorWindow : cursorWindows) {
-            int numRowsInWindow = cursorWindow.getNumRows();
-            for (int row = 0; row < numRowsInWindow; row++) {
-                long id = cursorWindow.getLong(row, INDEX_COLUMN_ID);
-                long dateTaken = cursorWindow.getLong(row, INDEX_COLUMN_DATE_TAKEN);
-                double score = cursorWindow.getDouble(row, INDEX_COLUMN_SCORE);
-                long mediaType = cursorWindow.getLong(row, INDEX_COLUMN_MEDIA_TYPE);
-                searchResults.add(new SearchMediaResult(id, dateTaken, score, mediaType));
-            }
-            totalRows += numRowsInWindow;
-        }
-
-        assertEquals(expectedRows, totalRows);
+        assertEquals(expectedRows, searchResults.size());
 
         List<SearchMediaResult> expectedSearchResults = getSearchResults(searchParams);
-
-        for (int i = 0; i < totalRows; i++) {
+        for (int i = 0; i < expectedRows; i++) {
             assertEquals(expectedSearchResults.get(i), searchResults.get(i));
         }
     }

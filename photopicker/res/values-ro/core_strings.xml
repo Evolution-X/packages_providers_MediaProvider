@@ -47,10 +47,7 @@
     <string name="photopicker_back_option" msgid="986374743479020214">"Înapoi"</string>
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Închide"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Grilă media"</string>
-    <!-- no translation found for photopicker_banner_no_network_connection_message (4797953604806666542) -->
-    <skip />
-    <!-- no translation found for photopicker_banner_no_network_connection_title (2353038014035707061) -->
-    <skip />
-    <!-- no translation found for photopicker_offline_banner_go_to_settings_button_label (6642836558571072401) -->
-    <skip />
+    <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"Conectează-te la Wi-Fi sau la date mobile pentru a selecta fotografii și videoclipuri din <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"Este necesară o conexiune la internet"</string>
+    <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"Accesează Setările"</string>
 </resources>

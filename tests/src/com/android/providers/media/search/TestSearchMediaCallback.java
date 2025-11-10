@@ -15,36 +15,30 @@
  */
 package com.android.providers.media.search;
 
-import android.database.CursorWindow;
-import android.os.Bundle;
 import android.os.RemoteException;
 import android.provider.ISearchMediaCallback;
+import android.provider.SearchMediaException;
+import android.provider.SearchMediaResultPage;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class TestSearchMediaCallback extends ISearchMediaCallback.Stub {
 
-    private boolean mErrored = false;
-    private String mErrorMessage = null;
-    private String mSearchId = null;
-    private CursorWindow[] mCursorWindows = null;
+    private SearchMediaResultPage mSearchMediaResultPage = null;
+    private SearchMediaException mSearchMediaException = null;
     private final CountDownLatch mLatch = new CountDownLatch(1);
 
     @Override
-    public void onSearchResultsSuccess(String searchId, CursorWindow[] results, Bundle extras)
+    public void onSearchResultsSuccess(SearchMediaResultPage searchMediaResultPage)
             throws RemoteException {
-        mSearchId = searchId;
-        mCursorWindows = results;
+        mSearchMediaResultPage = searchMediaResultPage;
         mLatch.countDown();
     }
 
     @Override
-    public void onSearchResultsFailure(String searchId, int errorCode, String errorMessage,
-            boolean retryable) throws RemoteException {
-        mErrored = true;
-        mSearchId = searchId;
-        mErrorMessage = errorMessage;
+    public void onSearchResultsFailure(SearchMediaException searchMediaException) {
+        mSearchMediaException = searchMediaException;
         mLatch.countDown();
     }
 
@@ -55,19 +49,11 @@ public class TestSearchMediaCallback extends ISearchMediaCallback.Stub {
         mLatch.await(time, unit);
     }
 
-    public boolean isErrored() {
-        return mErrored;
+    public SearchMediaResultPage getSearchMediaResultPage() {
+        return mSearchMediaResultPage;
     }
 
-    public String getSearchId() {
-        return mSearchId;
-    }
-
-    public CursorWindow[] getCursorWindows() {
-        return mCursorWindows;
-    }
-
-    public String getErrorMessage() {
-        return mErrorMessage;
+    public SearchMediaException getSearchMediaException() {
+        return mSearchMediaException;
     }
 }

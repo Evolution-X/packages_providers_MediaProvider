@@ -55,7 +55,7 @@ public final class BackupAndRestoreUtils {
      * {@link BackupAndRestoreUtils#BACKUP_COLUMNS}. A new level db instance will be created with
      * newly added columns.
      */
-    static final long LATEST_LEVEL_DB_VERSION = 3;
+    static final long LATEST_LEVEL_DB_VERSION = 4;
 
     /**
      * String separator used for separating key, value pairs.
@@ -156,6 +156,19 @@ public final class BackupAndRestoreUtils {
             BACKUP_COLUMNS.add(MediaStore.DownloadColumns.DOWNLOAD_URI);
         }
 
+        if (LATEST_LEVEL_DB_VERSION >= 4) {
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_MUSIC);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_RECORDING);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_AUDIOBOOK);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_NOTIFICATION);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_ALARM);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.SAMPLERATE);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.BITS_PER_SAMPLE);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_RINGTONE);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.BOOKMARK);
+            BACKUP_COLUMNS.add(MediaStore.Audio.AudioColumns.IS_PODCAST);
+        }
+
         // Keeping at the last as it is a BLOB type and can have separator used in our
         // serialisation. Added in version 1.
         BACKUP_COLUMNS.add(MediaStore.MediaColumns.XMP);
@@ -218,6 +231,19 @@ public final class BackupAndRestoreUtils {
 
         if (LATEST_LEVEL_DB_VERSION >= 3) {
             sIdToColumnBiMap.put("43", MediaStore.DownloadColumns.DOWNLOAD_URI);
+        }
+
+        if (LATEST_LEVEL_DB_VERSION >= 4) {
+            sIdToColumnBiMap.put("44", MediaStore.Audio.AudioColumns.IS_MUSIC);
+            sIdToColumnBiMap.put("45", MediaStore.Audio.AudioColumns.IS_RECORDING);
+            sIdToColumnBiMap.put("46", MediaStore.Audio.AudioColumns.IS_AUDIOBOOK);
+            sIdToColumnBiMap.put("47", MediaStore.Audio.AudioColumns.IS_NOTIFICATION);
+            sIdToColumnBiMap.put("48", MediaStore.Audio.AudioColumns.IS_ALARM);
+            sIdToColumnBiMap.put("49", MediaStore.Audio.AudioColumns.SAMPLERATE);
+            sIdToColumnBiMap.put("50", MediaStore.Audio.AudioColumns.BITS_PER_SAMPLE);
+            sIdToColumnBiMap.put("51", MediaStore.Audio.AudioColumns.IS_RINGTONE);
+            sIdToColumnBiMap.put("52", MediaStore.Audio.AudioColumns.BOOKMARK);
+            sIdToColumnBiMap.put("53", MediaStore.Audio.AudioColumns.IS_PODCAST);
         }
 
         // Adding number gap to allow addition of new values

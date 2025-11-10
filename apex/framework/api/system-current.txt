@@ -87,28 +87,53 @@ package android.provider {
   }
 
   @FlaggedApi("com.android.providers.media.flags.enable_media_search") public interface SearchMediaCallback {
-    method public void onSearchResultsFailure(@NonNull String, int, @NonNull String, boolean);
-    method public void onSearchResultsSuccess(@NonNull String, @NonNull java.util.List<android.provider.SearchMediaResult>, @NonNull android.os.Bundle);
+    method public void onSearchResultsFailure(@NonNull android.provider.SearchMediaException);
+    method public void onSearchResultsSuccess(@NonNull android.provider.SearchMediaResultPage);
+  }
+
+  @FlaggedApi("com.android.providers.media.flags.enable_media_search") public final class SearchMediaException extends java.lang.Throwable implements android.os.Parcelable {
+    ctor public SearchMediaException(@NonNull String, @NonNull String, int, boolean);
+    method public int describeContents();
+    method public int getErrorCode();
+    method @NonNull public String getErrorMessage();
+    method @NonNull public String getSearchId();
+    method public boolean isRetryable();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.provider.SearchMediaException> CREATOR;
+    field public static final int ERROR_INVALID_ARGUMENTS = 1; // 0x1
+    field public static final int ERROR_IO = 2; // 0x2
+    field public static final int ERROR_SECURITY = 3; // 0x3
+    field public static final int ERROR_UNKNOWN = 0; // 0x0
   }
 
   @FlaggedApi("com.android.providers.media.flags.enable_media_search") public final class SearchMediaResult {
     ctor public SearchMediaResult(long, long, double, long);
+    method public long getDateTaken();
+    method public long getId();
+    method public long getMediaType();
+    method public double getScore();
     field public static final int CURSOR_WINDOW_COLUMN_COUNT = 4; // 0x4
     field public static final int INDEX_COLUMN_DATE_TAKEN = 1; // 0x1
     field public static final int INDEX_COLUMN_ID = 0; // 0x0
     field public static final int INDEX_COLUMN_MEDIA_TYPE = 3; // 0x3
     field public static final int INDEX_COLUMN_SCORE = 2; // 0x2
-    field public final long dateTaken;
-    field public final long id;
-    field public final long mediaType;
-    field public final double score;
+  }
+
+  @FlaggedApi("com.android.providers.media.flags.enable_media_search") public final class SearchMediaResultPage implements android.os.Parcelable {
+    ctor public SearchMediaResultPage(@NonNull String, @NonNull java.util.List<android.provider.SearchMediaResult>, @NonNull android.os.Bundle);
+    method public int describeContents();
+    method @NonNull public android.os.Bundle getExtras();
+    method @NonNull public String getSearchId();
+    method @NonNull public java.util.List<android.provider.SearchMediaResult> getSearchResults();
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field @NonNull public static final android.os.Parcelable.Creator<android.provider.SearchMediaResultPage> CREATOR;
   }
 
   @FlaggedApi("com.android.providers.media.flags.enable_media_search") public abstract class SearchMediaService extends android.app.Service {
     ctor public SearchMediaService();
     method @Nullable public android.os.IBinder onBind(@Nullable android.content.Intent);
     method public abstract void onCancelSearch(@NonNull String);
-    method public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.provider.SearchMediaCallback);
+    method public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.os.OutcomeReceiver<android.provider.SearchMediaResultPage,android.provider.SearchMediaException>);
     field public static final String BIND_SEARCH_MEDIA_SERVICE_PERMISSION = "com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE";
     field public static final String EXTRA_MEDIA_TYPE_FILTER = "android.provider.extra.MEDIA_TYPE_FILTER";
     field public static final String EXTRA_NEXT_PAGE_TOKEN = "android.provider.extra.NEXT_PAGE_TOKEN";

@@ -30,8 +30,6 @@
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> തിരയുക"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> ഉപയോഗിച്ച് തിരയുക"</string>
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"തിരയൽ ഫലങ്ങളുടെ ഗ്രിഡ്"</string>
-    <!-- no translation found for photopicker_banner_search_result_no_network_connection (1769836145678523602) -->
-    <skip />
-    <!-- no translation found for photopicker_banner_search_result_no_network_title (5432357373862633740) -->
-    <skip />
+    <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> എന്നതിൽ നിന്ന് നിങ്ങളുടെ ഫോട്ടോകളും വീഡിയോകളും തിരഞ്ഞെടുക്കാൻ കണക്റ്റ് ചെയ്യുക"</string>
+    <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"ഇന്റർനെറ്റ് കണക്ഷൻ ആവശ്യമാണ്"</string>
 </resources>

@@ -1935,18 +1935,43 @@ public class FileUtils {
      * @return {@code true} if the path represents a trashed file, {@code false} otherwise.
      */
     public static boolean isTrashedFileInTrashDirectory(@NonNull String filePath) {
-        final String displayName = extractDisplayName(filePath);
-        final Matcher matcher = PATTERN_EXPIRES_FILE.matcher(displayName);
-        if (!matcher.matches() || !FileUtils.PREFIX_TRASHED.equals(matcher.group(1))) {
+        if (!isTrashedPath(filePath)) {
             return false;
         }
-
-        String relativePath = extractRelativePath(filePath);
+        final String relativePath = extractRelativePath(filePath);
         if (relativePath == null) {
             return false;
         }
         String trashDirPrefix = DIRECTORY_TRASH_STORAGE + File.separator;
         return relativePath.startsWith(trashDirPrefix);
+    }
+
+    /**
+     * Checks if the given file path represents a trashed item in place.
+     *
+     * @param path The file path to check.
+     * @return {@code true} if the path represents a trashed file in place, {@code false}
+     * otherwise.
+     */
+    public static boolean isTrashFileInPlace(@NonNull String path) {
+        return isTrashedPath(path) && !isTrashedFileInTrashDirectory(path);
+    }
+
+    /**
+     * Checks if the given file path matches the trashed file name format.
+     * The trashed file format is something like {@code .trashed-1621147340-test.jpg}.
+     *
+     * @param filePath The file path to check.
+     * @return {@code true} if the path matches the trashed file name format, {@code false}
+     * otherwise.
+     */
+    private static boolean isTrashedPath(@NonNull String filePath) {
+        final String displayName = extractDisplayName(filePath);
+        if (displayName == null) {
+            return false;
+        }
+        final Matcher matcher = PATTERN_EXPIRES_FILE.matcher(displayName);
+        return matcher.matches() && PREFIX_TRASHED.equals(matcher.group(1));
     }
 
 }

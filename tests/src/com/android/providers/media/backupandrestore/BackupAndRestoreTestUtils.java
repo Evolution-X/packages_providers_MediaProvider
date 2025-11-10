@@ -99,6 +99,19 @@ public class BackupAndRestoreTestUtils {
             sColumnIdToKeyMap.put("43", MediaStore.DownloadColumns.DOWNLOAD_URI);
         }
 
+        if (LATEST_LEVEL_DB_VERSION >= 4) {
+            sColumnIdToKeyMap.put("44", MediaStore.Audio.AudioColumns.IS_MUSIC);
+            sColumnIdToKeyMap.put("45", MediaStore.Audio.AudioColumns.IS_RECORDING);
+            sColumnIdToKeyMap.put("46", MediaStore.Audio.AudioColumns.IS_AUDIOBOOK);
+            sColumnIdToKeyMap.put("47", MediaStore.Audio.AudioColumns.IS_NOTIFICATION);
+            sColumnIdToKeyMap.put("48", MediaStore.Audio.AudioColumns.IS_ALARM);
+            sColumnIdToKeyMap.put("49", MediaStore.Audio.AudioColumns.SAMPLERATE);
+            sColumnIdToKeyMap.put("50", MediaStore.Audio.AudioColumns.BITS_PER_SAMPLE);
+            sColumnIdToKeyMap.put("51", MediaStore.Audio.AudioColumns.IS_RINGTONE);
+            sColumnIdToKeyMap.put("52", MediaStore.Audio.AudioColumns.BOOKMARK);
+            sColumnIdToKeyMap.put("53", MediaStore.Audio.AudioColumns.IS_PODCAST);
+        }
+
         // Adding number gap to allow addition of new values
         sColumnIdToKeyMap.put("80", MediaStore.MediaColumns.XMP);
     }
@@ -156,6 +169,19 @@ public class BackupAndRestoreTestUtils {
         // added with version 3
         if (LATEST_LEVEL_DB_VERSION >= 3) {
             sColumnNameToIdMap.put(MediaStore.DownloadColumns.DOWNLOAD_URI, "43");
+        }
+
+        if (LATEST_LEVEL_DB_VERSION >= 4) {
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_MUSIC, "44");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_RECORDING, "45");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_AUDIOBOOK, "46");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_NOTIFICATION, "47");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_ALARM, "48");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.SAMPLERATE, "49");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.BITS_PER_SAMPLE, "50");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_RINGTONE, "51");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.BOOKMARK, "52");
+            sColumnNameToIdMap.put(MediaStore.Audio.AudioColumns.IS_PODCAST, "53");
         }
 
         // Adding number gap to allow addition of new values
