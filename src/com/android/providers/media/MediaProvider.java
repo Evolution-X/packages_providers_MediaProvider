@@ -192,6 +192,7 @@ import static com.android.providers.media.util.SyntheticPathUtils.isSyntheticPat
 
 import android.Manifest;
 import android.annotation.IntDef;
+import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.AppOpsManager;
 import android.app.AppOpsManager.OnOpActiveChangedListener;
@@ -11418,9 +11419,15 @@ public class MediaProvider extends ContentProvider {
     }
 
     private boolean shouldQueryLevelDbForFileAttributes() {
-        // Don't query leveldb for wear targets and devices with android version R or lower.
+        /**
+         * Don't query file attributes from LevelDb for :
+         * 1. Wear targets
+         * 2. Low RAM devices
+         * 3. Devices targeting Android version R or lower.
+         */
         return Flags.queryLeveldbForFileAttributes()
                 && !getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH)
+                && !getContext().getSystemService(ActivityManager.class).isLowRamDevice()
                 && SdkLevel.isAtLeastS();
     }
 
