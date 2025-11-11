@@ -378,7 +378,7 @@ public class LocalCallingIdentity {
         boolean disableAppopOptimisations = context.getResources().getBoolean(
                 R.bool.config_disable_appop_optimisations);
 
-        if (disableAppopOptimisations || !Flags.enableAppopPermissionChecksCache()) {
+        if (disableAppopOptimisations) {
             return true;
         }
 
