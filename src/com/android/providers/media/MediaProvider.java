@@ -4259,6 +4259,11 @@ public class MediaProvider extends ContentProvider {
 
         Cursor c;
 
+        // Convert projection list to lowercase
+        if (projection != null) {
+            Arrays.asList(projection).replaceAll(String::toLowerCase);
+        }
+
         if (Flags.enableOemMetadata()
                 && hasColumnsToFilterInProjection(qb, projection, List.of(OEM_METADATA))
                 && !mCallingIdentity.get().checkCallingPermissionOemMetadata()) {
@@ -4333,14 +4338,10 @@ public class MediaProvider extends ContentProvider {
     private boolean hasColumnsToFilterInProjection(
             SQLiteQueryBuilder qb, String[] projection, List<String> columnsToFilter) {
         boolean columnsFound = false;
-        List<String> projectionInLowerCase = new ArrayList<>();
-        if (projection != null) {
-            projectionInLowerCase = Arrays.asList(projection);
-            projectionInLowerCase.replaceAll(String::toLowerCase);
-        }
+        List<String> projectionList = projection == null ? new ArrayList<>() : Arrays.asList(
+                projection);
         for (String column: columnsToFilter) {
-            columnsFound =
-                    (!projectionInLowerCase.isEmpty() && projectionInLowerCase.contains(column))
+            columnsFound = (!projectionList.isEmpty() && projectionList.contains(column))
                     || (projection == null && qb.getProjectionMap() != null
                     && qb.getProjectionMap().containsKey(column));
             if (columnsFound) {
@@ -4353,8 +4354,8 @@ public class MediaProvider extends ContentProvider {
     private String[] updateProjectionToFilterColumns(
             SQLiteQueryBuilder qb, String[] projection, List<String> columnsToFilter) {
         projection = maybeReplaceNullProjection(projection, qb);
-        List<String> projectionList = Arrays.asList(projection);
-        projectionList.replaceAll(String::toLowerCase);
+        List<String> projectionList = Arrays.asList(projection); // Creates a copy by reference
+        projectionList.replaceAll(String::toLowerCase); // Re-assert projection list is in lowercase
 
         if (qb.getProjectionAllowlist() == null) {
             qb.setProjectionAllowlist(new ArrayList<>());
@@ -4378,7 +4379,7 @@ public class MediaProvider extends ContentProvider {
     }
 
     private String constructNullProjectionForColumn(String columnName) {
-        return "NULL AS " + columnName;
+        return "null as " + columnName;
     }
 
     /**
