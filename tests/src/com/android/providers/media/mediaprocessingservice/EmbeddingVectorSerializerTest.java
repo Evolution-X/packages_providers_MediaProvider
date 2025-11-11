@@ -49,15 +49,8 @@ public class EmbeddingVectorSerializerTest {
     public void testSerializeDeserialize_emptyList() throws IOException {
         List<EmbeddingVector> original = Collections.emptyList();
         byte[] serialized = EmbeddingVectorSerializer.serializeList(original);
-        assertThat(serialized).isNull();
-        List<EmbeddingVector> deserialized = EmbeddingVectorSerializer.deserializeList(serialized);
-        assertThat(deserialized).isEmpty();
-    }
-
-    @Test
-    public void testSerializeDeserialize_nullList() throws IOException {
-        byte[] serialized = EmbeddingVectorSerializer.serializeList(null);
-        assertThat(serialized).isNull();
+        assertThat(serialized).isNotNull();
+        assertThat(serialized).isEmpty();
         List<EmbeddingVector> deserialized = EmbeddingVectorSerializer.deserializeList(serialized);
         assertThat(deserialized).isEmpty();
     }

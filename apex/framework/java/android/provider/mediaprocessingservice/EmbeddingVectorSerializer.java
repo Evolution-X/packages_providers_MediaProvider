@@ -17,7 +17,6 @@
 package android.provider.mediaprocessingservice;
 
 import android.annotation.FlaggedApi;
-import android.annotation.Nullable;
 import android.annotation.SystemApi;
 
 import androidx.annotation.NonNull;
@@ -66,11 +65,11 @@ public final class EmbeddingVectorSerializer {
      *
      * @throws IOException if an I/O error occurs during serialization.
      */
-    @Nullable
-    public static byte[] serializeList(@Nullable List<EmbeddingVector> embeddingVectorList)
+    @NonNull
+    public static byte[] serializeList(@NonNull List<EmbeddingVector> embeddingVectorList)
             throws IOException {
-        if (embeddingVectorList == null || embeddingVectorList.isEmpty()) {
-            return null;
+        if (embeddingVectorList.isEmpty()) {
+            return new byte[0];
         }
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try (DataOutputStream dos = new DataOutputStream(outputStream)) {
@@ -104,8 +103,8 @@ public final class EmbeddingVectorSerializer {
      * @throws IOException if an I/O error occurs, or if the data format is invalid
      */
     @NonNull
-    public static List<EmbeddingVector> deserializeList(@Nullable byte[] bytes) throws IOException {
-        if (bytes == null || bytes.length == 0) {
+    public static List<EmbeddingVector> deserializeList(@NonNull byte[] bytes) throws IOException {
+        if (bytes.length == 0) {
             return new ArrayList<>();
         }
         ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);

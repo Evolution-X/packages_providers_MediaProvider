@@ -3136,6 +3136,21 @@ public final class MediaStore {
         }
     }
 
+    /**
+     * @hide
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef(value = {
+            Files.FileColumns.MEDIA_TYPE_NONE,
+            Files.FileColumns.MEDIA_TYPE_IMAGE,
+            Files.FileColumns.MEDIA_TYPE_AUDIO,
+            Files.FileColumns.MEDIA_TYPE_VIDEO,
+            Files.FileColumns.MEDIA_TYPE_DOCUMENT
+    })
+    public @interface MediaType {
+    }
+
     /** @hide */
     public static class ThumbnailConstants {
         public static final int MINI_KIND = 1;
