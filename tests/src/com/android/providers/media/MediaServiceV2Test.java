@@ -49,9 +49,6 @@ import android.os.SystemClock;
 import android.os.UserHandle;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
-import android.platform.test.annotations.RequiresFlagsEnabled;
-import android.platform.test.flag.junit.CheckFlagsRule;
-import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.MediaStore;
 
 import androidx.annotation.Nullable;
@@ -62,7 +59,6 @@ import androidx.work.WorkInfo;
 import junit.framework.Assert;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.File;
@@ -71,10 +67,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
-@RequiresFlagsEnabled(com.android.providers.media.flags.Flags.FLAG_ENABLE_MEDIA_SERVICE_V2)
 public class MediaServiceV2Test {
-    @Rule
-    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
     private Context mContext;
     private File mDownloadsDir;
 

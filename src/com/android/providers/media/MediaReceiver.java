@@ -43,7 +43,7 @@ public class MediaReceiver extends BroadcastReceiver {
         } else {
             // All other operations are heavier-weight, so redirect them through
             // service to ensure they have breathing room to finish
-            if (SdkLevel.isAtLeastS() && MediaServiceV2.isFlagEnabled()) {
+            if (SdkLevel.isAtLeastS()) {
                 intent.setComponent(new ComponentName(context, MediaServiceV2.class));
                 MediaServiceV2.enqueueWork(context, intent);
             } else {
