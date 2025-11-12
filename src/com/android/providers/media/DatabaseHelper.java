@@ -1684,7 +1684,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
         makePristineTriggers(db);
 
         final String insertArg =
-                "new.volume_name||':'||new._id||':'||new.media_type||':'||new"
+                "new.volume_name||':'||new._id||':'||ifnull(new.media_type,0)||':'||new"
                         + ".is_download||':'||new.is_pending||':'||new.is_trashed||':'||new"
                         + ".is_favorite||':'||new._user_id"
                         + "||':'||new.generation_modified"
@@ -1692,8 +1692,8 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                         + "||':'||ifnull(new.owner_package_name,'null')"
                         + "||':'||new._data";
         final String updateArg =
-                "old.volume_name||':'||old._id||':'||old.media_type||':'||old.is_download"
-                        + "||':'||new._id||':'||new.media_type||':'||new.is_download"
+                "old.volume_name||':'||old._id||':'||ifnull(old.media_type,0)||':'||old.is_download"
+                        + "||':'||new._id||':'||ifnull(new.media_type,0)||':'||new.is_download"
                         + "||':'||old.is_trashed||':'||new.is_trashed"
                         + "||':'||old.is_pending||':'||new.is_pending"
                         + "||':'||ifnull(old.is_favorite,0)"
@@ -1708,7 +1708,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                         + "||':'||ifnull(new.date_expires,'null')"
                         + "||':'||old._data";
         final String deleteArg =
-                "old.volume_name||':'||old._id||':'||old.media_type||':'||old.is_download"
+                "old.volume_name||':'||old._id||':'||ifnull(old.media_type,0)||':'||old.is_download"
                         + "||':'||ifnull(old.owner_package_name,'null')||':'||old._data";
 
         db.execSQL("CREATE TRIGGER files_insert AFTER INSERT ON files"
@@ -2102,7 +2102,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
     // to go independent of U schema changes.
     static final int VERSION_U = 1409;
     static final int VERSION_V = 1506;
-    static final int VERSION_B = 1602;
+    static final int VERSION_B = 1603;
     public static final int VERSION_LATEST = VERSION_B;
 
     /**
@@ -2360,7 +2360,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                 createSearchIndexProcessingStatusTable(db);
             }
 
-            if (fromVersion < 1602) {
+            if (fromVersion < 1603) {
                 // Empty version bump to ensure triggers are recreated
             }
 

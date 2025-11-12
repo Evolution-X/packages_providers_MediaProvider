@@ -5408,6 +5408,8 @@ public class MediaProvider extends ContentProvider {
         values.put(FileColumns.RELATIVE_PATH, extractRelativePath(path));
         values.put(FileColumns.DISPLAY_NAME, displayName);
         values.put(FileColumns.IS_DOWNLOAD, isDownload(path) ? 1 : 0);
+        // MEDIA_TYPE of directory is MEDIA_TYPE_NONE.
+        values.put(FileColumns.MEDIA_TYPE, FileColumns.MEDIA_TYPE_NONE);
         if (isFileTrashRestoreEnabled()) {
             final Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(displayName);
             if (matcher.matches() && matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
