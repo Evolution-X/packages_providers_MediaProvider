@@ -86,11 +86,6 @@ package android.provider {
     field public static final String SERVICE_INTERFACE = "android.provider.OemMetadataService";
   }
 
-  @FlaggedApi("com.android.providers.media.flags.enable_media_search") public interface SearchMediaCallback {
-    method public void onSearchResultsFailure(@NonNull android.provider.SearchMediaException);
-    method public void onSearchResultsSuccess(@NonNull android.provider.SearchMediaResultPage);
-  }
-
   @FlaggedApi("com.android.providers.media.flags.enable_media_search") public final class SearchMediaException extends java.lang.Throwable implements android.os.Parcelable {
     ctor public SearchMediaException(@NonNull String, @NonNull String, int, boolean);
     method public int describeContents();
@@ -132,8 +127,8 @@ package android.provider {
   @FlaggedApi("com.android.providers.media.flags.enable_media_search") public abstract class SearchMediaService extends android.app.Service {
     ctor public SearchMediaService();
     method @Nullable public android.os.IBinder onBind(@Nullable android.content.Intent);
-    method public abstract void onCancelSearch(@NonNull String);
-    method public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.os.OutcomeReceiver<android.provider.SearchMediaResultPage,android.provider.SearchMediaException>);
+    method @AnyThread public abstract void onCancelSearch(@NonNull String);
+    method @AnyThread public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.os.OutcomeReceiver<android.provider.SearchMediaResultPage,android.provider.SearchMediaException>);
     field public static final String BIND_SEARCH_MEDIA_SERVICE_PERMISSION = "com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE";
     field public static final String EXTRA_MEDIA_TYPE_FILTER = "android.provider.extra.MEDIA_TYPE_FILTER";
     field public static final String EXTRA_NEXT_PAGE_TOKEN = "android.provider.extra.NEXT_PAGE_TOKEN";
