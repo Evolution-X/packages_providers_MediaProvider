@@ -192,6 +192,7 @@ import static com.android.providers.media.util.SyntheticPathUtils.isSyntheticPat
 
 import android.Manifest;
 import android.annotation.IntDef;
+import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.AppOpsManager;
 import android.app.AppOpsManager.OnOpActiveChangedListener;
@@ -2527,7 +2528,7 @@ public class MediaProvider extends ContentProvider {
                 int.class, int.class);
             return (Boolean) isAppCloneUserPair.invoke(mStorageManager, userId1, userId2);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            Log.w(TAG, "isAppCloneUserPair failed. Users: " + userId1 + " and " + userId2);
+            Log.v(TAG, "isAppCloneUserPair failed. Users: " + userId1 + " and " + userId2);
             return false;
         }
     }
@@ -4334,6 +4335,11 @@ public class MediaProvider extends ContentProvider {
 
         Cursor c;
 
+        // Convert projection list to lowercase
+        if (projection != null) {
+            Arrays.asList(projection).replaceAll(String::toLowerCase);
+        }
+
         if (Flags.enableOemMetadata()
                 && hasColumnsToFilterInProjection(qb, projection, List.of(OEM_METADATA))
                 && !mCallingIdentity.get().checkCallingPermissionOemMetadata()) {
@@ -4408,14 +4414,10 @@ public class MediaProvider extends ContentProvider {
     private boolean hasColumnsToFilterInProjection(
             SQLiteQueryBuilder qb, String[] projection, List<String> columnsToFilter) {
         boolean columnsFound = false;
-        List<String> projectionInLowerCase = new ArrayList<>();
-        if (projection != null) {
-            projectionInLowerCase = Arrays.asList(projection);
-            projectionInLowerCase.replaceAll(String::toLowerCase);
-        }
+        List<String> projectionList = projection == null ? new ArrayList<>() : Arrays.asList(
+                projection);
         for (String column: columnsToFilter) {
-            columnsFound =
-                    (!projectionInLowerCase.isEmpty() && projectionInLowerCase.contains(column))
+            columnsFound = (!projectionList.isEmpty() && projectionList.contains(column))
                     || (projection == null && qb.getProjectionMap() != null
                     && qb.getProjectionMap().containsKey(column));
             if (columnsFound) {
@@ -4428,8 +4430,8 @@ public class MediaProvider extends ContentProvider {
     private String[] updateProjectionToFilterColumns(
             SQLiteQueryBuilder qb, String[] projection, List<String> columnsToFilter) {
         projection = maybeReplaceNullProjection(projection, qb);
-        List<String> projectionList = Arrays.asList(projection);
-        projectionList.replaceAll(String::toLowerCase);
+        List<String> projectionList = Arrays.asList(projection); // Creates a copy by reference
+        projectionList.replaceAll(String::toLowerCase); // Re-assert projection list is in lowercase
 
         if (qb.getProjectionAllowlist() == null) {
             qb.setProjectionAllowlist(new ArrayList<>());
@@ -4453,7 +4455,7 @@ public class MediaProvider extends ContentProvider {
     }
 
     private String constructNullProjectionForColumn(String columnName) {
-        return "NULL AS " + columnName;
+        return "null as " + columnName;
     }
 
     /**
@@ -5406,6 +5408,8 @@ public class MediaProvider extends ContentProvider {
         values.put(FileColumns.RELATIVE_PATH, extractRelativePath(path));
         values.put(FileColumns.DISPLAY_NAME, displayName);
         values.put(FileColumns.IS_DOWNLOAD, isDownload(path) ? 1 : 0);
+        // MEDIA_TYPE of directory is MEDIA_TYPE_NONE.
+        values.put(FileColumns.MEDIA_TYPE, FileColumns.MEDIA_TYPE_NONE);
         if (isFileTrashRestoreEnabled()) {
             final Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(displayName);
             if (matcher.matches() && matcher.group(1).equals(FileUtils.PREFIX_TRASHED)) {
@@ -11418,9 +11422,15 @@ public class MediaProvider extends ContentProvider {
     }
 
     private boolean shouldQueryLevelDbForFileAttributes() {
-        // Don't query leveldb for wear targets and devices with android version R or lower.
+        /**
+         * Don't query file attributes from LevelDb for :
+         * 1. Wear targets
+         * 2. Low RAM devices
+         * 3. Devices targeting Android version R or lower.
+         */
         return Flags.queryLeveldbForFileAttributes()
                 && !getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH)
+                && !getContext().getSystemService(ActivityManager.class).isLowRamDevice()
                 && SdkLevel.isAtLeastS();
     }
 
