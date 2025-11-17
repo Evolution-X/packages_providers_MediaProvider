@@ -478,3 +478,11 @@ flag {
     description: "This flag exposes the API contract for abstract Media Processing Service"
     bug: "428139451"
 }
+    
+flag {
+  name: "enable_photopicker_desktop"
+  namespace: "mediaprovider"
+  description: "Enables desktop UI in photopicker"
+  is_exported: false
+  bug: "438571449"
+}
