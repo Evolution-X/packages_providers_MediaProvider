@@ -8062,8 +8062,11 @@ public class MediaProvider extends ContentProvider {
         long getMediaUriStartTime = SystemClock.elapsedRealtimeNanos();
 
         final Uri documentUri = extras.getParcelable(MediaStore.EXTRA_URI);
-        getContext().enforceCallingUriPermission(documentUri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION, TAG);
+        if (!isCallingPackageDocumentsManager()) {
+            getContext()
+                    .enforceCallingUriPermission(
+                            documentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION, TAG);
+        }
 
         final int callingPid = mCallingIdentity.get().pid;
         final int callingUid = mCallingIdentity.get().uid;
