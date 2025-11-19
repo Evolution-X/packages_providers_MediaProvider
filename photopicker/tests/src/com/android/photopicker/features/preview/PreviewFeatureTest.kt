@@ -1308,9 +1308,7 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("Unable to find initial route").that(initialRoute).isNotNull()
 
             // Navigate on the UI thread (similar to a click handler)
-            composeTestRule.runOnUiThread({
-                navController.navigateToPreviewMedia(TEST_MEDIA_IMAGE)
-            })
+            composeTestRule.runOnUiThread { navController.navigateToPreviewSelection() }
 
             // This looks a little awkward, but is necessary. There are two flows that need
             // to be awaited, and a recomposition is required between them, so await idle twice
@@ -1320,9 +1318,15 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.waitForIdle()
 
-            assertWithMessage("Expected route to be preview/media")
+            assertWithMessage("Expected route to be preview/selection")
                 .that(navController.currentBackStackEntry?.destination?.route)
-                .isEqualTo(PhotopickerDestinations.PREVIEW_MEDIA.route)
+                .isEqualTo(PhotopickerDestinations.PREVIEW_SELECTION.route)
+
+            // A third wait is required for the LazyPagingItems to finish loading the async data
+            // from the PagingSource, and for the HorizontalPager to compose the page with the
+            // loaded item. The content description is only available after this point.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
 
             // Verify that there exists an item with "Selected" substring in its content description
             composeTestRule
