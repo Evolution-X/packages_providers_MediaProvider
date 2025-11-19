@@ -233,6 +233,7 @@ fun PreviewSelection(
                             snackbarHostState,
                             /* singleItemPreview */ previewSingleItem,
                             dateFormat,
+                            currentSelection,
                         )
 
                         // Only show the selection button if not in single select.
@@ -434,6 +435,7 @@ private fun PreviewPager(
     snackbarHostState: SnackbarHostState,
     singleItemPreview: Boolean,
     dateFormat: DateFormat,
+    currentSelection: Set<Media>,
 ) {
     // Preview session state to keep track if the video player's audio is muted.
     val audioIsMuted = rememberSaveable { mutableStateOf(true) }
@@ -447,14 +449,15 @@ private fun PreviewPager(
             val media = selection.get(page)
             if (media != null) {
                 Box(modifier = Modifier.focusRequester(focusRequester).focusable(true)) {
+                    val isSelected = currentSelection.contains(media)
                     val pageDescription =
                         stringResource(
                             R.string.pohtopicker_horizontal_pager_description,
                             state.currentPage + 1,
                             state.pageCount,
                         )
-                    val mediaDescription = getMediaContentDescription(media, dateFormat)
-                    val contentDescription = mediaDescription + pageDescription
+                    val mediaDescription = getMediaContentDescription(media, dateFormat, isSelected)
+                    val contentDescription = "$mediaDescription $pageDescription"
                     when (media) {
                         is Media.Image -> ImageUi(media, singleItemPreview, contentDescription)
                         is Media.Video ->

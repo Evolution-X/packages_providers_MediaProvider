@@ -608,7 +608,7 @@ fun defaultBuildMediaItem(
                     falseBlock = { clip(RoundedCornerShape(MEASUREMENT_SELECTED_CORNER_RADIUS)) },
                 )
 
-            val mediaDescription = getMediaContentDescription(item.media, dateFormat)
+            val mediaDescription = getMediaContentDescription(item.media, dateFormat, isSelected)
 
             // Wrap the entire Grid cell in a box for handling aspectRatio and clicks.
             Box(
