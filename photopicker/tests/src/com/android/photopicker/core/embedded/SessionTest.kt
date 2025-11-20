@@ -430,7 +430,10 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
         }
 
     @Test
-    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
+    @RequiresFlagsEnabled(
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API,
+    )
     fun testSessionSetsEmbeddedPhotopickerFeatureInfoInConfiguration() =
         testScope.runTest {
             val component = embeddedServiceComponentBuilder.build()
@@ -460,6 +463,9 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected configuration to contain the highlight query")
                 .that(configuration.highlightQueryResultsParams.queryResultsHighlightQuery)
                 .isEqualTo(HighlightQuery.Search(searchQuery = ""))
+            assertWithMessage("Expected configuration to contain the location access value")
+                .that(configuration.locationMetadataAccessRequested)
+                .isEqualTo(false)
         }
 
     @Test
@@ -931,7 +937,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             session.close()
             advanceTimeBy(100)
 
-            // Clear any invocations on the mock client that may have occurred during session.close()
+            // Clear any invocations on the mock client that may have occurred during
+            // session.close()
             clearInvocations(mockClient)
 
             // Attempt to call another method on the now-closed session.
@@ -962,7 +969,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             session.close()
             advanceTimeBy(100)
 
-            // Clear any invocations on the mock client that may have occurred during session.close()
+            // Clear any invocations on the mock client that may have occurred during
+            // session.close()
             clearInvocations(mockClient)
 
             // Attempt to call close() again on the now-closed session.

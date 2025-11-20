@@ -229,4 +229,26 @@ class IntentTest {
         assertThat(retrievedHsrInfo.queryResultsHighlightQuery)
             .isEqualTo(HighlightQuery.Search(searchQuery = ""))
     }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    fun testisLocationMetadataAccessRequested() {
+        val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS, true)
+
+        val locationMetadataRequested = intent.isLocationMetadataAccessRequested(default = false)
+
+        assertThat(locationMetadataRequested).isTrue()
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    fun testisLocationMetadataAccessRequestedGetContent() {
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS, true)
+
+        assertThrows(IllegalIntentExtraException::class.java) {
+            intent.isLocationMetadataAccessRequested(default = false)
+        }
+    }
 }
