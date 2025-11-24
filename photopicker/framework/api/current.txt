@@ -19,6 +19,7 @@ package android.widget.photopicker {
     method @NonNull public java.util.List<java.lang.String> getMimeTypes();
     method @NonNull public java.util.List<android.net.Uri> getPreSelectedUris();
     method public int getThemeNightMode();
+    method @FlaggedApi("com.android.providers.media.flags.enable_picker_location_metadata_api") public boolean isLocationMetadataRequested();
     method public boolean isOrderedSelection();
     method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") public boolean isPickerLaunchedInExpandedState();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
@@ -38,6 +39,7 @@ package android.widget.photopicker {
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setOrderedSelection(boolean);
     method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setPickerLaunchedInExpandedState(boolean);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setPreSelectedUris(@NonNull java.util.List<android.net.Uri>);
+    method @FlaggedApi("com.android.providers.media.flags.enable_picker_location_metadata_api") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setRequestLocationMetadata(boolean);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setThemeNightMode(int);
   }
 

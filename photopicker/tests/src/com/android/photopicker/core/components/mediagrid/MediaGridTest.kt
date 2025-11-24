@@ -894,6 +894,86 @@ class MediaGridTest {
         }
     }
 
+    @Test
+    fun testMediaGridSelectionChangesContentDescription() {
+        runTest {
+            val selection =
+                SelectionImpl<Media>(
+                    scope = backgroundScope,
+                    configuration =
+                        provideTestConfigurationFlow(
+                            scope = backgroundScope,
+                            defaultConfiguration =
+                                TestPhotopickerConfiguration.build {
+                                    action("")
+                                    selectionLimit(50) // multi-select
+                                },
+                        ),
+                    preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+                )
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(
+                    LocalPhotopickerConfiguration provides
+                        TestPhotopickerConfiguration.build {
+                            action("")
+                            selectionLimit(50)
+                        }
+                ) {
+                    PhotopickerTheme(
+                        isDarkTheme = false,
+                        config =
+                            TestPhotopickerConfiguration.build {
+                                action("")
+                                selectionLimit(50)
+                            },
+                    ) {
+                        grid(
+                            /* selection= */ selection,
+                            /* onItemClick= */ { item ->
+                                launch {
+                                    if (item is MediaGridItem.MediaItem)
+                                        selection.toggle(item.media)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            // Find an item to click on.
+            val itemToSelect =
+                composeTestRule
+                    .onNode(hasTestTag(MEDIA_GRID_TEST_TAG))
+                    .onChildren()
+                    .filter(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING, // "taken on"
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+
+            itemToSelect.assertExists()
+
+            // Verify nothing is selected initially.
+            composeTestRule
+                .onAllNodes(hasContentDescription("Selected", substring = true))
+                .assertCountEquals(0)
+
+            // Click to select the item.
+            itemToSelect.performClick()
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Verify one item is now selected.
+            composeTestRule
+                .onAllNodes(hasContentDescription("Selected", substring = true))
+                .assertCountEquals(1)
+        }
+    }
+
     /** Ensures that items have the correct semantic information before and after selection */
     @Test
     fun testMediaGridClickItemOrderedSelection() {

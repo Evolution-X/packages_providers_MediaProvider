@@ -365,20 +365,20 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
 
     size_t prev = 0, pos = 0;
     std::string delimiter = "::";
-    const int UNSPECIFIED_VALUE = -10;
+    const jint UNSPECIFIED_VALUE = -10;
 
-    auto deserialize_bool = [&](size_t& prev, size_t& pos) -> bool {
+    auto deserialize_bool = [&](size_t& prev, size_t& pos) -> jboolean {
         pos = value.find(delimiter, prev);
-        bool result = value.substr(prev, pos - prev) == "1";
+        jboolean result = (value.substr(prev, pos - prev) == "1") ? JNI_TRUE : JNI_FALSE;
         prev = pos + delimiter.length();
         return result;
     };
 
-    auto deserialize_int = [&](size_t& prev, size_t& pos) -> int {
+    auto deserialize_int = [&](size_t& prev, size_t& pos) -> jint {
         pos = value.find(delimiter, prev);
         char* endptr;
         std::string substring = value.substr(prev, pos - prev);
-        int result = static_cast<int>(std::strtol(substring.c_str(), &endptr, /* base */ 10));
+        jint result = static_cast<jint>(std::strtol(substring.c_str(), &endptr, /* base */ 10));
         if (*endptr != '\0') {
             return UNSPECIFIED_VALUE;
         }
@@ -386,11 +386,11 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
         return result;
     };
 
-    auto deserialize_long = [&](size_t& prev, size_t& pos) -> int {
+    auto deserialize_long = [&](size_t& prev, size_t& pos) -> jlong {
         pos = value.find(delimiter, prev);
         char* endptr;
         std::string substring = value.substr(prev, pos - prev);
-        long result = std::strtol(substring.c_str(), &endptr, /* base */ 10);
+        jlong result = std::strtol(substring.c_str(), &endptr, /* base */ 10);
         if (*endptr != '\0') {
             return UNSPECIFIED_VALUE;
         }
@@ -398,29 +398,29 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
         return result;
     };
 
-    bool is_dirty = deserialize_bool(prev, pos);
+    jboolean is_dirty = deserialize_bool(prev, pos);
     if (is_dirty) {
         LOG(DEBUG) << "Backed up data for path {" << path << "} is dirty";
         return nullptr;
     }
 
-    long row_id = deserialize_long(prev, pos);
+    jlong row_id = deserialize_long(prev, pos);
     if (row_id == UNSPECIFIED_VALUE) {
         LOG(DEBUG) << "Error deserializing row id for path {" << path << "} from backed up data";
         return nullptr;
     }
 
-    bool is_favorite = deserialize_bool(prev, pos);
-    bool is_pending = deserialize_bool(prev, pos);
-    bool is_trashed = deserialize_bool(prev, pos);
+    jboolean is_favorite = deserialize_bool(prev, pos);
+    jboolean is_pending = deserialize_bool(prev, pos);
+    jboolean is_trashed = deserialize_bool(prev, pos);
 
-    int media_type = deserialize_int(prev, pos);
+    jint media_type = deserialize_int(prev, pos);
     if (media_type == UNSPECIFIED_VALUE) {
         LOG(DEBUG) << "Error deserializing media type for path {" << path << "} from backed up data";
         return nullptr;
     }
 
-    int user_id = deserialize_int(prev, pos);
+    jint user_id = deserialize_int(prev, pos);
     if (user_id == UNSPECIFIED_VALUE) {
         LOG(DEBUG) << "Error deserializing user id for path {" << path << "} from backed up data";
         return nullptr;
@@ -435,7 +435,7 @@ jobject com_android_providers_media_FuseDaemon_query_file_access_attributes(JNIE
     }
 
     char* endptr;
-    int owner_pkg_id = static_cast<int>(std::strtol(key.c_str(), &endptr, /* base */ 10));
+    jint owner_pkg_id = static_cast<jint>(std::strtol(key.c_str(), &endptr, /* base */ 10));
     if (*endptr != '\0') {
         LOG(DEBUG) << "Error deserializing owner package id for path {" << path << "} from "
                    << "backed up data";

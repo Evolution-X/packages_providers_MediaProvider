@@ -25,8 +25,14 @@
   <!-- Content description of when a photo was taken on [CHAR LIMIT=NONE] -->
   <string name="photopicker_item_content_desc"><xliff:g id="item_name" example="Photo">%1$s</xliff:g> taken on <xliff:g id="time" example="Jul 7, 2020, 12:00:00 AM">%2$s</xliff:g></string>
 
+  <!-- Content description of when a photo was taken on [CHAR LIMIT=NONE] -->
+  <string name="photopicker_selected_item_content_desc">Selected <xliff:g id="item_name" example="Photo">%1$s</xliff:g> taken on <xliff:g id="time" example="Jul 7, 2020, 12:00:00 AM">%2$s</xliff:g></string>
+
   <!-- Content description of a video item [CHAR LIMIT=NONE] -->
   <string name="photopicker_video_item_content_desc">Video taken on <xliff:g id="time" example="Jul 7, 2020, 12:00:00 AM">%1$s</xliff:g> with duration <xliff:g id="duration" example="00:03">%2$s</xliff:g></string>
+
+  <!-- Content description of a selected video item [CHAR LIMIT=NONE] -->
+  <string name="photopicker_selected_video_item_content_desc">Selected video taken on <xliff:g id="time" example="Jul 7, 2020, 12:00:00 AM">%1$s</xliff:g> with duration <xliff:g id="duration" example="00:03">%2$s</xliff:g></string>
 
   <!--
   Content description of the current date displayed with the date scrubber cursor.

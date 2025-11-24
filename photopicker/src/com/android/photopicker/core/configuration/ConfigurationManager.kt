@@ -34,6 +34,7 @@ import com.android.photopicker.extensions.getPhotopickerSelectionLimitOrDefault
 import com.android.photopicker.extensions.getPickImagesInOrderEnabled
 import com.android.photopicker.extensions.getPickImagesPreSelectedUris
 import com.android.photopicker.extensions.getStartDestination
+import com.android.photopicker.extensions.isLocationMetadataAccessRequested
 import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
@@ -191,6 +192,9 @@ class ConfigurationManager(
             }
         val launchedInExpandedState = featureInfo.isPickerLaunchedInExpandedState
 
+        // Check if calling app is requesting access to metadata
+        val locationMetadataAccessRequested = featureInfo.isLocationMetadataRequested
+
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.
         _configuration.updateAndGet {
@@ -203,6 +207,7 @@ class ConfigurationManager(
                 highlightQueryResultsParams = highlightQueryResultsParams,
                 startDestination = startDestination,
                 embeddedPickerLaunchedInExpandedState = launchedInExpandedState,
+                locationMetadataAccessRequested = locationMetadataAccessRequested,
             )
         }
     }
@@ -303,6 +308,10 @@ class ConfigurationManager(
         val highlightQueryResultsParams: HighlightQueryResultsParams =
             intent.getHighlightQueryResultsParams()
 
+        // get calling app's interest to access location metadata
+        val locationMetadataAccessRequested =
+            intent.isLocationMetadataAccessRequested(default = false)
+
         // Use updateAndGet to ensure the value is set before this method returns so the new
         // intent is immediately available to new subscribers.
         _configuration.updateAndGet {
@@ -317,6 +326,7 @@ class ConfigurationManager(
                 preSelectedUris = pickerPreSelectionUris,
                 callingPackageMediaCapabilities = applicationMediaCapabilities,
                 highlightQueryResultsParams = highlightQueryResultsParams,
+                locationMetadataAccessRequested = locationMetadataAccessRequested,
             )
         }
     }

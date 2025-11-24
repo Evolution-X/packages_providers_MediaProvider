@@ -29,6 +29,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.provider.MediaStore;
 import android.provider.MediaStore.PickImagesHighlightAlbum;
 import android.provider.MediaStore.PickImagesHighlightType;
 
@@ -75,6 +76,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
     @NonNull private final String mHighlightAlbumId;
     private final int mHighlightType;
     private final boolean mLaunchedPickerInExpandedState;
+    private final boolean mLocationMetadataRequested;
 
     private EmbeddedPhotoPickerFeatureInfo(
             List<String> mimeTypes,
@@ -86,7 +88,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             String highlightSearchMediaQuery,
             String highlightAlbumId,
             int highlightType,
-            boolean launchedPickerInExpandedState) {
+            boolean launchedPickerInExpandedState,
+            boolean locationMetadataRequested) {
         this.mMimeTypes = mimeTypes;
         this.mAccentColor = accentColor;
         this.mOrderedSelection = orderedSelection;
@@ -97,6 +100,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         this.mHighlightAlbumId = highlightAlbumId;
         this.mHighlightType = highlightType;
         this.mLaunchedPickerInExpandedState = launchedPickerInExpandedState;
+        this.mLocationMetadataRequested = locationMetadataRequested;
     }
     @NonNull
     public List<Uri> getPreSelectedUris() {
@@ -155,6 +159,11 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         return mLaunchedPickerInExpandedState;
     }
 
+    @FlaggedApi(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    public boolean isLocationMetadataRequested() {
+        return mLocationMetadataRequested;
+    }
+
 
     public static final class Builder {
         //All mime-types are returned by default.
@@ -174,7 +183,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private static final String DEFAULT_HIGHLIGHT_SEARCH_MEDIA_TEXT_QUERY = "";
         private static final String DEFAULT_HIGHLIGHT_ALBUM_ID = "";
         private static final int DEFAULT_HIGHLIGHT_TYPE = PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED;
-        private static boolean DEFAULT_EXPANDED_STATE = false;
+        private static final boolean DEFAULT_EXPANDED_STATE = false;
+        private static final boolean DEFAULT_ACCESS_LOCATION_METADATA = false;
 
         private List<String> mMimeTypes = DEFAULT_MIME_TYPES;
         private long mAccentColor = DEFAULT_ACCENT_COLOR;
@@ -186,6 +196,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private String mHighlightAlbumId = DEFAULT_HIGHLIGHT_ALBUM_ID;
         private int mHighlightType = DEFAULT_HIGHLIGHT_TYPE;
         private boolean mLaunchedPickerInExpandedState = DEFAULT_EXPANDED_STATE;
+        private boolean mLocationMetadataRequested = DEFAULT_ACCESS_LOCATION_METADATA;
 
         public Builder() {}
 
@@ -212,6 +223,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             this.mHighlightAlbumId = featureInfo.getHighlightAlbumId();
             this.mHighlightType = featureInfo.getHighlightType();
             this.mLaunchedPickerInExpandedState = featureInfo.isPickerLaunchedInExpandedState();
+            this.mLocationMetadataRequested = featureInfo.isLocationMetadataRequested();
         }
 
         /**
@@ -388,6 +400,31 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             return this;
         }
 
+        /**
+         * The app can request access to the location metadata of the media items selected by
+         * the user.
+         * <p>
+         * This is indicated by a boolean value which when set to {@code true} informs the
+         * picker that the app is requesting location information for the media items selected by
+         * the user.
+         * The default value for this option will always be {@code false} i.e. not sharing the
+         * location metadata of the selected media items with the calling app.
+         * <p>
+         * Setting this option to true does not guarantee that the calling app will get the location
+         * information. The media items selected by the user may not have any location metadata
+         * associated with them at all. The picker also reserves the right to inform the user of
+         * this request and the user's choice to share the location information will be final.
+         * The calling app will not be able to get the requested data in both these cases.
+         *
+         * @param accessLocationMetadata boolean value indicating location access request
+         */
+        @NonNull
+        @FlaggedApi(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+        public Builder setRequestLocationMetadata(boolean accessLocationMetadata) {
+            mLocationMetadataRequested = accessLocationMetadata;
+            return this;
+        }
+
 
         /**
          * Sets ordered selection of media items i.e. this allows user to view/receive items in
@@ -481,7 +518,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                     mHighlightSearchMediaTextQuery,
                     mHighlightAlbumId,
                     mHighlightType,
-                    mLaunchedPickerInExpandedState);
+                    mLaunchedPickerInExpandedState,
+                    mLocationMetadataRequested);
         }
     }
     private EmbeddedPhotoPickerFeatureInfo(Parcel in) {
@@ -499,6 +537,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         this.mHighlightAlbumId = in.readString();
         this.mHighlightType = in.readInt();
         this.mLaunchedPickerInExpandedState = in.readBoolean();
+        this.mLocationMetadataRequested = in.readBoolean();
     }
 
     @Override
@@ -513,6 +552,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         dest.writeString(mHighlightAlbumId);
         dest.writeInt(mHighlightType);
         dest.writeBoolean(mLaunchedPickerInExpandedState);
+        dest.writeBoolean(mLocationMetadataRequested);
     }
 
     @Override
@@ -547,6 +587,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                 + ", mHighlightAlbumId=" + mHighlightAlbumId
                 + ", mHighlightType=" + mHighlightType
                 + ", mLaunchedPickerInExpandedState=" + mLaunchedPickerInExpandedState
+                + ", mLaunchedPickerInExpandedState=" + mLocationMetadataRequested
                 + '}';
     }
 }

@@ -54,6 +54,7 @@ import android.database.SQLException;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CancellationSignal;
+import android.os.DeadObjectException;
 import android.os.Handler;
 import android.os.RemoteException;
 import android.os.Trace;
@@ -1476,15 +1477,36 @@ public class PickerSyncController {
         return bundle;
     }
 
+    /**
+     * Fetches the latest collection info from the cloud media provider and returns it wrapped in a
+     * {@link Bundle}. In case the collection info cannot be fetched, an empty {@link Bundle}
+     * object is returned.
+     */
     @NonNull
     private Bundle getLatestMediaCollectionInfo(String authority) {
         final InstanceId instanceId = NonUiEventLogger.generateInstanceId();
         NonUiEventLogger.logPickerGetMediaCollectionInfoStart(instanceId, MY_UID, authority);
-        try {
-            Bundle result = mContext.getContentResolver().call(getMediaCollectionInfoUri(authority),
-                    CloudMediaProviderContract.METHOD_GET_MEDIA_COLLECTION_INFO, /* arg */ null,
+        try (ContentProviderClient client = mContext
+                .getContentResolver()
+                .acquireUnstableContentProviderClient(getMediaCollectionInfoUri(authority))) {
+            if (client == null) {
+                throw new NullPointerException("Null ContentProviderClient reference received");
+            }
+            Bundle result = client.call(
+                    CloudMediaProviderContract.METHOD_GET_MEDIA_COLLECTION_INFO,
+                    /* arg */ null,
                     /* extras */ new Bundle());
             return (result == null) ? (new Bundle()) : result;
+        } catch (DeadObjectException e) {
+            Log.e(TAG, "Inactive CloudProvider process " + authority, e);
+            return new Bundle();
+        } catch (RemoteException e) {
+            Log.e(TAG, "Unable to fetch the cloud collection info from " + authority, e);
+            return new Bundle();
+        } catch (RuntimeException e) {
+            Log.e(TAG, "Could not fetch cloud collection info from " + authority
+                            + "due to " + e.getMessage(), e);
+            return new Bundle();
         } finally {
             NonUiEventLogger.logPickerGetMediaCollectionInfoEnd(instanceId, MY_UID, authority);
         }
