@@ -415,14 +415,7 @@ class ConfigurationManager(
                     /* key= */ FEATURE_PICKER_CHOICE_MANAGED_SELECTION.first,
                     /* defaultValue= */ FEATURE_PICKER_CHOICE_MANAGED_SELECTION.second,
                 ),
-            PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED =
-                Flags.enablePickerHighlightSearchResultsApis() &&
-                    (Flags.highlightSearchResultsFeature() ||
-                        deviceConfigProxy.getFlag(
-                            NAMESPACE_MEDIAPROVIDER,
-                            /* key= */ FEATURE_HIGHLIGHT_SEARCH_RESULTS.first,
-                            /* defaultValue= */ FEATURE_HIGHLIGHT_SEARCH_RESULTS.second,
-                        )),
+            PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED = Flags.enablePickerHighlightSearchResultsApis(),
             PICKER_SEARCH_ENABLED = Flags.enablePhotopickerSearch(),
             PICKER_DATESCRUBBER_ENABLED = Flags.enablePhotopickerDatescrubber(),
             PICKER_LOCATION_METADATA_ENABLED = Flags.enablePhotopickerLocationMetadata(),

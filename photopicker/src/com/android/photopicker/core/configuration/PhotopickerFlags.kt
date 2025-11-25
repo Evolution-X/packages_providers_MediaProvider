@@ -52,7 +52,7 @@ data class PhotopickerFlags(
     val PICKER_LOCATION_METADATA_ENABLED: Boolean = Flags.enablePhotopickerLocationMetadata(),
     val PICKER_TRANSCODING_ENABLED: Boolean = Flags.enablePhotopickerTranscoding(),
     val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean =
-        Flags.enablePickerHighlightSearchResultsApis() && Flags.highlightSearchResultsFeature(),
+        Flags.enablePickerHighlightSearchResultsApis(),
     val OWNED_PHOTOS_ENABLED: Boolean = Flags.revokeAccessOwnedPhotos(),
     val PICKER_THUMBNAIL_PRELOAD_ENABLED: Boolean = Flags.enablePhotopickerThumbnailPreload(),
     val POLAROID_ENABLED: Boolean = Flags.photopickerPolaroid(),
