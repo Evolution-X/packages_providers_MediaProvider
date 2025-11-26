@@ -23,6 +23,7 @@ import android.net.Uri;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
+import android.provider.MediaStore.MediaType;
 
 import com.android.providers.media.flags.Flags;
 
@@ -38,7 +39,7 @@ import java.util.Objects;
 public final class MediaProcessingRequest implements Parcelable {
     @NonNull
     private final Uri mUri;
-    private final int mMediaType;
+    private final @MediaType int mMediaType;
     private final long mProcessingGenerationNumber;
 
     /**
@@ -47,7 +48,7 @@ public final class MediaProcessingRequest implements Parcelable {
      * @param processingGenerationNumber Generation modified ID at which media processing request
      *                                   was initiated
      */
-    public MediaProcessingRequest(@NonNull Uri uri, int mediaType,
+    public MediaProcessingRequest(@NonNull Uri uri, @MediaType int mediaType,
             long processingGenerationNumber) {
         Objects.requireNonNull(uri);
 
@@ -68,6 +69,12 @@ public final class MediaProcessingRequest implements Parcelable {
         mProcessingGenerationNumber = in.readLong();
     }
 
+    /**
+     * Write this object in to a Parcel.
+     *
+     * @param dest  The Parcel in which the object should be written.
+     * @param flags Additional flags about how the object should be written.
+     */
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         Objects.requireNonNull(dest);
@@ -76,6 +83,9 @@ public final class MediaProcessingRequest implements Parcelable {
         dest.writeLong(mProcessingGenerationNumber);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int describeContents() {
         return 0;
@@ -95,15 +105,34 @@ public final class MediaProcessingRequest implements Parcelable {
                 }
             };
 
+    /**
+     * Returns the {@link Uri} of the media file to be processed.
+     *
+     * @return The content URI of the media item.
+     */
     @NonNull
     public Uri getUri() {
         return mUri;
     }
 
-    public int getMediaType() {
+    /**
+     * Returns the specific media type of the file.
+     *
+     * @return An integer constant corresponding to {@code MediaStore.MediaType} IntDef values
+     */
+    public @MediaType int getMediaType() {
         return mMediaType;
     }
 
+    /**
+     * Returns the generation number of the media file at the time this processing request was
+     * created.
+     * <p>
+     * This value corresponds to {@link MediaStore.MediaColumns#GENERATION_MODIFIED} and is used
+     * to ensure that processing results are associated with the correct version of the file.
+     *
+     * @return The generation modified ID.
+     */
     public long getProcessingGenerationNumber() {
         return mProcessingGenerationNumber;
     }

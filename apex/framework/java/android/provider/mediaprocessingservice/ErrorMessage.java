@@ -53,19 +53,28 @@ public final class ErrorMessage extends Throwable implements Parcelable {
     @IntDef(value = {ErrorCode.ERROR_UNKNOWN, ErrorCode.ERROR_INVALID_ARGUMENTS, ErrorCode.ERROR_IO,
             ErrorCode.ERROR_SECURITY})
     public @interface ErrorCode {
-        // An unknown error occurred.
+        /** An unknown error occurred. */
         int ERROR_UNKNOWN = 0;
 
-        // The search was called with invalid or malformed arguments.
+        /** The search was called with invalid or malformed arguments. */
         int ERROR_INVALID_ARGUMENTS = 1;
 
-        // An error occurred during an I/O operation (e.g., network or disk).
+        /** An error occurred during an I/O operation (e.g., network or disk). */
         int ERROR_IO = 2;
 
-        // A security or permission-related error occurred.
+        /** A security or permission-related error occurred. */
         int ERROR_SECURITY = 3;
     }
 
+    /**
+     * Constructs a new {@link ErrorMessage}.
+     *
+     * @param errorCode    The specific error code from {@link ErrorCode} associated with the
+     *                     failure.
+     * @param errorMessage A human-readable description of the error.
+     * @param isRetryable  Whether the operation that caused this error is transient and can be
+     *                     retried.
+     */
     public ErrorMessage(@ErrorCode int errorCode, @NonNull String errorMessage,
             boolean isRetryable) {
         Objects.requireNonNull(errorMessage);
@@ -114,7 +123,7 @@ public final class ErrorMessage extends Throwable implements Parcelable {
     };
 
     /**
-     *
+     * {@inheritDoc}
      */
     @Override
     public int describeContents() {
