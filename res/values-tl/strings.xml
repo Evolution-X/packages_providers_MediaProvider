@@ -46,8 +46,7 @@
     <string name="picker_settings_selection_message" msgid="245453573086488596">"I-access ang cloud media sa"</string>
     <string name="picker_settings_no_provider" msgid="2582311853680058223">"Wala"</string>
     <string name="picker_settings_toast_error" msgid="697274445512467469">"Hindi mapalitan ang cloud media app sa ngayon."</string>
-    <!-- no translation found for picker_settings_no_account_access_summary (7529782752439588436) -->
-    <skip />
+    <string name="picker_settings_no_account_access_summary" msgid="7529782752439588436">"Walang access sa account"</string>
     <string name="picker_sync_notification_channel" msgid="1867105708912627993">"Tagapili ng media"</string>
     <string name="picker_sync_notification_title" msgid="1122713382122055246">"Tagapili ng media"</string>
     <string name="picker_sync_notification_text" msgid="8204423917712309382">"Sini-sync ang media…"</string>
