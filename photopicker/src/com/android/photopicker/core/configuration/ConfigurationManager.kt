@@ -419,6 +419,7 @@ class ConfigurationManager(
             PICKER_TRANSCODING_ENABLED = Flags.enablePhotopickerTranscoding(),
             PICKER_THUMBNAIL_PRELOAD_ENABLED = Flags.enablePhotopickerThumbnailPreload(),
             MODERN_CLOUD_SETTINGS_ENABLED = Flags.enableModernPhotopickerCloudSettingsPage(),
+            PICKER_DELETE_HISTORY_SUGGESTION = Flags.enablePhotopickerDeleteHistorySuggestion(),
         )
     }
 
