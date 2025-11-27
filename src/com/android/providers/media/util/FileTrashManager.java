@@ -80,15 +80,7 @@ public final class FileTrashManager {
     public static String trashFile(String filePath,
             FileRenameCallback fileRenameCallback) throws IllegalArgumentException,
             FileNotFoundException, IllegalStateException {
-        File originalFile = getValidatedFilePath(filePath);
-
-        File trashBaseDirectory = getOrCreateTrashBaseDirectory(originalFile);
-
-        final long dateExpires =
-                (System.currentTimeMillis() + FileUtils.DEFAULT_DURATION_TRASHED) / 1000;
-
-        File destinationFile = prepareDestinationFile(originalFile, trashBaseDirectory,
-                dateExpires);
+        File destinationFile = getTrashedFile(filePath);
 
         boolean isRenameSuccess = fileRenameCallback.renameFile(filePath,
                 destinationFile.getAbsolutePath()) == 0;
@@ -186,6 +178,50 @@ public final class FileTrashManager {
         File newTrashFile = new File(destParent, new File(relPath).getName());
         return fileRenameCallback.renameFile(legacyTrashFilePath, newTrashFile.getAbsolutePath())
                 == 0;
+    }
+
+    /**
+     * Checks if a file was trashed to the correct directory.
+     *
+     * @param currentPath   The original path of the file before being trashed.
+     * @param resultantPath The path of the file after it was moved to the trash.
+     * @return {@code true} if the file was moved to the expected trash directory,
+     *         {@code false} otherwise.
+     */
+    public static boolean isValidTrashOperation(String currentPath, String resultantPath) {
+        try {
+            File expectedTrashFile = FileTrashManager.getTrashedFile(currentPath);
+            File resultantFile = new File(resultantPath);
+            // Compare the parent path
+            if (!expectedTrashFile.getParent().equalsIgnoreCase(resultantFile.getParent())) {
+                return false;
+            }
+
+            String currentName = new File(currentPath).getName();
+            String resultantName = FileRestoreManager.cleanTrashPrefix(resultantFile.getName());
+            return currentName.equalsIgnoreCase(resultantName);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Generates the destination {@link File} for a file that is to be moved to the trash.
+     * This method calculates the final path within the trash directory, including a unique
+     * name with an expiration timestamp. It does not perform the actual file move.
+     *
+     * @param filePath The absolute path of the original file.
+     * @return The destination {@link File} in the trash directory.
+     * @throws FileNotFoundException if the original file does not exist.
+     */
+    private static File getTrashedFile(String filePath) throws FileNotFoundException {
+        File originalFile = getValidatedFilePath(filePath);
+        File trashBaseDirectory = getOrCreateTrashBaseDirectory(originalFile);
+        final long dateExpires =
+                (System.currentTimeMillis() + FileUtils.DEFAULT_DURATION_TRASHED) / 1000;
+
+        return prepareDestinationFile(originalFile, trashBaseDirectory,
+                dateExpires);
     }
 
     /**

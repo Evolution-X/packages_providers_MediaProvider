@@ -149,6 +149,48 @@ public final class FileRestoreManager {
     }
 
     /**
+     * Determines the default target path for restoration based on the trashed file's location
+     * within the `.trash-storage` directory. This method take account the trash structure as
+     * the original file system relative to the external storage root.
+     *
+     * <p>
+     * For example, if a file originally at {@code /storage/emulated/0/DCIM/image.jpg} is moved
+     * to {@code /storage/emulated/0/.trash-storage/DCIM/.trashed-123-image.jpg}, this method
+     * will return {@code /storage/emulated/0/DCIM}.
+     *
+     * @param file The trashed file for which to determine the default restore path.
+     * @return The absolute path to the default restoration target directory.
+     */
+    public static String getTargetPath(File file) {
+        if (FileUtils.isTrashFileInPlace(file.getAbsolutePath())) {
+            return file.getParent();
+        }
+
+        // File should exist inside the trash directory.
+        if (!FileUtils.isTrashedFileInTrashDirectory(file.getAbsolutePath())) {
+            return null;
+        }
+
+        String volumeRootPath = FileUtils.extractVolumePath(file.getAbsolutePath());
+        String trashStorageRoot = volumeRootPath + FileUtils.DIRECTORY_TRASH_STORAGE;
+        String pathInTrash = file.getAbsolutePath();
+
+        String relativePathInTrash = pathInTrash.substring(trashStorageRoot.length());
+
+        // Remove the filename itself to get the parent path
+        int lastSeparator = relativePathInTrash.lastIndexOf(File.separator);
+        if (lastSeparator != -1) {
+            relativePathInTrash = relativePathInTrash.substring(0, lastSeparator);
+        } else {
+            relativePathInTrash = ""; // If it's a file directly under .trash-storage
+        }
+
+        File defaultRestoreParent = new File(volumeRootPath, relativePathInTrash);
+
+        return defaultRestoreParent.getAbsolutePath();
+    }
+
+    /**
      * Recursively deletes empty parent directories in the trash location after a file is restored.
      * It stops when it encounters the `.trash-storage` root or a directory that is not empty
      * or does not follow the trashed naming pattern.
@@ -177,7 +219,7 @@ public final class FileRestoreManager {
 
             // Stop if the directory name matches the standard trashed item pattern. This prevents
             // deleting actual trashed folders that happen to be empty.
-            if (isTrashedItem(nextParentToBeChecked)) {
+            if (FileUtils.isTrashedPath(nextParentToBeChecked.getAbsolutePath())) {
                 break;
             }
 
@@ -197,6 +239,39 @@ public final class FileRestoreManager {
         if (directoryToBeScanned != null && mediaScannerCallback != null) {
             mediaScannerCallback.scanFile(directoryToBeScanned);
         }
+    }
+
+    /**
+     * Cleans a full path by removing trash prefixes from all segments.
+     * <p>
+     * For example:
+     * {@code /path/to/.trashed-1234-Folder/.trashed-1234-File.txt} ->
+     * {@code /path/to/Folder/File.txt}
+     *
+     * @param targetPath The path string to clean.
+     * @return The cleaned path string.
+     */
+    public static String getValidTargetPath(String targetPath) {
+        if (targetPath == null || targetPath.isEmpty()) {
+            return targetPath;
+        }
+
+        String[] segments = targetPath.split(File.separator);
+        List<String> cleanedSegments = new ArrayList<>();
+        for (String segment : segments) {
+            cleanedSegments.add(cleanTrashPrefix(segment));
+        }
+
+        // Reconstruct path, handling leading/trailing slashes if present
+        String cleanedPath = String.join(File.separator, cleanedSegments);
+        if (targetPath.startsWith(File.separator) && !cleanedPath.startsWith(File.separator)) {
+            cleanedPath = File.separator + cleanedPath;
+        }
+        if (targetPath.endsWith(File.separator) && !cleanedPath.endsWith(File.separator)) {
+            cleanedPath = cleanedPath + File.separator;
+        }
+
+        return cleanedPath;
     }
 
     /**
@@ -233,51 +308,42 @@ public final class FileRestoreManager {
     }
 
     /**
-     * Checks if a file's name matches the standard pattern for a trashed item.
-     * e.g., ".trashed-1695886782000-..."
-     */
-    private static boolean isTrashedItem(File file) {
-        Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(file.getName());
-        return matcher.matches() && FileUtils.PREFIX_TRASHED.equals(matcher.group(1));
-    }
-
-    private static boolean isFileAllowedToRestore(File trashedFile, File targetParent) {
-        String trashedFileVolumePath = FileUtils.extractVolumePath(trashedFile.getAbsolutePath());
-        String targetParentVolumePath = FileUtils.extractVolumePath(targetParent.getAbsolutePath());
-
-        if (trashedFileVolumePath == null || targetParentVolumePath == null) {
+     * Validates if a restored file's destination is its original parent directory.
+     *
+     * @param currentPath   The absolute path of the item in the trash.
+     * @param resultantPath The path where the item was restored.
+     * @return {@code true} if the restore path is the original parent directory, {@code false}
+     * otherwise.
+     **/
+    public static boolean isValidRestoreOperation(String currentPath, String resultantPath) {
+        String currentParentPath = FileRestoreManager.getTargetPath(
+                new File(currentPath));
+        if (currentParentPath == null || currentParentPath.isEmpty()) {
+            return false;
+        }
+        // The currentParentPath might contain the trash prefix on its ancestor folders,
+        // so it needs to be cleaned up to retrieve the actual non-trashed path.
+        String cleanNonTrashedCurrentParent = FileRestoreManager.getValidTargetPath(
+                currentParentPath);
+        File resultantFile = new File(resultantPath);
+        if (!resultantFile.getParent().equalsIgnoreCase(cleanNonTrashedCurrentParent)) {
             return false;
         }
 
-        String trashedRootPath = trashedFileVolumePath + FileUtils.DIRECTORY_TRASH_STORAGE;
-
-        // trashed file should be descendant of .trash-storage location
-        if (!trashedFile.getAbsolutePath().startsWith(trashedRootPath)) {
-            Log.w(TAG, "trashed file not a descendant of .trash-storage");
-            return false;
-        }
-
-        // trashed file volume path should be equal to target volume path
-        if (!trashedFileVolumePath.equals(targetParentVolumePath)) {
-            Log.w(TAG, "trashed file volume path not equal to target volume path");
-            return false;
-        }
-
-        if (FileUtils.shouldBeInvisible(targetParent.getParent())) {
-            Log.w(TAG, "cannot restored to restricted path");
-            return false;
-        }
-
-        return true;
+        String currentFileName = cleanTrashPrefix(new File(currentPath).getName());
+        String resultantFileName = FileUtils.normalizeFileName(resultantFile.getName());
+        return currentFileName.equalsIgnoreCase(resultantFileName);
     }
 
     /**
-     * Cleans a segment by removing trash prefixes.
+     * Cleans a path segment by removing the trash prefix if present.
+     * <p>
+     * For example: {@code .trashed-1629292929-foo.jpg} becomes {@code foo.jpg}.
      *
      * @param segment The path segment to clean.
      * @return The cleaned segment, or the original if no matching prefix was found.
      */
-    private static String cleanSegment(String segment) {
+    public static String cleanTrashPrefix(String segment) {
         if (segment == null || segment.isEmpty()) {
             return segment;
         }
@@ -290,61 +356,37 @@ public final class FileRestoreManager {
         return segment;
     }
 
-    /**
-     * Cleans a full path by removing trash prefixes from all segments.
-     *
-     * @param targetPath The path string to clean.
-     * @return The cleaned path string.
-     */
-    private static String getValidTargetPath(String targetPath) {
-        if (targetPath == null || targetPath.isEmpty()) {
-            return targetPath;
+    private static boolean isFileAllowedToRestore(File trashedFile, File targetParent) {
+        String trashedFileVolumePath = FileUtils.extractVolumePath(trashedFile.getAbsolutePath());
+        String targetParentVolumePath = FileUtils.extractVolumePath(targetParent.getAbsolutePath());
+
+        if (trashedFileVolumePath == null || targetParentVolumePath == null) {
+            return false;
         }
 
-        String[] segments = targetPath.split(File.separator);
-        List<String> cleanedSegments = new ArrayList<>();
-        for (String segment : segments) {
-            cleanedSegments.add(cleanSegment(segment));
+        boolean isFileTrashedInPlace = FileUtils.isTrashFileInPlace(trashedFile.getAbsolutePath());
+        boolean isFileInTrashStorageDir = FileUtils.isTrashedFileInTrashDirectory(
+                trashedFile.getAbsolutePath());
+
+        if (!isFileTrashedInPlace && !isFileInTrashStorageDir) {
+            Log.w(TAG,
+                    "Restoration denied: Trashed file is neither in-place nor in the "
+                            + ".trash-storage location. Path: "
+                            + trashedFile.getAbsolutePath());
+            return false;
+        }
+        // trashed file volume path should be equal to target volume path
+        if (!trashedFileVolumePath.equals(targetParentVolumePath)) {
+            Log.w(TAG, "Trashed file volume path not equal to target volume path");
+            return false;
         }
 
-        // Reconstruct path, handling leading/trailing slashes if present
-        String cleanedPath = String.join(File.separator, cleanedSegments);
-        if (targetPath.startsWith(File.separator) && !cleanedPath.startsWith(File.separator)) {
-            cleanedPath = File.separator + cleanedPath;
-        }
-        if (targetPath.endsWith(File.separator) && !cleanedPath.endsWith(File.separator)) {
-            cleanedPath = cleanedPath + File.separator;
+        if (FileUtils.shouldBeInvisible(targetParent.getParent())) {
+            Log.w(TAG, "Cannot restored to restricted path");
+            return false;
         }
 
-        return cleanedPath;
-    }
-
-    /**
-     * Determines the default target path for restoration based on the trashed file's location
-     * within the `.trash-storage` directory. This method take account the trash structure as
-     * the original file system relative to the external storage root.
-     *
-     * @param file The trashed file for which to determine the default restore path.
-     * @return The absolute path to the default restoration target directory.
-     */
-    private static String getTargetPath(File file) {
-        String volumeRootPath = FileUtils.extractVolumePath(file.getAbsolutePath());
-        String trashStorageRoot = volumeRootPath + FileUtils.DIRECTORY_TRASH_STORAGE;
-        String pathInTrash = file.getAbsolutePath();
-
-        String relativePathInTrash = pathInTrash.substring(trashStorageRoot.length());
-
-        // Remove the filename itself to get the parent path
-        int lastSeparator = relativePathInTrash.lastIndexOf(File.separator);
-        if (lastSeparator != -1) {
-            relativePathInTrash = relativePathInTrash.substring(0, lastSeparator);
-        } else {
-            relativePathInTrash = ""; // If it's a file directly under .trash-storage
-        }
-
-        File defaultRestoreParent = new File(volumeRootPath, relativePathInTrash);
-
-        return defaultRestoreParent.getAbsolutePath();
+        return true;
     }
 
     /**
