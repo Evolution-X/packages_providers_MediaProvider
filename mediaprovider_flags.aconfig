@@ -502,3 +502,11 @@ flag {
     description: "This flag enables option to delete photopicker search history suggestions"
     bug: "412985514"
 }
+
+flag {
+    name: "enable_photopicker_offline_banners"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "Enables offline banners shown when there is no network connection available on the device."
+    bug: "412985507"
+}
