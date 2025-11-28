@@ -500,6 +500,7 @@ public class MediaProvider extends ContentProvider {
     static final String BROADCAST_INTENT = "broadcast_intent";
     static final String CANCEL_WORK_AFTER_ENQUEUEING = "cancel_work_after_enqueueing";
     static final String REMOVE_VOL_BEFORE_ENQUEUEING = "remove_vol_before_enqueueing";
+    static final String PERFORM_CLEANUP = "perform_cleanup";
 
     /**
      * Constants to test changes related database backup and recovery.
@@ -1911,6 +1912,8 @@ public class MediaProvider extends ContentProvider {
         // In Android 15, certain MIME types were introduced that are not supported, this fixes
         // existing data with these unsupported MIME types
         fixUnsupportedMimeTypesForAndroid15(getContext());
+
+        MediaServiceV2.performCleanUp(getContext());
 
         final long durationMillis = (SystemClock.elapsedRealtime() - startTime);
         Metrics.logIdleMaintenance(MediaStore.VOLUME_EXTERNAL, itemCount,
@@ -8713,6 +8716,11 @@ public class MediaProvider extends ContentProvider {
 
                 // cancel work once work is enqueued
                 workManager.cancelWorkById(uuid);
+            }
+
+            boolean performCleanup = extras.getBoolean(PERFORM_CLEANUP, false);
+            if (performCleanup) {
+                MediaServiceV2.performCleanUp(getContext());
             }
 
             WorkInfo workInfo = workManager.getWorkInfoById(uuid).get();

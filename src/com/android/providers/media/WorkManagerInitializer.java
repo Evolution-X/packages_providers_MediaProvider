@@ -56,6 +56,7 @@ public class WorkManagerInitializer {
         if (!WorkManager.isInitialized()) {
             Log.i(TAG, "Work manager not initialised. Attempting to initialise.");
             WorkManager.initialize(mContext, getWorkManagerConfiguration());
+            MediaServiceV2.performCleanUp(mContext);
         }
         return WorkManager.getInstance(mContext);
     }
