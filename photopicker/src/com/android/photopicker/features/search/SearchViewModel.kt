@@ -360,6 +360,23 @@ constructor(
     }
 
     /**
+     * Removes the selected search suggestion from history.
+     *
+     * @param suggestion The `SearchSuggestion` selected by the user.
+     */
+    fun removeSearchHistory(suggestion: SearchSuggestion) {
+        if (configurationManager.configuration.value.flags.PICKER_DELETE_HISTORY_SUGGESTION) {
+            scope.launch(backgroundDispatcher) {
+                searchDataService.deleteHistorySuggestion(suggestion)
+                suggestionCache.clearSuggestions()
+
+                // Fetch the new list of suggestions.
+                fetchSuggestions(_searchBarTextState.value)
+            }
+        }
+    }
+
+    /**
      * Initiates a search based on a user-provided query string.
      *
      * @param query The search query entered by the user.

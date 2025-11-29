@@ -7110,9 +7110,11 @@ public class MediaProvider extends ContentProvider {
 
         uri = safeUncanonicalize(uri);
         final boolean allowHidden = isCallingPackageAllowedHidden();
-        final int match = matchUri(uri, allowHidden);
+        final int match = mUriMatcher.matchUri(uri, allowHidden, isCallerPhotoPicker());
 
         switch (match) {
+            case PICKER_INTERNAL_V2:
+                return PickerUriResolverV2.delete(uri, extras);
             case AUDIO_MEDIA_ID:
             case AUDIO_PLAYLISTS_ID:
             case VIDEO_MEDIA_ID:

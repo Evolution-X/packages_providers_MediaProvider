@@ -61,4 +61,7 @@
    <!-- Title for the offline banner in search results page notifying user network connecton required to select cloud photos and videos  [CHAR LIMIT=50] -->
   <string name="photopicker_banner_search_result_no_network_title"
          translation_description="Banner title informing the user Internet connection required.">Internet connection required</string>
+
+    <!-- History Suggestion delete tooltip text  [CHAR LIMIT=20] -->
+    <string name="photopicker_history_suggestion_delete_text" translation_description="Text message to delete shown on the tooltip when long pressed on a history suggestion">Delete</string>
 </resources>

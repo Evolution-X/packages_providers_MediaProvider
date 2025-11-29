@@ -676,6 +676,22 @@ open class MediaProviderClient {
         }
     }
 
+    /** Deletes a search suggestion from the search history suggestions. */
+    suspend fun deleteHistorySuggestion(resolver: ContentResolver, suggestion: SearchSuggestion) {
+        try {
+            val input =
+                Bundle().apply {
+                    putString(SearchSuggestionsResponse.AUTHORITY.key, suggestion.authority)
+                    putString(SearchSuggestionsResponse.MEDIA_SET_ID.key, suggestion.mediaSetId)
+                    putString(SearchSuggestionsResponse.SEARCH_TEXT.key, suggestion.displayText)
+                }
+
+            resolver.delete(SEARCH_SUGGESTIONS_URI, input)
+        } catch (e: Exception) {
+            throw RuntimeException("Could not delete search history", e)
+        }
+    }
+
     /**
      * Fetches a list of search suggestions from MediaProvider filtered by the input prefix string.
      */

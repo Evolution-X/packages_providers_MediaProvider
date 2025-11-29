@@ -40,6 +40,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -1013,5 +1014,116 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule
                 .onNode(hasContentDescription(cloudProvider.displayName))
                 .assertDoesNotExist()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PHOTOPICKER_DELETE_HISTORY_SUGGESTION,
+    )
+    fun testHistorySuggestion_whenLongClicked_opensTooltip() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Perform click action on the Search bar
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+                .performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            composeTestRule.onNode(hasText("paris")).performTouchInput { longClick() }
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_history_suggestion_delete_text)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PHOTOPICKER_DELETE_HISTORY_SUGGESTION,
+    )
+    fun testNonHistorySuggestion_whenLongClicked_notOpensTooltip() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Perform click action on the Search bar
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+                .performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            composeTestRule.onNode(hasText("France")).performTouchInput { longClick() }
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
+
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_history_suggestion_delete_text)
+                    )
+                )
+                .assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_DELETE_HISTORY_SUGGESTION)
+    fun testHistorySuggestion_whenLongClicked_flagOff_NoTooltip() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Perform click action on the Search bar
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .assertIsDisplayed()
+                .performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(1000)
+
+            composeTestRule.onNode(hasText("paris")).performTouchInput { longClick() }
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        resources.getString(R.string.photopicker_history_suggestion_delete_text)
+                    ),
+                    useUnmergedTree = true,
+                )
+                .assertIsNotDisplayed()
         }
 }

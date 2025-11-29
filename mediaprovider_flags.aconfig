@@ -494,3 +494,11 @@ flag {
     description: "This flag will control the rollout of the photopicker location metadata feature."
     bug: "457454437"
 }
+
+flag {
+    name: "enable_photopicker_delete_history_suggestion"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables option to delete photopicker search history suggestions"
+    bug: "412985514"
+}
