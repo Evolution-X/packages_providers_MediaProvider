@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import com.android.photopicker.R
 import com.android.photopicker.core.banners.Banner
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
@@ -93,6 +94,7 @@ class CloudMediaFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        bannerLocation: BannerLocation,
     ): Int {
 
         val isEmbedded = config.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED

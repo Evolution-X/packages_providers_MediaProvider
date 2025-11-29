@@ -38,20 +38,30 @@ import kotlinx.coroutines.flow.StateFlow
  */
 interface BannerManager {
 
-    /** A flow of the currently active Banner. NULL if no banner is currently active. */
-    val flow: StateFlow<Banner?>
+    /**
+     * Returns a [StateFlow] that emits the current [Banner] for a specific [BannerLocation].
+     *
+     * This is useful for UI components that only need to be aware of banners for their specific
+     * location.
+     *
+     * @param bannerLocation The banner location to observe.
+     * @return A [StateFlow] of the [Banner] for the given location, or null if no banner is active.
+     */
+    fun getBannerFlow(bannerLocation: BannerLocation): StateFlow<Banner?>
 
     /**
      * Set the currently shown banner to a banner which implements the provided [BannerDeclaration]
+     * at the specified [BannerLocation].
      *
      * This method will attempt to locate a factory for the provided [BannerDeclaration]
      *
      * @param banner The [BannerDeclaration] to build.
+     * @param bannerLocation The [BannerLocation] to show the banner.
      */
-    suspend fun showBanner(banner: BannerDeclaration)
+    suspend fun showBanner(banner: BannerDeclaration, bannerLocation: BannerLocation)
 
     /**
-     * Immediately hides any shown banners.
+     * Immediately hides any shown banners for all locations.
      *
      * Calling this while no banner is active will have no effect.
      */
@@ -69,14 +79,20 @@ interface BannerManager {
     suspend fun markBannerAsDismissed(banner: BannerDeclaration)
 
     /**
-     * Refresh the current banner state by evaluating all enabled banners again. The banner with the
-     * highest returned priority will be shown when this method is complete. Priorities below zero
-     * are ignored. This method is time-limited, but can result in external data calls depending on
-     * the enabled banners implementation.
-     *
-     * If no BannerDeclaration has a valid priority, this method clears the existing banner.
+     * Refreshes the banners for all possible [BannerLocation]s. For each location, this method
+     * re-evaluates all enabled banners, displaying the one with the highest priority.
      */
     suspend fun refreshBanners()
+
+    /**
+     * Refreshes the banner for a specific [BannerLocation].
+     *
+     * This evaluates all banners registered for the given location and displays the one with the
+     * highest priority.
+     *
+     * @param bannerLocation The [BannerLocation] for which the banners are refreshed.
+     */
+    suspend fun refreshBanner(bannerLocation: BannerLocation)
 
     /**
      * Retrieve the persisted [BannerState] for the requested [BannerDeclaration].

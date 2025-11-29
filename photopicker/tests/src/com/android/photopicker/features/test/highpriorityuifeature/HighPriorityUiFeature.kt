@@ -31,6 +31,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import com.android.photopicker.core.banners.Banner
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerState
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.events.RegisteredEventClass
@@ -85,6 +86,7 @@ class HighPriorityUiFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        bannerLocation: BannerLocation,
     ): Int {
         // If the banner reports as being dismissed, don't show it.
         if (bannerState?.dismissed == true) {
