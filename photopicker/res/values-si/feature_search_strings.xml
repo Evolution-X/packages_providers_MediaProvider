@@ -32,4 +32,6 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"සෙවීම් ප්‍රතිඵල ජාලකය"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> වෙතින් ඔබේ ඡායාරූප සහ වීඩියෝ තේරීමට සම්බන්ධ වන්න"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"අන්තර්ජාල සම්බන්ධතාව අවශ්‍ය වේ"</string>
+    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
+    <skip />
 </resources>

@@ -32,4 +32,6 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"検索結果のグリッド"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> から写真や動画を選択するには、インターネットに接続してください"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"インターネット接続が必要です"</string>
+    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
+    <skip />
 </resources>

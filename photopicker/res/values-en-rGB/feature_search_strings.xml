@@ -32,4 +32,6 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Search results grid"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"Connect to select your photos and videos from <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"Internet connection required"</string>
+    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
+    <skip />
 </resources>

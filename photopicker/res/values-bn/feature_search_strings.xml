@@ -32,4 +32,6 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"সার্চ ফলাফলের গ্রিড"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> থেকে আপনার ফটো &amp; ভিডিও বেছে নিতে কানেক্ট করুন"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"ইন্টারনেট কানেকশন প্রয়োজন হবে"</string>
+    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
+    <skip />
 </resources>

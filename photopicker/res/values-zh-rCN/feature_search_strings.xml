@@ -32,4 +32,6 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"搜索结果网格"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"关联后即可从“<xliff:g id="APP_NAME">%1$s</xliff:g>”中选择照片和视频"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"需联网"</string>
+    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
+    <skip />
 </resources>
