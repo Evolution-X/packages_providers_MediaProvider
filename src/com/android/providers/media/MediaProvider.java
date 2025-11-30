@@ -598,6 +598,14 @@ public class MediaProvider extends ContentProvider {
     @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.VANILLA_ICE_CREAM)
     static final long LIMIT_CREATE_REQUEST_URIS = 203408344L;
 
+    /**
+     * Trashed files are moved to a centralized trash directory instead of being marked as trashed
+     * in their original location.
+     */
+    @ChangeId
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.BAKLAVA)
+    static final long TRASH_BEHAVIOR_CHANGE = 461429441L;
+
     @GuardedBy("mPendingOpenInfo")
     private final Map<Integer, PendingOpenInfo> mPendingOpenInfo = new ArrayMap<>();
 
@@ -13241,7 +13249,8 @@ public class MediaProvider extends ContentProvider {
     @VisibleForTesting
     protected boolean isCallingPackageTargetSdkVersionGreaterThanB() {
         // If the calling app's target SDK version is greater than Baklava (API 36)
-        return getCallingPackageTargetSdkVersion() > Build.VERSION_CODES.BAKLAVA;
+        return getCallingPackageTargetSdkVersion() > Build.VERSION_CODES.BAKLAVA
+                && CompatChanges.isChangeEnabled(TRASH_BEHAVIOR_CHANGE);
     }
 
     /**
