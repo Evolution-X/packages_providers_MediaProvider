@@ -104,17 +104,30 @@ public final class MediaProcessingResponse implements Parcelable {
         }
     }
 
+    /**
+     * Returns the {@link Uri} of the media file that was processed.
+     *
+     * @return The content URI of the media item.
+     */
     @NonNull
     public Uri getUri() {
         return mUri;
     }
 
+    /**
+     * Returns the generation number of the media file associated with this response.
+     * <p>
+     * This should match the generation number provided in the original
+     * {@link MediaProcessingRequest} to ensure data consistency.
+     *
+     * @return The generation modified ID.
+     */
     public long getProcessingGenerationNumber() {
         return mProcessingGenerationNumber;
     }
 
     /**
-     * @return A string with comma separated labels extracted from the media file.
+     * @return A string with space separated labels extracted from the media file.
      */
     @Nullable
     public String getExtractedLabels() {
@@ -162,14 +175,14 @@ public final class MediaProcessingResponse implements Parcelable {
                     Log.e(TAG,
                             "SharedMemory size mismatch, expected " + mEmbeddingsSize + " but got "
                                     + buffer.remaining());
-                    throw new IOException("SharedMemory size mismatch");
+                    throw new IllegalStateException("SharedMemory size mismatch");
                 }
                 byte[] bytes = new byte[mEmbeddingsSize];
                 buffer.get(bytes);
                 mCachedEmbeddings = EmbeddingVectorSerializer.deserializeList(bytes);
             } catch (Exception e) {
                 Log.e(TAG, "Failed to deserialize embeddings", e);
-                mCachedEmbeddings = new ArrayList<>();
+                throw new RuntimeException("Failed to retrieve embedding vector list", e);
             } finally {
                 if (buffer != null) {
                     SharedMemory.unmap(buffer);
@@ -200,6 +213,9 @@ public final class MediaProcessingResponse implements Parcelable {
                 }
             };
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int describeContents() {
         // Contents include a FileDescriptor within the SharedMemory object.
@@ -315,7 +331,7 @@ public final class MediaProcessingResponse implements Parcelable {
          * @return This Builder instance.
          */
         @NonNull
-        public Builder setEmbeddingVectorList(@Nullable List<EmbeddingVector> embeddingVectorList) {
+        public Builder setEmbeddingVectorList(@NonNull List<EmbeddingVector> embeddingVectorList) {
             this.mEmbeddingVectorList = embeddingVectorList;
             return this;
         }

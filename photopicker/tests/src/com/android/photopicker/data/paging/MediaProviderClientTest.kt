@@ -42,6 +42,7 @@ import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.search.model.SearchRequest
 import com.android.photopicker.features.search.model.SearchSuggestion
+import com.android.photopicker.features.search.model.SearchSuggestionType
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -688,5 +689,87 @@ class MediaProviderClientTest {
         val expectedMediaPageKeyList =
             testContentProvider.getMediaPageKeyListForAllItemsAtInterval()
         assertThat(mediaPageKeyList).containsExactlyElementsIn(expectedMediaPageKeyList)
+    }
+
+    @Test
+    fun testDeleteHistorySuggestion_success() = runTest {
+        val mediaProviderClient = MediaProviderClient()
+        val cancellationSignal = CancellationSignal()
+
+        val searchSuggestions: List<SearchSuggestion> =
+            mediaProviderClient.fetchSearchSuggestions(
+                resolver = testContentResolver,
+                prefix = "",
+                limit = 10,
+                historyLimit = 3,
+                availableProviders = listOf(),
+                cancellationSignal = cancellationSignal,
+            )
+
+        assertThat(searchSuggestions.size).isEqualTo(DEFAULT_SEARCH_SUGGESTIONS.size)
+
+        val suggestion =
+            SearchSuggestion(
+                mediaSetId = "media-set-id-2",
+                authority = "local-provider",
+                type = SearchSuggestionType.HISTORY,
+                displayText = "Text",
+                icon = null,
+            )
+
+        mediaProviderClient.deleteHistorySuggestion(testContentResolver, suggestion)
+
+        val newSuggestions: List<SearchSuggestion> =
+            mediaProviderClient.fetchSearchSuggestions(
+                resolver = testContentResolver,
+                prefix = "",
+                limit = 10,
+                historyLimit = 3,
+                availableProviders = listOf(),
+                cancellationSignal = cancellationSignal,
+            )
+
+        assertThat(newSuggestions.size).isEqualTo(searchSuggestions.size - 1)
+    }
+
+    @Test
+    fun testDeleteHistorySuggestion_failure() = runTest {
+        val mediaProviderClient = MediaProviderClient()
+        val cancellationSignal = CancellationSignal()
+
+        val searchSuggestions: List<SearchSuggestion> =
+            mediaProviderClient.fetchSearchSuggestions(
+                resolver = testContentResolver,
+                prefix = "",
+                limit = 10,
+                historyLimit = 3,
+                availableProviders = listOf(),
+                cancellationSignal = cancellationSignal,
+            )
+
+        assertThat(searchSuggestions.size).isEqualTo(DEFAULT_SEARCH_SUGGESTIONS.size)
+
+        val suggestion =
+            SearchSuggestion(
+                mediaSetId = "media-set-id-2",
+                authority = "local-provider",
+                type = SearchSuggestionType.HISTORY,
+                displayText = "falseText",
+                icon = null,
+            )
+
+        mediaProviderClient.deleteHistorySuggestion(testContentResolver, suggestion)
+
+        val newSuggestions: List<SearchSuggestion> =
+            mediaProviderClient.fetchSearchSuggestions(
+                resolver = testContentResolver,
+                prefix = "",
+                limit = 10,
+                historyLimit = 3,
+                availableProviders = listOf(),
+                cancellationSignal = cancellationSignal,
+            )
+
+        assertThat(newSuggestions.size).isEqualTo(searchSuggestions.size)
     }
 }

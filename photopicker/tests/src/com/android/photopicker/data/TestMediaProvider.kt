@@ -95,8 +95,8 @@ val DEFAULT_ALBUM_MEDIA: Map<String, List<Media>> = mapOf(DEFAULT_ALBUM_NAME to 
 
 val DEFAULT_SEARCH_REQUEST_ID: Int = 100
 
-val DEFAULT_SEARCH_SUGGESTIONS: List<SearchSuggestion> =
-    listOf(
+val DEFAULT_SEARCH_SUGGESTIONS: MutableList<SearchSuggestion> =
+    mutableListOf(
         SearchSuggestion(
             mediaSetId = null,
             authority = null,
@@ -115,6 +115,13 @@ val DEFAULT_SEARCH_SUGGESTIONS: List<SearchSuggestion> =
             mediaSetId = "media-set-id-1",
             authority = "local-provider",
             type = SearchSuggestionType.TEXT,
+            displayText = "Text",
+            icon = null,
+        ),
+        SearchSuggestion(
+            mediaSetId = "media-set-id-2",
+            authority = "local-provider",
+            type = SearchSuggestionType.HISTORY,
             displayText = "Text",
             icon = null,
         ),
@@ -241,6 +248,16 @@ class TestMediaProvider(
         }
     }
 
+    override fun delete(uri: Uri, queryArgs: Bundle?): Int {
+        when (uri.lastPathSegment) {
+            SEARCH_SUGGESTIONS_PATH_SEGMENT -> return deleteSearchHistory(queryArgs)
+            else -> {
+                return 0
+            }
+        }
+        return 0
+    }
+
     override fun call(authority: String, method: String, arg: String?, extras: Bundle?): Bundle? {
         return when (method) {
             MediaProviderClient.MEDIA_INIT_CALL_METHOD -> {
@@ -261,6 +278,25 @@ class TestMediaProvider(
                 )
             else -> throw UnsupportedOperationException("Could not recognize method $method")
         }
+    }
+
+    private fun deleteSearchHistory(queryArgs: Bundle?): Int {
+        if (queryArgs != null) {
+            val displayText = queryArgs.getString("display_text")
+            val mediaSetId = queryArgs.getString("media_set_id")
+            val authority = queryArgs.getString("authority")
+            DEFAULT_SEARCH_SUGGESTIONS.forEach { suggestion ->
+                if (
+                    suggestion.mediaSetId.equals(mediaSetId) &&
+                        suggestion.displayText.equals(displayText) &&
+                        suggestion.authority.equals(authority)
+                ) {
+                    DEFAULT_SEARCH_SUGGESTIONS.remove(suggestion)
+                    return 1
+                }
+            }
+        }
+        return 0
     }
 
     /** Returns a [Cursor] with the providers currently in the [providers] list. */

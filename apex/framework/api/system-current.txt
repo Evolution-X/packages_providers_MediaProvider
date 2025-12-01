@@ -158,8 +158,8 @@ package android.provider.mediaprocessingservice {
   }
 
   @FlaggedApi("com.android.providers.media.flags.enable_media_processing_service") public final class EmbeddingVectorSerializer {
-    method @NonNull public static java.util.List<android.provider.mediaprocessingservice.EmbeddingVector> deserializeList(@Nullable byte[]) throws java.io.IOException;
-    method @Nullable public static byte[] serializeList(@Nullable java.util.List<android.provider.mediaprocessingservice.EmbeddingVector>) throws java.io.IOException;
+    method @NonNull public static java.util.List<android.provider.mediaprocessingservice.EmbeddingVector> deserializeList(@NonNull byte[]) throws java.io.IOException;
+    method @NonNull public static byte[] serializeList(@NonNull java.util.List<android.provider.mediaprocessingservice.EmbeddingVector>) throws java.io.IOException;
   }
 
   @FlaggedApi("com.android.providers.media.flags.enable_media_processing_service") public final class ErrorMessage extends java.lang.Throwable implements android.os.Parcelable {
@@ -195,7 +195,7 @@ package android.provider.mediaprocessingservice {
   public static final class MediaProcessingResponse.Builder {
     ctor public MediaProcessingResponse.Builder(@NonNull android.net.Uri, long);
     method @NonNull public android.provider.mediaprocessingservice.MediaProcessingResponse build();
-    method @NonNull public android.provider.mediaprocessingservice.MediaProcessingResponse.Builder setEmbeddingVectorList(@Nullable java.util.List<android.provider.mediaprocessingservice.EmbeddingVector>);
+    method @NonNull public android.provider.mediaprocessingservice.MediaProcessingResponse.Builder setEmbeddingVectorList(@NonNull java.util.List<android.provider.mediaprocessingservice.EmbeddingVector>);
     method @NonNull public android.provider.mediaprocessingservice.MediaProcessingResponse.Builder setExtractedLabels(@Nullable String);
   }
 

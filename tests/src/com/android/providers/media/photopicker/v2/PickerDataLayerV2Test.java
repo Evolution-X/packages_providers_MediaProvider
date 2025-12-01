@@ -139,6 +139,7 @@ import com.android.providers.media.photopicker.v2.model.MediaInMediaSetSyncReque
 import com.android.providers.media.photopicker.v2.model.MediaSetsSyncRequestParams;
 import com.android.providers.media.photopicker.v2.model.MediaSource;
 import com.android.providers.media.photopicker.v2.model.SearchSuggestion;
+import com.android.providers.media.photopicker.v2.model.SearchSuggestionRequest;
 import com.android.providers.media.photopicker.v2.model.SearchTextRequest;
 import com.android.providers.media.photopicker.v2.sqlite.MediaInMediaSetsDatabaseUtil;
 import com.android.providers.media.photopicker.v2.sqlite.MediaSetsDatabaseUtil;
@@ -3858,6 +3859,340 @@ public class PickerDataLayerV2Test {
     }
 
     @Test
+    public void testDeleteSearchHistorySuggestionSearchText() {
+        doReturn(true).when(mMockSyncController).shouldQueryLocalMediaForSearch(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaForSearch(any(), any());
+        doReturn(mMockOperation).when(mMockWorkManager)
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+        doReturn(mMockFuture).when(mMockOperation).getResult();
+
+        final String searchText = "volcano";
+        final Bundle extras = getCreateSearchRequestExtras(new SearchTextRequest(null, searchText));
+        final Executor currentThreadExecutor = Runnable::run;
+
+        final Bundle result = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result).isNotNull();
+        assertThat(result.getInt("search_request_id")).isEqualTo(1);
+
+        // Assert that local sync, cloud sync and cache clearing work was scheduled
+        verify(mMockWorkManager, times(3))
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+
+        // Assert that search request was saved as search history in database
+        final List<SearchSuggestion> suggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(suggestions.size()).isEqualTo(1);
+        assertThat(suggestions.get(0).getSearchText()).isEqualTo(searchText);
+
+        final Bundle bundle = new Bundle();
+        bundle.putString("display_text", searchText);
+
+        final int deletedRows = PickerDataLayerV2.deleteSearchHistorySuggestion(bundle);
+        assertThat(deletedRows).isEqualTo(1);
+
+        final List<SearchSuggestion> newSuggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(newSuggestions.size()).isEqualTo(0);
+    }
+
+
+    @Test
+    public void testDeleteSearchHistorySuggestionSearchText_noMatch() {
+        doReturn(true).when(mMockSyncController).shouldQueryLocalMediaForSearch(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaForSearch(any(), any());
+        doReturn(mMockOperation).when(mMockWorkManager)
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+        doReturn(mMockFuture).when(mMockOperation).getResult();
+
+        final String searchText = "volcano";
+        final Bundle extras = getCreateSearchRequestExtras(new SearchTextRequest(null, searchText));
+        final Executor currentThreadExecutor = Runnable::run;
+
+        final Bundle result = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result).isNotNull();
+        assertThat(result.getInt("search_request_id")).isEqualTo(1);
+
+        // Assert that local sync, cloud sync and cache clearing work was scheduled
+        verify(mMockWorkManager, times(3))
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+
+        // Assert that search request was saved as search history in database
+        final List<SearchSuggestion> suggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(suggestions.size()).isEqualTo(1);
+        assertThat(suggestions.get(0).getSearchText()).isEqualTo(searchText);
+
+        final Bundle bundle = new Bundle();
+        bundle.putString("display_text", "different_text");
+
+        final int deletedRows = PickerDataLayerV2.deleteSearchHistorySuggestion(bundle);
+        assertThat(deletedRows).isEqualTo(0);
+
+        final List<SearchSuggestion> newSuggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(newSuggestions.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testDeleteSearchHistorySuggestionWithMediaSetId() {
+        doReturn(true).when(mMockSyncController).shouldQueryLocalMediaForSearch(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaForSearch(any(), any());
+        doReturn(mMockOperation).when(mMockWorkManager)
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+        doReturn(mMockFuture).when(mMockOperation).getResult();
+
+        final String searchText = "volcano";
+        final String searchMediaSetId = "testMediaSetId";
+        Bundle extras = getCreateSearchSuggestionRequestExtras(
+                new SearchSuggestionRequest(null, searchText, searchMediaSetId,
+                        null, CloudMediaProviderContract.SEARCH_SUGGESTION_HISTORY));
+        final Executor currentThreadExecutor = Runnable::run;
+
+        final Bundle result = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result).isNotNull();
+        assertThat(result.getInt("search_request_id")).isEqualTo(1);
+
+        // Assert that local sync, cloud sync and cache clearing work was scheduled
+        verify(mMockWorkManager, times(3))
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+
+        // Assert that search request was saved as search history in database
+        final List<SearchSuggestion> suggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(suggestions.size()).isEqualTo(1);
+        assertThat(suggestions.get(0).getSearchText()).isEqualTo(searchText);
+        assertThat(suggestions.get(0).getMediaSetId()).isEqualTo(searchMediaSetId);
+
+        final Bundle bundle = new Bundle();
+        bundle.putString("display_text", searchText);
+        bundle.putString("media_set_id", searchMediaSetId);
+        bundle.putString("authority", null);
+
+        final int deletedRows = PickerDataLayerV2.deleteSearchHistorySuggestion(bundle);
+        assertThat(deletedRows).isEqualTo(1);
+
+        final List<SearchSuggestion> newSuggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(newSuggestions.size()).isEqualTo(0);
+    }
+
+
+    @Test
+    public void testDeleteSearchHistorySuggestionWithMediaSetId_noMatch() {
+        doReturn(true).when(mMockSyncController).shouldQueryLocalMediaForSearch(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaForSearch(any(), any());
+        doReturn(mMockOperation).when(mMockWorkManager)
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+        doReturn(mMockFuture).when(mMockOperation).getResult();
+
+        final String searchText = "volcano";
+        final String searchMediaSetId = "testMediaSetId";
+        final String authority = null;
+        Bundle extras = getCreateSearchSuggestionRequestExtras(
+                new SearchSuggestionRequest(null, searchText, searchMediaSetId,
+                        authority, CloudMediaProviderContract.SEARCH_SUGGESTION_HISTORY));
+        final Executor currentThreadExecutor = Runnable::run;
+
+        final Bundle result = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result).isNotNull();
+        assertThat(result.getInt("search_request_id")).isEqualTo(1);
+
+        // Assert that local sync, cloud sync and cache clearing work was scheduled
+        verify(mMockWorkManager, times(3))
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+
+        // Assert that search request was saved as search history in database
+        final List<SearchSuggestion> suggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(suggestions.size()).isEqualTo(1);
+        assertThat(suggestions.get(0).getSearchText()).isEqualTo(searchText);
+        assertThat(suggestions.get(0).getMediaSetId()).isEqualTo(searchMediaSetId);
+        assertThat(suggestions.get(0).getAuthority()).isEqualTo(authority);
+
+        final Bundle bundle = new Bundle();
+        bundle.putString("display_text", searchText);
+        bundle.putString("media_set_id", "differentMediaSetId");
+        bundle.putString("authority", null);
+
+        final int deletedRows = PickerDataLayerV2.deleteSearchHistorySuggestion(bundle);
+        assertThat(deletedRows).isEqualTo(0);
+
+        final List<SearchSuggestion> newSuggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("", new ArrayList<>()));
+        assertThat(newSuggestions.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testDeleteSearchHistorySuggestionWithMediaSetIdAndAuthority_noMatch() {
+        doReturn(true).when(mMockSyncController).shouldQueryLocalMediaForSearch(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaForSearch(any(), any());
+        doReturn(mMockOperation).when(mMockWorkManager)
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+        doReturn(mMockFuture).when(mMockOperation).getResult();
+
+        final String searchText = "volcano";
+        final String searchMediaSetId = "testMediaSetId";
+        final String authority = CloudProviderPrimary.AUTHORITY;
+        Bundle extras = getCreateSearchSuggestionRequestExtras(
+                new SearchSuggestionRequest(null, searchText, searchMediaSetId,
+                        authority, CloudMediaProviderContract.SEARCH_SUGGESTION_HISTORY));
+        final Executor currentThreadExecutor = Runnable::run;
+
+        final Bundle result = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result).isNotNull();
+        assertThat(result.getInt("search_request_id")).isEqualTo(1);
+
+        // Assert that local sync, cloud sync and cache clearing work was scheduled
+        verify(mMockWorkManager, times(3))
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+
+        // Assert that search request was saved as search history in database
+        final List<SearchSuggestion> suggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("",
+                                new ArrayList<>(List.of(CloudProviderPrimary.AUTHORITY))));
+        assertThat(suggestions.size()).isEqualTo(1);
+        assertThat(suggestions.get(0).getSearchText()).isEqualTo(searchText);
+        assertThat(suggestions.get(0).getMediaSetId()).isEqualTo(searchMediaSetId);
+        assertThat(suggestions.get(0).getAuthority()).isEqualTo(authority);
+
+        final Bundle bundle = new Bundle();
+        bundle.putString("display_text", searchText);
+        bundle.putString("media_set_id", searchMediaSetId);
+        bundle.putString("authority", "differentAuthority");
+
+        final int deletedRows = PickerDataLayerV2.deleteSearchHistorySuggestion(bundle);
+        assertThat(deletedRows).isEqualTo(0);
+
+        final List<SearchSuggestion> newSuggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("",
+                                new ArrayList<>(List.of(CloudProviderPrimary.AUTHORITY))));
+        assertThat(newSuggestions.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void testDeleteSearchHistorySuggestionWithMediaSetIdAndAuthority() {
+        doReturn(true).when(mMockSyncController).shouldQueryLocalMediaForSearch(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaForSearch(any(), any());
+        doReturn(mMockOperation).when(mMockWorkManager)
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+        doReturn(mMockFuture).when(mMockOperation).getResult();
+
+        final String searchText = "volcano";
+        final String searchMediaSetId = "testMediaSetId";
+        final String cloudAuthority = CloudProviderPrimary.AUTHORITY;
+        Bundle extras = getCreateSearchSuggestionRequestExtras(
+                new SearchSuggestionRequest(null, searchText, searchMediaSetId,
+                        cloudAuthority, CloudMediaProviderContract.SEARCH_SUGGESTION_HISTORY));
+        final Executor currentThreadExecutor = Runnable::run;
+
+        final Bundle result = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result).isNotNull();
+        assertThat(result.getInt("search_request_id")).isEqualTo(1);
+
+        final String searchAuthority = SearchProvider.AUTHORITY;
+        final String searchMediaSetId1 = "testMediaSetId1";
+        Bundle extras1 = getCreateSearchSuggestionRequestExtras(
+                new SearchSuggestionRequest(null, searchText, searchMediaSetId1,
+                        searchAuthority, CloudMediaProviderContract.SEARCH_SUGGESTION_HISTORY));
+
+        final Bundle result1 = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras1, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result1).isNotNull();
+        assertThat(result1.getInt("search_request_id")).isEqualTo(2);
+
+        final String searchMediaSetId2 = "testMediaSetId2";
+        Bundle extras2 = getCreateSearchSuggestionRequestExtras(
+                new SearchSuggestionRequest(null, searchText, searchMediaSetId2,
+                        cloudAuthority, CloudMediaProviderContract.SEARCH_SUGGESTION_HISTORY));
+
+        final Bundle result2 = PickerDataLayerV2.handleNewSearchRequest(
+                mMockContext, extras2, currentThreadExecutor, mMockWorkManager);
+
+        // Assert that a new search request was created
+        assertThat(result2).isNotNull();
+        assertThat(result2.getInt("search_request_id")).isEqualTo(3);
+
+        // Assert that local sync, cloud sync and cache clearing work was scheduled
+        verify(mMockWorkManager, times(9))
+                .enqueueUniqueWork(anyString(), any(ExistingWorkPolicy.class),
+                        any(OneTimeWorkRequest.class));
+
+        // Assert that search request was saved as search history in database
+        final List<SearchSuggestion> suggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("",
+                                new ArrayList<>(List.of(cloudAuthority, searchAuthority))));
+        assertThat(suggestions.size()).isEqualTo(3);
+
+        final Bundle bundle = new Bundle();
+        bundle.putString("display_text", searchText);
+        bundle.putString("media_set_id", searchMediaSetId);
+        bundle.putString("authority", cloudAuthority);
+
+        final int deletedRows = PickerDataLayerV2.deleteSearchHistorySuggestion(bundle);
+        assertThat(deletedRows).isEqualTo(1);
+
+        final List<SearchSuggestion> newSuggestions =
+                SearchSuggestionsDatabaseUtils.getHistorySuggestions(
+                        mFacade.getDatabase(),
+                        new SearchSuggestionsQuery("",
+                                new ArrayList<>(List.of(cloudAuthority, searchAuthority))));
+        assertThat(newSuggestions.size()).isEqualTo(2);
+    }
+
+    @Test
     public void testTriggerMediaSetsSyncRequest() {
         doReturn(true).when(mMockSyncController).shouldQueryLocalMediaSets(any());
         doReturn(true).when(mMockSyncController).shouldQueryCloudMediaSets(any(), any());
@@ -3890,6 +4225,7 @@ public class PickerDataLayerV2Test {
         verify(mMockWorkContinuation, times(1)).then(any(List.class));
         verify(mMockWorkContinuation, times(1)).enqueue();
     }
+
     @Test
     public void testTriggerMediaInMediaSetSyncRequest() {
         doReturn(true).when(mMockSyncController).shouldQueryLocalMediaSets(any());
@@ -4448,6 +4784,18 @@ public class PickerDataLayerV2Test {
         final Bundle bundle = new Bundle();
         bundle.putString("search_text", searchTextRequest.getSearchText());
         bundle.putStringArrayList("providers", new ArrayList<>(List.of(SearchProvider.AUTHORITY)));
+        return bundle;
+    }
+
+    private static Bundle getCreateSearchSuggestionRequestExtras(
+            SearchSuggestionRequest searchTextRequest) {
+        final Bundle bundle = new Bundle();
+        bundle.putString("search_text", searchTextRequest.getSearchSuggestion().getSearchText());
+        bundle.putString("media_set_id", searchTextRequest.getSearchSuggestion().getMediaSetId());
+        bundle.putStringArrayList("providers", new ArrayList<>(List.of(SearchProvider.AUTHORITY)));
+        bundle.putString("authority", searchTextRequest.getSearchSuggestion().getAuthority());
+        bundle.putString("search_suggestion_type",
+                searchTextRequest.getSearchSuggestion().getSearchSuggestionType());
         return bundle;
     }
 

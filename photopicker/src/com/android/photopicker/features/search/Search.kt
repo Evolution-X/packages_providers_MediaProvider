@@ -25,6 +25,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.outlined.HideImage
@@ -67,6 +69,7 @@ import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -85,9 +88,12 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.dismiss
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -95,6 +101,7 @@ import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -182,6 +189,12 @@ private val SINGLE_SUGGESTION_CARD_SHAPE = RoundedCornerShape(CARD_CORNER_RADIUS
 private val MEASUREMENT_FACE_SUGGESTION_ICON = 48.dp
 private val MEASUREMENT_FACE_RESULT_ICON = 32.dp
 private val MEASUREMENT_OTHER_ICON = 40.dp
+
+private val HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE = 2.dp
+private val TOOLTIP_CONTENT_HORIZONTAL_PADDING = 12.dp
+private val TOOLTIP_CONTENT_VERTICAL_PADDING = 8.dp
+private val TOOLTIP_ROUNDED_CORNERS_MEASURE = 20.dp
+private val TOOLTIP_WIDTH = 250.dp
 
 /** A composable function that displays a SearchBar. */
 @Composable
@@ -295,13 +308,16 @@ fun SearchBarEnabled(params: LocationParams, viewModel: SearchViewModel, modifie
                                 it.mediaSource == MediaSource.REMOTE
                             }
 
-                        ShowSuggestions(
+                        Suggestions(
                             searchSuggestions = suggestionLists,
                             isZeroSearchState = searchTerm.isEmpty(),
                             onSuggestionClick = { suggestion ->
                                 focusManager.clearFocus()
                                 viewModel.setSearchBarText(suggestion.displayText ?: "")
                                 viewModel.performSearch(suggestion = suggestion)
+                            },
+                            onDeleteSuggestion = { suggestion ->
+                                viewModel.removeSearchHistory(suggestion)
                             },
                             modifier = modifier,
                             cloudProviderIcon = providerToIconMap.getOrDefault(cloudProvider, null),
@@ -681,7 +697,7 @@ fun ShowSearchInputWithCustomIcon(
             onFocused = onFocused,
             onSearchQueryChanged = { onSearchQueryChanged("") },
         )
-        ShowSuggestionIcon(
+        SuggestionIcon(
             suggestion,
             modifier = Modifier.clip(CircleShape).size(MEASUREMENT_FACE_RESULT_ICON),
         )
@@ -830,15 +846,18 @@ fun EmptySearchResult(modifier: Modifier = Modifier) {
  * @param cloudProviderIcon [Icon] of the cloud provider providing the suggestions
  * @param cloudProviderName Name of the cloud provider providing the suggestions
  * @param onSuggestionClick A callback function to be invoked when a suggestion is clicked.
+ * @param onDeleteSuggestion A callback function to be invoked when a history suggestion is
+ *   long-pressed.
  */
 @Composable
-private fun ShowSuggestions(
+private fun Suggestions(
     searchSuggestions: SearchSuggestions,
     isZeroSearchState: Boolean,
     modifier: Modifier,
     cloudProviderIcon: Icon?,
     cloudProviderName: String?,
     onSuggestionClick: (SearchSuggestion) -> Unit,
+    onDeleteSuggestion: (SearchSuggestion) -> Unit,
 ) {
     val isEmbedded =
         LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
@@ -867,13 +886,14 @@ private fun ShowSuggestions(
                 suggestion ->
                 val size =
                     minOf(historySuggestions.size, SearchViewModel.HISTORY_SUGGESTION_MAX_LIMIT)
-                ShowSuggestionCard(
+                SuggestionCard(
                     suggestion,
                     historySuggestions.indexOf(suggestion),
                     size,
                     faceSuggestions.size,
                     otherSuggestions.size,
                     onSuggestionClick,
+                    onDeleteSuggestion = onDeleteSuggestion,
                 )
             }
             if (faceSuggestions.isNotEmpty() || otherSuggestions.isNotEmpty()) {
@@ -913,7 +933,7 @@ private fun ShowSuggestions(
             }
             items(otherSuggestions.take(SearchViewModel.ALL_SUGGESTION_MAX_LIMIT)) { suggestion ->
                 val size = minOf(otherSuggestions.size, SearchViewModel.ALL_SUGGESTION_MAX_LIMIT)
-                ShowSuggestionCard(
+                SuggestionCard(
                     suggestion,
                     otherSuggestions.indexOf(suggestion),
                     size,
@@ -921,6 +941,7 @@ private fun ShowSuggestions(
                     otherSuggestions.size,
                     onSuggestionClick,
                     isZeroSearchState,
+                    onDeleteSuggestion,
                 )
             }
         }
@@ -949,9 +970,12 @@ private fun ShowSuggestions(
  *   receives the clicked [SearchSuggestion] as a parameter.
  * @param isZeroSearchState A boolean flag indicating whether the search is in a "zero state" (e.g.,
  *   no search term entered yet). Defaults to `false`.
+ * @param onDeleteSuggestion Callback function to be invoked when a history suggestion card is
+ *   long-pressed.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ShowSuggestionCard(
+private fun SuggestionCard(
     suggestion: SearchSuggestion,
     index: Int,
     size: Int,
@@ -959,24 +983,137 @@ private fun ShowSuggestionCard(
     otherTypeCount: Int,
     onSuggestionClick: (SearchSuggestion) -> Unit,
     isZeroSearchState: Boolean = false,
+    onDeleteSuggestion: (SearchSuggestion) -> Unit,
 ) {
-    Card(
-        modifier =
-            Modifier.fillMaxWidth()
-                .padding(MEASUREMENT_EXTRA_SMALL_PADDING)
-                .clickable(onClick = { onSuggestionClick(suggestion) }),
-        shape =
-            getCardShape(
-                index,
-                size,
-                suggestion.type,
-                faceTypeCount,
-                otherTypeCount,
-                isZeroSearchState,
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    val config = LocalPhotopickerConfiguration.current
+    val cardShape =
+        getCardShape(index, size, suggestion.type, faceTypeCount, otherTypeCount, isZeroSearchState)
+    if (
+        config.flags.PICKER_DELETE_HISTORY_SUGGESTION &&
+            suggestion.type == SearchSuggestionType.HISTORY
     ) {
-        SuggestionItem(suggestion)
+        DeletableSuggestionCard(
+            suggestion = suggestion,
+            shape = cardShape,
+            onSuggestionClick = onSuggestionClick,
+            onDeleteSuggestion = onDeleteSuggestion,
+        )
+    } else {
+        Card(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(MEASUREMENT_EXTRA_SMALL_PADDING)
+                    .clickable(onClick = { onSuggestionClick(suggestion) }),
+            shape = cardShape,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            SuggestionItem(suggestion)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeletableSuggestionCard(
+    suggestion: SearchSuggestion,
+    shape: Shape,
+    onSuggestionClick: (SearchSuggestion) -> Unit,
+    onDeleteSuggestion: (SearchSuggestion) -> Unit,
+) {
+
+    val config = LocalPhotopickerConfiguration.current
+    if (!config.flags.PICKER_DELETE_HISTORY_SUGGESTION) {
+        return
+    }
+    val tooltipState = rememberTooltipState(isPersistent = true)
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
+    // Position provider to place the tooltip below the anchor, aligned to the left.
+    val positionProvider = remember {
+        object : PopupPositionProvider {
+            override fun calculatePosition(
+                anchorBounds: IntRect,
+                windowSize: IntSize,
+                layoutDirection: LayoutDirection,
+                popupContentSize: IntSize,
+            ): IntOffset {
+                // A small spacing between the anchor and the tooltip.
+                val spacing = with(density) { 8.dp.toPx() }.toInt()
+
+                // Position the tooltip below the anchor card.
+                val y = anchorBounds.top - with(density) { 32.dp.toPx() }.toInt()
+
+                // Align the left edge of the tooltip with the left edge of the anchor.
+                val x = anchorBounds.left + spacing
+
+                return IntOffset(x, y)
+            }
+        }
+    }
+    TooltipBox(
+        positionProvider = positionProvider,
+        tooltip = {
+            PlainTooltip(
+                // This adds the caret(the small arrow pointing to the anchor button)
+                // to the tooltip.
+                caretShape = TooltipDefaults.caretShape(),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = RoundedCornerShape(TOOLTIP_ROUNDED_CORNERS_MEASURE),
+                modifier = Modifier.width(TOOLTIP_WIDTH).height(48.dp),
+                tonalElevation = HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE,
+                shadowElevation = HIGHLIGHT_TOOLTIP_ELEVATION_MEASURE,
+            ) {
+                val deleteDescription =
+                    stringResource(R.string.photopicker_history_suggestion_delete_text)
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier.semantics(mergeDescendants = true) {
+                                contentDescription = deleteDescription
+                            }
+                            .clickable {
+                                onDeleteSuggestion(suggestion)
+                                scope.launch { tooltipState.dismiss() }
+                            },
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = stringResource(R.string.photopicker_history_suggestion_delete_text),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier =
+                            Modifier.clearAndSetSemantics {}
+                                .padding(
+                                    horizontal = TOOLTIP_CONTENT_HORIZONTAL_PADDING,
+                                    vertical = TOOLTIP_CONTENT_VERTICAL_PADDING,
+                                ),
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+        },
+        state = tooltipState,
+    ) {
+        Card(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(MEASUREMENT_EXTRA_SMALL_PADDING)
+                    .combinedClickable(
+                        onClick = { onSuggestionClick(suggestion) },
+                        onLongClick = { scope.launch { tooltipState.show() } },
+                        onLongClickLabel =
+                            stringResource(R.string.photopicker_history_suggestion_delete_text),
+                    ),
+            shape = shape,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            SuggestionItem(suggestion)
+        }
     }
 }
 
@@ -992,7 +1129,7 @@ fun SuggestionItem(suggestion: SearchSuggestion) {
         modifier = Modifier.fillMaxWidth().padding(MEASUREMENT_SUGGESTION_ITEM_PADDING),
     ) {
         if (suggestion.type == SearchSuggestionType.FACE) {
-            ShowSuggestionIcon(suggestion, Modifier.size(MEASUREMENT_OTHER_ICON).clip(CircleShape))
+            SuggestionIcon(suggestion, Modifier.size(MEASUREMENT_OTHER_ICON).clip(CircleShape))
         } else {
             Box(
                 modifier =
@@ -1012,7 +1149,7 @@ fun SuggestionItem(suggestion: SearchSuggestion) {
                 suggestion.type != SearchSuggestionType.HISTORY &&
                 suggestion.icon != null
         ) {
-            ShowSuggestionIcon(suggestion, Modifier.size(MEASUREMENT_OTHER_ICON).clip(CircleShape))
+            SuggestionIcon(suggestion, Modifier.size(MEASUREMENT_OTHER_ICON).clip(CircleShape))
         }
     }
 }
@@ -1052,7 +1189,7 @@ fun ShowFaceSuggestions(
                 },
         ) {
             list.take(SearchViewModel.FACE_SUGGESTION_MAX_LIMIT).forEach { suggestion ->
-                ShowSuggestionIcon(
+                SuggestionIcon(
                     suggestion,
                     modifier =
                         Modifier.size(MEASUREMENT_FACE_SUGGESTION_ICON)
@@ -1075,7 +1212,7 @@ fun ShowFaceSuggestions(
  * @param modifier Modifiers to be applied to the Icon composable.
  */
 @Composable
-fun ShowSuggestionIcon(suggestion: SearchSuggestion, modifier: Modifier) {
+fun SuggestionIcon(suggestion: SearchSuggestion, modifier: Modifier) {
     val imageDescription = suggestion.displayText ?: ""
     when {
         suggestion.icon != null -> {

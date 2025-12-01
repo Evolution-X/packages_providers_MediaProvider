@@ -56,6 +56,7 @@ data class PhotopickerFlags(
     val PICKER_THUMBNAIL_PRELOAD_ENABLED: Boolean = Flags.enablePhotopickerThumbnailPreload(),
     val POLAROID_ENABLED: Boolean = Flags.photopickerPolaroid(),
     val MODERN_CLOUD_SETTINGS_ENABLED: Boolean = Flags.enableModernPhotopickerCloudSettingsPage(),
+    val PICKER_DELETE_HISTORY_SUGGESTION: Boolean = Flags.enablePhotopickerDeleteHistorySuggestion(),
 ) {
     /**
      * Implement a custom equals method to correctly check the equality of the Array member
@@ -78,6 +79,7 @@ data class PhotopickerFlags(
         if (PICKER_THUMBNAIL_PRELOAD_ENABLED != other.PICKER_THUMBNAIL_PRELOAD_ENABLED) return false
         if (POLAROID_ENABLED != other.POLAROID_ENABLED) return false
         if (MODERN_CLOUD_SETTINGS_ENABLED != other.MODERN_CLOUD_SETTINGS_ENABLED) return false
+        if (PICKER_DELETE_HISTORY_SUGGESTION != other.PICKER_DELETE_HISTORY_SUGGESTION) return false
         return true
     }
 
@@ -100,5 +102,6 @@ data class PhotopickerFlags(
             PICKER_THUMBNAIL_PRELOAD_ENABLED,
             POLAROID_ENABLED,
             MODERN_CLOUD_SETTINGS_ENABLED,
+            PICKER_DELETE_HISTORY_SUGGESTION,
         )
 }

@@ -1186,6 +1186,16 @@ public class MediaProvider extends ContentProvider {
                 }
 
                 mDatabaseBackupAndRecovery.updateBackup(helper, oldRow, newRow);
+
+                // Check if the file was trashed and is now not trashed (a restore operation)
+                if (Flags.enableTrashAndRestoreByFilePathApi()) {
+                    boolean isRestoreOperation = oldRow.isTrashed() && !newRow.isTrashed()
+                            && FileUtils.isTrashedFileInTrashDirectory(oldRow.getPath());
+                    if (isRestoreOperation) {
+                        FileRestoreManager.deleteAllParentIfNonTrashed(new File(oldRow.getPath()),
+                                parentFile -> scanFileAsMediaProvider(parentFile));
+                    }
+                }
             });
 
             if (newRow.getMediaType() != oldRow.getMediaType()) {
@@ -5078,23 +5088,29 @@ public class MediaProvider extends ContentProvider {
                 throw new IllegalArgumentException(e);
             }
 
-            FileUtils.sanitizeValues(values, /*rewriteHiddenFileName*/ !isFuseThread());
-            FileUtils.computeDataFromValues(values, volumePath, isFuseThread());
+            // Explicitly set rewriteHiddenFileName to false. This prevents hidden file names
+            // from being rewritten, which is critical for ensuring that file renames,
+            // especially across hidden directories, function as expected.
+            boolean rewriteHiddenFileName =
+                    Flags.enableTrashAndRestoreByFilePathApi() ? false : !isFuseThread();
+            FileUtils.sanitizeValues(values, rewriteHiddenFileName);
+            FileUtils.computeDataFromValues(values, volumePath,
+                    isFuseThread(), /* handleTrashAndRestoreByPath */ isFileTrashRestoreEnabled());
             assertFileColumnsConsistent(match, uri, values);
 
             // Create result file
-            File res = new File(values.getAsString(MediaColumns.DATA));
+            File resultantFile = new File(values.getAsString(MediaColumns.DATA));
             try {
                 if (makeUnique) {
-                    res = FileUtils.buildUniqueFile(res.getParentFile(),
-                            mimeType, res.getName());
+                    resultantFile = FileUtils.buildUniqueFile(resultantFile.getParentFile(),
+                            mimeType, resultantFile.getName());
                 } else {
-                    res = FileUtils.buildNonUniqueFile(res.getParentFile(),
-                            mimeType, res.getName());
+                    resultantFile = FileUtils.buildNonUniqueFile(resultantFile.getParentFile(),
+                            mimeType, resultantFile.getName());
                 }
             } catch (FileNotFoundException e) {
                 throw new IllegalStateException(
-                        "Failed to build unique file: " + res + " " + values);
+                        "Failed to build unique file: " + resultantFile + " " + values);
             }
 
             // Require that content lives under well-defined directories to help
@@ -5103,7 +5119,21 @@ public class MediaProvider extends ContentProvider {
             // Start by saying unchanged directories are valid
             final String currentDir = (currentPath != null)
                     ? new File(currentPath).getParent() : null;
-            boolean validPath = res.getParent().equals(currentDir);
+            boolean validPath = resultantFile.getParent().equals(currentDir);
+
+            // If the file is being moved to or from the .trash-storage, the path validation
+            // logic should compare the untrashed paths to determine if the move is valid.
+            if (isFileTrashRestoreEnabled() && !validPath && currentPath != null) {
+                if (FileUtils.isTrashedFileInTrashDirectory(resultantFile.getPath())) {
+                    // Trash case, where the res path is trashed path.
+                    validPath = FileTrashManager.isValidTrashOperation(currentPath,
+                            resultantFile.getPath());
+                } else if (FileUtils.isTrashedFileInTrashDirectory(currentPath)) {
+                    // Restore case, where the current path is trashed path.
+                    validPath = FileRestoreManager.isValidRestoreOperation(currentPath,
+                            resultantFile.getPath());
+                }
+            }
 
             // Next, consider allowing based on allowed primary directory
             final String[] relativePath = values.getAsString(MediaColumns.RELATIVE_PATH).split("/");
@@ -5147,10 +5177,11 @@ public class MediaProvider extends ContentProvider {
 
             // Consider allowing external media directory of calling package
             if (!validPath) {
-                final String pathOwnerPackage = extractPathOwnerPackageName(res.getAbsolutePath());
+                final String pathOwnerPackage = extractPathOwnerPackageName(
+                        resultantFile.getAbsolutePath());
                 if (pathOwnerPackage != null) {
-                    validPath = isExternalMediaDirectory(res.getAbsolutePath()) &&
-                            isCallingIdentitySharedPackageName(pathOwnerPackage);
+                    validPath = isExternalMediaDirectory(resultantFile.getAbsolutePath())
+                            && isCallingIdentitySharedPackageName(pathOwnerPackage);
                 }
             }
 
@@ -5167,7 +5198,7 @@ public class MediaProvider extends ContentProvider {
                 final boolean createNonDefaultTopLevelDir = primary != null &&
                         !FileUtils.buildPath(volumePath, primary).exists();
                 validPath = !createNonDefaultTopLevelDir && canSystemGalleryAccessTheFile(
-                        res.getAbsolutePath());
+                        resultantFile.getAbsolutePath());
             }
 
             // Nothing left to check; caller can't use this path
@@ -5185,15 +5216,15 @@ public class MediaProvider extends ContentProvider {
             // on the lower filesystem. This fixes some FileManagers relying on the mTime change
             // for UI updates
             File defaultDirVolumePath =
-                    isFuseThread ? null : checkDefaultDirMissing(resolvedVolumeName, res);
+                    isFuseThread ? null : checkDefaultDirMissing(resolvedVolumeName, resultantFile);
             // Ensure all parent folders of result file exist
-            res.getParentFile().mkdirs();
-            if (!res.getParentFile().exists()) {
-                throw new IllegalStateException("Failed to create directory: " + res);
+            resultantFile.getParentFile().mkdirs();
+            if (!resultantFile.getParentFile().exists()) {
+                throw new IllegalStateException("Failed to create directory: " + resultantFile);
             }
             touchFusePath(defaultDirVolumePath);
 
-            values.put(MediaColumns.DATA, res.getAbsolutePath());
+            values.put(MediaColumns.DATA, resultantFile.getAbsolutePath());
             // buildFile may have changed the file name, compute values to extract new DISPLAY_NAME.
             // Note: We can't extract displayName from res.getPath() because for pending & trashed
             // files DISPLAY_NAME will not be same as file name.
@@ -7079,9 +7110,11 @@ public class MediaProvider extends ContentProvider {
 
         uri = safeUncanonicalize(uri);
         final boolean allowHidden = isCallingPackageAllowedHidden();
-        final int match = matchUri(uri, allowHidden);
+        final int match = mUriMatcher.matchUri(uri, allowHidden, isCallerPhotoPicker());
 
         switch (match) {
+            case PICKER_INTERNAL_V2:
+                return PickerUriResolverV2.delete(uri, extras);
             case AUDIO_MEDIA_ID:
             case AUDIO_PLAYLISTS_ID:
             case VIDEO_MEDIA_ID:

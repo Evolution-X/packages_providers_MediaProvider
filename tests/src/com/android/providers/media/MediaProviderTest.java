@@ -925,7 +925,7 @@ public class MediaProviderTest {
         final Uri uri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         assertEndsWith("/Pictures/foo_bar.png",
             buildFile(uri, null, "foo/bar", "image/png"));
-        assertEndsWith("/Pictures/_.hidden.png",
+        assertEndsWith("/Pictures/.hidden.png",
             buildFile(uri, null, ".hidden", "image/png"));
     }
 

@@ -224,4 +224,23 @@ public class PickerUriResolverV2 {
                 throw new UnsupportedOperationException("Could not recognize content URI " + uri);
         }
     }
+
+    /**
+     * Deletes data from the picker's internal storage based on the provided URI.
+     *
+     * <p>This method uses a {@link UriMatcher} to determine the type of data to delete based on the
+     * {@code uri}. It then calls the appropriate method in {@link PickerDataLayerV2} to perform the
+     * deletion.
+     */
+    public static int delete(
+            @NonNull Uri uri,
+            @Nullable Bundle queryArgs) {
+        final int query = sUriMatcher.match(uri);
+        return switch (query) {
+            case PICKER_INTERNAL_SEARCH_SUGGESTIONS ->
+                    PickerDataLayerV2.deleteSearchHistorySuggestion(requireNonNull(queryArgs));
+            default -> throw new UnsupportedOperationException("Could not recognize content URI "
+                    + uri);
+        };
+    }
 }

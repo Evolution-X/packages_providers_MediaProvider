@@ -923,6 +923,24 @@ public class PickerDataLayerV2 {
     }
 
     /**
+     * Deletes a search suggestion from the search history.
+     * @param queryArgs A {@link Bundle} containing the details of the search suggestion to be
+     *                  deleted.
+     * @return The number of rows deleted from the search history table.
+     */
+    static int deleteSearchHistorySuggestion(
+            @NonNull Bundle queryArgs) {
+        final String displayText = Objects.requireNonNull(queryArgs.getString("display_text"));
+        final String mediaSetId = queryArgs.getString("media_set_id");
+        final String authority = queryArgs.getString("authority");
+
+        return SearchSuggestionsDatabaseUtils
+                .deleteHistorySearchSuggestion(
+                        PickerSyncController.getInstanceOrThrow().getDbFacade().getDatabase(),
+                        displayText, mediaSetId, authority);
+    }
+
+    /**
      * Get search suggestions for a given prefix from the cloud media provider and search history.
      * In case cloud media provider is taking time in returning the suggestion results, we'll try to
      * fallback on previously cached search results.
