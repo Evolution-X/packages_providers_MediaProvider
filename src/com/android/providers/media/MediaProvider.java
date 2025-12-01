@@ -192,7 +192,6 @@ import static com.android.providers.media.util.SyntheticPathUtils.isSyntheticPat
 
 import android.Manifest;
 import android.annotation.IntDef;
-import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.AppOpsManager;
 import android.app.AppOpsManager.OnOpActiveChangedListener;
@@ -1932,6 +1931,10 @@ public class MediaProvider extends ContentProvider {
         fixUnsupportedMimeTypesForAndroid15(getContext());
 
         MediaServiceV2.performCleanUp(getContext());
+
+        // Schedule unique periodic job to log Device Storage stats. Ignores new attempt to schedule
+        // the job if a job is already scheduled.
+        Metrics.scheduleDeviceStorageStateLoggingJob(getContext());
 
         final long durationMillis = (SystemClock.elapsedRealtime() - startTime);
         Metrics.logIdleMaintenance(MediaStore.VOLUME_EXTERNAL, itemCount,
