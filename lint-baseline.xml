@@ -100,4 +100,15 @@
             column="32"/>
     </issue>
 
+    <issue
+        id="GestureBackNavigation"
+        message="`onBackPressed` is no longer called for back gestures; migrate to AndroidX&apos;s backward compatible `OnBackPressedDispatcher`"
+        errorLine1="    public void onBackPressed() {"
+        errorLine2="                ~~~~~~~~~~~~~">
+        <location
+            file="packages/providers/MediaProvider/src/com/android/providers/media/photopicker/PhotoPickerActivity.java"
+            line="365"
+            column="17"/>
+    </issue>
+
 </issues>
