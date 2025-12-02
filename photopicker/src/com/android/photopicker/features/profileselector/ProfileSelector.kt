@@ -187,7 +187,8 @@ fun ProfileSelector(
                                     // The button is always enabled in activity runtime, as an error
                                     // dialog will be shown to the user if the profile cannot be
                                     // selected.
-                                    PhotopickerRuntimeEnv.ACTIVITY -> true
+                                    PhotopickerRuntimeEnv.ACTIVITY,
+                                    PhotopickerRuntimeEnv.DESKTOP -> true
 
                                     // For embedded, dialogs cannot be launched, so only allow the
                                     // profile button to be enabled if the profile is enabled.

@@ -46,7 +46,14 @@ val DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS =
 
 /** Enum that describes the current runtime environment of the Photopicker. */
 enum class PhotopickerRuntimeEnv {
+    // Runs as a normal activity for Phones, tablets, etc with UI in a BottomSheet.
     ACTIVITY,
+
+    // Still runs as a normal activity, this is meant for desktop capable devices where the
+    // UI does not include the bottom sheet but is instead a floating window.
+    DESKTOP,
+
+    // Photopicker is being embedded inside of another app via remote-rendering.
     EMBEDDED,
 }
 
@@ -126,7 +133,8 @@ data class PhotopickerConfiguration(
 
         val intentToCheck: Intent? =
             when (runtimeEnv) {
-                PhotopickerRuntimeEnv.ACTIVITY ->
+                PhotopickerRuntimeEnv.ACTIVITY,
+                PhotopickerRuntimeEnv.DESKTOP ->
                     // clone() returns an object so cast back to an Intent
                     intent?.clone() as? Intent
 
