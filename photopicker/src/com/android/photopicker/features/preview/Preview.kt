@@ -442,7 +442,14 @@ private fun PreviewPager(
         state = state,
         modifier = modifier.semantics(mergeDescendants = true) { traversalIndex = -1f },
     ) { page ->
-        HierarchicalFocusCoordinator(requiresFocus = { state.currentPage == page }) {
+        HierarchicalFocusCoordinator(
+            requiresFocus = {
+                state.currentPage == page &&
+                    /*The system should not grab focus while the preview page is still moving to
+                    avoid the conflicts and flickering issues in RTL layout.*/
+                    !state.isScrollInProgress
+            }
+        ) {
             val focusRequester = rememberActiveFocusRequester()
             val media = selection.get(page)
             if (media != null) {
