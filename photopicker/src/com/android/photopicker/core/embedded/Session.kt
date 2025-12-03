@@ -79,7 +79,6 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.launch
@@ -144,8 +143,6 @@ open class Session(
 
     companion object {
         val TAG: String = "PhotopickerEmbeddedSession"
-        // Time interval to notify client about selected/deselected Uris
-        const val URI_DEBOUNCE_TIME: Long = 400 // In milliseconds
     }
 
     /**
@@ -443,13 +440,11 @@ open class Session(
      */
     fun listenForSelectionEvents() {
         _backgroundScope.launch {
-            @OptIn(kotlinx.coroutines.FlowPreview::class)
             _dependencies
                 .selection()
                 .get()
                 .flow
                 .flowWithLifecycle(_embeddedViewLifecycle.lifecycle, Lifecycle.State.STARTED)
-                .debounce(URI_DEBOUNCE_TIME)
                 .runningFold(initial = emptySet<Media>()) { _prevSelection, _newSelection ->
                     // Get list of items removed/deselected by user so that we can revoke access to
                     // those uris.
@@ -461,14 +456,14 @@ open class Session(
                     var newlySelectedMedia: Set<Media> = _newSelection.subtract(_prevSelection)
                     Log.d(TAG, "Granting uri permission to $newlySelectedMedia")
 
-                    val selectedUris: MutableList<Uri> = mutableListOf()
-                    val deselectedUris: MutableList<Uri> = mutableListOf()
+                    val grantedUris: MutableList<Uri> = mutableListOf()
+                    val revokedUris: MutableList<Uri> = mutableListOf()
 
                     // Grant uri to newly selected media and notify client
                     newlySelectedMedia.iterator().forEach { item ->
                         val result = grantUriPermission(clientPackageName, item.mediaUri)
                         if (result == EmbeddedService.GrantResult.SUCCESS) {
-                            selectedUris.add(item.mediaUri)
+                            grantedUris.add(item.mediaUri)
 
                             // Report media item selected
                             reportMediaItemStatus(item, Telemetry.MediaStatus.SELECTED)
@@ -485,7 +480,7 @@ open class Session(
                     unselectedMedia.iterator().forEach { item ->
                         val result = revokeUriPermission(clientPackageName, item.mediaUri)
                         if (result == EmbeddedService.GrantResult.SUCCESS) {
-                            deselectedUris.add(item.mediaUri)
+                            revokedUris.add(item.mediaUri)
 
                             // Report media item unselected
                             reportMediaItemStatus(item, Telemetry.MediaStatus.UNSELECTED)
@@ -499,16 +494,16 @@ open class Session(
                     }
 
                     // notify client about final selection
-                    if (selectedUris.isNotEmpty()) {
+                    if (grantedUris.isNotEmpty()) {
                         try {
-                            clientCallback.onUriPermissionGranted(selectedUris)
+                            clientCallback.onUriPermissionGranted(grantedUris)
                         } catch (e: RemoteException) {
                             Log.e(TAG, "Failed to notify client of new permission grants", e)
                         }
                     }
-                    if (deselectedUris.isNotEmpty()) {
+                    if (revokedUris.isNotEmpty()) {
                         try {
-                            clientCallback.onUriPermissionRevoked(deselectedUris)
+                            clientCallback.onUriPermissionRevoked(revokedUris)
                         } catch (e: RemoteException) {
                             Log.e(TAG, "Failed to notify client of revoked permission grants", e)
                         }
