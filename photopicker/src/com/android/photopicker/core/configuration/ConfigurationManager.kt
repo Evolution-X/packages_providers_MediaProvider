@@ -420,6 +420,7 @@ class ConfigurationManager(
             PICKER_THUMBNAIL_PRELOAD_ENABLED = Flags.enablePhotopickerThumbnailPreload(),
             MODERN_CLOUD_SETTINGS_ENABLED = Flags.enableModernPhotopickerCloudSettingsPage(),
             PICKER_DELETE_HISTORY_SUGGESTION = Flags.enablePhotopickerDeleteHistorySuggestion(),
+            PICKER_OFFLINE_BANNERS_ENABLED = Flags.enablePhotopickerOfflineBanners(),
         )
     }
 
