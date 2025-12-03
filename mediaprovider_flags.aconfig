@@ -69,7 +69,7 @@ flag {
 
 flag {
     name: "enable_media_search"
-    is_exported: false
+    is_exported: true
     namespace: "mediaprovider"
     description: "This flag exposes the API contract for media search"
     bug: "442600609"
