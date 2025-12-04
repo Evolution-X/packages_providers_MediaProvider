@@ -25,6 +25,7 @@ import static android.content.Intent.ACTION_PACKAGE_FULLY_REMOVED;
 import static com.android.providers.media.MediaProvider.BROADCAST_INTENT;
 import static com.android.providers.media.MediaProvider.CANCEL_WORK_AFTER_ENQUEUEING;
 import static com.android.providers.media.MediaProvider.IS_SCAN_VOLUME_CALL;
+import static com.android.providers.media.MediaProvider.PERFORM_CLEANUP;
 import static com.android.providers.media.MediaProvider.REMOVE_VOL_BEFORE_ENQUEUEING;
 import static com.android.providers.media.MediaProvider.VOLUME_NAME;
 import static com.android.providers.media.MediaProvider.WAIT_FOR_SCAN_COMPLETION;
@@ -97,6 +98,28 @@ public class MediaServiceV2Test {
             assertThat(result.getString(WORK_INFO_STATE))
                     .isEqualTo(WorkInfo.State.SUCCEEDED.toString());
             assertTrue(isFileScanned(testFile));
+        } finally {
+            testFile.delete();
+        }
+    }
+
+    @Test
+    public void testPerformCleanup() throws Exception {
+        File testFile = new File(mDownloadsDir,
+                "testImage_" + SystemClock.elapsedRealtimeNanos() + ".jpg");
+        stageNewFile(R.raw.test_image, testFile);
+
+        try {
+            Bundle extras = new Bundle();
+            extras.putString(VOLUME_NAME, MediaStore.VOLUME_EXTERNAL_PRIMARY);
+            extras.putBoolean(IS_SCAN_VOLUME_CALL, true);
+            extras.putBoolean(PERFORM_CLEANUP, true);
+
+            Bundle result = mContext.getContentResolver().call(MediaStore.AUTHORITY,
+                    MediaStore.MEDIA_SERVICE_V2_CALL, /* arg */ null, extras);
+
+            assertTrue(isFileScanned(testFile));
+            assertThat(result.getString(WORK_INFO_STATE)).isNull();
         } finally {
             testFile.delete();
         }
