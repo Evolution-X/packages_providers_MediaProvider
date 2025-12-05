@@ -37,6 +37,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.flowWithLifecycle
@@ -179,8 +180,12 @@ class MainActivity : Hilt_MainActivity() {
             referToDocumentsUi(userRequested = false)
         }
 
-        // Set a Black color scrim behind the status bar.
-        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.Black.toArgb()))
+        // TODO b/467618852 Check if the fleeting scrim can be fixed in a better way
+        enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(Color.Transparent.toArgb()))
+        // Ensure light status bar icons are explicitly used for optimal contrast against the
+        // greyed out background of the photopicker.
+        WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars =
+            false
 
         // Set the action before allowing FeatureManager to be initialized, so that it receives
         // the correct config with this activity's action.
