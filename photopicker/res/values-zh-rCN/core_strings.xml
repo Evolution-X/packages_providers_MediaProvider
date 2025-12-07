@@ -33,6 +33,7 @@
     <string name="photopicker_select_action_description" msgid="5369819457862091225">"选择"</string>
     <string name="photopicker_deselect_action_description" msgid="4986504797441859297">"取消选择"</string>
     <string name="photopicker_done_button_label" msgid="2641444126618862287">"完成"</string>
+    <string name="photopicker_close_button_description" msgid="2396957460883731300">"关闭"</string>
     <string name="photopicker_clear_selection_button_description" msgid="8614016909754648208">"全部不选"</string>
     <string name="photopicker_selection_size_description" msgid="1142474949774463967">"已选择 <xliff:g id="COUNT">%1$s</xliff:g> 个照片或视频"</string>
     <string name="photopicker_selection_limit_exceeded_snackbar" msgid="9136196524514670280">"最多选择 <xliff:g id="COUNT">%1$s</xliff:g> 项"</string>

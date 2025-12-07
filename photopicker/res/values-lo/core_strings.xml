@@ -33,6 +33,7 @@
     <string name="photopicker_select_action_description" msgid="5369819457862091225">"ເລືອກ"</string>
     <string name="photopicker_deselect_action_description" msgid="4986504797441859297">"ເຊົາເລືອກ"</string>
     <string name="photopicker_done_button_label" msgid="2641444126618862287">"ແລ້ວໆ"</string>
+    <string name="photopicker_close_button_description" msgid="2396957460883731300">"ປິດ"</string>
     <string name="photopicker_clear_selection_button_description" msgid="8614016909754648208">"ເຊົາເລືອກທັງໝົດ"</string>
     <string name="photopicker_selection_size_description" msgid="1142474949774463967">"ເລືອກແລ້ວ <xliff:g id="COUNT">%1$s</xliff:g> ຮູບ ຫຼື ວິດີໂອ"</string>
     <string name="photopicker_selection_limit_exceeded_snackbar" msgid="9136196524514670280">"ເລືອກໄດ້ສູງສຸດ <xliff:g id="COUNT">%1$s</xliff:g> ລາຍການ"</string>
