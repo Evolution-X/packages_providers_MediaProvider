@@ -68,6 +68,7 @@
 #include "libfuse_jni/FuseUtils.h"
 #include "libfuse_jni/ReaddirHelper.h"
 #include "libfuse_jni/RedactionInfo.h"
+#include "mediaprovider_jni_metrics.h"
 
 using mediaprovider::fuse::DirectoryEntry;
 using mediaprovider::fuse::dirhandle;
@@ -262,7 +263,8 @@ class FAdviser {
 /* Single FUSE mount */
 struct fuse {
     explicit fuse(const std::string& _path, const ino_t _ino, const bool _uncached_mode,
-                  const bool _bpf, android::base::unique_fd&& _bpf_fd,
+                  const bool _bpf, const bool _enable_parallel_fuse_dir_ops,
+                  android::base::unique_fd&& _bpf_fd,
                   const std::vector<string>& _supported_transcoding_relative_paths,
                   const std::vector<string>& _supported_uncached_relative_paths)
         : path(_path),
@@ -275,6 +277,7 @@ struct fuse {
           passthrough(false),
           upstream_passthrough(false),
           bpf(_bpf),
+          enable_parallel_fuse_dir_ops(_enable_parallel_fuse_dir_ops),
           bpf_fd(std::move(_bpf_fd)),
           supported_transcoding_relative_paths(_supported_transcoding_relative_paths),
           supported_uncached_relative_paths(_supported_uncached_relative_paths) {}
@@ -401,6 +404,7 @@ struct fuse {
     std::atomic_bool passthrough;
     std::atomic_bool upstream_passthrough;
     std::atomic_bool bpf;
+    std::atomic_bool enable_parallel_fuse_dir_ops;
 
     const android::base::unique_fd bpf_fd;
 
@@ -799,6 +803,10 @@ static void pf_init(void* userdata, struct fuse_conn_info* conn) {
         mask &= ~FUSE_CAP_WRITEBACK_CACHE;
     }
 
+    if (fuse->enable_parallel_fuse_dir_ops) {
+        mask |= FUSE_CAP_PARALLEL_DIROPS;
+    }
+
     bool disable_splice_write = false;
     if (fuse->passthrough) {
         if (conn->capable & FUSE_CAP_PASSTHROUGH) {
@@ -976,6 +984,7 @@ static bool is_user_accessible_path(fuse_req_t req, const struct fuse* fuse, con
 static node* do_lookup(fuse_req_t req, fuse_ino_t parent, const char* name,
                        struct fuse_entry_param* e, int* error_code, const FuseOp op,
                        const bool validate_access, int* backing_fd = NULL) {
+    MetricLogger logger(FuseOpType::LOOKUP);
     struct fuse* fuse = get_fuse(req);
     node* parent_node = fuse->FromInode(parent);
     if (!parent_node) {
@@ -989,15 +998,19 @@ static node* do_lookup(fuse_req_t req, fuse_ino_t parent, const char* name,
     if (validate_access && !fuse->IsRoot(parent_node) &&
         !is_app_accessible_path(fuse, parent_path, req->ctx.uid)) {
         *error_code = ENOENT;
+        logger.setLogMetric(false);
         return nullptr;
     }
 
     TRACE_NODE(parent_node, req);
 
     const string child_path = parent_path + "/" + name;
+    logger.setVolumeFromPath(child_path);
+    logger.setCallingPackageUid(req->ctx.uid);
 
     if (validate_access && !is_user_accessible_path(req, fuse, child_path)) {
         *error_code = EACCES;
+        logger.setLogMetric(false);
         return nullptr;
     }
 
@@ -1113,23 +1126,30 @@ static void pf_getattr(fuse_req_t req,
                        fuse_ino_t ino,
                        struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::GETATTR);
     struct fuse* fuse = get_fuse(req);
     node* node = fuse->FromInode(ino);
     if (!node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const string& path = get_path(node);
     if (!is_app_accessible_path(fuse, path, req->ctx.uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     TRACE_NODE(node, req);
+
+    logger.setVolumeFromPath(path);
+    logger.setCallingPackageUid(req->ctx.uid);
 
     struct stat s;
     memset(&s, 0, sizeof(s));
     if (lstat(path.c_str(), &s) < 0) {
         fuse_reply_err(req, errno);
+        logger.setLogMetric(false);
     } else {
         fuse_reply_attr(req, &s,
                         fuse->ShouldNotCache(path) ? 0 : std::numeric_limits<double>::max());
@@ -1142,17 +1162,23 @@ static void pf_setattr(fuse_req_t req,
                        int to_set,
                        struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::SETATTR);
     struct fuse* fuse = get_fuse(req);
     node* node = fuse->FromInode(ino);
     if (!node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const string& path = get_path(node);
     if (!is_app_accessible_path(fuse, path, req->ctx.uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
+
+    logger.setCallingPackageUid(req->ctx.uid);
+    logger.setVolumeFromPath(path);
 
     int fd = -1;
     if (fi) {
@@ -1167,11 +1193,13 @@ static void pf_setattr(fuse_req_t req,
 
         if (!result) {
             fuse_reply_err(req, EFAULT);
+            logger.setLogMetric(false);
             return;
         }
 
         if (result->status) {
             fuse_reply_err(req, EACCES);
+            logger.setLogMetric(false);
             return;
         }
     }
@@ -1191,6 +1219,7 @@ static void pf_setattr(fuse_req_t req,
 
         if (res < 0) {
             fuse_reply_err(req, errno);
+            logger.setLogMetric(false);
             return;
         }
     }
@@ -1230,6 +1259,7 @@ static void pf_setattr(fuse_req_t req,
 
         if (res < 0) {
             fuse_reply_err(req, errno);
+            logger.setLogMetric(false);
             return;
         }
     }
@@ -1240,15 +1270,21 @@ static void pf_setattr(fuse_req_t req,
 
 static void pf_canonical_path(fuse_req_t req, fuse_ino_t ino)
 {
+    MetricLogger logger(FuseOpType::CANONICAL_PATH);
     struct fuse* fuse = get_fuse(req);
     node* node = fuse->FromInode(ino);
     const string& path = node ? get_path(node) : "";
+
+    logger.setVolumeFromPath(path);
+    logger.setCallingPackageUid(req->ctx.uid);
 
     if (node && is_app_accessible_path(fuse, path, req->ctx.uid)) {
         // TODO(b/147482155): Check that uid has access to |path| and its contents
         fuse_reply_canonical_path(req, path.c_str());
         return;
     }
+
+    logger.setLogMetric(false);
     fuse_reply_err(req, ENOENT);
 }
 
@@ -1296,16 +1332,19 @@ static void pf_mkdir(fuse_req_t req,
                      const char* name,
                      mode_t mode) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::MKDIR);
     struct fuse* fuse = get_fuse(req);
     node* parent_node = fuse->FromInode(parent);
     if (!parent_node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const struct fuse_ctx* ctx = fuse_req_ctx(req);
     const string parent_path = parent_node->BuildPath();
     if (!is_app_accessible_path(fuse, parent_path, ctx->uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -1313,15 +1352,20 @@ static void pf_mkdir(fuse_req_t req,
 
     const string child_path = parent_path + "/" + name;
 
+    logger.setCallingPackageUid(ctx->uid);
+    logger.setVolumeFromPath(child_path);
+
     int status = fuse->mp->IsCreatingDirAllowed(child_path, ctx->uid);
     if (status) {
         fuse_reply_err(req, status);
+        logger.setLogMetric(false);
         return;
     }
 
     mode = (mode & (~0777)) | 0775;
     if (mkdir(child_path.c_str(), mode) < 0) {
         fuse_reply_err(req, errno);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -1333,23 +1377,30 @@ static void pf_mkdir(fuse_req_t req,
     } else {
         CHECK(error_code != 0);
         fuse_reply_err(req, error_code);
+        logger.setLogMetric(false);
     }
 }
 
 static void pf_unlink(fuse_req_t req, fuse_ino_t parent, const char* name) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::UNLINK);
     struct fuse* fuse = get_fuse(req);
     node* parent_node = fuse->FromInode(parent);
     if (!parent_node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const struct fuse_ctx* ctx = fuse_req_ctx(req);
     const string parent_path = parent_node->BuildPath();
     if (!is_app_accessible_path(fuse, parent_path, ctx->uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
+
+    logger.setCallingPackageUid(ctx->uid);
+    logger.setVolumeFromPath(parent_path);
 
     TRACE_NODE(parent_node, req);
 
@@ -1358,6 +1409,7 @@ static void pf_unlink(fuse_req_t req, fuse_ino_t parent, const char* name) {
     int status = fuse->mp->DeleteFile(child_path, ctx->uid);
     if (status) {
         fuse_reply_err(req, status);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -1368,15 +1420,18 @@ static void pf_unlink(fuse_req_t req, fuse_ino_t parent, const char* name) {
 
 static void pf_rmdir(fuse_req_t req, fuse_ino_t parent, const char* name) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::RMDIR);
     struct fuse* fuse = get_fuse(req);
     node* parent_node = fuse->FromInode(parent);
     if (!parent_node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const string parent_path = parent_node->BuildPath();
     if (!is_app_accessible_path(fuse, parent_path, req->ctx.uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -1384,6 +1439,7 @@ static void pf_rmdir(fuse_req_t req, fuse_ino_t parent, const char* name) {
         // .transforms and .picker_transcoded are special daemon controlled dirs so apps shouldn't
         // be able to see it via readdir, and any dir operations attempted on it should fail
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -1391,14 +1447,19 @@ static void pf_rmdir(fuse_req_t req, fuse_ino_t parent, const char* name) {
 
     const string child_path = parent_path + "/" + name;
 
+    logger.setVolumeFromPath(child_path);
+    logger.setCallingPackageUid(req->ctx.uid);
+
     int status = fuse->mp->IsDeletingDirAllowed(child_path, req->ctx.uid);
     if (status) {
         fuse_reply_err(req, status);
+        logger.setLogMetric(false);
         return;
     }
 
     if (rmdir(child_path.c_str()) < 0) {
         fuse_reply_err(req, errno);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -1494,8 +1555,13 @@ static int do_rename(fuse_req_t req, fuse_ino_t parent, const char* name, fuse_i
 
 static void pf_rename(fuse_req_t req, fuse_ino_t parent, const char* name, fuse_ino_t new_parent,
                       const char* new_name, unsigned int flags) {
+    MetricLogger logger(FuseOpType::RENAME, get_fuse(req)->FromInode(parent)->BuildPath(),
+                        req->ctx.uid);
     int res = do_rename(req, parent, name, new_parent, new_name, flags);
     fuse_reply_err(req, res);
+    if (res != 0) {
+        logger.setLogMetric(false);
+    }
 }
 
 /*
@@ -1507,7 +1573,8 @@ static void pf_link(fuse_req_t req, fuse_ino_t ino, fuse_ino_t new_parent,
 */
 
 static handle* create_handle_for_node(struct fuse* fuse, const string& path, int fd, uid_t uid,
-                                      uid_t transforms_uid, node* node, const RedactionInfo* ri,
+                                      uid_t transforms_uid, node* node,
+                                      std::unique_ptr<const RedactionInfo>&& ri,
                                       const bool allow_passthrough, const bool open_info_direct_io,
                                       int* keep_cache) {
     std::lock_guard<std::recursive_mutex> guard(fuse->lock);
@@ -1530,9 +1597,10 @@ static handle* create_handle_for_node(struct fuse* fuse, const string& path, int
         // arbitrary bytes the first time around. However, if we ensure that transforms are
         // completed, then it's safe to use passthrough. Additionally, transcoded nodes never
         // require redaction so (2) implies (1)
-        handle = new struct handle(fd, ri, !open_info_direct_io /* cached */,
-                                   !redaction_needed && transforms_complete /* passthrough */, uid,
-                                   transforms_uid);
+        bool passthrough = !redaction_needed && transforms_complete;
+        bool direct_io = open_info_direct_io && !passthrough;
+        handle = new struct handle(fd, std::move(ri), !direct_io /* cached */,
+                                   passthrough /* passthrough */, uid, transforms_uid);
     } else {
         // Without fuse->passthrough, we don't want to use the FUSE VFS cache in two cases:
         // 1. When redaction is needed because app A with EXIF access might access
@@ -1561,8 +1629,8 @@ static handle* create_handle_for_node(struct fuse* fuse, const string& path, int
         } else {
             *keep_cache = transforms_complete;
         }
-        handle = new struct handle(fd, ri, !direct_io /* cached */, false /* passthrough */, uid,
-                                   transforms_uid);
+        handle = new struct handle(fd, std::move(ri), !direct_io /* cached */,
+                                   false /* passthrough */, uid, transforms_uid);
     }
 
     node->AddHandle(handle);
@@ -1605,14 +1673,16 @@ static OpenInfo parse_open_flags(const string& path, const int in_flags) {
     bool direct_io = false;
 
     if (in_flags & O_DIRECT) {
-        // Set direct IO on the FUSE fs file
-        direct_io = true;
 
         if (android::base::StartsWith(path, PRIMARY_VOLUME_PREFIX)) {
             // Remove O_DIRECT because there are strict alignment requirements for direct IO and
             // there were some historical bugs affecting encrypted block devices.
             // Hence, this is only supported on public volumes.
             out_flags &= ~O_DIRECT;
+            direct_io = false;
+        } else {
+            // Set direct IO on the FUSE fs file
+            direct_io = true;
         }
     }
     if (in_flags & O_WRONLY) {
@@ -1631,8 +1701,8 @@ static OpenInfo parse_open_flags(const string& path, const int in_flags) {
     return {.flags = out_flags, .for_write = for_write, .direct_io = direct_io};
 }
 
-static void fill_fuse_file_info(const handle* handle, const OpenInfo* open_info,
-                                const int keep_cache, struct fuse_file_info* fi) {
+static void fill_fuse_file_info(const handle* handle, const int keep_cache,
+                                struct fuse_file_info* fi) {
     fi->fh = ptr_to_id(handle);
     fi->keep_cache = keep_cache;
     fi->direct_io = !handle->cached;
@@ -1640,10 +1710,12 @@ static void fill_fuse_file_info(const handle* handle, const OpenInfo* open_info,
 
 static void pf_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::OPEN);
     struct fuse* fuse = get_fuse(req);
     node* node = fuse->FromInode(ino);
     if (!node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const struct fuse_ctx* ctx = fuse_req_ctx(req);
@@ -1651,8 +1723,12 @@ static void pf_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
     const string& build_path = node->BuildPath();
     if (!is_app_accessible_path(fuse, io_path, ctx->uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
+
+    logger.setCallingPackageUid(ctx->uid);
+    logger.setVolumeFromPath(io_path);
 
     const OpenInfo open_info = parse_open_flags(io_path, fi->flags);
 
@@ -1696,10 +1772,10 @@ static void pf_open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
     // If is_fd_from_java==true, we disallow passthrough because the fd can be pointing to the
     // FUSE fs if gotten from another process
     const handle* h = create_handle_for_node(fuse, io_path, fd, result->uid, result->transforms_uid,
-                                             node, result->redaction_info.release(),
+                                             node, std::move(result->redaction_info),
                                              /* allow_passthrough */ !is_fd_from_java,
                                              open_info.direct_io, &keep_cache);
-    fill_fuse_file_info(h, &open_info, keep_cache, fi);
+    fill_fuse_file_info(h, keep_cache, fi);
 
     // TODO(b/173190192) ensuring that h->cached must be enabled in order to
     // user FUSE passthrough is a conservative rule and might be dropped as
@@ -1796,8 +1872,10 @@ static void do_read_with_redaction(fuse_req_t req, size_t size, off_t off, fuse_
 static void pf_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
                     struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::READ);
     handle* h = reinterpret_cast<handle*>(fi->fh);
     if (h == nullptr) {
+        logger.setLogMetric(false);
         return;
     }
     const bool direct_io = !h->cached;
@@ -1810,10 +1888,14 @@ static void pf_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
                                  node->GetTransformsReason(), req->ctx.uid, h->uid,
                                  h->transforms_uid)) {
             fuse_reply_err(req, EFAULT);
+            logger.setLogMetric(false);
             return;
         }
         node->SetTransformsComplete(true);
     }
+
+    logger.setVolumeFromPath(node->BuildPath());
+    logger.setCallingPackageUid(req->ctx.uid);
 
     fuse->fadviser.Record(h->fd, size);
 
@@ -1849,9 +1931,9 @@ static void pf_write_buf(fuse_req_t req,
             (enum fuse_buf_flags) (FUSE_BUF_IS_FD | FUSE_BUF_FD_SEEK);
     size = fuse_buf_copy(&buf, bufv, (enum fuse_buf_copy_flags) 0);
 
-    if (size < 0)
+    if (size < 0) {
         fuse_reply_err(req, -size);
-    else {
+    } else {
         // Execute Record *before* fuse_reply_write to avoid the following ordering:
         // fuse_reply_write -> pf_release (destroy handle) -> Record (use handle after free)
         fuse->fadviser.Record(h->fd, size);
@@ -1958,30 +2040,38 @@ static void pf_opendir(fuse_req_t req,
                        fuse_ino_t ino,
                        struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::OPENDIR);
     struct fuse* fuse = get_fuse(req);
     node* node = fuse->FromInode(ino);
     if (!node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const struct fuse_ctx* ctx = fuse_req_ctx(req);
     const string path = node->BuildPath();
     if (!is_app_accessible_path(fuse, path, ctx->uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
+
+    logger.setCallingPackageUid(ctx->uid);
+    logger.setVolumeFromPath(path);
 
     TRACE_NODE(node, req);
 
     int status = fuse->mp->IsOpendirAllowed(path, ctx->uid, /* forWrite */ false);
     if (status) {
         fuse_reply_err(req, status);
+        logger.setLogMetric(false);
         return;
     }
 
     DIR* dir = opendir(path.c_str());
     if (!dir) {
         fuse_reply_err(req, errno);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -2104,6 +2194,8 @@ static void do_readdir_common(fuse_req_t req,
 static void pf_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
                        struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::READDIR, get_fuse(req)->FromInode(ino)->BuildPath(),
+                        req->ctx.uid);
     do_readdir_common(req, ino, size, off, fi, false);
 }
 
@@ -2192,10 +2284,10 @@ static void pf_statfs(fuse_req_t req, fuse_ino_t ino) {
     ATRACE_CALL();
     struct statvfs st;
     struct fuse* fuse = get_fuse(req);
-
-    if (statvfs(fuse->root->GetName().c_str(), &st))
+    std::string path = fuse->root->GetName();
+    if (statvfs(path.c_str(), &st)) {
         fuse_reply_err(req, errno);
-    else
+    } else
         fuse_reply_statfs(req, &st);
 }
 /*
@@ -2223,19 +2315,25 @@ static void pf_removexattr(fuse_req_t req, fuse_ino_t ino, const char* name)
 
 static void pf_access(fuse_req_t req, fuse_ino_t ino, int mask) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::ACCESS);
     struct fuse* fuse = get_fuse(req);
 
     node* node = fuse->FromInode(ino);
     if (!node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const string path = node->BuildPath();
     if (path != PRIMARY_VOLUME_PREFIX && !is_app_accessible_path(fuse, path, req->ctx.uid)) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     TRACE_NODE(node, req);
+
+    logger.setVolumeFromPath(path);
+    logger.setCallingPackageUid(req->ctx.uid);
 
     // exists() checks are always allowed.
     if (mask == F_OK) {
@@ -2289,10 +2387,12 @@ static void pf_create(fuse_req_t req,
                       mode_t mode,
                       struct fuse_file_info* fi) {
     ATRACE_CALL();
+    MetricLogger logger(FuseOpType::CREATE);
     struct fuse* fuse = get_fuse(req);
     node* parent_node = fuse->FromInode(parent);
     if (!parent_node) {
         fuse_reply_err(req, ENOENT);
+        logger.setLogMetric(false);
         return;
     }
     const string parent_path = parent_node->BuildPath();
@@ -2300,6 +2400,9 @@ static void pf_create(fuse_req_t req,
         fuse_reply_err(req, ENOENT);
         return;
     }
+
+    logger.setVolumeFromPath(parent_path);
+    logger.setCallingPackageUid(req->ctx.uid);
 
     TRACE_NODE(parent_node, req);
 
@@ -2310,6 +2413,7 @@ static void pf_create(fuse_req_t req,
     int mp_return_code = fuse->mp->InsertFile(child_path.c_str(), req->ctx.uid);
     if (mp_return_code) {
         fuse_reply_err(req, mp_return_code);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -2321,6 +2425,7 @@ static void pf_create(fuse_req_t req,
         // failed open(), so that needs to be rolled back here.
         fuse->mp->DeleteFile(child_path.c_str(), req->ctx.uid);
         fuse_reply_err(req, error_code);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -2332,6 +2437,7 @@ static void pf_create(fuse_req_t req,
     if (!node) {
         CHECK(error_code != 0);
         fuse_reply_err(req, error_code);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -2343,10 +2449,11 @@ static void pf_create(fuse_req_t req,
     // to the file before all the EXIF content is written. We could special case reads before the
     // first close after a file has just been created.
     int keep_cache = 1;
+    std::unique_ptr<RedactionInfo> ri = std::make_unique<RedactionInfo>();
     const handle* h = create_handle_for_node(
-            fuse, child_path, fd, req->ctx.uid, 0 /* transforms_uid */, node, new RedactionInfo(),
+            fuse, child_path, fd, req->ctx.uid, 0 /* transforms_uid */, node, std::move(ri),
             /* allow_passthrough */ true, open_info.direct_io, &keep_cache);
-    fill_fuse_file_info(h, &open_info, keep_cache, fi);
+    fill_fuse_file_info(h, keep_cache, fi);
 
     // TODO(b/173190192) ensuring that h->cached must be enabled in order to
     // user FUSE passthrough is a conservative rule and might be dropped as
@@ -2354,6 +2461,7 @@ static void pf_create(fuse_req_t req,
     if (h->passthrough && !do_passthrough_enable(req, fi, fd, node)) {
         PLOG(ERROR) << "Passthrough CREATE failed for " << child_path;
         fuse_reply_err(req, EFAULT);
+        logger.setLogMetric(false);
         return;
     }
 
@@ -2558,7 +2666,7 @@ bool IsFuseBpfEnabled() {
 }
 
 void FuseDaemon::Start(android::base::unique_fd fd, const std::string& path,
-                       const bool uncached_mode,
+                       const bool uncached_mode, const bool enable_parallel_fuse_dir_ops,
                        const std::vector<std::string>& supported_transcoding_relative_paths,
                        const std::vector<std::string>& supported_uncached_relative_paths) {
     android::base::SetDefaultTag(LOG_TAG);
@@ -2602,7 +2710,8 @@ void FuseDaemon::Start(android::base::unique_fd fd, const std::string& path,
         LOG(INFO) << "Not using FUSE BPF";
     }
 
-    struct fuse fuse_default(path, stat.st_ino, uncached_mode, bpf_enabled, std::move(bpf_fd),
+    struct fuse fuse_default(path, stat.st_ino, uncached_mode, bpf_enabled,
+                             enable_parallel_fuse_dir_ops, std::move(bpf_fd),
                              supported_transcoding_relative_paths,
                              supported_uncached_relative_paths);
     fuse_default.mp = &mp;
@@ -2722,11 +2831,15 @@ void FuseDaemon::SetupLevelDbConnection(const std::string& instance_name) {
             "/data/media/" + MY_USER_ID_STRING + "/.transforms/recovery/leveldb-" + instance_name;
     leveldb::Options options;
     options.create_if_missing = true;
-    leveldb::DB* leveldb;
-    leveldb::Status status = leveldb::DB::Open(options, leveldbPath, &leveldb);
+
+    std::unique_ptr<leveldb::DB> leveldb_db_ptr;
+    leveldb::DB* raw_ptr = nullptr;
+    leveldb::Status status = leveldb::DB::Open(options, leveldbPath, &raw_ptr);
+    leveldb_db_ptr.reset(raw_ptr);
+
     if (status.ok()) {
         fuse->level_db_connection_map.insert(
-                std::pair<std::string, leveldb::DB*>(instance_name, leveldb));
+                std::make_pair(instance_name, leveldb_db_ptr.release()));
         LOG(INFO) << "Leveldb connection established for :" << instance_name;
     } else {
         LOG(ERROR) << "Leveldb connection failed for :" << instance_name
@@ -2817,8 +2930,9 @@ std::vector<std::string> FuseDaemon::ReadFilePathsFromLevelDb(const std::string&
         return file_paths;
     }
 
-    leveldb::Iterator* it =
-            fuse->level_db_connection_map[volume_name]->NewIterator(leveldb::ReadOptions());
+    std::unique_ptr<leveldb::Iterator> it(
+            fuse->level_db_connection_map[volume_name]->NewIterator(leveldb::ReadOptions()));
+
     if (android::base::EqualsIgnoreCase(last_read_value, "")) {
         it->SeekToFirst();
     } else {
@@ -2836,24 +2950,29 @@ std::vector<std::string> FuseDaemon::ReadFilePathsFromLevelDb(const std::string&
 }
 
 std::string FuseDaemon::ReadBackedUpDataFromLevelDb(const std::string& filePath) {
-    fuse->level_db_mutex.lock();
-    std::string data = "";
     std::string volume_name = deriveVolumeName(filePath);
+    return ReadFromLevelDb(volume_name, filePath);
+}
+
+std::string FuseDaemon::ReadFromLevelDb(const std::string& volume_name, const std::string& key) {
+    std::string data = "";
+    fuse->level_db_mutex.lock();
     if (!CheckLevelDbConnection(volume_name)) {
         fuse->level_db_mutex.unlock();
-        LOG(ERROR) << "ReadBackedUpDataFromLevelDb: Missing leveldb connection.";
+        LOG(ERROR) << "ReadFromLevelDb: Missing leveldb connection.";
         return data;
     }
 
-    leveldb::Status status = fuse->level_db_connection_map[volume_name]->Get(
-            leveldb::ReadOptions(), filePath, &data);
+    leveldb::Status status =
+            fuse->level_db_connection_map[volume_name]->Get(leveldb::ReadOptions(), key, &data);
     fuse->level_db_mutex.unlock();
 
     if (status.IsNotFound()) {
-        LOG(VERBOSE) << "Key is not found in leveldb: " << filePath << " " << status.ToString();
+        data = "";
+        LOG(VERBOSE) << "Key is not found in leveldb: " << key << " " << status.ToString();
     } else if (!status.ok()) {
-        LOG(WARNING) << "Failure in leveldb read for key: " << filePath << " "
-                     << status.ToString();
+        data = "";
+        LOG(WARNING) << "Failure in leveldb read for key: " << key << " " << status.ToString();
     }
     return data;
 }
@@ -2873,8 +2992,10 @@ std::string FuseDaemon::ReadOwnership(const std::string& key) {
     fuse->level_db_mutex.unlock();
 
     if (status.IsNotFound()) {
+        data = "";
         LOG(VERBOSE) << "Key is not found in leveldb: " << key << " " << status.ToString();
     } else if (!status.ok()) {
+        data = "";
         LOG(WARNING) << "Failure in leveldb read for key: " << key << " " << status.ToString();
     }
 
@@ -2945,10 +3066,9 @@ std::map<std::string, std::string> FuseDaemon::GetOwnerRelationship() {
         return resultMap;
     }
 
-    leveldb::Status status;
-    // Get the key-value pairs from the database.
-    leveldb::Iterator* it =
-            fuse->level_db_connection_map[OWNERSHIP_RELATION]->NewIterator(leveldb::ReadOptions());
+    std::unique_ptr<leveldb::Iterator> it(
+            fuse->level_db_connection_map[OWNERSHIP_RELATION]->NewIterator(leveldb::ReadOptions()));
+
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         std::string key = it->key().ToString();
         std::string value = it->value().ToString();
