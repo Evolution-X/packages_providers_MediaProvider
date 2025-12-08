@@ -74,6 +74,8 @@
   <!-- Button label for the "Done" button in the selection bar -->
   <string name="photopicker_done_button_label" translation_description="Button label that confirms the selected items and closes the photopicker.">Done</string>
 
+  <string name="photopicker_close_button_description" translation_description="Button accessibility description of the close button which exits the photopicker. [CHAR_LIMIT=NONE]">Close</string>
+
   <!-- Accessibility description for the X (deselect all) button in the selection bar -->
   <string name="photopicker_clear_selection_button_description" translation_description="Button Accessibility description that unselects all selected media items.">Deselect all</string>
 

@@ -18,7 +18,7 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="photopicker_search_placeholder_text" msgid="2056650487029735317">"Hľadať"</string>
-    <string name="photopicker_search_photos_placeholder_text" msgid="4193624269605283280">"Hľadajte vo fotkách"</string>
+    <string name="photopicker_search_photos_placeholder_text" msgid="4193624269605283280">"Hľadať vo vašich fotkách"</string>
     <string name="photopicker_search_videos_placeholder_text" msgid="6373176950925263103">"Hľadajte vo videách"</string>
     <string name="photopicker_search_clear_text" msgid="864128584605615045">"Vymazať text vyhľadávania"</string>
     <string name="photopicker_search_voice_search_button_description" msgid="6125285733831487821">"Hlasový vstup"</string>
@@ -32,4 +32,6 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"Mriežka výsledkov vyhľadávania"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"Ak chcete z aplikácie <xliff:g id="APP_NAME">%1$s</xliff:g> vybrať fotky a videá, pripojte sa"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"Vyžaduje sa internetové pripojenie"</string>
+    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
+    <skip />
 </resources>

@@ -44,10 +44,12 @@ import androidx.lifecycle.lifecycleScope
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.Background
 import com.android.photopicker.core.PhotopickerAppWithBottomSheet
+import com.android.photopicker.core.PhotopickerDesktop
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.configuration.ConfigurationManager
 import com.android.photopicker.core.configuration.IllegalIntentExtraException
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.LocalEvents
@@ -102,6 +104,7 @@ class MainActivity : Hilt_MainActivity() {
     @Inject @ActivityRetainedScoped lateinit var processOwnerUserHandle: UserHandle
     @Inject @ActivityRetainedScoped lateinit var selection: Lazy<Selection<Media>>
     @Inject @ActivityRetainedScoped lateinit var dataService: Lazy<DataService>
+
     // This needs to be injected lazily, to defer initialization until the action can be set
     // on the ConfigurationManager.
     @Inject @ActivityRetainedScoped lateinit var featureManager: Lazy<FeatureManager>
@@ -217,18 +220,33 @@ class MainActivity : Hilt_MainActivity() {
                 LocalLocalizationHelper provides rememberLocalizationHelper(),
             ) {
                 PhotopickerTheme(config = photopickerConfiguration) {
-                    PhotopickerAppWithBottomSheet(
-                        onDismissRequest = ::finish,
-                        onMediaSelectionConfirmed = {
-                            lifecycleScope.launch {
-                                // Move the work off the UI dispatcher.
-                                withContext(background) { onMediaSelectionConfirmed() }
-                            }
-                        },
-                        prepareMedia = prepareMedia,
-                        obtainPreparerDeferred = { prepareDeferred },
-                        disruptiveDataNotification,
-                    )
+                    if (photopickerConfiguration.runtimeEnv == PhotopickerRuntimeEnv.DESKTOP) {
+                        PhotopickerDesktop(
+                            onDismissRequest = ::finish,
+                            onMediaSelectionConfirmed = {
+                                lifecycleScope.launch {
+                                    // Move the work off the UI dispatcher.
+                                    withContext(background) { onMediaSelectionConfirmed() }
+                                }
+                            },
+                            prepareMedia = prepareMedia,
+                            obtainPreparerDeferred = { prepareDeferred },
+                            disruptiveDataNotification,
+                        )
+                    } else {
+                        PhotopickerAppWithBottomSheet(
+                            onDismissRequest = ::finish,
+                            onMediaSelectionConfirmed = {
+                                lifecycleScope.launch {
+                                    // Move the work off the UI dispatcher.
+                                    withContext(background) { onMediaSelectionConfirmed() }
+                                }
+                            },
+                            prepareMedia = prepareMedia,
+                            obtainPreparerDeferred = { prepareDeferred },
+                            disruptiveDataNotification,
+                        )
+                    }
                 }
             }
         }
@@ -262,6 +280,7 @@ class MainActivity : Hilt_MainActivity() {
                 Intent.ACTION_GET_CONTENT -> Telemetry.PickerIntentAction.ACTION_GET_CONTENT
                 MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP ->
                     Telemetry.PickerIntentAction.ACTION_USER_SELECT
+
                 else -> Telemetry.PickerIntentAction.UNSET_PICKER_INTENT_ACTION
             }
 
@@ -474,6 +493,7 @@ class MainActivity : Hilt_MainActivity() {
             MediaStore.ACTION_PICK_IMAGES,
             Intent.ACTION_GET_CONTENT ->
                 setResultForApp(selection, canSelectMultiple = configuration.selectionLimit > 1)
+
             MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP -> {
                 val uid =
                     getIntent().getExtras()?.getInt(Intent.EXTRA_UID)
@@ -484,6 +504,7 @@ class MainActivity : Hilt_MainActivity() {
                         )
                 updateGrantsForApp(selection, deselection, uid)
             }
+
             else -> {}
         }
 

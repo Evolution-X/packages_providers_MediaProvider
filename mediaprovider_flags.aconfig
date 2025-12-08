@@ -69,7 +69,7 @@ flag {
 
 flag {
     name: "enable_media_search"
-    is_exported: false
+    is_exported: true
     namespace: "mediaprovider"
     description: "This flag exposes the API contract for media search"
     bug: "442600609"
@@ -501,4 +501,12 @@ flag {
     namespace: "mediaprovider"
     description: "This flag enables option to delete photopicker search history suggestions"
     bug: "412985514"
+}
+
+flag {
+    name: "enable_photopicker_offline_banners"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "Enables offline banners shown when there is no network connection available on the device."
+    bug: "412985507"
 }

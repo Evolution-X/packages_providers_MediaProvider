@@ -500,6 +500,7 @@ public class MediaProvider extends ContentProvider {
     static final String BROADCAST_INTENT = "broadcast_intent";
     static final String CANCEL_WORK_AFTER_ENQUEUEING = "cancel_work_after_enqueueing";
     static final String REMOVE_VOL_BEFORE_ENQUEUEING = "remove_vol_before_enqueueing";
+    static final String PERFORM_CLEANUP = "perform_cleanup";
 
     /**
      * Constants to test changes related database backup and recovery.
@@ -597,6 +598,14 @@ public class MediaProvider extends ContentProvider {
     @ChangeId
     @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.VANILLA_ICE_CREAM)
     static final long LIMIT_CREATE_REQUEST_URIS = 203408344L;
+
+    /**
+     * Trashed files are moved to a centralized trash directory instead of being marked as trashed
+     * in their original location.
+     */
+    @ChangeId
+    @EnabledAfter(targetSdkVersion = Build.VERSION_CODES.BAKLAVA)
+    static final long TRASH_BEHAVIOR_CHANGE = 461429441L;
 
     @GuardedBy("mPendingOpenInfo")
     private final Map<Integer, PendingOpenInfo> mPendingOpenInfo = new ArrayMap<>();
@@ -1921,6 +1930,8 @@ public class MediaProvider extends ContentProvider {
         // In Android 15, certain MIME types were introduced that are not supported, this fixes
         // existing data with these unsupported MIME types
         fixUnsupportedMimeTypesForAndroid15(getContext());
+
+        MediaServiceV2.performCleanUp(getContext());
 
         final long durationMillis = (SystemClock.elapsedRealtime() - startTime);
         Metrics.logIdleMaintenance(MediaStore.VOLUME_EXTERNAL, itemCount,
@@ -8748,6 +8759,11 @@ public class MediaProvider extends ContentProvider {
                 workManager.cancelWorkById(uuid);
             }
 
+            boolean performCleanup = extras.getBoolean(PERFORM_CLEANUP, false);
+            if (performCleanup) {
+                MediaServiceV2.performCleanUp(getContext());
+            }
+
             WorkInfo workInfo = workManager.getWorkInfoById(uuid).get();
             if (workInfo == null) {
                 result.putString(WORK_INFO_STATE, null);
@@ -13274,7 +13290,8 @@ public class MediaProvider extends ContentProvider {
     @VisibleForTesting
     protected boolean isCallingPackageTargetSdkVersionGreaterThanB() {
         // If the calling app's target SDK version is greater than Baklava (API 36)
-        return getCallingPackageTargetSdkVersion() > Build.VERSION_CODES.BAKLAVA;
+        return getCallingPackageTargetSdkVersion() > Build.VERSION_CODES.BAKLAVA
+                && CompatChanges.isChangeEnabled(TRASH_BEHAVIOR_CHANGE);
     }
 
     /**
