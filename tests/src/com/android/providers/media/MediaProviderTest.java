@@ -921,12 +921,23 @@ public class MediaProviderTest {
     }
 
     @Test
-    public void testBuildData_InvalidNames() throws Exception {
+    @RequiresFlagsEnabled({Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API})
+    public void testBuildData_withInvalidNames_preservesLeadingDotInFileName() throws Exception {
         final Uri uri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
         assertEndsWith("/Pictures/foo_bar.png",
             buildFile(uri, null, "foo/bar", "image/png"));
         assertEndsWith("/Pictures/.hidden.png",
             buildFile(uri, null, ".hidden", "image/png"));
+    }
+
+    @Test
+    @RequiresFlagsDisabled({Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API})
+    public void testBuildData_withInvalidNames_replacesLeadingDotInFileName() throws Exception {
+        final Uri uri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        assertEndsWith("/Pictures/foo_bar.png",
+                buildFile(uri, null, "foo/bar", "image/png"));
+        assertEndsWith("/Pictures/_.hidden.png",
+                buildFile(uri, null, ".hidden", "image/png"));
     }
 
     @Test
