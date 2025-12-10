@@ -32,6 +32,5 @@
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"खोज के नतीजे की ग्रिड"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> से फ़ोटो और वीडियो चुनने के लिए, कनेक्ट करें"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"इंटरनेट कनेक्शन ज़रूरी है"</string>
-    <!-- no translation found for photopicker_history_suggestion_delete_text (3014988744228807747) -->
-    <skip />
+    <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"मिटाएं"</string>
 </resources>

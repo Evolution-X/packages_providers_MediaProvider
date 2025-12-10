@@ -33,6 +33,7 @@
     <string name="photopicker_select_action_description" msgid="5369819457862091225">"선택"</string>
     <string name="photopicker_deselect_action_description" msgid="4986504797441859297">"선택 해제"</string>
     <string name="photopicker_done_button_label" msgid="2641444126618862287">"완료"</string>
+    <string name="photopicker_close_button_description" msgid="2396957460883731300">"닫기"</string>
     <string name="photopicker_clear_selection_button_description" msgid="8614016909754648208">"전체 선택 해제"</string>
     <string name="photopicker_selection_size_description" msgid="1142474949774463967">"사진 또는 동영상 <xliff:g id="COUNT">%1$s</xliff:g>개 선택됨"</string>
     <string name="photopicker_selection_limit_exceeded_snackbar" msgid="9136196524514670280">"최대 <xliff:g id="COUNT">%1$s</xliff:g>개 항목 선택"</string>
