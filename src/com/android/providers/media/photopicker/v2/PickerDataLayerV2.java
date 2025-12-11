@@ -340,13 +340,19 @@ public class PickerDataLayerV2 {
         PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
         final Set<String> providers = new HashSet<>(
                 Objects.requireNonNull(queryArgs.getStringArrayList("providers")));
-        final String effectiveLocalAuthority = providers.contains(
-                syncController.getLocalProvider()) ? syncController.getLocalProvider() : null;
+
+        final String currentLocalAuthority = syncController.getLocalProvider();
+        final String effectiveLocalAuthority =
+                requestParams.getAuthority().equals(currentLocalAuthority)
+                        && providers.contains(currentLocalAuthority)
+                ? syncController.getLocalProvider() : null;
+
         final String currentCloudAuthority = syncController
                 .getCloudProviderOrDefault(/*defaultValue*/ null);
-        final String effectiveCloudAuthority = syncController
-                .shouldQueryCloudMediaSets(providers, currentCloudAuthority)
-                ? currentCloudAuthority : null;
+        final String effectiveCloudAuthority =
+                requestParams.getAuthority().equals(currentCloudAuthority)
+                        && providers.contains(currentCloudAuthority)
+                        ? currentCloudAuthority : null;
 
         waitForOngoingMediaSetsSync(effectiveLocalAuthority, effectiveCloudAuthority);
 
@@ -880,16 +886,20 @@ public class PickerDataLayerV2 {
 
         PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
         final Set<String> providers = new HashSet<>(query.getProviders());
-        final String effectiveLocalAuthority = syncController
-                .getLocalProvider().equals(requestParams.getAuthority())
-                ? requestParams.getAuthority() : null;
+        String effectiveLocalAuthority = syncController.getLocalProvider();
         String currentCloudAuthority = syncController.getCloudProviderOrDefault(
                 /*defaultValue*/ null);
-        final String effectiveCloudAuthority = syncController
-                .shouldQueryCloudMediaSets(providers, currentCloudAuthority)
+        final String effectiveCloudAuthority =
+                requestParams.getAuthority().equals(currentCloudAuthority)
+                && providers.contains(currentCloudAuthority)
                 ? currentCloudAuthority : null;
 
-        waitForOngoingMediaInMediaSetSync(effectiveLocalAuthority, effectiveCloudAuthority);
+        waitForOngoingMediaInMediaSetSync(
+                effectiveLocalAuthority,
+                effectiveCloudAuthority,
+                requestParams.getAuthority()
+        );
+
 
         final Cursor result = MediaInMediaSetsDatabaseUtil.queryMediaInMediaSet(
                 syncController, query, effectiveLocalAuthority, effectiveCloudAuthority);
@@ -1199,22 +1209,25 @@ public class PickerDataLayerV2 {
      * @param cloudAuthority The effective cloud authority that we need to consider for this
      *                       transaction. If the cloud items should not be queried but the cloud
      *                       authority has some value, the effective cloud authority would be null.
+     * @param requestParamAuthority The authority that we receive in the query arguments. This is
+     *                              the authority the media set belongs to.
      */
     private static void waitForOngoingMediaInMediaSetSync(
             @Nullable String localAuthority,
-            @Nullable String cloudAuthority) {
+            @Nullable String cloudAuthority,
+            @NonNull String requestParamAuthority) {
         if (localAuthority != null && cloudAuthority != null) {
             Log.w(TAG, "Media sets sync can only happen with either the local provider or a "
                     + "cloud provider for a parent category. Please check the input providers.");
         }
-        if (localAuthority != null) {
+        if (requestParamAuthority.equals(localAuthority)) {
             Log.d(TAG, "Waiting for media set contents sync with local authority "
                     + localAuthority);
             final boolean success = SyncCompletionWaiter.waitForSyncWithTimeout(
                     SyncTrackerRegistry.getLocalMediaInMediaSetTracker(), /*timeoutInMillis*/ 500);
             Log.d(TAG, "Done waiting for media set contents sync. Was it a success? " + success);
         }
-        if (cloudAuthority != null) {
+        if (requestParamAuthority.equals(cloudAuthority)) {
             Log.d(TAG, "Waiting for media set contents sync with cloud authority "
                     + cloudAuthority);
             final boolean success = SyncCompletionWaiter.waitForSyncWithTimeout(
