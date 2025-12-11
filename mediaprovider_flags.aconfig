@@ -518,3 +518,11 @@ flag {
     description: "Enables usage of selection params api in photopicker."
     bug: "467334899"
 }
+
+flag {
+    name: "enable_photopicker_ui_customization_params_usage"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "Enables usage of ui customization params api in photopicker."
+    bug: "467914970"
+}
