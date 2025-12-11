@@ -103,6 +103,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.fail
@@ -693,16 +694,37 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             val component = embeddedServiceComponentBuilder.build()
 
             val session = getSessionUnderTest(component)
-            advanceTimeBy(100)
+            advanceUntilIdle()
+
+            // Now the view is in the test's compose tree, so do a simple check to make sure
+            // the view actually initialized and the test can locate the photo grid / modify the
+            // selection.
+            composeTestRule.setContent {
+                // Wrap the surfacePackage inside of an [AndroidView] to make the view accessible to
+                // the test.
+                AndroidView(
+                    factory = {
+                        SurfaceView(getTestableContext()).apply {
+                            setChildSurfacePackage(session.surfacePackage)
+                        }
+                    }
+                )
+            }
+            composeTestRule.waitForIdle()
+
+            composeTestRule.waitUntil { session.getView().width > 0 }
 
             val initialWidth = session.getView().width
             val initialHeight = session.getView().height
 
-            val newWidth = 2 * initialWidth
-            val newHeight = 2 * initialHeight
+            val newWidth = initialWidth / 2
+            val newHeight = initialHeight / 2
 
             session.notifyResized(newWidth, newHeight)
-            advanceTimeBy(100)
+            advanceUntilIdle()
+
+            // Wait for the view to resize
+            composeTestRule.waitUntil { session.getView().width == newWidth }
 
             assertWithMessage("Expected view's width to be resized")
                 .that(session.getView().width)
