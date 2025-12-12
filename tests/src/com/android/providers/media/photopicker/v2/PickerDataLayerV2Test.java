@@ -144,6 +144,7 @@ import com.android.providers.media.photopicker.v2.model.SearchTextRequest;
 import com.android.providers.media.photopicker.v2.sqlite.MediaInMediaSetsDatabaseUtil;
 import com.android.providers.media.photopicker.v2.sqlite.MediaSetsDatabaseUtil;
 import com.android.providers.media.photopicker.v2.sqlite.PickerSQLConstants;
+import com.android.providers.media.photopicker.v2.sqlite.SearchResultsDatabaseUtil;
 import com.android.providers.media.photopicker.v2.sqlite.SearchSuggestionsDatabaseUtils;
 import com.android.providers.media.photopicker.v2.sqlite.SearchSuggestionsQuery;
 
@@ -1737,6 +1738,75 @@ public class PickerDataLayerV2Test {
                 ));
                 assertNull(retrievedBadgeUri2);
             }
+        }
+    }
+
+    @Test
+    public void testQueryMediaSets_returnsMediaSetsFromSingleAuthority()
+            throws RequestObsoleteException, PackageManager.NameNotFoundException {
+        List<String> mimeTypes = new ArrayList<>();
+        mimeTypes.add("image/*");
+        String localMediaSetId = "localMediaSetId";
+        String cloudMediaSetId = "cloudMediaSetId";
+        String displayNameLocal = "Local Album";
+        String displayNameCloud = "Cloud Album";
+        String coverId = "123";
+        String categoryId = "id";
+
+        doReturn(mMockPackageManager)
+                .when(mMockContext).getPackageManager();
+        ApplicationInfo applicationInfo = new ApplicationInfo();
+        applicationInfo.icon = RES_ID1;
+        doReturn(applicationInfo).when(mMockPackageManager).getApplicationInfo(anyString(),
+                anyInt());
+
+        String[] columns = new String[]{
+                CloudMediaProviderContract.MediaSetColumns.ID,
+                CloudMediaProviderContract.MediaSetColumns.DISPLAY_NAME,
+                CloudMediaProviderContract.MediaSetColumns.MEDIA_COVER_ID
+        };
+
+        // Cache local media set
+        MatrixCursor localCursor = new MatrixCursor(columns);
+        localCursor.addRow(new Object[] { localMediaSetId, displayNameLocal, coverId });
+        MediaSetsDatabaseUtil.cacheMediaSets(
+                mFacade.getDatabase(), localCursor, categoryId,
+                LOCAL_PROVIDER, mimeTypes);
+
+        // Cache cloud media set
+        MatrixCursor cloudCursor = new MatrixCursor(columns);
+        cloudCursor.addRow(new Object[] { cloudMediaSetId, displayNameCloud, coverId });
+        MediaSetsDatabaseUtil.cacheMediaSets(
+                mFacade.getDatabase(), cloudCursor, categoryId,
+                CLOUD_PROVIDER, mimeTypes);
+
+        // Query for media set from LOCAL_PROVIDER
+        Bundle extras = new Bundle();
+        extras.putString(
+                MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_AUTHORITY,
+                LOCAL_PROVIDER);
+        extras.putStringArrayList(
+                MediaSetsSyncRequestParams.KEY_MIME_TYPES,
+                new ArrayList<>(List.of("image/*")));
+        extras.putString(MediaSetsSyncRequestParams.KEY_PARENT_CATEGORY_ID, categoryId);
+        // Both providers are present as available providers list
+        extras.putStringArrayList("providers",
+                new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
+
+        try (Cursor mediaSets = PickerDataLayerV2.queryMediaSets(mMockContext, extras)) {
+            assertNotNull(mediaSets);
+            assertEquals(1, mediaSets.getCount());
+
+            mediaSets.moveToFirst();
+            String retrievedMediaSetId = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
+                    PickerSQLConstants.MediaGroupResponseColumns.GROUP_ID.getColumnName()));
+            assertEquals(localMediaSetId, retrievedMediaSetId);
+            String retrievedDisplayName = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
+                    PickerSQLConstants.MediaGroupResponseColumns.DISPLAY_NAME.getColumnName()));
+            assertEquals(displayNameLocal, retrievedDisplayName);
+            String retrievedAuthority = mediaSets.getString(mediaSets.getColumnIndexOrThrow(
+                    PickerSQLConstants.MediaGroupResponseColumns.AUTHORITY.getColumnName()));
+            assertEquals(LOCAL_PROVIDER, retrievedAuthority);
         }
     }
 
@@ -4780,6 +4850,235 @@ public class PickerDataLayerV2Test {
         }
     }
 
+    @Test
+    public void testQueryMediaInMediaSet_withCloudProvider_localMediaisDisplayedInCloudMediaSet() {
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMediaSets(any(), any());
+
+        // Add local media item.
+        final Cursor localMediaCursor = getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, localMediaCursor, 1);
+        // Add the cloud copy of the same item.
+        final Cursor cloudMediaCursor = getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cloudMediaCursor, 1);
+
+        // Create a media set for the cloud provider and add the media item to it.
+        Long mediaSetPickerId = 1L;
+
+        int cloudRowsInserted = MediaInMediaSetsDatabaseUtil.cacheMediaOfMediaSet(
+                mFacade.getDatabase(), List.of(
+                        getContentValues(LOCAL_ID_1, CLOUD_ID_1, mediaSetPickerId)
+                ), CLOUD_PROVIDER
+        );
+        assertEquals(
+                "Number of rows inserted should be equal to the number of items in the cursor,",
+                /*expected*/1,
+                /*actual*/cloudRowsInserted);
+
+        // Query for the media set with the cloud provider authority.
+        Bundle extras = new Bundle();
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
+        extras.putStringArrayList("providers",
+                new ArrayList<>(Arrays.asList(CLOUD_PROVIDER)));
+        extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+        extras.putLong(
+                MediaInMediaSetSyncRequestParams.KEY_PARENT_MEDIA_SET_PICKER_ID,
+                mediaSetPickerId);
+        extras.putString(
+                MediaInMediaSetSyncRequestParams.KEY_PARENT_MEDIA_SET_AUTHORITY,
+                CLOUD_PROVIDER);
+
+        try (Cursor cursor =
+                     PickerDataLayerV2.queryMediaInMediaSet(mMockContext, extras)) {
+            // Assertion: Verify the results.
+            assertWithMessage("Cursor should not be null")
+                    .that(cursor)
+                    .isNotNull();
+
+            assertWithMessage("Cursor count is not as expected")
+                    .that(cursor.getCount())
+                    .isEqualTo(1);
+
+            cursor.moveToFirst();
+            assertWithMessage("Media ID is not as expected in the media set results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.MEDIA_ID.getProjectedName())))
+                    .isEqualTo(LOCAL_ID_1);
+
+            assertWithMessage("Authority is not as expected in the media set results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.AUTHORITY.getProjectedName())))
+                    .isEqualTo(LOCAL_PROVIDER);
+        }
+    }
+
+    @Test
+    public void testQuerySearchMedia_withBothProviders_localCopyOfCloudMediaIsDisplayed() {
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        // Add local media item.
+        final Cursor localMediaCursor = getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, localMediaCursor, 1);
+        // Add the cloud copy of the same item.
+        final Cursor cloudMediaCursor = getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cloudMediaCursor, 1);
+
+        final int searchRequestId = 1;
+
+        // Cache search results from cloud provider only, pointing to the cloud ID.
+        SearchResultsDatabaseUtil.cacheSearchResults(
+                mFacade.getDatabase(), CLOUD_PROVIDER, List.of(
+                        getSearchContentValues(LOCAL_ID_1, CLOUD_ID_1, searchRequestId)
+                ), /* cancellationSignal */ null);
+
+        // Query for the search results.
+        Bundle extras = new Bundle();
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
+        extras.putStringArrayList("providers",
+                new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)));
+        extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+
+        try (Cursor cursor =
+                     PickerDataLayerV2.querySearchMedia(mMockContext, extras, searchRequestId)) {
+
+            assertWithMessage("Cursor should not be null")
+                    .that(cursor)
+                    .isNotNull();
+
+            assertWithMessage("Cursor count is not as expected")
+                    .that(cursor.getCount())
+                    .isEqualTo(1);
+
+            cursor.moveToFirst();
+            assertWithMessage("Media ID is not as expected in the search results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.MEDIA_ID.getProjectedName())))
+                    .isEqualTo(LOCAL_ID_1);
+
+            assertWithMessage("Authority is not as expected in the search results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.AUTHORITY.getProjectedName())))
+                    .isEqualTo(LOCAL_PROVIDER);
+        }
+    }
+
+    @Test
+    public void testQuerySearchMedia_withCloudProvider_cloudOnlyMediaIsDisplayed() {
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        // Add local media item.
+        final Cursor localMediaCursor = getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, localMediaCursor, 1);
+        // Add the cloud copy of the same item.
+        final Cursor cloudMediaCursor1 = getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cloudMediaCursor1, 1);
+        // Add cloud media item.
+        final Cursor cloudMediaCursor2 = getCloudMediaCursor(CLOUD_ID_2, null, DATE_TAKEN_MS_1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cloudMediaCursor2, 1);
+
+        final int searchRequestId = 1;
+
+        // Cache search results from cloud provider only.
+        SearchResultsDatabaseUtil.cacheSearchResults(
+                mFacade.getDatabase(), CLOUD_PROVIDER, List.of(
+                        getSearchContentValues(LOCAL_ID_1, CLOUD_ID_1, searchRequestId),
+                        getSearchContentValues(null, CLOUD_ID_2, searchRequestId)
+                ), /* cancellationSignal */ null);
+
+        // Query for the search results.
+        Bundle extras = new Bundle();
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
+        // Add only the cloud provider in the list of available provider
+        extras.putStringArrayList("providers",
+                new ArrayList<>(Arrays.asList(CLOUD_PROVIDER)));
+        extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+
+        try (Cursor cursor =
+                     PickerDataLayerV2.querySearchMedia(mMockContext, extras, searchRequestId)) {
+
+            assertWithMessage("Cursor should not be null")
+                    .that(cursor)
+                    .isNotNull();
+
+            assertWithMessage("Cursor count is not as expected")
+                    .that(cursor.getCount())
+                    .isEqualTo(1);
+
+            cursor.moveToFirst();
+            assertWithMessage("Media ID is not as expected in the search results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.MEDIA_ID.getProjectedName())))
+                    .isEqualTo(CLOUD_ID_2);
+
+            assertWithMessage("Authority is not as expected in the search results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.AUTHORITY.getProjectedName())))
+                    .isEqualTo(CLOUD_PROVIDER);
+        }
+    }
+
+    @Test
+    public void testQuerySearchMedia_withLocalProvider_localOnlyMediaIsDisplayed() {
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(false).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        // Add local media item.
+        final Cursor localMediaCursor = getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER, localMediaCursor, 1);
+        // Add the cloud copy of the same item.
+        final Cursor cloudMediaCursor1 = getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cloudMediaCursor1, 1);
+        // Add cloud media item.
+        final Cursor cloudMediaCursor2 = getCloudMediaCursor(CLOUD_ID_2, null, DATE_TAKEN_MS_1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER, cloudMediaCursor2, 1);
+
+        final int searchRequestId = 1;
+
+        // Cache all search results.
+        SearchResultsDatabaseUtil.cacheSearchResults(
+                mFacade.getDatabase(), CLOUD_PROVIDER, List.of(
+                        getSearchContentValues(LOCAL_ID_1, null, searchRequestId),
+                        getSearchContentValues(LOCAL_ID_1, CLOUD_ID_1, searchRequestId),
+                        getSearchContentValues(null, CLOUD_ID_2, searchRequestId)
+                ), /* cancellationSignal */ null);
+
+        // Query for the search results.
+        Bundle extras = new Bundle();
+        extras.putInt("current_page_size", 100);
+        extras.putInt("next_page_size", 100);
+        // Add only the local provider in the list of available provider
+        extras.putStringArrayList("providers",
+                new ArrayList<>(Arrays.asList(LOCAL_PROVIDER)));
+        extras.putString("intent_action", MediaStore.ACTION_PICK_IMAGES);
+
+        try (Cursor cursor =
+                     PickerDataLayerV2.querySearchMedia(mMockContext, extras, searchRequestId)) {
+
+            assertWithMessage("Cursor should not be null")
+                    .that(cursor)
+                    .isNotNull();
+
+            assertWithMessage("Cursor count is not as expected")
+                    .that(cursor.getCount())
+                    .isEqualTo(1);
+
+            cursor.moveToFirst();
+            assertWithMessage("Media ID is not as expected in the search results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.MEDIA_ID.getProjectedName())))
+                    .isEqualTo(LOCAL_ID_1);
+
+            assertWithMessage("Authority is not as expected in the search results")
+                    .that(cursor.getString(cursor.getColumnIndexOrThrow(
+                            PickerSQLConstants.MediaResponse.AUTHORITY.getProjectedName())))
+                    .isEqualTo(LOCAL_PROVIDER);
+        }
+    }
+
     private static Bundle getCreateSearchRequestExtras(SearchTextRequest searchTextRequest) {
         final Bundle bundle = new Bundle();
         bundle.putString("search_text", searchTextRequest.getSearchText());
@@ -5047,6 +5346,19 @@ public class PickerDataLayerV2Test {
                 PickerSQLConstants.MediaInMediaSetsTableColumns.MEDIA_SETS_PICKER_ID
                         .getColumnName(),
                 mediaSetPickerId);
+        return contentValues;
+    }
+
+    private ContentValues getSearchContentValues(String localId, String cloudId,
+            int searchRequestId) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(
+                PickerSQLConstants.SearchResultMediaTableColumns.CLOUD_ID.getColumnName(), cloudId);
+        contentValues.put(
+                PickerSQLConstants.SearchResultMediaTableColumns.LOCAL_ID.getColumnName(), localId);
+        contentValues.put(
+                PickerSQLConstants.SearchResultMediaTableColumns.SEARCH_REQUEST_ID.getColumnName(),
+                searchRequestId);
         return contentValues;
     }
 
