@@ -34,7 +34,9 @@ import com.android.providers.media.flags.Flags;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A utility class for handling expired items in the MediaProvider.
@@ -117,21 +119,44 @@ public final class ExpiredItemsUtils {
         String dateSelection = FileColumns.DATE_EXPIRES + " <= " + expiredOneWeek;
         String selection = buildFileSelection(context, dateSelection);
 
-        final List<FileRow> itemsToExtend = new ArrayList<>();
+        final List<FileRow> allItemsToExtend = new ArrayList<>();
+        // Sort by path (ASC) to ensure that parent directories are processed before their
+        // children.
         try (Cursor c = db.query(true, MediaStore.Files.TABLE, FileRow.PROJECTIONS, selection,
-                null, null, null, null, null, signal)) {
+                null, null, null, FileColumns.DATA + " ASC", null, signal)) {
             while (c.moveToNext()) {
-                itemsToExtend.add(new FileRow(c));
+                FileRow fileRow = new FileRow(c);
+                // Only include directories if the trash flag is enabled
+                if (Flags.enableTrashAndRestoreByFilePathApi() || !fileRow.mIsDirectory) {
+                    allItemsToExtend.add(fileRow);
+                }
             }
         }
+
+        // A map to store the count of items within each directory. This is used to calculate the
+        // total number of extended items when a directory's expiration is extended.
+        final HashMap<Long, Integer> directoryItemCount = new HashMap<>();
+
+        // The final list of items to process. For directories, we only process the
+        // top-level one and the extension logic will handle nested items.
+        final List<FileRow> itemsToExtend =
+                filterItemsToExtend(allItemsToExtend, directoryItemCount);
 
         int extendCount = 0;
         int index = 0;
         for (FileRow item : itemsToExtend) {
-            if (extendExpiredItem(db, item.mOriginalPath, item.mId, expiredTime,
-                    expiredTime + index,
-                    extensionHost)) {
-                extendCount++;
+            // This is a sanity check. If the flag is off, we should not have any directories to
+            // extend.
+            if (!Flags.enableTrashAndRestoreByFilePathApi() && item.mIsDirectory) {
+                continue;
+            }
+            if (extendExpiredItem(db, item, expiredTime, expiredTime + index, extensionHost)) {
+                if (item.mIsDirectory) {
+                    // When a directory is extended, all its children are also considered extended.
+                    extendCount += 1 + directoryItemCount.getOrDefault(item.mId, 0);
+                } else {
+                    extendCount++;
+                }
             }
             index++;
         }
@@ -155,9 +180,10 @@ public final class ExpiredItemsUtils {
      * Extends the expiration date of an expired item.
      */
     private static boolean extendExpiredItem(@NonNull SQLiteDatabase db,
-            @NonNull String originalPath,
-            long id, long newExpiredTime, long adjustedExpiredTime,
+            @NonNull FileRow fileRow, long newExpiredTime, long adjustedExpiredTime,
             @NonNull ExpiredExtensionHost host) {
+        final long fileId = fileRow.mId;
+        final String originalPath = fileRow.mOriginalPath;
         String newPath = FileUtils.getAbsoluteExtendedPath(originalPath, newExpiredTime);
         if (newPath == null) {
             Log.e(TAG, "Couldn't compute path for " + originalPath + " and expired time "
@@ -165,8 +191,32 @@ public final class ExpiredItemsUtils {
             return false;
         }
 
+        long updatedExpiredTime = newExpiredTime;
+        // If the intended new path already exists, try to generate a unique path by using the
+        // adjusted expiration time. This helps avoid filename collisions.
+        if (new File(newPath).exists()) {
+            newPath = FileUtils.getAbsoluteExtendedPath(originalPath, adjustedExpiredTime);
+            updatedExpiredTime = adjustedExpiredTime;
+
+            // If the path with the adjusted time also exists, we cannot generate a unique filename,
+            // so the operation must fail.
+            if (new File(newPath).exists()) {
+                final String errorMessage =
+                        "Failed to extend expired item from " + originalPath + " to "
+                                + newPath + " because the destination file already exists.";
+                Log.e(TAG, errorMessage);
+                return false;
+            }
+        }
+
+        // In case of directory, rename the directory, all its nested items, and invalidate the
+        // cache.
+        if (fileRow.mIsDirectory) {
+            return host.renameDirectoryAndInvalidateCache(originalPath, newPath);
+        }
+
         try {
-            if (updateDatabaseForExpiredItem(db, newPath, id, newExpiredTime)) {
+            if (updateDatabaseForExpiredItem(db, newPath, fileId, updatedExpiredTime)) {
                 return host.renameFileAndInvalidateCache(originalPath, newPath);
             }
             return false;
@@ -174,21 +224,8 @@ public final class ExpiredItemsUtils {
             final String errorMessage =
                     "Update database _data from " + originalPath + " to " + newPath + " failed.";
             Log.d(TAG, errorMessage, e);
+            return false;
         }
-
-        newPath = FileUtils.getAbsoluteExtendedPath(originalPath, adjustedExpiredTime);
-        Log.i(TAG, "Retrying to extend expired item with the new path = " + newPath);
-        try {
-            if (updateDatabaseForExpiredItem(db, newPath, id, adjustedExpiredTime)) {
-                return host.renameFileAndInvalidateCache(originalPath, newPath);
-            }
-        } catch (SQLiteConstraintException e) {
-            final String errorMessage =
-                    "Update database _data from " + originalPath + " to " + newPath + " failed.";
-            Log.d(TAG, errorMessage, e);
-        }
-
-        return false;
     }
 
     /**
@@ -204,6 +241,44 @@ public final class ExpiredItemsUtils {
         values.put(FileColumns.DATE_EXPIRES, expiredTime);
         final int count = db.update(table, values, whereClause, whereArgs);
         return count == 1;
+    }
+
+    /**
+     * Filters the list of all items to extend, returning only the items that need to be processed.
+     * For directories, only the top-level directory is returned, and its children are counted in
+     * the directoryItemCount map.
+     */
+    private static List<FileRow> filterItemsToExtend(
+            List<FileRow> allItemsToExtend, Map<Long, Integer> directoryItemCount) {
+        if (!Flags.enableTrashAndRestoreByFilePathApi()) {
+            return allItemsToExtend;
+        }
+
+        final List<FileRow> itemsToProcess = new ArrayList<>();
+        String lastProcessedDirectoryPath = null;
+        long lastProcessedDirId = -1;
+
+        for (FileRow item : allItemsToExtend) {
+            if (lastProcessedDirectoryPath != null && item.mOriginalPath.startsWith(
+                    lastProcessedDirectoryPath + "/")) {
+                // This item is inside a directory we are already processing.
+                directoryItemCount.put(
+                        lastProcessedDirId,
+                        directoryItemCount.getOrDefault(lastProcessedDirId, 0) + 1);
+                continue;
+            }
+
+            itemsToProcess.add(item);
+
+            if (item.mIsDirectory) {
+                lastProcessedDirectoryPath = item.mOriginalPath;
+                lastProcessedDirId = item.mId;
+            } else {
+                lastProcessedDirectoryPath = null;
+                lastProcessedDirId = -1;
+            }
+        }
+        return itemsToProcess;
     }
 
     /**
@@ -232,6 +307,16 @@ public final class ExpiredItemsUtils {
          * @return {@code true} if the rename was successful, {@code false} otherwise.
          */
         boolean renameFileAndInvalidateCache(String originalPath, String newPath);
+
+        /**
+         * Renames a directory from an original path to a new path and invalidates any related
+         * caches.
+         *
+         * @param originalPath The current path of the directory to rename.
+         * @param newPath      The destination path for the directory.
+         * @return {@code true} if the rename was successful, {@code false} otherwise.
+         */
+        boolean renameDirectoryAndInvalidateCache(String originalPath, String newPath);
     }
 
 
