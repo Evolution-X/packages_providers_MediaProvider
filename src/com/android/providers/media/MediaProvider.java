@@ -2235,9 +2235,13 @@ public class MediaProvider extends ContentProvider {
                     }
                 };
 
-        return mExternalDatabase.runWithTransaction(
-                (db) -> ExpiredItemsUtils.processExpiredItems(getContext(), db, signal,
-                        deletionHost, extensionHost));
+        return mExternalDatabase.runWithTransaction((db) -> {
+            final int deleteCount = ExpiredItemsUtils.deleteExpiredItems(getContext(), db, signal,
+                    deletionHost);
+            final int extendCount = ExpiredItemsUtils.extendExpiredItems(getContext(), db, signal,
+                    extensionHost);
+            return new int[]{deleteCount, extendCount};
+        });
     }
 
     private boolean renameInLowerFsAndInvalidateFuseDentry(@NonNull String originalPath,

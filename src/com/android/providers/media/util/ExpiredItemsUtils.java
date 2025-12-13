@@ -30,6 +30,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,76 +45,91 @@ public final class ExpiredItemsUtils {
     }
 
     /**
-     * Processes expired items, either by deleting them or extending their expiration date.
+     * Deletes expired items from the database.
+     *
+     * @param context      The context.
+     * @param db           The SQLite database.
+     * @param signal       A signal to cancel the operation in progress.
+     * @param deletionHost A host to handle the deletion of files.
+     * @return The number of items that were deleted.
+     */
+    public static int deleteExpiredItems(@NonNull Context context, @NonNull SQLiteDatabase db,
+            @NonNull CancellationSignal signal, @NonNull ExpiredDeletionHost deletionHost) {
+        final long expiredOneWeek =
+                ((System.currentTimeMillis() - DateUtils.WEEK_IN_MILLIS) / 1000);
+        final long now = (System.currentTimeMillis() / 1000);
+
+        String dateSelection = FileColumns.DATE_EXPIRES + " > " + expiredOneWeek + " AND "
+                + FileColumns.DATE_EXPIRES + " < " + now;
+        String selection = buildFileSelection(context, dateSelection);
+
+        final List<FileRow> itemsToDelete = new ArrayList<>();
+        try (Cursor c = db.query(true, "files", FileRow.PROJECTIONS, selection,
+                null, null, null, null, null, signal)) {
+            while (c.moveToNext()) {
+                itemsToDelete.add(new FileRow(c));
+            }
+        }
+
+        int deleteCount = 0;
+        for (FileRow item : itemsToDelete) {
+            deleteCount += deletionHost.deleteFile(item.mVolumeName, item.mId);
+        }
+
+        return deleteCount;
+    }
+
+    /**
+     * Extends the expiration date of expired items.
      *
      * @param context       The context.
      * @param db            The SQLite database.
      * @param signal        A signal to cancel the operation in progress.
-     * @param deletionHost  A host to handle the deletion of files.
      * @param extensionHost A host to handle the extension of expired items.
-     * @return An array containing the total deleted count and the total extended count.
+     * @return The number of items whose expiration dates were extended.
      */
-    public static int[] processExpiredItems(@NonNull Context context, @NonNull SQLiteDatabase db,
-            @NonNull CancellationSignal signal, @NonNull ExpiredDeletionHost deletionHost,
-            @NonNull ExpiredExtensionHost extensionHost) {
+    public static int extendExpiredItems(@NonNull Context context, @NonNull SQLiteDatabase db,
+            @NonNull CancellationSignal signal, @NonNull ExpiredExtensionHost extensionHost) {
         final long expiredOneWeek =
                 ((System.currentTimeMillis() - DateUtils.WEEK_IN_MILLIS) / 1000);
         final long now = (System.currentTimeMillis() / 1000);
         final long expiredTime = now + (FileUtils.DEFAULT_DURATION_EXTENDED / 1000);
+        String dateSelection = FileColumns.DATE_EXPIRES + " <= " + expiredOneWeek;
+        String selection = buildFileSelection(context, dateSelection);
 
-        String selection = FileColumns.DATE_EXPIRES + " < " + now;
-        selection += " AND (IS_PENDING=1 OR IS_TRASHED=1)";
-        selection += " AND volume_name in " + DatabaseUtils.bindList(
-                MediaStore.getExternalVolumeNames(
-                        context).toArray());
-        String[] projection = new String[]{"volume_name", "_id",
-                FileColumns.DATE_EXPIRES, FileColumns.DATA};
-
-        final class TrashItem {
-            final String mVolumeName;
-            final long mId;
-            final long mDateExpires;
-            final String mOriginalPath;
-
-            TrashItem(String volumeName, long id, long dateExpires, String oriPath) {
-                this.mVolumeName = volumeName;
-                this.mId = id;
-                this.mDateExpires = dateExpires;
-                this.mOriginalPath = oriPath;
-            }
-        }
-
-        final List<TrashItem> items = new ArrayList<>();
-        try (Cursor c = db.query(true, "files", projection, selection,
+        final List<FileRow> itemsToExtend = new ArrayList<>();
+        try (Cursor c = db.query(true, "files", FileRow.PROJECTIONS, selection,
                 null, null, null, null, null, signal)) {
             while (c.moveToNext()) {
-                items.add(new TrashItem(
-                        c.getString(0), // volumeName
-                        c.getLong(1), // id
-                        c.getLong(2), // dateExpires
-                        c.getString(3) // oriPath
-                ));
+                itemsToExtend.add(new FileRow(c));
             }
         }
 
-        int totalDeleteCount = 0;
-        int totalExtendedCount = 0;
+        int extendCount = 0;
         int index = 0;
-
-        for (TrashItem item : items) {
-            if (item.mDateExpires > expiredOneWeek) {
-                totalDeleteCount += deletionHost.deleteFile(item.mVolumeName, item.mId);
-            } else {
-                boolean success = extendExpiredItem(db, item.mOriginalPath, item.mId,
-                        expiredTime, expiredTime + index, extensionHost);
-                if (success) {
-                    totalExtendedCount++;
-                }
-                index++;
+        for (FileRow item : itemsToExtend) {
+            if (extendExpiredItem(db, item.mOriginalPath, item.mId, expiredTime,
+                    expiredTime + index,
+                    extensionHost)) {
+                extendCount++;
             }
+            index++;
         }
 
-        return new int[]{totalDeleteCount, totalExtendedCount};
+        return extendCount;
+    }
+
+    /**
+     * Builds the full SQL selection clause for querying pending or trashed files
+     * on external volumes using a specific date-based filter.
+     */
+    private static String buildFileSelection(@NonNull Context context,
+            @NonNull String dateSelection) {
+        return dateSelection
+                + " AND (IS_PENDING=1 OR IS_TRASHED=1)"
+                + " AND volume_name in " + DatabaseUtils.bindList(
+                MediaStore.getExternalVolumeNames(
+                        context).toArray());
     }
 
     /**
@@ -197,5 +213,25 @@ public final class ExpiredItemsUtils {
          * @return {@code true} if the rename was successful, {@code false} otherwise.
          */
         boolean renameFileAndInvalidateCache(String originalPath, String newPath);
+    }
+
+
+    static final class FileRow {
+        public static final String[] PROJECTIONS =
+                new String[]{FileColumns._ID, FileColumns.VOLUME_NAME,
+                        FileColumns.DATE_EXPIRES, FileColumns.DATA};
+        final long mId;
+        final String mVolumeName;
+        final long mDateExpires;
+        final String mOriginalPath;
+        final boolean mIsDirectory;
+
+        FileRow(Cursor c) {
+            this.mId = c.getLong(c.getColumnIndexOrThrow(FileColumns._ID));
+            this.mVolumeName = c.getString(c.getColumnIndexOrThrow(FileColumns.VOLUME_NAME));
+            this.mDateExpires = c.getLong(c.getColumnIndexOrThrow(FileColumns.DATE_EXPIRES));
+            this.mOriginalPath = c.getString(c.getColumnIndexOrThrow(FileColumns.DATA));
+            this.mIsDirectory = new File(mOriginalPath).isDirectory();
+        }
     }
 }
