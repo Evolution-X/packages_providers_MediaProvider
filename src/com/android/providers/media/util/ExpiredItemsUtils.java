@@ -30,6 +30,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import com.android.providers.media.flags.Flags;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,17 +65,35 @@ public final class ExpiredItemsUtils {
                 + FileColumns.DATE_EXPIRES + " < " + now;
         String selection = buildFileSelection(context, dateSelection);
 
-        final List<FileRow> itemsToDelete = new ArrayList<>();
+        final List<FileRow> filesToDelete = new ArrayList<>();
+        final List<FileRow> dirsToDelete = new ArrayList<>();
         try (Cursor c = db.query(true, MediaStore.Files.TABLE, FileRow.PROJECTIONS, selection,
                 null, null, null, null, null, signal)) {
             while (c.moveToNext()) {
-                itemsToDelete.add(new FileRow(c));
+                final FileRow item = new FileRow(c);
+                if (item.mIsDirectory) {
+                    dirsToDelete.add(item);
+                } else {
+                    filesToDelete.add(item);
+                }
             }
         }
 
         int deleteCount = 0;
-        for (FileRow item : itemsToDelete) {
-            deleteCount += deletionHost.deleteFile(item.mVolumeName, item.mId);
+        for (FileRow file : filesToDelete) {
+            deleteCount += deletionHost.deleteFile(file.mVolumeName, file.mId);
+        }
+
+        if (Flags.enableTrashAndRestoreByFilePathApi()) {
+            // Sort directories by path length in descending order to delete nested directories
+            // first.
+            dirsToDelete.sort(
+                    (d1, d2) -> Integer.compare(d2.mOriginalPath.length(),
+                            d1.mOriginalPath.length()));
+
+            for (FileRow dir : dirsToDelete) {
+                deleteCount += deletionHost.deleteFile(dir.mVolumeName, dir.mId);
+            }
         }
 
         return deleteCount;
