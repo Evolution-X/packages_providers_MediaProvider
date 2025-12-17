@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import com.android.photopicker.R
 import com.android.photopicker.core.banners.Banner
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerState
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.events.Event
@@ -79,6 +80,7 @@ class ProfileSelectorFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        bannerLocation: BannerLocation,
     ): Int {
 
         if (bannerState?.dismissed == true) {

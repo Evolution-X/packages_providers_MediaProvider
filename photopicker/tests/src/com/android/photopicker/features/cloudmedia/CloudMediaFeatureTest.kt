@@ -42,6 +42,7 @@ import com.android.photopicker.core.ConcurrencyModule
 import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.banners.BannerState
 import com.android.photopicker.core.banners.BannerStateDao
@@ -428,8 +429,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     "abc@xyz.com",
                 )
 
-            bannerManager.get().refreshBanners()
-            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -437,6 +436,11 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     events = events.get(),
                 )
             }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
@@ -496,8 +500,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     "abc@xyz.com",
                 )
 
-            bannerManager.get().refreshBanners()
-            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -505,6 +507,11 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     events = events.get(),
                 )
             }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsNotDisplayed()
@@ -554,8 +561,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     cloudProvider.displayName,
                 )
 
-            bannerManager.get().refreshBanners()
-            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -563,6 +568,10 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     events = events.get(),
                 )
             }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(500)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
@@ -622,7 +631,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     cloudProvider.displayName,
                 )
 
-            bannerManager.get().refreshBanners()
             advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
@@ -631,6 +639,8 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     events = events.get(),
                 )
             }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(100)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsNotDisplayed()
@@ -666,8 +676,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             val expectedMessage =
                 resources.getString(R.string.photopicker_banner_cloud_choose_provider_message)
 
-            bannerManager.get().refreshBanners()
-            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -675,6 +683,10 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     events = events.get(),
                 )
             }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(500)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(500)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
@@ -723,8 +735,6 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             val expectedMessage =
                 resources.getString(R.string.photopicker_banner_cloud_choose_provider_message)
 
-            bannerManager.get().refreshBanners()
-            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -732,6 +742,8 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
                     events = events.get(),
                 )
             }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(100)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
             composeTestRule.onNode(hasText(expectedMessage)).assertIsNotDisplayed()

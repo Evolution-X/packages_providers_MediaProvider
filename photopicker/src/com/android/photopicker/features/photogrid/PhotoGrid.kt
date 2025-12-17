@@ -257,7 +257,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                 // When the PhotoGrid is ready to show, also collect the latest banner
                 // data from [BannerManager] so it can be placed inside of the mediaGrid's
                 // scroll container.
-                val currentBanner by viewModel.banners.collectAsStateWithLifecycle()
+                val currentBanner by viewModel.getBannerFlow().collectAsStateWithLifecycle()
 
                 // Embedded selector for the Grid banner section..
                 // Extract this out because the below grid implementations differ based on flags,

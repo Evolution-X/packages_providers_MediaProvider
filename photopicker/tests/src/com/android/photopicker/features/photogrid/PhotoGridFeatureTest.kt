@@ -57,6 +57,7 @@ import com.android.photopicker.core.ConcurrencyModule
 import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
 import com.android.photopicker.core.ViewModelModule
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.banners.BannerStateDao
 import com.android.photopicker.core.configuration.ConfigurationManager
@@ -464,9 +465,9 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
                     callingPackageUid = 12345,
                     callingPackageLabel = "Test Package",
                 )
-            advanceTimeBy(100)
 
-            bannerManager.get().refreshBanners()
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
                     featureManager = featureManager.get(),
@@ -480,6 +481,8 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
                 resources.getString(R.string.photopicker_privacy_explainer, "Test Package")
 
             // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
             advanceTimeBy(100)
             composeTestRule.waitForIdle()
 

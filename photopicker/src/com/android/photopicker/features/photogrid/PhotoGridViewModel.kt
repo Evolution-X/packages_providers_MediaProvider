@@ -24,7 +24,9 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource.LoadResult
 import androidx.paging.cachedIn
+import com.android.photopicker.core.banners.Banner
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.events.Event
@@ -43,6 +45,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -175,7 +178,9 @@ constructor(
     }
 
     /** Export the [Banner] flow from BannerManager to the UI */
-    val banners = bannerManager.flow
+    fun getBannerFlow(): StateFlow<Banner?> {
+        return bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER)
+    }
 
     /**
      * Dismissal handler from the UI to mark a particular banner as dismissed by the user. This call
@@ -184,10 +189,7 @@ constructor(
      * Afterwards, refreshBanners is called to check for any new Banners from [BannerManager].
      */
     fun markBannerAsDismissed(banner: BannerDefinitions) {
-        scope.launch {
-            bannerManager.markBannerAsDismissed(banner)
-            bannerManager.refreshBanners()
-        }
+        scope.launch { bannerManager.markBannerAsDismissed(banner) }
     }
 
     /**

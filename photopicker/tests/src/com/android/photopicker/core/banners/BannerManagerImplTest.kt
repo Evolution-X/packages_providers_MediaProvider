@@ -54,9 +54,12 @@ import com.android.photopicker.util.test.whenever
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -247,7 +250,7 @@ class BannerManagerImplTest {
                 )
 
             assertWithMessage("Expected no banner to be emitted")
-                .that(bannerManager.flow.value)
+                .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
                 .isNull()
         }
     }
@@ -303,10 +306,13 @@ class BannerManagerImplTest {
                 )
 
             whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
-            bannerManager.refreshBanners()
+
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
 
             assertWithMessage("Incorrect banner was chosen.")
-                .that(bannerManager.flow.value?.declaration)
+                .that(
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
+                )
                 .isEqualTo(BannerDefinitions.PRIVACY_EXPLAINER)
         }
     }
@@ -383,14 +389,14 @@ class BannerManagerImplTest {
                 )
             }
 
-            bannerManager.refreshBanners()
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
 
             // Ensure BannerManager fetches the database state for the banner, with the correct uid
             verify(databaseManager.bannerState)
                 .getBannerState(BannerDefinitions.PRIVACY_EXPLAINER.id, 12345)
 
             assertWithMessage("Incorrect banner was chosen.")
-                .that(bannerManager.flow.value)
+                .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
                 .isNull()
         }
     }
@@ -398,7 +404,6 @@ class BannerManagerImplTest {
     /** Ensures that the [BannerManagerImpl] emits the highest priority Banner. */
     @Test
     fun testEmitsHighestPriorityBanner() {
-
         runTest {
             val configurationManager =
                 ConfigurationManager(
@@ -455,7 +460,7 @@ class BannerManagerImplTest {
             // Mock out database state as no previously dismissed banners
             whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
 
-            bannerManager.refreshBanners()
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
 
             // Ensure BannerManager fetches the database state for the banner, with the correct uids
             verify(databaseManager.bannerState)
@@ -464,7 +469,9 @@ class BannerManagerImplTest {
                 .getBannerState(BannerDefinitions.CLOUD_CHOOSE_ACCOUNT.id, 0)
 
             assertWithMessage("Incorrect banner was chosen.")
-                .that(bannerManager.flow.value?.declaration)
+                .that(
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
+                )
                 .isEqualTo(BannerDefinitions.CLOUD_CHOOSE_ACCOUNT)
         }
     }
@@ -520,13 +527,24 @@ class BannerManagerImplTest {
                 )
 
             assertWithMessage("Initial banner was not null.")
-                .that(bannerManager.flow.value)
+                .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
                 .isNull()
 
-            bannerManager.showBanner(BannerDefinitions.PRIVACY_EXPLAINER)
+            bannerManager.showBanner(
+                BannerDefinitions.PRIVACY_EXPLAINER,
+                BannerLocation.PHOTO_GRID_BANNER,
+            )
+
+            val shownBanner =
+                withTimeout(1000) {
+                    bannerManager
+                        .getBannerFlow(BannerLocation.PHOTO_GRID_BANNER)
+                        .filterNotNull()
+                        .first()
+                }
 
             assertWithMessage("Incorrect banner was shown.")
-                .that(bannerManager.flow.value?.declaration)
+                .that(shownBanner.declaration)
                 .isEqualTo(BannerDefinitions.PRIVACY_EXPLAINER)
         }
     }
@@ -582,20 +600,37 @@ class BannerManagerImplTest {
                 )
 
             assertWithMessage("Initial banner was not null.")
-                .that(bannerManager.flow.value)
+                .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
                 .isNull()
 
-            bannerManager.showBanner(BannerDefinitions.PRIVACY_EXPLAINER)
+            bannerManager.showBanner(
+                BannerDefinitions.PRIVACY_EXPLAINER,
+                BannerLocation.PHOTO_GRID_BANNER,
+            )
+
+            // Wait for the banner to appear before proceeding
+            val shownBanner =
+                withTimeout(1000) {
+                    bannerManager
+                        .getBannerFlow(BannerLocation.PHOTO_GRID_BANNER)
+                        .filterNotNull()
+                        .first()
+                }
 
             assertWithMessage("Incorrect banner was shown.")
-                .that(bannerManager.flow.value?.declaration)
+                .that(shownBanner.declaration)
                 .isEqualTo(BannerDefinitions.PRIVACY_EXPLAINER)
 
             bannerManager.hideBanners()
 
-            assertWithMessage("Expected current banner to be null.")
-                .that(bannerManager.flow.value)
-                .isNull()
+            val hiddenBanner =
+                withTimeout(1000) {
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).first {
+                        it == null
+                    }
+                }
+
+            assertWithMessage("Expected current banner to be null.").that(hiddenBanner).isNull()
         }
     }
 
@@ -900,6 +935,7 @@ class BannerManagerImplTest {
                     nonNullableEq(configurationManager.configuration.value),
                     nonNullableEq(testDataService),
                     nonNullableEq(userMonitor),
+                    nonNullableEq(BannerLocation.PHOTO_GRID_BANNER),
                 )
             ) {
                 -1
@@ -908,7 +944,7 @@ class BannerManagerImplTest {
             bannerManager.refreshBanners()
 
             assertWithMessage("Incorrect banner was chosen.")
-                .that(bannerManager.flow.value)
+                .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
                 .isNull()
         }
     }
@@ -973,7 +1009,7 @@ class BannerManagerImplTest {
             advanceTimeBy(100)
 
             assertWithMessage("Incorrect banner was chosen.")
-                .that(bannerManager.flow.value)
+                .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
                 .isNull()
         }
     }

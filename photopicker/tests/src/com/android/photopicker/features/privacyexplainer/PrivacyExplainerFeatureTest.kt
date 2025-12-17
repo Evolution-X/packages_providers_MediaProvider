@@ -37,6 +37,7 @@ import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
 import com.android.photopicker.core.ViewModelModule
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.banners.BannerState
 import com.android.photopicker.core.banners.BannerStateDao
@@ -173,7 +174,7 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
             val expectedPrivacyMessage =
                 resources.getString(R.string.photopicker_privacy_explainer, "Test Package")
 
-            bannerManager.get().refreshBanners()
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
             advanceTimeBy(100)
 
             composeTestRule.setContent {
@@ -184,6 +185,8 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
                 )
             }
             // Wait for the PhotoGrid to load.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
             advanceTimeBy(100)
             composeTestRule.waitForIdle()
             composeTestRule.onNode(hasText(expectedPrivacyMessage)).assertIsDisplayed()
@@ -220,7 +223,7 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
             val expectedPrivacyMessage =
                 resources.getString(R.string.photopicker_privacy_explainer, "Test Package")
 
-            bannerManager.get().refreshBanners()
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
             advanceTimeBy(100)
             composeTestRule.setContent {
                 callPhotopickerMain(
