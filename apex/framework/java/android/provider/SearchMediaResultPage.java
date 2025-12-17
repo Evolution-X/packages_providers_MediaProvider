@@ -26,12 +26,9 @@ import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
 import android.database.CursorWindow;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
-
-import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -45,7 +42,6 @@ import java.util.Objects;
  * @hide
  */
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SystemApi
 public final class SearchMediaResultPage implements Parcelable {
     private static final String CURSOR_WINDOW_NAME = "search_media_cursor_window";

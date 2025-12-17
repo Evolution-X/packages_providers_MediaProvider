@@ -42,6 +42,7 @@ import androidx.appsearch.app.SearchSpec;
 import androidx.appsearch.app.SetSchemaRequest;
 import androidx.appsearch.platformstorage.PlatformStorage;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.flags.Flags;
 
 import java.util.ArrayList;
@@ -52,11 +53,22 @@ import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
+/**
+ * Manages all interactions with the AppSearch database used for local media search.
+ *
+ * <p>This class encapsulates the logic for connecting to the database, setting and updating the
+ * schema, and performing thread-safe Create, Read, Update, and Delete (CRUD) operations on
+ * {@link MediaItem} documents.
+ *
+ * <p>All bulk operations have a limit of {@link #MAX_BULK_OPERATIONS_SIZE} documents per call.
+ *
+ * <p>Usage of this class is only supported on devices running Android T (API 33) or higher and
+ * when the {@code enable_media_search} flag is enabled.
+ */
 public final class AppSearchDbManager {
     private static final String TAG = AppSearchDbManager.class.getSimpleName();
+    public static final String NAMESPACE = "media_appsearch_namespace";
     static final String DATABASE_NAME = "media_appsearch_db";
-    static final String NAMESPACE = "media_appsearch_namespace";
-
     static final int LATEST_SCHEMA_VERSION = 1;
     static final String SHARED_PREFERENCE_NAME = "media_appsearch_schema_version";
     static final String CURRENT_SCHEMA_VERSION = "media_appsearch_current_schema_version";
@@ -70,19 +82,29 @@ public final class AppSearchDbManager {
      */
     private static final ReentrantReadWriteLock sReadWriteLock = new ReentrantReadWriteLock();
 
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public AppSearchDbManager(@NonNull Context context) throws Exception {
-        if (!Flags.enableMediaSearch()) {
-            throw new IllegalStateException("Flag enable_media_search should be enabled.");
-        }
+        ensureAppSearchDbManagerSupported();
         this.mContext = context.getApplicationContext();
-        connect();
+        if (SdkLevel.isAtLeastT()) {
+            connect();
+        }
+    }
+
+    private static void ensureAppSearchDbManagerSupported() {
+        if (!Flags.enableMediaSearch()) {
+            throw new UnsupportedOperationException("Flag enable_media_search should be enabled.");
+        }
+
+        if (!SdkLevel.isAtLeastT()) {
+            throw new UnsupportedOperationException("Localsearch is only enabled for "
+                    + "Android T (API 33) or higher.");
+        }
     }
 
     /**
      * Connects to the AppSearch database and sets the schema.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private void connect() throws Exception {
         final long startTimeMillis = SystemClock.elapsedRealtime();
         try {
@@ -135,7 +157,6 @@ public final class AppSearchDbManager {
     /**
      * Disconnects from the AppSearch database.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
     public void disconnect() {
         final long startTimeMillis = SystemClock.elapsedRealtime();
         sReadWriteLock.writeLock().lock();
@@ -162,7 +183,7 @@ public final class AppSearchDbManager {
      *                                  field values according to the validation checks in
      *                                  {@code validateMediaItemList}.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void insertDocuments(@NonNull List<MediaItem> documents) throws Exception {
         if (documents.size() > MAX_BULK_OPERATIONS_SIZE) {
             throw new IllegalArgumentException("Document list size exceeds the limit of "
@@ -236,7 +257,7 @@ public final class AppSearchDbManager {
      *                                  invalid state according to the validation checks in
      *                                  {@code validateMediaItemList}.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void updateDocuments(@NonNull Map<Long, UpdateSpec> updatesByFileId) throws Exception {
         if (updatesByFileId.size() > MAX_BULK_OPERATIONS_SIZE) {
             throw new IllegalArgumentException("Updates map size exceeds the limit of "
@@ -320,7 +341,7 @@ public final class AppSearchDbManager {
      * @throws IllegalArgumentException if the list size exceeds {@link #MAX_BULK_OPERATIONS_SIZE}.
      * @return A list of {@link GenericDocument} matching the file IDs.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public List<GenericDocument> getDocumentsByFileIds(@NonNull List<Long> fileIds)
             throws Exception {
         if (fileIds.size() > MAX_BULK_OPERATIONS_SIZE) {
@@ -373,7 +394,7 @@ public final class AppSearchDbManager {
      *                exceed {@link #MAX_BULK_OPERATIONS_SIZE}.
      * @throws IllegalArgumentException if the list size exceeds {@link #MAX_BULK_OPERATIONS_SIZE}.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void deleteDocumentsByFileIds(@NonNull List<Long> fileIds)
             throws Exception {
         if (fileIds.size() > MAX_BULK_OPERATIONS_SIZE) {
@@ -416,7 +437,7 @@ public final class AppSearchDbManager {
      * @param searchSpec The specification for the search.
      * @return A {@link SearchResults} object to iterate through results.
      */
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public SearchResults searchDocuments(String query, SearchSpec searchSpec) {
         final long startTimeMillis = SystemClock.elapsedRealtime();
         ensureAppSearchDbConnected();
@@ -435,8 +456,7 @@ public final class AppSearchDbManager {
 
     private void ensureAppSearchDbConnected() {
         if (mAppSearchSession == null) {
-            throw new IllegalStateException("AppSearch session is not initialized. Please call the "
-                    + "connect() method first to establish a connection to AppSearch.");
+            throw new IllegalStateException("AppSearch session is not initialized.");
         }
     }
 
@@ -471,10 +491,9 @@ public final class AppSearchDbManager {
         return item;
     }
 
-
-        /**
-         * A data class to encapsulate the information needed for a single document update.
-         */
+    /**
+     * A data class to encapsulate the information needed for a single document update.
+     */
     public static final class UpdateSpec {
         private final Map<String, Object> mPropertiesToUpdate;
 

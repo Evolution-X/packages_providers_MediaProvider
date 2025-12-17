@@ -20,9 +20,6 @@ import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.SystemApi;
 import android.database.CursorWindow;
-import android.os.Build;
-
-import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -37,7 +34,6 @@ import java.util.Objects;
  * @hide
  */
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SystemApi
 public final class SearchMediaResult {
 

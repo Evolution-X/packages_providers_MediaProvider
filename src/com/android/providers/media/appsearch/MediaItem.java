@@ -226,7 +226,7 @@ public class MediaItem {
                 .setPropertyLong(PROPERTY_FILE_ID, fileId)
                 .setPropertyLong(PROPERTY_DATE_TAKEN, dateTaken)
                 .setPropertyLong(PROPERTY_MEDIA_TYPE, mediaType)
-                .setPropertyBoolean(PROPERTY_DIRTY, dirty);
+                .setPropertyLong(PROPERTY_DIRTY, dirty ? 1L : 0L);
 
         if (metadataExtracted != null) {
             builder.setPropertyString(PROPERTY_METADATA_EXTRACTED, metadataExtracted);
