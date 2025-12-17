@@ -64,7 +64,7 @@ public final class ExpiredItemsUtils {
         String selection = buildFileSelection(context, dateSelection);
 
         final List<FileRow> itemsToDelete = new ArrayList<>();
-        try (Cursor c = db.query(true, "files", FileRow.PROJECTIONS, selection,
+        try (Cursor c = db.query(true, MediaStore.Files.TABLE, FileRow.PROJECTIONS, selection,
                 null, null, null, null, null, signal)) {
             while (c.moveToNext()) {
                 itemsToDelete.add(new FileRow(c));
@@ -98,7 +98,7 @@ public final class ExpiredItemsUtils {
         String selection = buildFileSelection(context, dateSelection);
 
         final List<FileRow> itemsToExtend = new ArrayList<>();
-        try (Cursor c = db.query(true, "files", FileRow.PROJECTIONS, selection,
+        try (Cursor c = db.query(true, MediaStore.Files.TABLE, FileRow.PROJECTIONS, selection,
                 null, null, null, null, null, signal)) {
             while (c.moveToNext()) {
                 itemsToExtend.add(new FileRow(c));
@@ -126,10 +126,9 @@ public final class ExpiredItemsUtils {
     private static String buildFileSelection(@NonNull Context context,
             @NonNull String dateSelection) {
         return dateSelection
-                + " AND (IS_PENDING=1 OR IS_TRASHED=1)"
-                + " AND volume_name in " + DatabaseUtils.bindList(
-                MediaStore.getExternalVolumeNames(
-                        context).toArray());
+                + " AND (" + MediaColumns.IS_PENDING + "=1 OR " + MediaColumns.IS_TRASHED + "=1)"
+                + " AND " + MediaColumns.VOLUME_NAME + " in " + DatabaseUtils.bindList(
+                MediaStore.getExternalVolumeNames(context).toArray());
     }
 
     /**
@@ -177,7 +176,7 @@ public final class ExpiredItemsUtils {
      */
     private static boolean updateDatabaseForExpiredItem(@NonNull SQLiteDatabase db,
             @NonNull String path, long id, long expiredTime) {
-        final String table = "files";
+        final String table = MediaStore.Files.TABLE;
         final String whereClause = MediaColumns._ID + "=?";
         final String[] whereArgs = new String[]{String.valueOf(id)};
         final ContentValues values = new ContentValues();
