@@ -192,7 +192,6 @@ import static com.android.providers.media.util.SyntheticPathUtils.isSyntheticPat
 
 import android.Manifest;
 import android.annotation.IntDef;
-import android.app.ActivityManager;
 import android.app.ActivityOptions;
 import android.app.AppOpsManager;
 import android.app.AppOpsManager.OnOpActiveChangedListener;
@@ -286,7 +285,6 @@ import android.system.Os;
 import android.system.OsConstants;
 import android.system.StructStat;
 import android.text.TextUtils;
-import android.text.format.DateUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.DisplayMetrics;
@@ -335,6 +333,7 @@ import com.android.providers.media.scan.ModernMediaScanner;
 import com.android.providers.media.stableuris.dao.BackupIdRow;
 import com.android.providers.media.util.CachedSupplier;
 import com.android.providers.media.util.DatabaseUtils;
+import com.android.providers.media.util.ExpiredItemsUtils;
 import com.android.providers.media.util.FileRestoreManager;
 import com.android.providers.media.util.FileTrashManager;
 import com.android.providers.media.util.FileUtils;
@@ -1933,6 +1932,10 @@ public class MediaProvider extends ContentProvider {
 
         MediaServiceV2.performCleanUp(getContext());
 
+        // Schedule unique periodic job to log Device Storage stats. Ignores new attempt to schedule
+        // the job if a job is already scheduled.
+        Metrics.scheduleDeviceStorageStateLoggingJob(getContext());
+
         final long durationMillis = (SystemClock.elapsedRealtime() - startTime);
         Metrics.logIdleMaintenance(MediaStore.VOLUME_EXTERNAL, itemCount,
                 durationMillis, staleThumbnails, deletedExpiredMedia);
@@ -2225,130 +2228,24 @@ public class MediaProvider extends ContentProvider {
      */
     @NonNull
     private int[] deleteOrExtendExpiredItems(@NonNull CancellationSignal signal) {
-        final long expiredOneWeek =
-                ((System.currentTimeMillis() - DateUtils.WEEK_IN_MILLIS) / 1000);
-        final long now = (System.currentTimeMillis() / 1000);
-        final long expiredTime = now + (FileUtils.DEFAULT_DURATION_EXTENDED / 1000);
-        return mExternalDatabase.runWithTransaction((db) -> {
-            String selection = FileColumns.DATE_EXPIRES + " < " + now;
-            selection += " AND (IS_PENDING=1 OR IS_TRASHED=1)";
-            selection += " AND volume_name in " + bindList(MediaStore.getExternalVolumeNames(
-                    getContext()).toArray());
-            String[] projection = new String[]{"volume_name", "_id",
-                    FileColumns.DATE_EXPIRES, FileColumns.DATA};
-            final class TrashItem {
-                final String mVolumeName;
-                final long mId;
-                final long mDateExpires;
-                final String mOriginalPath;
-
-                TrashItem(String volumeName, long id, long dateExpires, String oriPath) {
-                    this.mVolumeName = volumeName;
-                    this.mId = id;
-                    this.mDateExpires = dateExpires;
-                    this.mOriginalPath = oriPath;
-                }
-            }
-
-            final List<TrashItem> items = new ArrayList<>();
-            try (Cursor c = db.query(true, "files", projection, selection,
-                    null, null, null, null, null, signal)) {
-                while (c.moveToNext()) {
-                    items.add(new TrashItem(
-                            c.getString(0), // volumeName
-                            c.getLong(1),   // id
-                            c.getLong(2),   // dateExpires
-                            c.getString(3)  // oriPath
-                    ));
-                }
-            }
-
-            int totalDeleteCount = 0;
-            int totalExtendedCount = 0;
-            int index = 0;
-
-            for (TrashItem item : items) {
-                if (item.mDateExpires > expiredOneWeek) {
-                    totalDeleteCount += delete(Files.getContentUri(item.mVolumeName, item.mId),
-                            null, null);
-                } else {
-                    boolean success = extendExpiredItem(db, item.mOriginalPath, item.mId,
-                            expiredTime, expiredTime + index);
-                    if (success) {
-                        totalExtendedCount++;
+        final ExpiredItemsUtils.ExpiredDeletionHost deletionHost =
+                (volumeName, id) -> delete(Files.getContentUri(volumeName, id), /* extras */ null);
+        final ExpiredItemsUtils.ExpiredExtensionHost extensionHost =
+                new ExpiredItemsUtils.ExpiredExtensionHost() {
+                    @Override
+                    public boolean renameFileAndInvalidateCache(String originalPath,
+                            String newPath) {
+                        return renameInLowerFsAndInvalidateFuseDentry(originalPath, newPath);
                     }
-                    index++;
-                }
-            }
+                };
 
-            return new int[]{totalDeleteCount, totalExtendedCount};
+        return mExternalDatabase.runWithTransaction((db) -> {
+            final int deleteCount = ExpiredItemsUtils.deleteExpiredItems(getContext(), db, signal,
+                    deletionHost);
+            final int extendCount = ExpiredItemsUtils.extendExpiredItems(getContext(), db, signal,
+                    extensionHost);
+            return new int[]{deleteCount, extendCount};
         });
-    }
-
-    /**
-     * Extend the expired items by renaming the file to new path with new timestamp and updating the
-     * database for {@link FileColumns#DATA} and {@link FileColumns#DATE_EXPIRES}. If there is
-     * UNIQUE constraint error for FileColumns.DATA, use adjustedExpiredTime and generate the new
-     * path by adjustedExpiredTime.
-     */
-    private boolean extendExpiredItem(@NonNull SQLiteDatabase db, @NonNull String originalPath,
-            long id, long newExpiredTime, long adjustedExpiredTime) {
-        String newPath = FileUtils.getAbsoluteExtendedPath(originalPath, newExpiredTime);
-        if (newPath == null) {
-            Log.e(TAG, "Couldn't compute path for " + originalPath + " and expired time "
-                    + newExpiredTime);
-            return false;
-        }
-
-        try {
-            if (updateDatabaseForExpiredItem(db, newPath, id, newExpiredTime)) {
-                return renameInLowerFsAndInvalidateFuseDentry(originalPath, newPath);
-            }
-            return false;
-        } catch (SQLiteConstraintException e) {
-            final String errorMessage =
-                    "Update database _data from " + originalPath + " to " + newPath + " failed.";
-            Log.d(TAG, errorMessage, e);
-        }
-
-        // When we update the database for newPath with newExpiredTime, if the new path already
-        // exists in the database, it may raise SQLiteConstraintException.
-        // If there are two expired items that have the same display name in the same directory,
-        // but they have different expired time. E.g. .trashed-123-A.jpg and .trashed-456-A.jpg.
-        // After we rename .trashed-123-A.jpg to .trashed-newExpiredTime-A.jpg, then we rename
-        // .trashed-456-A.jpg to .trashed-newExpiredTime-A.jpg, it raises the exception. For
-        // this case, we will retry it with the adjustedExpiredTime again.
-        newPath = FileUtils.getAbsoluteExtendedPath(originalPath, adjustedExpiredTime);
-        Log.i(TAG, "Retrying to extend expired item with the new path = " + newPath);
-        try {
-            if (updateDatabaseForExpiredItem(db, newPath, id, adjustedExpiredTime)) {
-                return renameInLowerFsAndInvalidateFuseDentry(originalPath, newPath);
-            }
-        } catch (SQLiteConstraintException e) {
-            // If we want to rename one expired item E.g. .trashed-123-A.jpg., and there is another
-            // non-expired trashed/pending item has the same name. E.g.
-            // .trashed-adjustedExpiredTime-A.jpg. When we rename .trashed-123-A.jpg to
-            // .trashed-adjustedExpiredTime-A.jpg, it raises the SQLiteConstraintException.
-            // The smallest unit of the expired time we use is second. It is a very rare case.
-            // When this case is happened, we can handle it in next idle maintenance.
-            final String errorMessage =
-                    "Update database _data from " + originalPath + " to " + newPath + " failed.";
-            Log.d(TAG, errorMessage, e);
-        }
-
-        return false;
-    }
-
-    private boolean updateDatabaseForExpiredItem(@NonNull SQLiteDatabase db,
-            @NonNull String path, long id, long expiredTime) {
-        final String table = "files";
-        final String whereClause = MediaColumns._ID + "=?";
-        final String[] whereArgs = new String[]{String.valueOf(id)};
-        final ContentValues values = new ContentValues();
-        values.put(FileColumns.DATA, path);
-        values.put(FileColumns.DATE_EXPIRES, expiredTime);
-        final int count = db.update(table, values, whereClause, whereArgs);
-        return count == 1;
     }
 
     private boolean renameInLowerFsAndInvalidateFuseDentry(@NonNull String originalPath,

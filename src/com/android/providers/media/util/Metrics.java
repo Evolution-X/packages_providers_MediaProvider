@@ -45,14 +45,18 @@ import static com.android.providers.media.scan.MediaScanner.REASON_IDLE;
 import static com.android.providers.media.scan.MediaScanner.REASON_MOUNTED;
 import static com.android.providers.media.scan.MediaScanner.REASON_UNKNOWN;
 
+import android.content.ContentProviderClient;
+import android.content.Context;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.util.Log;
 
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.android.providers.media.MediaProvider;
 import com.android.providers.media.MediaProviderStatsLog;
+import com.android.providers.media.metrics.DeviceStorageStateMetricsCollector;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -62,6 +66,7 @@ import java.lang.annotation.RetentionPolicy;
  * regression investigations and bug triage.
  */
 public class Metrics {
+    private static final String TAG = "MediaProviderMetrics";
     private Metrics() {
         // Utility class, cannot be instantiated
     }
@@ -385,4 +390,21 @@ public class Metrics {
                 packageUid, opExecutionTime);
     }
 
+    /**
+     * Schedule a periodic weekly job to collect and log device storage state metrics at device
+     * idle maintenance. The job is scheduled at the first run of device idle maintenance job.
+     */
+    public static void scheduleDeviceStorageStateLoggingJob(@NonNull Context context) {
+        try (ContentProviderClient cpc = context.getContentResolver()
+                .acquireContentProviderClient(MediaStore.AUTHORITY)) {
+            if (cpc != null) {
+                MediaProvider mediaProvider = (MediaProvider) cpc.getLocalContentProvider();
+                DeviceStorageStateMetricsCollector.schedulePeriodicWork(context, mediaProvider);
+            } else {
+                Log.w(TAG, "Failed to acquire MediaProvider via ContentProviderClient");
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to schedule device storage state logging job", e);
+        }
+    }
 }

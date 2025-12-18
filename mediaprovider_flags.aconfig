@@ -510,3 +510,19 @@ flag {
     description: "Enables offline banners shown when there is no network connection available on the device."
     bug: "412985507"
 }
+
+flag {
+    name: "enable_photopicker_selection_params_usage"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "Enables usage of selection params api in photopicker."
+    bug: "467334899"
+}
+
+flag {
+    name: "enable_photopicker_ui_customization_params_usage"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "Enables usage of ui customization params api in photopicker."
+    bug: "467914970"
+}

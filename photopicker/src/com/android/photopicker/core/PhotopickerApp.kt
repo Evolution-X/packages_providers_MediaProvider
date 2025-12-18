@@ -54,6 +54,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -158,42 +159,42 @@ fun PhotopickerAppWithBottomSheet(
             bottomSheetState =
                 rememberStandardBottomSheetState(
                     initialValue = SheetValue.PartiallyExpanded,
-                    confirmValueChange = { sheetValue ->
-                        when (sheetValue) {
-                            // When the sheet is hidden, trigger the onDismissRequest
-                            SheetValue.Hidden -> onDismissRequest()
-                            // Log picker state change
-                            SheetValue.Expanded ->
-                                scope.launch {
-                                    events.dispatch(
-                                        Event.LogPhotopickerUIEvent(
-                                            FeatureToken.CORE.token,
-                                            configuration.sessionId,
-                                            configuration.callingPackageUid ?: -1,
-                                            Telemetry.UiEvent.EXPAND_PICKER,
-                                        )
-                                    )
-                                }
-
-                            SheetValue.PartiallyExpanded ->
-                                scope.launch {
-                                    events.dispatch(
-                                        Event.LogPhotopickerUIEvent(
-                                            FeatureToken.CORE.token,
-                                            configuration.sessionId,
-                                            configuration.callingPackageUid ?: -1,
-                                            Telemetry.UiEvent.COLLAPSE_PICKER,
-                                        )
-                                    )
-                                }
-                        }
-                        true // allow all value changes
-                    },
-
                     // Allow a hidden state to close the bottom sheet.
                     skipHiddenState = false,
                 )
         )
+    // TODO (b/469751944): Revisit introduction of LaunchedEffect after
+    // discussion of better API surface at the SheetState or AnchoredDraggable
+    // component level.
+    LaunchedEffect(state.bottomSheetState) {
+        snapshotFlow { state.bottomSheetState.currentValue }
+            .collect { sheetValue ->
+                when (sheetValue) {
+                    SheetValue.Hidden -> onDismissRequest()
+                    // Log picker state change
+                    SheetValue.Expanded -> {
+                        events.dispatch(
+                            Event.LogPhotopickerUIEvent(
+                                FeatureToken.CORE.token,
+                                configuration.sessionId,
+                                configuration.callingPackageUid ?: -1,
+                                Telemetry.UiEvent.EXPAND_PICKER,
+                            )
+                        )
+                    }
+                    SheetValue.PartiallyExpanded -> {
+                        events.dispatch(
+                            Event.LogPhotopickerUIEvent(
+                                FeatureToken.CORE.token,
+                                configuration.sessionId,
+                                configuration.callingPackageUid ?: -1,
+                                Telemetry.UiEvent.COLLAPSE_PICKER,
+                            )
+                        )
+                    }
+                }
+            }
+    }
 
     // Photopicker's BottomSheet peeks at 75% of screen height.
     val localConfig = LocalConfiguration.current
