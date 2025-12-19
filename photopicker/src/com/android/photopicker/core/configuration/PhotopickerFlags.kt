@@ -49,6 +49,7 @@ data class PhotopickerFlags(
     val MANAGED_SELECTION_ENABLED: Boolean = FEATURE_PICKER_CHOICE_MANAGED_SELECTION.second,
     val PICKER_SEARCH_ENABLED: Boolean = Flags.enablePhotopickerSearch(),
     val PICKER_DATESCRUBBER_ENABLED: Boolean = Flags.enablePhotopickerDatescrubber(),
+    val PICKER_LOCATION_METADATA_ENABLED: Boolean = Flags.enablePhotopickerLocationMetadata(),
     val PICKER_TRANSCODING_ENABLED: Boolean = Flags.enablePhotopickerTranscoding(),
     val PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED: Boolean =
         Flags.enablePickerHighlightSearchResultsApis() && Flags.highlightSearchResultsFeature(),
@@ -75,6 +76,7 @@ data class PhotopickerFlags(
         if (MANAGED_SELECTION_ENABLED != other.MANAGED_SELECTION_ENABLED) return false
         if (PICKER_SEARCH_ENABLED != other.PICKER_SEARCH_ENABLED) return false
         if (PICKER_DATESCRUBBER_ENABLED != other.PICKER_DATESCRUBBER_ENABLED) return false
+        if (PICKER_LOCATION_METADATA_ENABLED != other.PICKER_LOCATION_METADATA_ENABLED) return false
         if (PICKER_TRANSCODING_ENABLED != other.PICKER_TRANSCODING_ENABLED) return false
         if (PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED != other.PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED)
             return false
@@ -101,6 +103,7 @@ data class PhotopickerFlags(
             MANAGED_SELECTION_ENABLED,
             PICKER_SEARCH_ENABLED,
             PICKER_DATESCRUBBER_ENABLED,
+            PICKER_LOCATION_METADATA_ENABLED,
             PICKER_TRANSCODING_ENABLED,
             PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED,
             OWNED_PHOTOS_ENABLED,

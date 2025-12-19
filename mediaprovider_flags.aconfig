@@ -175,6 +175,14 @@ flag {
 }
 
 flag {
+    name: "enable_photopicker_location_metadata"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag controls whether to enable location metadata feature in photopicker"
+    bug: "462002765"
+}
+
+flag {
     name: "cloud_media_provider_search"
     is_exported: true
     namespace: "mediaprovider"
