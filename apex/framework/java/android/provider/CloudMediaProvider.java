@@ -456,7 +456,7 @@ public abstract class CloudMediaProvider extends ContentProvider {
      *                           </ul>
      * @param cancellationSignal {@link CancellationSignal} to check if request has been cancelled.
      * @return cursor representing search suggestions containing all
-     * {@see CloudMediaProviderContract.SearchSuggestionColumns} columns
+     * {@link CloudMediaProviderContract.SearchSuggestionColumns} columns
      */
     @FlaggedApi(Flags.FLAG_CLOUD_MEDIA_PROVIDER_SEARCH)
     @NonNull

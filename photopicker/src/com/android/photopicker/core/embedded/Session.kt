@@ -83,6 +83,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 /** Alias that describes a factory function that creates a Session. */
 internal typealias SessionFactory =
@@ -540,8 +541,12 @@ open class Session(
             callClosedSessionError()
             return
         }
-        _host.relayout(width, height)
-        _stateManager.triggerRecompose()
+        _dependencies.scope().launch {
+            withContext(_main) {
+                _host.relayout(width, height)
+                _stateManager.triggerRecompose()
+            }
+        }
     }
 
     override fun notifyConfigurationChanged(configuration: Configuration?) {
