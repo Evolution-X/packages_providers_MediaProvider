@@ -52,6 +52,7 @@ android_app {
         "framework-media.stubs.module_lib",
         "framework-statsd.stubs.module_lib",
         "keepanno-annotations",
+        "framework-location.stubs.module_lib",
     ],
 
     jni_libs: [
