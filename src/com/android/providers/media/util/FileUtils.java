@@ -1074,6 +1074,9 @@ public class FileUtils {
     @VisibleForTesting
     public static final String[] DEFAULT_FOLDER_NAMES;
 
+    // Note: If you change this list, you may also need to change
+    // frameworks/base/packages/ExternalStorageProvider/src/com/android/externalstorage
+    // /ExternalStorageProvider.java
     static {
         List<String> folderNames = new ArrayList<>(Arrays.asList(
                 Environment.DIRECTORY_MUSIC,
