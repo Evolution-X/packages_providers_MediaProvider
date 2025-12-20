@@ -27,6 +27,9 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.MediaStore;
 import android.text.format.DateUtils;
 
@@ -35,9 +38,11 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.providers.media.IsolatedContext;
 import com.android.providers.media.R;
+import com.android.providers.media.flags.Flags;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -47,8 +52,11 @@ import java.util.Locale;
 
 @RunWith(AndroidJUnit4.class)
 public class ExpiredItemsUtilsTest {
+
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
     private File mDir;
-    private ContentResolver mIsolatedResolver;
+    private ContentResolver mIsolatedContentResolver;
 
     @Before
     public void setUp() throws Exception {
@@ -72,8 +80,8 @@ public class ExpiredItemsUtilsTest {
         mDir.mkdirs();
         FileUtils.deleteContents(mDir);
         // Previous tests may have left stale files, do an idle run first to clean them up.
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
     }
 
     @After
@@ -92,10 +100,10 @@ public class ExpiredItemsUtilsTest {
                 (System.currentTimeMillis() - (2 * DateUtils.DAY_IN_MILLIS)) / 1000;
         final Uri uri = createExpiredItem(FileUtils.PREFIX_TRASHED, expiredTwoDaysAgo, "item1");
 
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
-        try (Cursor cursor = mIsolatedResolver.query(uri, null, null, null)) {
+        try (Cursor cursor = mIsolatedContentResolver.query(uri, null, null, null)) {
             assertThat(cursor.getCount()).isEqualTo(0);
         }
     }
@@ -109,10 +117,10 @@ public class ExpiredItemsUtilsTest {
                 (System.currentTimeMillis() - (2 * DateUtils.DAY_IN_MILLIS)) / 1000;
         final Uri uri = createExpiredItem(FileUtils.PREFIX_PENDING, expiredTwoDaysAgo, "item1");
 
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
-        try (Cursor cursor = mIsolatedResolver.query(uri, null, null, null)) {
+        try (Cursor cursor = mIsolatedContentResolver.query(uri, null, null, null)) {
             assertThat(cursor.getCount()).isEqualTo(0);
         }
     }
@@ -127,12 +135,12 @@ public class ExpiredItemsUtilsTest {
                 (System.currentTimeMillis() - (8 * DateUtils.DAY_IN_MILLIS)) / 1000;
         final Uri uri = createExpiredItem(FileUtils.PREFIX_TRASHED, expiredEightDaysAgo, "item2");
 
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
         final Bundle queryArgs = new Bundle();
         queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
-        try (Cursor cursor = mIsolatedResolver.query(uri,
+        try (Cursor cursor = mIsolatedContentResolver.query(uri,
                 new String[]{MediaStore.MediaColumns.DATE_EXPIRES},
                 queryArgs, null)) {
             assertThat(cursor.moveToFirst()).isTrue();
@@ -150,12 +158,12 @@ public class ExpiredItemsUtilsTest {
                 (System.currentTimeMillis() - (8 * DateUtils.DAY_IN_MILLIS)) / 1000;
         final Uri uri = createExpiredItem(FileUtils.PREFIX_PENDING, expiredEightDaysAgo, "item2");
 
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
         final Bundle queryArgs = new Bundle();
         queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
-        try (Cursor cursor = mIsolatedResolver.query(uri,
+        try (Cursor cursor = mIsolatedContentResolver.query(uri,
                 new String[]{MediaStore.MediaColumns.DATE_EXPIRES},
                 queryArgs, null)) {
             assertThat(cursor.moveToFirst()).isTrue();
@@ -172,12 +180,12 @@ public class ExpiredItemsUtilsTest {
         final long notExpired = (System.currentTimeMillis() + DateUtils.DAY_IN_MILLIS) / 1000;
         final Uri uri = createExpiredItem(FileUtils.PREFIX_TRASHED, notExpired, "item3");
 
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
         final Bundle queryArgs = new Bundle();
         queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
-        try (Cursor cursor = mIsolatedResolver.query(uri,
+        try (Cursor cursor = mIsolatedContentResolver.query(uri,
                 new String[]{MediaStore.MediaColumns.DATE_EXPIRES},
                 queryArgs, null)) {
             assertThat(cursor.moveToFirst()).isTrue();
@@ -195,12 +203,12 @@ public class ExpiredItemsUtilsTest {
         final long notExpired = (System.currentTimeMillis() + DateUtils.DAY_IN_MILLIS) / 1000;
         final Uri uri = createExpiredItem(FileUtils.PREFIX_PENDING, notExpired, "item3");
 
-        MediaStore.runIdleMaintenance(mIsolatedResolver);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
         final Bundle queryArgs = new Bundle();
         queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
-        try (Cursor cursor = mIsolatedResolver.query(uri,
+        try (Cursor cursor = mIsolatedContentResolver.query(uri,
                 new String[]{MediaStore.MediaColumns.DATE_EXPIRES},
                 queryArgs, null)) {
             assertThat(cursor.moveToFirst()).isTrue();
@@ -209,17 +217,82 @@ public class ExpiredItemsUtilsTest {
         }
     }
 
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testDeleteExpiredTrashedFolder() throws IOException {
+        final long expiredTwoDaysAgo =
+                (System.currentTimeMillis() - (2 * DateUtils.DAY_IN_MILLIS)) / 1000;
+        final String trashedPrefix = FileUtils.PREFIX_TRASHED;
+
+        // Create the trashed folder structure directly with the .trash- prefix and expiry
+        final String trashedFolder1Name = String.format(Locale.US, ".%s-%d-%s", trashedPrefix,
+                expiredTwoDaysAgo, "Folder1");
+        final File trashedFolder1 = new File(mDir, trashedFolder1Name);
+        assertThat(trashedFolder1.mkdirs()).isTrue();
+
+        final String trashedFolder2Name = String.format(Locale.US, ".%s-%d-%s", trashedPrefix,
+                expiredTwoDaysAgo, "Folder2");
+        final File trashedFolder2 = new File(trashedFolder1, trashedFolder2Name);
+        assertThat(trashedFolder2.mkdirs()).isTrue();
+
+        MediaStore.scanFile(mIsolatedContentResolver, trashedFolder1);
+        MediaStore.scanFile(mIsolatedContentResolver, trashedFolder2);
+
+        // Create the trashed files directly in their respective trashed folders
+        final String trashedFile1Name = String.format(Locale.US, ".%s-%d-%s.jpg", trashedPrefix,
+                expiredTwoDaysAgo, "File1");
+        final File trashedFile1 = stage(R.raw.test_image,
+                new File(trashedFolder1, trashedFile1Name));
+
+        final String trashedFile2Name = String.format(Locale.US, ".%s-%d-%s.jpg", trashedPrefix,
+                expiredTwoDaysAgo, "File2");
+        final File trashedFile2 = stage(R.raw.test_image,
+                new File(trashedFolder2, trashedFile2Name));
+
+        final String trashedFile3Name = String.format(Locale.US, ".%s-%d-%s.jpg", trashedPrefix,
+                expiredTwoDaysAgo, "File3");
+        final File trashedFile3 = stage(R.raw.test_image,
+                new File(trashedFolder2, trashedFile3Name));
+
+        // Scan the files to make MediaStore aware of them
+        final Uri uri1 = MediaStore.scanFile(mIsolatedContentResolver, trashedFile1);
+        final Uri uri2 = MediaStore.scanFile(mIsolatedContentResolver, trashedFile2);
+        final Uri uri3 = MediaStore.scanFile(mIsolatedContentResolver, trashedFile3);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
+
+        // Run idle maintenance to trigger the deletion of expired items
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
+
+        // Verify that the items have been deleted from MediaStore
+        final Bundle queryArgs = new Bundle();
+        queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
+
+        try (Cursor cursor = mIsolatedContentResolver.query(uri1, null, queryArgs, null)) {
+            assertThat(cursor.getCount()).isEqualTo(0);
+        }
+        try (Cursor cursor = mIsolatedContentResolver.query(uri2, null, queryArgs, null)) {
+            assertThat(cursor.getCount()).isEqualTo(0);
+        }
+        try (Cursor cursor = mIsolatedContentResolver.query(uri3, null, queryArgs, null)) {
+            assertThat(cursor.getCount()).isEqualTo(0);
+        }
+
+        // Verify that the top-level trashed folder has been deleted from the filesystem
+        assertThat(trashedFolder1.exists()).isFalse();
+    }
+
     private void resetIsolatedContext() {
-        if (mIsolatedResolver != null) {
+        if (mIsolatedContentResolver != null) {
             // This is necessary, we wait for all unfinished tasks to finish before we create a
             // new IsolatedContext.
-            MediaStore.waitForIdle(mIsolatedResolver);
+            MediaStore.waitForIdle(mIsolatedContentResolver);
         }
 
         Context context = InstrumentationRegistry.getTargetContext();
         IsolatedContext isolatedContext = new IsolatedContext(context, "modern", /*asFuseThread*/
                 false);
-        mIsolatedResolver = isolatedContext.getContentResolver();
+        mIsolatedContentResolver = isolatedContext.getContentResolver();
     }
 
     private Uri createExpiredItem(String prefix, long dateExpires, String displayName)
@@ -227,8 +300,8 @@ public class ExpiredItemsUtilsTest {
         final String fileName = String.format(Locale.US, ".%s-%d-%s.jpg", prefix, dateExpires,
                 displayName);
         final File file = stage(R.raw.test_image, new File(mDir, fileName));
-        final Uri uri = MediaStore.scanFile(mIsolatedResolver, file);
-        MediaStore.waitForIdle(mIsolatedResolver);
+        final Uri uri = MediaStore.scanFile(mIsolatedContentResolver, file);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
 
         final String[] projection = new String[]{MediaStore.MediaColumns.DATE_EXPIRES};
         final Bundle queryArgs = new Bundle();
@@ -238,7 +311,7 @@ public class ExpiredItemsUtilsTest {
             queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_PENDING, MediaStore.MATCH_INCLUDE);
         }
 
-        try (Cursor cursor = mIsolatedResolver.query(uri, projection, queryArgs, null)) {
+        try (Cursor cursor = mIsolatedContentResolver.query(uri, projection, queryArgs, null)) {
             assertThat(cursor.getCount()).isEqualTo(1);
         }
         return uri;
