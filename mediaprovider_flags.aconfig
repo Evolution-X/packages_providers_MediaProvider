@@ -512,6 +512,14 @@ flag {
 }
 
 flag {
+    name: "enable_media_processing"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables media processing - location, metadata and media labels - for local search"
+    bug: "428140009"
+}
+
+flag {
     name: "enable_photopicker_selection_params_usage"
     is_exported: false
     namespace: "mediaprovider"
