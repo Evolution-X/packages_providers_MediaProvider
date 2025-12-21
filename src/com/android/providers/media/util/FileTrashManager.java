@@ -16,7 +16,11 @@
 
 package com.android.providers.media.util;
 
+import static com.android.providers.media.util.FileUtils.DEFAULT_FOLDER_NAMES;
 import static com.android.providers.media.util.FileUtils.PREFIX_TRASHED;
+import static com.android.providers.media.util.FileUtils.extractDisplayName;
+import static com.android.providers.media.util.FileUtils.extractRelativePath;
+import static com.android.providers.media.util.FileUtils.sanitizePath;
 
 import android.system.ErrnoException;
 import android.system.Os;
@@ -25,6 +29,7 @@ import android.util.Log;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
@@ -34,6 +39,8 @@ import java.util.stream.Collectors;
 public final class FileTrashManager {
 
     private static final String TAG = "FileTrashManager";
+
+    private static final String DIRECTORY_ANDROID = "Android";
 
 
     /**
@@ -308,19 +315,52 @@ public final class FileTrashManager {
     }
 
     private static boolean isAllowedToTrash(File file) {
-        String relativePath = FileUtils.extractRelativePath(file.getAbsolutePath());
-        // "/" if file is top-level file/folder
-        if (relativePath == null || relativePath.equals("/")) {
-            Log.w(TAG, "Cannot trash top-level files/folders");
+        final String[] relativePath = sanitizePath(extractRelativePath(file.getAbsolutePath()));
+
+        // Trash not allowed on paths that can't be translated to RELATIVE_PATH.
+        if (relativePath.length == 0) {
+            Log.w(TAG, "Cannot trash, invalid relative path: " + file.getAbsolutePath());
             return false;
         }
 
-        // should not be invisible path
+        // If file is top-level file/folder.
+        if (relativePath.length == 1) {
+            if (isTopLevelDefaultDir(file)) {
+                Log.w(TAG, "Cannot trash default directory: " + file.getAbsolutePath());
+                return false;
+            }
+        }
+
+        // Should not be invisible path.
         if (FileUtils.shouldBeInvisible(file.getAbsolutePath())) {
-            Log.w(TAG, "Cannot trash restricted path");
+            Log.w(TAG, "Cannot trash restricted path: " + file.getAbsolutePath());
+            return false;
+        }
+
+        // Files present in .trash-storage directory can't be trashed.
+        File trashBase = getOrCreateTrashBaseDirectory(file);
+        if (FileUtils.contains(trashBase, file)) {
+            Log.w(TAG, "Cannot trash, item already in trash: " + file.getAbsolutePath());
             return false;
         }
 
         return true;
+    }
+
+    private static boolean isTopLevelDefaultDir(File file) {
+        final List<String> defaultDirs = List.of(DEFAULT_FOLDER_NAMES);
+        defaultDirs.add(DIRECTORY_ANDROID);
+        final String displayName = extractDisplayName(file.getAbsolutePath());
+        if (displayName == null) {
+            return false;
+        }
+
+        for (String defaultFolder : defaultDirs) {
+            if (displayName.equalsIgnoreCase(defaultFolder)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

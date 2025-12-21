@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import android.Manifest;
 import android.content.ContentResolver;
@@ -628,6 +629,38 @@ public class MediaStoreTrashedTest {
 
         // Verify restored state
         assertInPlaceRestoreState(uri, file);
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashTopLevelDefaultDirectory_fails() {
+        final File dcim = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            MediaStore.trashFile(sIsolatedResolver, dcim.getPath());
+            fail("Trashing a default directory should have failed");
+        } catch (Exception e) {
+            // expected
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashTopLevelDefaultDirectory_caseInsensitive_fails() {
+        final File downloads = new File(Environment.getExternalStorageDirectory(), "download");
+        downloads.mkdirs();
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            MediaStore.trashFile(sIsolatedResolver, downloads.getPath());
+            fail("Trashing a default directory should have failed");
+        } catch (Exception e) {
+            // expected
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+            downloads.delete();
+        }
     }
 
     /**
