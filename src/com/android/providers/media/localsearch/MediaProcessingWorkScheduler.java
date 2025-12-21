@@ -40,11 +40,11 @@ import java.util.concurrent.TimeUnit;
 public class MediaProcessingWorkScheduler extends Worker {
     public static final String TAG = "MediaProcessingWorker";
     static final String PERIODIC_WORK_NAME = "MediaProcessingJob";
-    private static final String LAST_GEN_MODIFIED_WITH_MEDIA_LABEL =
+    public static final String LAST_GEN_MODIFIED_WITH_MEDIA_LABEL =
             "last_gen_modified_with_media_label";
-    private static final String LAST_GEN_MODIFIED_WITH_LOCATION_LABEL =
+    public static final String LAST_GEN_MODIFIED_WITH_LOCATION_LABEL =
             "last_gen_modified_with_location";
-    private static final String LAST_GEN_MODIFIED_WITH_METADATA_LABEL =
+    public static final String LAST_GEN_MODIFIED_WITH_METADATA_LABEL =
             "last_gen_modified_with_metadata";
     private static final int DEFAULT_WORK_INTERVAL_HOURS = 6;
 
