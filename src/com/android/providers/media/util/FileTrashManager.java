@@ -28,6 +28,7 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -175,7 +176,11 @@ public final class FileTrashManager {
         if (relPath.startsWith(File.separator)) {
             relPath = relPath.substring(1);
         }
-        File destParent = new File(trashBaseDir, new File(relPath).getParent());
+        File destParent = trashBaseDir;
+        String relParentPath = new File(relPath).getParent();
+        if (relParentPath != null) {
+            destParent = new File(trashBaseDir, relParentPath);
+        }
         if (!destParent.mkdirs()) {
             if (!destParent.exists()) {
                 throw new IllegalStateException(
@@ -280,7 +285,11 @@ public final class FileTrashManager {
             relPath = relPath.substring(1);
         }
 
-        File destParent = new File(trashBaseDirectory, new File(relPath).getParent());
+        File destParent = trashBaseDirectory;
+        String relParentPath = new File(relPath).getParent();
+        if (relParentPath != null) {
+            destParent = new File(trashBaseDirectory, relParentPath);
+        }
 
         if (!destParent.mkdirs()) {
             if (!destParent.exists()) {
@@ -348,7 +357,7 @@ public final class FileTrashManager {
     }
 
     private static boolean isTopLevelDefaultDir(File file) {
-        final List<String> defaultDirs = List.of(DEFAULT_FOLDER_NAMES);
+        final List<String> defaultDirs = new ArrayList<>(List.of(DEFAULT_FOLDER_NAMES));
         defaultDirs.add(DIRECTORY_ANDROID);
         final String displayName = extractDisplayName(file.getAbsolutePath());
         if (displayName == null) {
