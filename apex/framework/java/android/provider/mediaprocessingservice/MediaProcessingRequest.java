@@ -20,10 +20,13 @@ import android.annotation.FlaggedApi;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.provider.MediaStore.MediaType;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -35,6 +38,7 @@ import java.util.Objects;
  * @hide
  */
 @SystemApi
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
 public final class MediaProcessingRequest implements Parcelable {
     @NonNull

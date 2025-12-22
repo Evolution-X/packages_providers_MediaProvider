@@ -58,7 +58,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
-@SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_SEARCH)
 public class SearchMediaServiceTest {
     @Rule

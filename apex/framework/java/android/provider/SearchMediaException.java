@@ -20,8 +20,11 @@ import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.SystemApi;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+
+import androidx.annotation.RequiresApi;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -31,6 +34,7 @@ import java.lang.annotation.RetentionPolicy;
  * @hide
  */
 @FlaggedApi(com.android.providers.media.flags.Flags.FLAG_ENABLE_MEDIA_SEARCH)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SystemApi
 public final class SearchMediaException extends Throwable implements Parcelable {
 

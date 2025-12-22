@@ -19,10 +19,12 @@ package android.provider.mediaprocessingservice;
 import android.annotation.FlaggedApi;
 import android.annotation.IntDef;
 import android.annotation.SystemApi;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -37,6 +39,7 @@ import java.util.Objects;
  */
 
 @SystemApi
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
 public final class ErrorMessage extends Throwable implements Parcelable {
     @ErrorCode
