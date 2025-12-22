@@ -440,6 +440,7 @@ public class MediaDocumentsProviderTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.S)
     public void testTrashDocument() throws Exception {
         MediaDocumentsProvider provider = new MediaDocumentsProvider();
         final IsolatedContext isolatedContext = new IsolatedContext(
