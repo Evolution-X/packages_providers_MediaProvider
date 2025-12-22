@@ -416,6 +416,7 @@ class ConfigurationManager(
                         )),
             PICKER_SEARCH_ENABLED = Flags.enablePhotopickerSearch(),
             PICKER_DATESCRUBBER_ENABLED = Flags.enablePhotopickerDatescrubber(),
+            PICKER_LOCATION_METADATA_ENABLED = Flags.enablePhotopickerLocationMetadata(),
             PICKER_TRANSCODING_ENABLED = Flags.enablePhotopickerTranscoding(),
             PICKER_THUMBNAIL_PRELOAD_ENABLED = Flags.enablePhotopickerThumbnailPreload(),
             MODERN_CLOUD_SETTINGS_ENABLED = Flags.enableModernPhotopickerCloudSettingsPage(),
