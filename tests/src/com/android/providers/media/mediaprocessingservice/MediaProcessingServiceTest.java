@@ -31,6 +31,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.IBinder;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
@@ -48,6 +49,7 @@ import android.provider.mediaprocessingservice.QueryProcessingResponse;
 import android.util.Log;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.providers.media.IsolatedContext;
@@ -73,6 +75,7 @@ import java.util.function.Supplier;
 
 @RunWith(AndroidJUnit4.class)
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 public class MediaProcessingServiceTest {
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();

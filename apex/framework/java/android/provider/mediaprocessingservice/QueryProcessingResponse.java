@@ -19,10 +19,12 @@ package android.provider.mediaprocessingservice;
 import android.annotation.FlaggedApi;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
+import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -37,6 +39,7 @@ import java.util.Objects;
  * @hide
  */
 @SystemApi
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
 public final class QueryProcessingResponse implements Parcelable {
     private static final String TAG = "QueryProcessingResponse";

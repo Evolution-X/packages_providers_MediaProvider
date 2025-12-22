@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import android.net.Uri;
+import android.os.Build;
 import android.os.Parcel;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
@@ -33,6 +34,7 @@ import android.provider.mediaprocessingservice.MediaProcessingResponse;
 import android.provider.mediaprocessingservice.QueryProcessingResponse;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 
 import com.android.providers.media.flags.Flags;
 
@@ -45,6 +47,7 @@ import java.util.List;
 
 @RunWith(AndroidJUnit4.class)
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
+@SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 public class MediaProcessingParcelableTest {
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
