@@ -21,6 +21,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.UserManager
@@ -87,6 +88,7 @@ import com.android.photopicker.features.PhotopickerFeatureBaseTest
 import com.android.photopicker.features.datescrubber.data.DateScrubberDataService
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
+import com.android.photopicker.util.test.mockSystemService
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertThat
 import dagger.Lazy
@@ -170,6 +172,7 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
     // Needed for UserMonitor
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     @Inject override lateinit var configurationManager: Lazy<ConfigurationManager>
     @Inject lateinit var mockContext: Context
@@ -247,6 +250,8 @@ class DateScrubberFeatureTest : PhotopickerFeatureBaseTest() {
         MockitoAnnotations.openMocks(this)
         hiltRule.inject()
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
     }
 
     @Test

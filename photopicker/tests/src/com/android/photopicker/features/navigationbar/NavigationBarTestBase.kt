@@ -20,6 +20,7 @@ import android.content.ContentProvider
 import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.UserManager
 import android.platform.test.flag.junit.SetFlagsRule
 import android.test.mock.MockContentResolver
@@ -36,6 +37,7 @@ import com.android.photopicker.data.model.Media
 import com.android.photopicker.features.PhotopickerFeatureBaseTest
 import com.android.photopicker.tests.HiltTestActivity
 import com.android.photopicker.util.test.MockContentProviderWrapper
+import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.whenever
 import dagger.Lazy
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -66,6 +68,7 @@ abstract class NavigationBarTestBase : PhotopickerFeatureBaseTest() {
     // Needed for UserMonitor
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     @Inject lateinit var mockContext: Context
     @Inject lateinit var selection: Selection<Media>
@@ -95,5 +98,6 @@ abstract class NavigationBarTestBase : PhotopickerFeatureBaseTest() {
             getTestableContext().getResources().openRawResourceFd(R.drawable.android)
         }
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
     }
 }

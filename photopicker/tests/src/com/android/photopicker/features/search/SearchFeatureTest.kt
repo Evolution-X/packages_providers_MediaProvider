@@ -20,6 +20,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.Build
 import android.os.UserHandle
 import android.os.UserManager
@@ -79,6 +80,7 @@ import com.android.photopicker.features.search.model.GlobalSearchState
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
 import com.android.photopicker.util.test.dragInIncrements
+import com.android.photopicker.util.test.mockSystemService
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Lazy
@@ -156,6 +158,7 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var mockContext: Context
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     val deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>> =
         mapOf(
@@ -177,6 +180,7 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
         MockitoAnnotations.openMocks(this)
         hiltRule.inject()
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
     }
 
     /* Ensures the Search feature is not enabled when flag is disabled. */

@@ -22,6 +22,7 @@ import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.hardware.display.DisplayManager
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
@@ -83,6 +84,7 @@ import com.android.photopicker.tests.HiltTestActivity
 import com.android.photopicker.util.test.MockContentProviderWrapper
 import com.android.photopicker.util.test.StubProvider
 import com.android.photopicker.util.test.capture
+import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.whenever
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertThat
@@ -172,6 +174,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     // Needed for UserMonitor
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
     @Inject lateinit var mockContext: Context
     @Inject lateinit var embeddedServiceComponentBuilder: EmbeddedServiceComponentBuilder
     @Inject lateinit var selection: Lazy<Selection<Media>>
@@ -247,6 +250,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             getTestableContext().getResources().openRawResourceFd(R.drawable.android)
         }
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
     }
 
     @After()

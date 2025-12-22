@@ -44,6 +44,7 @@ import com.android.photopicker.core.features.PhotopickerUiFeature
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.features.Priority
 import com.android.photopicker.core.navigation.Route
+import com.android.photopicker.core.network.NetworkStatus
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.CollectionInfo
@@ -81,12 +82,26 @@ class CloudMediaFeature : PhotopickerUiFeature {
 
     override val token = FeatureToken.CLOUD_MEDIA.token
 
-    override val ownedBanners: Set<BannerDefinitions> =
-        setOf(
-            BannerDefinitions.CLOUD_CHOOSE_ACCOUNT,
-            BannerDefinitions.CLOUD_CHOOSE_PROVIDER,
-            BannerDefinitions.CLOUD_MEDIA_AVAILABLE,
+    /**
+     * A map that defines which banners are available for each [BannerLocation] for this feature.
+     * This allows for a generic check to ensure a banner is only evaluated for its intended
+     * location.
+     */
+    private val ownedBannersByLocation: Map<BannerLocation, Set<BannerDefinitions>> =
+        mapOf(
+            BannerLocation.PHOTO_GRID_BANNER to
+                setOf(
+                    BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE,
+                    BannerDefinitions.CLOUD_CHOOSE_ACCOUNT,
+                    BannerDefinitions.CLOUD_CHOOSE_PROVIDER,
+                    BannerDefinitions.CLOUD_MEDIA_AVAILABLE,
+                ),
+            BannerLocation.SEARCH_GRID_BANNER to
+                setOf(BannerDefinitions.CLOUD_SEARCH_RESULTS_OFFLINE),
         )
+
+    override val ownedBanners: Set<BannerDefinitions> =
+        ownedBannersByLocation.values.flatten().toSet()
 
     override suspend fun getBannerPriority(
         banner: BannerDefinitions,
@@ -94,13 +109,16 @@ class CloudMediaFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        networkStatus: NetworkStatus,
         bannerLocation: BannerLocation,
     ): Int {
 
         val isEmbedded = config.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
-        // If any of the banners owned by [CloudMediaFeature] have been previously dismissed, then
-        // return a disabled priority.
-        if (bannerState?.dismissed == true) {
+
+        // Banners owned by [CloudMediaFeature] have been previously dismissed or are not valid
+        // for the current location should be disabled immediately.
+        val isValidForLocation = ownedBannersByLocation[bannerLocation]?.contains(banner) ?: false
+        if (bannerState?.dismissed == true || !isValidForLocation) {
             return Priority.DISABLED.priority
         }
 
@@ -114,7 +132,24 @@ class CloudMediaFeature : PhotopickerUiFeature {
         val collectionInfo: CollectionInfo? =
             currentCloudProvider?.let { dataService.getCollectionInfo(it) }
 
+        val areOfflineBannersEnabled =
+            config.flags.PICKER_OFFLINE_BANNERS_ENABLED && currentCloudProvider != null
+
         return when (banner) {
+            BannerDefinitions.CLOUD_SEARCH_RESULTS_OFFLINE -> {
+                if (areOfflineBannersEnabled && networkStatus == NetworkStatus.Unavailable) {
+                    return Priority.HIGHEST.priority
+                } else {
+                    return Priority.DISABLED.priority
+                }
+            }
+            BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE -> {
+                if (areOfflineBannersEnabled && networkStatus == NetworkStatus.Unavailable) {
+                    return Priority.HIGHEST.priority
+                } else {
+                    return Priority.DISABLED.priority
+                }
+            }
             BannerDefinitions.CLOUD_CHOOSE_PROVIDER -> {
                 return when {
                     // Don't show in Embedded, as the banner starts an activity which can cause a
@@ -163,6 +198,7 @@ class CloudMediaFeature : PhotopickerUiFeature {
         banner: BannerDefinitions,
         dataService: DataService,
         userMonitor: UserMonitor,
+        isEmbedded: Boolean,
     ): Banner {
 
         val cloudProvider: Provider? =
@@ -197,6 +233,17 @@ class CloudMediaFeature : PhotopickerUiFeature {
                             "collectionInfo was null during buildBanner"
                         },
                     providerIcon = providerIcon,
+                )
+            BannerDefinitions.CLOUD_SEARCH_RESULTS_OFFLINE ->
+                buildSearchResultsOfflineBanner(
+                    cloudProvider =
+                        checkNotNull(cloudProvider) { "cloudProvider was null during buildBanner" }
+                )
+            BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE ->
+                buildNoNetworkAvailableBanner(
+                    cloudProvider =
+                        checkNotNull(cloudProvider) { "cloudProvider was null during buildBanner" },
+                    isEmbedded = isEmbedded,
                 )
             else ->
                 throw IllegalArgumentException("$TAG cannot build the requested banner: $banner")

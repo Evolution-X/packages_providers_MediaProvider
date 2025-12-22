@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.net.ConnectivityManager
 import android.os.UserHandle
 import android.os.UserManager
 import android.provider.MediaStore
@@ -56,6 +57,7 @@ import com.android.photopicker.features.PhotopickerFeatureBaseTest
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.inject.TestOptions
 import com.android.photopicker.tests.HiltTestActivity
+import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.whenever
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Lazy
@@ -152,12 +154,14 @@ class SwitchProfileBannerTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var mockContext: Context
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
         hiltRule.inject()
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
 
         whenever(mockUserManager.userProfiles) { listOf(USER_HANDLE_PRIMARY, USER_HANDLE_MANAGED) }
         whenever(mockUserManager.isManagedProfile(USER_ID_MANAGED)) { true }

@@ -47,8 +47,11 @@ import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations.ALBUM_GRID
 import com.android.photopicker.core.navigation.PhotopickerDestinations.PHOTO_GRID
 import com.android.photopicker.core.navigation.Route
+import com.android.photopicker.core.network.NetworkStatus
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
+import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.simpleuifeature.SimpleUiFeature
 import kotlinx.coroutines.Deferred
 
@@ -78,7 +81,8 @@ class HighPriorityUiFeature : PhotopickerUiFeature {
     override val token = TAG
 
     /** Only one banner is claimed */
-    override val ownedBanners = setOf(BannerDefinitions.CLOUD_CHOOSE_ACCOUNT)
+    override val ownedBanners =
+        setOf(BannerDefinitions.CLOUD_CHOOSE_ACCOUNT, BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE)
 
     override suspend fun getBannerPriority(
         banner: BannerDefinitions,
@@ -86,6 +90,7 @@ class HighPriorityUiFeature : PhotopickerUiFeature {
         config: PhotopickerConfiguration,
         dataService: DataService,
         userMonitor: UserMonitor,
+        networkStatus: NetworkStatus,
         bannerLocation: BannerLocation,
     ): Int {
         // If the banner reports as being dismissed, don't show it.
@@ -93,21 +98,47 @@ class HighPriorityUiFeature : PhotopickerUiFeature {
             return Priority.DISABLED.priority
         }
 
-        // Otherwise, show it with medium priority.
-        return Priority.HIGH.priority
+        val currentCloudProvider: Provider? =
+            dataService.availableProviders.value.firstOrNull {
+                it.mediaSource == MediaSource.REMOTE
+            }
+
+        return when (banner.id) {
+            BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE.id ->
+                // This banner is only shown when the network is unavailable and there is a cloud
+                // provider.
+                if (networkStatus == NetworkStatus.Unavailable && currentCloudProvider != null) {
+                    Priority.HIGHEST.priority
+                } else {
+                    Priority.DISABLED.priority
+                }
+            else -> Priority.HIGH.priority
+        }
     }
 
     override suspend fun buildBanner(
         banner: BannerDefinitions,
         dataService: DataService,
         userMonitor: UserMonitor,
+        isEmbedded: Boolean,
     ): Banner {
-        return object : Banner {
-            override val declaration = BannerDefinitions.CLOUD_CHOOSE_ACCOUNT
+        return when (banner) {
+            BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE ->
+                object : Banner {
+                    override val declaration = BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE
 
-            @Composable override fun buildTitle() = "Choose Account Title"
+                    @Composable override fun buildTitle() = "No Network Connection"
 
-            @Composable override fun buildMessage() = "Choose Account Message"
+                    @Composable override fun buildMessage() = "Connect your device to Wifi/Internet"
+                }
+            else ->
+                object : Banner {
+                    override val declaration = BannerDefinitions.CLOUD_CHOOSE_ACCOUNT
+
+                    @Composable override fun buildTitle() = "Choose Account Title"
+
+                    @Composable override fun buildMessage() = "Choose Account Message"
+                }
         }
     }
 
