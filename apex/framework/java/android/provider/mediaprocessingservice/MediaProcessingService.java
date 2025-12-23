@@ -24,10 +24,13 @@ import android.annotation.SdkConstant;
 import android.annotation.SystemApi;
 import android.app.Service;
 import android.content.Intent;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.OutcomeReceiver;
 import android.os.RemoteException;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -66,6 +69,7 @@ import java.util.Map;
  * @hide
  */
 @SystemApi
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_PROCESSING_SERVICE)
 public abstract class MediaProcessingService extends Service {
 
