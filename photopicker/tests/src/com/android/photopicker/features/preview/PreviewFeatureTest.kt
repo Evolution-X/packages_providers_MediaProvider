@@ -21,6 +21,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -96,6 +97,7 @@ import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
 import com.android.photopicker.util.test.MockContentProviderWrapper
 import com.android.photopicker.util.test.capture
+import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
 import com.google.common.truth.Truth.assertWithMessage
@@ -182,6 +184,7 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
     // Needed for UserMonitor in PreviewViewModel
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
 
     // Needed for Preview
     lateinit var controllerProxy: ICloudMediaSurfaceController.Stub
@@ -273,6 +276,7 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
             getTestableContext().getResources().openRawResourceFd(R.drawable.android)
         }
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
 
         // Setup a proxy to call the mocked controller, since IBinder uses onTransact under the hood
         // and that is more complicated to verify.

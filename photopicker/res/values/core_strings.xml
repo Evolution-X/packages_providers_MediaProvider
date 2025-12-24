@@ -136,4 +136,8 @@
   <!-- Label for the button in the offline banner, which navigates the user to the device's network settings. [CHAR LIMIT=50] -->
   <string name="photopicker_offline_banner_go_to_settings_button_label"
         translation_description="Button text for the banner shown in the photo grid page when offline to take to Settings page.">Go to Settings</string>
+
+    <!-- Placeholder text for cloud app name in the offline banner. [CHAR LIMIT=50] -->
+    <string name="photopicker_offline_banner_cloud_app_placeholder"
+        translation_description="App placeholder text for cloud app name in the Photo grid offline banner.">a cloud media app</string>
 </resources>

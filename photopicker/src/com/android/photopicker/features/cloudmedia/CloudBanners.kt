@@ -19,8 +19,10 @@ package com.android.photopicker.features.cloudmedia
 import android.content.Context
 import android.content.Intent
 import android.provider.MediaStore
+import android.provider.Settings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
@@ -145,5 +147,85 @@ fun buildCloudMediaAvailableBanner(
         }
 
         @Composable override fun getIcon() = providerIcon ?: VectorIcon(Icons.Outlined.Cloud)
+    }
+}
+
+/**
+ * Builder for the [BannerDefinitions.CLOUD_SEARCH_RESULTS_OFFLINE] banner in from search results
+ * page that shows a action that takes to network connection page .
+ *
+ * @param cloudProvider the [Provider] details of the active CloudMediaProvider.
+ * @return The [Banner] to be displayed in the UI.
+ */
+fun buildSearchResultsOfflineBanner(cloudProvider: Provider): Banner {
+    return object : Banner {
+
+        override val declaration = BannerDefinitions.CLOUD_SEARCH_RESULTS_OFFLINE
+
+        @Composable
+        override fun buildTitle(): String {
+            return stringResource(R.string.photopicker_banner_search_result_no_network_title)
+        }
+
+        @Composable
+        override fun buildMessage(): String {
+            return stringResource(
+                R.string.photopicker_banner_search_result_no_network_connection,
+                "${cloudProvider.displayName}",
+            )
+        }
+
+        @Composable override fun getIcon() = VectorIcon(Icons.Outlined.CloudOff)
+
+        @Composable
+        override fun actionLabel(): String? {
+            return null
+        }
+
+        override fun onAction(context: Context) {}
+    }
+}
+
+/**
+ * Builder for [BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE] banner object that indicates to the
+ * user that there is no network connection available on the device.
+ *
+ * @param cloudProvider the [Provider] details of the active CloudMediaProvider.
+ * @param isEmbedded Boolean indicates if runtime environment is embedded or not.
+ * @return The [Banner] to be displayed in the UI.
+ */
+fun buildNoNetworkAvailableBanner(cloudProvider: Provider, isEmbedded: Boolean = false): Banner {
+    return object : Banner {
+
+        override val declaration = BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE
+
+        @Composable
+        override fun buildTitle(): String {
+            return stringResource(R.string.photopicker_banner_no_network_connection_title)
+        }
+
+        @Composable
+        override fun buildMessage(): String {
+            return stringResource(
+                R.string.photopicker_banner_no_network_connection_message,
+                cloudProvider.displayName,
+            )
+        }
+
+        @Composable override fun getIcon() = VectorIcon(Icons.Outlined.CloudOff)
+
+        @Composable
+        override fun actionLabel(): String? {
+            if (!isEmbedded)
+                return stringResource(
+                    R.string.photopicker_offline_banner_go_to_settings_button_label
+                )
+            else return null
+        }
+
+        override fun onAction(context: Context) {
+            // TODO(b/465364190): Enable settings link action in embedded picker.
+            if (!isEmbedded) context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+        }
     }
 }

@@ -22,9 +22,16 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.pm.UserProperties
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Parcel
 import android.os.UserHandle
 import android.os.UserManager
+import android.platform.test.annotations.DisableFlags
+import android.platform.test.annotations.EnableFlags
+import android.platform.test.flag.junit.CheckFlagsRule
+import android.platform.test.flag.junit.DeviceFlagsValueProvider
+import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
@@ -42,15 +49,21 @@ import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureRegistration
 import com.android.photopicker.core.features.PrefetchResultKey
+import com.android.photopicker.core.network.NetworkMonitor
+import com.android.photopicker.core.network.NetworkStatus
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.core.user.UserProfile
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.TestPrefetchDataService
+import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.highpriorityuifeature.HighPriorityUiFeature
 import com.android.photopicker.features.simpleuifeature.SimpleUiFeature
 import com.android.photopicker.util.test.mockSystemService
+import com.android.photopicker.util.test.nonNullableAny
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
+import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,6 +74,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.ArgumentMatchers.any
@@ -80,6 +94,10 @@ import org.mockito.MockitoAnnotations
 @RunWith(AndroidJUnit4::class)
 @OptIn(ExperimentalCoroutinesApi::class)
 class BannerManagerImplTest {
+
+    @get:Rule(order = 0) var setFlagsRule = SetFlagsRule()
+    @get:Rule(order = 1)
+    val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
 
     /**
      * Class that exposes the @hide api [targetUserId] in order to supply proper values for
@@ -109,6 +127,10 @@ class BannerManagerImplTest {
     @Mock lateinit var mockContext: Context
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
+
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
+
+    lateinit var networkMonitor: NetworkMonitor
 
     init {
         val parcel1 = Parcel.obtain()
@@ -147,6 +169,7 @@ class BannerManagerImplTest {
         val resources = InstrumentationRegistry.getInstrumentation().getContext().getResources()
 
         mockSystemService(mockContext, UserManager::class.java) { mockUserManager }
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
         whenever(mockContext.packageManager) { mockPackageManager }
         whenever(mockContext.packageName) { "" }
         whenever(mockContext.contentResolver) { mockContentResolver }
@@ -237,6 +260,8 @@ class BannerManagerImplTest {
                     USER_HANDLE_PRIMARY,
                 )
 
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
             val bannerManager =
                 BannerManagerImpl(
                     scope = this.backgroundScope,
@@ -246,6 +271,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -293,6 +319,7 @@ class BannerManagerImplTest {
                     USER_HANDLE_PRIMARY,
                 )
 
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
             val bannerManager =
                 BannerManagerImpl(
                     scope = this.backgroundScope,
@@ -302,6 +329,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -355,6 +383,7 @@ class BannerManagerImplTest {
                     USER_HANDLE_PRIMARY,
                 )
 
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
             val bannerManager =
                 BannerManagerImpl(
                     scope = this.backgroundScope,
@@ -364,6 +393,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -405,6 +435,16 @@ class BannerManagerImplTest {
     @Test
     fun testEmitsHighestPriorityBanner() {
         runTest {
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
+            advanceTimeBy(100)
+
             val configurationManager =
                 ConfigurationManager(
                     runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
@@ -447,6 +487,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -473,6 +514,343 @@ class BannerManagerImplTest {
                     bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
                 )
                 .isEqualTo(BannerDefinitions.CLOUD_CHOOSE_ACCOUNT)
+        }
+    }
+
+    /** Ensures that when flag disabled the [BannerManagerImpl] does not emit the offline banner. */
+    @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkUnavailable_whenOfflineFlagDisabled_doesNotEmitOfflineBanner() {
+        runTest {
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { null }
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
+            advanceTimeBy(100)
+
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId,
+                )
+            val featureManager =
+                FeatureManager(
+                    configurationManager.configuration,
+                    this.backgroundScope,
+                    TestPrefetchDataService(),
+                    setOf(SimpleUiFeature.Registration, HighPriorityUiFeature.Registration),
+                )
+            val databaseManager = DatabaseManagerTestImpl()
+
+            val userMonitor =
+                UserMonitor(
+                    mockContext,
+                    provideTestConfigurationFlow(
+                        scope = this.backgroundScope,
+                        defaultConfiguration =
+                            TestPhotopickerConfiguration.build {
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ),
+                    this.backgroundScope,
+                    StandardTestDispatcher(this.testScheduler),
+                    USER_HANDLE_PRIMARY,
+                )
+
+            val bannerManager =
+                BannerManagerImpl(
+                    scope = this.backgroundScope,
+                    backgroundDispatcher = StandardTestDispatcher(this.testScheduler),
+                    configurationManager = configurationManager,
+                    databaseManager = databaseManager,
+                    featureManager = featureManager,
+                    dataService = TestDataServiceImpl(),
+                    userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
+                    processOwnerHandle = USER_HANDLE_PRIMARY,
+                )
+
+            // Set the caller because PRIVACY_EXPLAINER is PER_UID dismissal.
+            configurationManager.setCaller(
+                callingPackage = "com.android.test.package",
+                callingPackageUid = 12345,
+                callingPackageLabel = "Test Package",
+            )
+
+            // Mock out database state as no previously dismissed banners
+            whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
+
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+
+            assertWithMessage("Incorrect banner was chosen.")
+                .that(
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
+                )
+                .isNotEqualTo(BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Ensures that when flag enabled the [BannerManagerImpl] emits the offline banner when no
+     * network.
+     */
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkUnavailable_whenOfflineFlagEnabled_emitsOfflineBanner() {
+        runTest {
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { null }
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
+            // Wait for the network status to update from its initial "Unknown" state.
+            networkMonitor.networkStatus.first { it == NetworkStatus.Unavailable }
+
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId,
+                )
+            val featureManager =
+                FeatureManager(
+                    configurationManager.configuration,
+                    this.backgroundScope,
+                    TestPrefetchDataService(),
+                    setOf(SimpleUiFeature.Registration, HighPriorityUiFeature.Registration),
+                )
+            val databaseManager = DatabaseManagerTestImpl()
+            val dataService = TestDataServiceImpl()
+            dataService.setAvailableProviders(
+                listOf(
+                    Provider(
+                        authority = "clout_authority",
+                        mediaSource = MediaSource.REMOTE,
+                        uid = 2,
+                        displayName = "Cloud Provider",
+                    )
+                )
+            )
+
+            val userMonitor =
+                UserMonitor(
+                    mockContext,
+                    provideTestConfigurationFlow(
+                        scope = this.backgroundScope,
+                        defaultConfiguration =
+                            TestPhotopickerConfiguration.build {
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ),
+                    this.backgroundScope,
+                    StandardTestDispatcher(this.testScheduler),
+                    USER_HANDLE_PRIMARY,
+                )
+
+            val bannerManager =
+                BannerManagerImpl(
+                    scope = this.backgroundScope,
+                    backgroundDispatcher = StandardTestDispatcher(this.testScheduler),
+                    configurationManager = configurationManager,
+                    databaseManager = databaseManager,
+                    featureManager = featureManager,
+                    dataService = dataService,
+                    userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
+                    processOwnerHandle = USER_HANDLE_PRIMARY,
+                )
+
+            // Set the caller because PRIVACY_EXPLAINER is PER_UID dismissal.
+            configurationManager.setCaller(
+                callingPackage = "com.android.test.package",
+                callingPackageUid = 12345,
+                callingPackageLabel = "Test Package",
+            )
+
+            // Mock out database state as no previously dismissed banners
+            whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
+
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+
+            advanceTimeBy(100)
+
+            assertWithMessage("Incorrect banner was chosen.")
+                .that(
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
+                )
+                .isEqualTo(BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Ensures that when flag enabled the and current cloud provider not selected then does not emit
+     * offline banner.
+     */
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkUnavailable_noCloudProvider_doesNotEmitOfflineBanner() {
+        runTest {
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { null }
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
+            // Wait for the network status to update from its initial "Unknown" state.
+            networkMonitor.networkStatus.first { it == NetworkStatus.Unavailable }
+
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId,
+                )
+            val featureManager =
+                FeatureManager(
+                    configurationManager.configuration,
+                    this.backgroundScope,
+                    TestPrefetchDataService(),
+                    setOf(SimpleUiFeature.Registration, HighPriorityUiFeature.Registration),
+                )
+            val databaseManager = DatabaseManagerTestImpl()
+            val dataService = TestDataServiceImpl()
+            dataService.setAvailableProviders(emptyList())
+
+            val userMonitor =
+                UserMonitor(
+                    mockContext,
+                    provideTestConfigurationFlow(
+                        scope = this.backgroundScope,
+                        defaultConfiguration =
+                            TestPhotopickerConfiguration.build {
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ),
+                    this.backgroundScope,
+                    StandardTestDispatcher(this.testScheduler),
+                    USER_HANDLE_PRIMARY,
+                )
+
+            val bannerManager =
+                BannerManagerImpl(
+                    scope = this.backgroundScope,
+                    backgroundDispatcher = StandardTestDispatcher(this.testScheduler),
+                    configurationManager = configurationManager,
+                    databaseManager = databaseManager,
+                    featureManager = featureManager,
+                    dataService = dataService,
+                    userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
+                    processOwnerHandle = USER_HANDLE_PRIMARY,
+                )
+
+            // Set the caller because PRIVACY_EXPLAINER is PER_UID dismissal.
+            configurationManager.setCaller(
+                callingPackage = "com.android.test.package",
+                callingPackageUid = 12345,
+                callingPackageLabel = "Test Package",
+            )
+
+            // Mock out database state as no previously dismissed banners
+            whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
+
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+
+            advanceTimeBy(100)
+
+            assertWithMessage("Incorrect banner was chosen.")
+                .that(
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
+                )
+                .isNotEqualTo(BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE)
+        }
+    }
+
+    /**
+     * Ensures that when flag enabled the [BannerManagerImpl] does not emit the offline banner when
+     * the network is available.
+     */
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    fun testNetworkAvailable_whenOfflineFlagEnabled_doesNotEmitOfflineBanner() {
+        runTest {
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
+
+            advanceTimeBy(100)
+
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId,
+                )
+            val featureManager =
+                FeatureManager(
+                    configurationManager.configuration,
+                    this.backgroundScope,
+                    TestPrefetchDataService(),
+                    setOf(SimpleUiFeature.Registration, HighPriorityUiFeature.Registration),
+                )
+            val databaseManager = DatabaseManagerTestImpl()
+
+            val userMonitor =
+                UserMonitor(
+                    mockContext,
+                    provideTestConfigurationFlow(
+                        scope = this.backgroundScope,
+                        defaultConfiguration =
+                            TestPhotopickerConfiguration.build {
+                                action(MediaStore.ACTION_PICK_IMAGES)
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ),
+                    this.backgroundScope,
+                    StandardTestDispatcher(this.testScheduler),
+                    USER_HANDLE_PRIMARY,
+                )
+
+            val bannerManager =
+                BannerManagerImpl(
+                    scope = this.backgroundScope,
+                    backgroundDispatcher = StandardTestDispatcher(this.testScheduler),
+                    configurationManager = configurationManager,
+                    databaseManager = databaseManager,
+                    featureManager = featureManager,
+                    dataService = TestDataServiceImpl(),
+                    userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
+                    processOwnerHandle = USER_HANDLE_PRIMARY,
+                )
+
+            // Set the caller because PRIVACY_EXPLAINER is PER_UID dismissal.
+            configurationManager.setCaller(
+                callingPackage = "com.android.test.package",
+                callingPackageUid = 12345,
+                callingPackageLabel = "Test Package",
+            )
+
+            // Mock out database state as no previously dismissed banners
+            whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
+
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+
+            assertWithMessage("Incorrect banner was chosen.")
+                .that(
+                    bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value?.declaration
+                )
+                .isNotEqualTo(BannerDefinitions.DEVICE_NETWORK_UNAVAILABLE)
         }
     }
 
@@ -513,6 +891,7 @@ class BannerManagerImplTest {
                     StandardTestDispatcher(this.testScheduler),
                     USER_HANDLE_PRIMARY,
                 )
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -523,6 +902,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -586,6 +966,7 @@ class BannerManagerImplTest {
                     StandardTestDispatcher(this.testScheduler),
                     USER_HANDLE_PRIMARY,
                 )
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -596,6 +977,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -673,6 +1055,7 @@ class BannerManagerImplTest {
                     StandardTestDispatcher(this.testScheduler),
                     USER_HANDLE_PRIMARY,
                 )
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -683,6 +1066,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -738,6 +1122,7 @@ class BannerManagerImplTest {
                     StandardTestDispatcher(this.testScheduler),
                     USER_HANDLE_PRIMARY,
                 )
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -748,6 +1133,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
             // Set the caller because PRIVACY_EXPLAINER is PER_UID dismissal.
@@ -793,6 +1179,7 @@ class BannerManagerImplTest {
                     setOf(SimpleUiFeature.Registration, HighPriorityUiFeature.Registration),
                 )
             val databaseManager = DatabaseManagerTestImpl()
+            val dispatcher = StandardTestDispatcher(this.testScheduler)
 
             val userMonitor =
                 UserMonitor(
@@ -806,19 +1193,21 @@ class BannerManagerImplTest {
                             },
                     ),
                     this.backgroundScope,
-                    StandardTestDispatcher(this.testScheduler),
+                    dispatcher,
                     USER_HANDLE_PRIMARY,
                 )
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
                     scope = this.backgroundScope,
-                    backgroundDispatcher = StandardTestDispatcher(this.testScheduler),
+                    backgroundDispatcher = dispatcher,
                     configurationManager = configurationManager,
                     databaseManager = databaseManager,
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
             // Set the caller because PRIVACY_EXPLAINER is PER_UID dismissal.
@@ -857,6 +1246,7 @@ class BannerManagerImplTest {
     fun testIgnoresBannersWithNegativePriority() {
 
         runTest {
+
             // Mock out a feature and provide a fake registration that provides the mock.
             val mockSimpleUiFeature: SimpleUiFeature = mock(SimpleUiFeature::class.java)
             val mockRegistration =
@@ -912,6 +1302,7 @@ class BannerManagerImplTest {
                 callingPackageLabel = "Test Package",
             )
             val testDataService = TestDataServiceImpl()
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -922,6 +1313,7 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = testDataService,
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
@@ -935,13 +1327,14 @@ class BannerManagerImplTest {
                     nonNullableEq(configurationManager.configuration.value),
                     nonNullableEq(testDataService),
                     nonNullableEq(userMonitor),
+                    nonNullableAny(NetworkStatus::class.java, NetworkStatus.Unknown),
                     nonNullableEq(BannerLocation.PHOTO_GRID_BANNER),
                 )
             ) {
                 -1
             }
 
-            bannerManager.refreshBanners()
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
 
             assertWithMessage("Incorrect banner was chosen.")
                 .that(bannerManager.getBannerFlow(BannerLocation.PHOTO_GRID_BANNER).value)
@@ -986,6 +1379,7 @@ class BannerManagerImplTest {
                     StandardTestDispatcher(this.testScheduler),
                     USER_HANDLE_PRIMARY,
                 )
+            networkMonitor = NetworkMonitor(mockContext, this.backgroundScope)
 
             val bannerManager =
                 BannerManagerImpl(
@@ -996,11 +1390,12 @@ class BannerManagerImplTest {
                     featureManager = featureManager,
                     dataService = TestDataServiceImpl(),
                     userMonitor = userMonitor,
+                    networkMonitor = networkMonitor,
                     processOwnerHandle = USER_HANDLE_PRIMARY,
                 )
 
             whenever(databaseManager.bannerState.getBannerState(anyString(), anyInt())) { null }
-            bannerManager.refreshBanners()
+            bannerManager.refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
 
             userMonitor.requestSwitchActiveUserProfile(
                 requested = MANAGED_PROFILE_BASE,

@@ -23,6 +23,8 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -112,6 +114,9 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.R
+import com.android.photopicker.core.StateSelector
+import com.android.photopicker.core.animations.standardDecelerate
+import com.android.photopicker.core.components.AnimatedBanner
 import com.android.photopicker.core.components.EmptyState
 import com.android.photopicker.core.components.MediaGridItem
 import com.android.photopicker.core.components.getCellsPerRow
@@ -129,6 +134,7 @@ import com.android.photopicker.core.features.LocationParams
 import com.android.photopicker.core.glide.GlideLoadable
 import com.android.photopicker.core.glide.Resolution
 import com.android.photopicker.core.glide.loadMedia
+import com.android.photopicker.core.hideWhenState
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
@@ -195,6 +201,11 @@ private val TOOLTIP_CONTENT_HORIZONTAL_PADDING = 12.dp
 private val TOOLTIP_CONTENT_VERTICAL_PADDING = 8.dp
 private val TOOLTIP_ROUNDED_CORNERS_MEASURE = 20.dp
 private val TOOLTIP_WIDTH = 250.dp
+private val MEASUREMENT_RESULTS_BANNER_PADDING =
+    PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
+
+private val MEASUREMENT_SUGGESTION_BANNER_PADDING =
+    PaddingValues(start = 2.dp, end = 2.dp, top = 8.dp, bottom = 16.dp)
 
 /** A composable function that displays a SearchBar. */
 @Composable
@@ -858,6 +869,7 @@ private fun Suggestions(
     cloudProviderName: String?,
     onSuggestionClick: (SearchSuggestion) -> Unit,
     onDeleteSuggestion: (SearchSuggestion) -> Unit,
+    viewModel: SearchViewModel = obtainViewModel(isActivityScoped = true),
 ) {
     val isEmbedded =
         LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
@@ -866,11 +878,20 @@ private fun Suggestions(
     val events = LocalEvents.current
     val configuration = LocalPhotopickerConfiguration.current
 
+    val currentBanner by viewModel.getBanners().collectAsStateWithLifecycle()
+    val bannerContentSelector =
+        object : StateSelector.AnimatedVisibilityInEmbedded {
+            override val visible = LocalEmbeddedState.current?.isExpanded ?: false
+            override val enter = expandVertically(animationSpec = standardDecelerate(300))
+            override val exit = shrinkVertically(animationSpec = standardDecelerate(150))
+        }
+
     val historySuggestions = searchSuggestions.history
     val faceSuggestions = searchSuggestions.face
     val otherSuggestions = searchSuggestions.other
 
     val state = rememberLazyListState()
+
     Box(modifier = modifier.padding(MEASUREMENT_LARGE_PADDING)) {
         LazyColumn(
             modifier =
@@ -881,7 +902,18 @@ private fun Suggestions(
                 },
             state = state,
         ) {
-            item { Spacer(modifier = Modifier.height(MEASUREMENT_MEDIUM_PADDING)) }
+            if (configuration.flags.PICKER_OFFLINE_BANNERS_ENABLED && currentBanner != null) {
+                item {
+                    hideWhenState(selector = bannerContentSelector) {
+                        AnimatedBanner(
+                            currentBanner,
+                            Modifier.padding(MEASUREMENT_SUGGESTION_BANNER_PADDING),
+                        )
+                    }
+                }
+            } else {
+                item { Spacer(modifier = Modifier.height(MEASUREMENT_MEDIUM_PADDING)) }
+            }
             items(historySuggestions.take(SearchViewModel.HISTORY_SUGGESTION_MAX_LIMIT)) {
                 suggestion ->
                 val size =
@@ -1376,12 +1408,33 @@ private fun ResultMediaGrid(
                     Modifier.fillMaxSize().semantics { contentDescription = searchGridDescription }
             ) {
                 val state = rememberMediaGridState()
+                val currentBanner by viewModel.getBanners().collectAsStateWithLifecycle()
+                val bannerContentSelector =
+                    object : StateSelector.AnimatedVisibilityInEmbedded {
+                        override val visible = LocalEmbeddedState.current?.isExpanded ?: false
+                        override val enter =
+                            expandVertically(animationSpec = standardDecelerate(300))
+                        override val exit =
+                            shrinkVertically(animationSpec = standardDecelerate(150))
+                    }
                 mediaGrid(
                     state = state,
                     items = items,
                     isExpandedScreen = isExpandedScreen,
                     selection = selection,
+                    bannerContent = {
+                        if (configuration.flags.PICKER_OFFLINE_BANNERS_ENABLED) {
+                            hideWhenState(selector = bannerContentSelector) {
+                                AnimatedBanner(
+                                    currentBanner,
+                                    Modifier.padding(MEASUREMENT_RESULTS_BANNER_PADDING),
+                                )
+                            }
+                        }
+                    },
                     dragSelectionEnabled = configuration.selectionLimit > 1,
+                    /* index offset for banner */
+                    dragSelectIndexOffset = 1,
                     pinchToZoomEnabled = true,
                     onZoomAtMaxZoom = onPreviewItem,
                     onItemClick = onItemClick,

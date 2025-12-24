@@ -22,6 +22,7 @@ import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.configuration.ConfigurationManager
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.features.FeatureManager
+import com.android.photopicker.core.network.NetworkMonitor
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
@@ -80,6 +81,7 @@ class EmbeddedViewModelFactory(
     val featureManager: Lazy<FeatureManager>,
     val selection: Lazy<Selection<Media>>,
     val userMonitor: Lazy<UserMonitor>,
+    val networkMonitor: Lazy<NetworkMonitor>,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         with(modelClass) {
@@ -134,6 +136,7 @@ class EmbeddedViewModelFactory(
                         selection.get(),
                         events.get(),
                         configurationManager.get(),
+                        bannerManager.get(),
                     )
                         as T
                 isAssignableFrom(CategoryGridViewModel::class.java) ->

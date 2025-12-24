@@ -32,6 +32,7 @@ import com.android.photopicker.core.embedded.EmbeddedViewModelFactory
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
+import com.android.photopicker.core.network.NetworkMonitor
 import com.android.photopicker.core.selection.GrantsAwareSelectionImpl
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.selection.SelectionImpl
@@ -105,6 +106,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
         bannerManager: Lazy<BannerManager>,
         selection: Lazy<Selection<Media>>,
         userMonitor: Lazy<UserMonitor>,
+        networkMonitor: Lazy<NetworkMonitor>,
         dataService: Lazy<DataService>,
         searchDataService: Lazy<SearchDataService>,
         categoryDataService: Lazy<CategoryDataService>,
@@ -124,6 +126,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
                 featureManager,
                 selection,
                 userMonitor,
+                networkMonitor,
             )
         return embeddedViewModelFactory
     }
@@ -138,6 +141,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
         featureManager: FeatureManager,
         dataService: DataService,
         userMonitor: UserMonitor,
+        networkMonitor: NetworkMonitor,
         processOwnerHandle: UserHandle,
     ): BannerManager {
         return BannerManagerImpl(
@@ -148,6 +152,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
             featureManager,
             dataService,
             userMonitor,
+            networkMonitor,
             processOwnerHandle,
         )
     }
@@ -204,6 +209,12 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
             dispatcher,
             userHandle,
         )
+    }
+
+    @Singleton
+    @Provides
+    fun createNetworkMonitor(context: Context, @Background scope: CoroutineScope): NetworkMonitor {
+        return NetworkMonitor(context, scope)
     }
 
     @Singleton

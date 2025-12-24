@@ -21,6 +21,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
 import android.os.UserHandle
@@ -107,6 +108,7 @@ import com.android.photopicker.util.LocalLocalizationHelper
 import com.android.photopicker.util.LocalizationHelper
 import com.android.photopicker.util.test.MockContentProviderWrapper
 import com.android.photopicker.util.test.StubProvider
+import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.whenever
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertWithMessage
@@ -189,6 +191,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @Mock lateinit var mockUserManager: UserManager
     @Mock lateinit var mockPackageManager: PackageManager
     @Mock lateinit var mockContentProvider: ContentProvider
+    @Mock lateinit var mockConnectivityManager: ConnectivityManager
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
 
     val deferredPrefetchResultsMap: Map<PrefetchResultKey, Deferred<Any?>> =
@@ -212,6 +215,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
         hiltRule.inject()
         provider = MockContentProviderWrapper(mockContentProvider)
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
+        mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
 
         // Return a resource png so that glide actually has something to load
         whenever(mockContentProvider.openTypedAssetFile(any(), any(), any(), any())) {

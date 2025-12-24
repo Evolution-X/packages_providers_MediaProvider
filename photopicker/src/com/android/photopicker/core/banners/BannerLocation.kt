@@ -26,6 +26,7 @@ package com.android.photopicker.core.banners
  */
 enum class BannerLocation {
     // keep-sorted start
-    PHOTO_GRID_BANNER // Banner location at the top of the main photo grid.
+    PHOTO_GRID_BANNER, // Banner location at the top of the main photo grid.
+    SEARCH_GRID_BANNER, // Banner location on the search results grid.
     // keep-sorted end
 }

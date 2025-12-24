@@ -33,6 +33,7 @@ import com.android.photopicker.core.embedded.EmbeddedViewModelFactory
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
+import com.android.photopicker.core.network.NetworkMonitor
 import com.android.photopicker.core.selection.GrantsAwareSelectionImpl
 import com.android.photopicker.core.selection.Selection
 import com.android.photopicker.core.selection.SelectionImpl
@@ -120,6 +121,7 @@ class EmbeddedServiceModule {
         bannerManager: Lazy<BannerManager>,
         selection: Lazy<Selection<Media>>,
         userMonitor: Lazy<UserMonitor>,
+        @ApplicationOwned networkMonitor: Lazy<NetworkMonitor>,
         dataService: Lazy<DataService>,
         searchDataService: Lazy<SearchDataService>,
         categoryDataService: Lazy<CategoryDataService>,
@@ -143,6 +145,7 @@ class EmbeddedServiceModule {
                     featureManager,
                     selection,
                     userMonitor,
+                    networkMonitor,
                 )
             return embeddedViewModelFactory
         }
@@ -195,6 +198,7 @@ class EmbeddedServiceModule {
         featureManager: FeatureManager,
         dataService: DataService,
         userMonitor: UserMonitor,
+        @ApplicationOwned networkMonitor: NetworkMonitor,
         processOwnerHandle: UserHandle,
     ): BannerManager {
         if (::bannerManager.isInitialized) {
@@ -210,6 +214,7 @@ class EmbeddedServiceModule {
                     featureManager,
                     dataService,
                     userMonitor,
+                    networkMonitor,
                     processOwnerHandle,
                 )
             return bannerManager
