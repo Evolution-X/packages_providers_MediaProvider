@@ -53,4 +53,6 @@
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"Kumonekta sa Wi-Fi o mobile data para makapili ng mga larawan at video mula sa <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"Kailangang may koneksyon sa Internet"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"Pumunta sa Mga Setting"</string>
+    <!-- no translation found for photopicker_offline_banner_cloud_app_placeholder (7653739406837936359) -->
+    <skip />
 </resources>

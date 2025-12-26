@@ -53,4 +53,6 @@
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"连接到 WLAN 或移动数据网络，即可从“<xliff:g id="APP_NAME">%1$s</xliff:g>”中选择照片和视频"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"需联网"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"前往“设置”"</string>
+    <!-- no translation found for photopicker_offline_banner_cloud_app_placeholder (7653739406837936359) -->
+    <skip />
 </resources>
