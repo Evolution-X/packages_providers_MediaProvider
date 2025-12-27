@@ -53,4 +53,6 @@
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"<xliff:g id="APP_NAME">%1$s</xliff:g> වෙතින් ඡායාරූප සහ වීඩියෝ තේරීමට Wi-Fi හෝ ජංගම දත්ත වෙත සම්බන්ධ වන්න"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"අන්තර්ජාල සම්බන්ධතාව අවශ්‍ය වේ"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"සැකසීම් වෙත යන්න"</string>
+    <!-- no translation found for photopicker_offline_banner_cloud_app_placeholder (7653739406837936359) -->
+    <skip />
 </resources>
