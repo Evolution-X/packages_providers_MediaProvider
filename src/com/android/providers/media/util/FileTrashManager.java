@@ -144,6 +144,63 @@ public final class FileTrashManager {
     }
 
     /**
+     * Generates an extended trashed path by replacing the expiration timestamp in each
+     * component of the relative path.
+     *
+     * @param parentPath   The parent path (already extended).
+     * @param relativePath The relative path from the parent (containing old prefixes).
+     * @param dateExpires  The new expiration timestamp.
+     * @return The fully constructed extended trashed path.
+     */
+    public static String getExtendedTrashedPath(String parentPath, String relativePath,
+            long dateExpires) {
+        String newRelativePath = Arrays.stream(relativePath.split("/"))
+                .map(component -> {
+                    // Strip the old .trashed-OLD_EXPIRY- prefix and add the new one
+                    String originalName = FileRestoreManager.cleanTrashPrefix(component);
+                    return String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED, dateExpires,
+                            originalName);
+                })
+                .collect(Collectors.joining("/"));
+        return parentPath + "/" + newRelativePath;
+    }
+
+    /**
+     * Recursively updates the expiration timestamp in the filenames of all children on disk.
+     *
+     * @param parentDir      The directory whose children need to be renamed.
+     * @param newDateExpires The new expiration timestamp.
+     * @return 0 on success, or an errno value on failure.
+     */
+    public static int extendChildrenOnDisk(File parentDir, long newDateExpires) {
+        File[] children = parentDir.listFiles();
+        if (children == null) {
+            return 0;
+        }
+
+        for (File child : children) {
+            String originalName = FileRestoreManager.cleanTrashPrefix(child.getName());
+            String newChildName = String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED,
+                    newDateExpires, originalName);
+
+            File renamedChildFile = new File(parentDir, newChildName);
+            try {
+                Os.rename(child.getAbsolutePath(), renamedChildFile.getAbsolutePath());
+            } catch (ErrnoException e) {
+                Log.e(TAG, "Rename " + child.getAbsolutePath() + " to "
+                        + renamedChildFile.getAbsolutePath() + " failed.", e);
+                return e.errno;
+            }
+
+            if (renamedChildFile.isDirectory()) {
+                int result = extendChildrenOnDisk(renamedChildFile, newDateExpires);
+                if (result != 0) return result;
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Generates a trashed path by prefixing each component of the relative path.
      *
      * @param parentPath   The parent path.
