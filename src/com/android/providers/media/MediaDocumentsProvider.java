@@ -40,6 +40,7 @@ import android.media.ExifInterface;
 import android.media.MediaMetadata;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
@@ -1238,6 +1239,12 @@ public class MediaDocumentsProvider extends DocumentsProvider {
     @Override
     public String trashDocument(@NonNull String documentId) throws FileNotFoundException {
         enforceShellRestrictions();
+
+        // Throw an error if the platform version does not support the trash API (requires API 31+)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            throw new UnsupportedOperationException("Trash not supported before Android S");
+        }
+
         final ContentResolver resolver = getContext().getContentResolver();
         final long originalIdentity = Binder.clearCallingIdentity();
 

@@ -1973,6 +1973,7 @@ public final class MediaStore {
      *                                  permission.
      * @see #restoreFileFromTrash(ContentResolver, String, String)
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     @FlaggedApi(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
     @RequiresPermission(value = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
             conditional = true)
@@ -2024,6 +2025,7 @@ public final class MediaStore {
      *                                  permission.
      * @see #trashFile(ContentResolver, String)
      */
+    @RequiresApi(Build.VERSION_CODES.S)
     @FlaggedApi(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
     @RequiresPermission(value = android.Manifest.permission.MANAGE_EXTERNAL_STORAGE,
             conditional = true)
