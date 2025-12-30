@@ -19,11 +19,14 @@ package android.widget.photopicker;
 import android.annotation.FlaggedApi;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import com.android.providers.media.flags.Flags;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -43,19 +46,22 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     private final long mMinVideoDurationInSeconds;
     private final long mMaxMediaItemResolutionInPixels;
     private final long mMinMediaItemResolutionInPixels;
+    private final List<String> mMimeTypes;
 
     private PhotoPickerSelectionParams(
             long maxMediaItemSizeInBytes,
             long maxVideoDurationInSeconds,
             long minVideoDurationInSeconds,
             long maxMediaItemResolutionInPixels,
-            long minMediaItemResolutionInPixels
+            long minMediaItemResolutionInPixels,
+            List<String> mimeTypes
     ) {
         mMaxMediaItemSizeInBytes = maxMediaItemSizeInBytes;
         mMaxVideoDurationInSeconds = maxVideoDurationInSeconds;
         mMinVideoDurationInSeconds = minVideoDurationInSeconds;
         mMaxMediaItemResolutionInPixels = maxMediaItemResolutionInPixels;
         mMinMediaItemResolutionInPixels = minMediaItemResolutionInPixels;
+        mMimeTypes = List.copyOf(mimeTypes);
     }
 
     /**
@@ -68,6 +74,9 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         mMinVideoDurationInSeconds = in.readLong();
         mMaxMediaItemResolutionInPixels = in.readLong();
         mMinMediaItemResolutionInPixels = in.readLong();
+        List<String> mimeTypes = new ArrayList<>();
+        in.readStringList(mimeTypes);
+        mMimeTypes = mimeTypes;
     }
 
 
@@ -78,6 +87,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         dest.writeLong(mMinVideoDurationInSeconds);
         dest.writeLong(mMaxMediaItemResolutionInPixels);
         dest.writeLong(mMinMediaItemResolutionInPixels);
+        dest.writeStringList(mMimeTypes);
     }
 
     @Override
@@ -155,6 +165,18 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     }
 
     /**
+     * Returns the list of allowed MIME types that media items must match to be selectable.
+     *
+     * <p>If the allowed MIME types are not set by the caller app using {@link
+     * Builder#setMimeTypes(List)}, this method returns an empty list, indicating that the
+     * photo picker will not restrict selection based on the MIME type.
+     */
+    @NonNull
+    public List<String> getMimeTypes() {
+        return mMimeTypes;
+    }
+
+    /**
      * A builder class used to construct and validate an immutable
      * {@link PhotoPickerSelectionParams} object.
      */
@@ -165,6 +187,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         private long mMinVideoDurationInSeconds = -1;
         private long mMaxMediaItemResolutionInPixels = -1;
         private long mMinMediaItemResolutionInPixels = -1;
+        private List<String> mMimeTypes = new ArrayList<>();
 
         public Builder() {
         }
@@ -359,6 +382,58 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         }
 
         /**
+         * Sets the list of MIME types that are allowed for selection.
+         *
+         * <p>Media items that violate this constraint will be disabled for selection.
+         *
+         * <p>This parameter is different from the MIME types which can be specified in {@link
+         * android.content.Intent#setType(String)} extra or {@link
+         * android.content.Intent#EXTRA_MIME_TYPES}, when those are used to launch the photo picker,
+         * they will filter out any media items which has a MIME type not added to them. While the
+         * MIME Types defined by this API will still exist in photo picker media grid, but disabled
+         * from selection.
+         *
+         * <p>Filter media items using the MIME Types defined in {@link
+         * android.content.Intent#setType(String)} extra or {@link
+         * android.content.Intent#EXTRA_MIME_TYPES} will happen first, before disabling the media
+         * items based on the MIME Types passed to this API.
+         *
+         * <p>Callers must indicate the acceptable document MIME types. For example, to select
+         * photos, use {@code image/*}.
+         *
+         * <p>If it is not set, no MIME type constraint will be enforced on the media items the user
+         * can select.
+         *
+         * @param mimeTypes The list of allowed MIME types.
+         * @throws IllegalArgumentException if {@code mimeTypes} is null, empty, or contains
+         *                                  non-media types (types not starting with "image/" or
+         *                                  "video/").
+         */
+        @NonNull
+        public Builder setMimeTypes(@NonNull List<String> mimeTypes) {
+            if (!validateMimeType(mimeTypes)) {
+                throw new IllegalArgumentException("MimeTypes list must not be null or empty, "
+                        + "and must only contain valid 'image/' or 'video/' types.");
+            }
+            mMimeTypes = new ArrayList<>(mimeTypes);
+            return this;
+        }
+
+        /**
+         * Clears the MIME type constraint.
+         *
+         * <p>On calling this, the builder will revert to its default state of allowing all
+         * supported media MIME types (images and videos) for selection.
+         *
+         * @see #setMimeTypes(List)
+         */
+        @NonNull
+        public Builder clearMimeTypes() {
+            mMimeTypes.clear();
+            return this;
+        }
+
+        /**
          * Builds a new immutable {@link PhotoPickerSelectionParams} object.
          *
          * @return A new {@link PhotoPickerSelectionParams} object with the configured properties.
@@ -377,7 +452,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
                     mMaxVideoDurationInSeconds,
                     mMinVideoDurationInSeconds,
                     mMaxMediaItemResolutionInPixels,
-                    mMinMediaItemResolutionInPixels);
+                    mMinMediaItemResolutionInPixels,
+                    mMimeTypes);
         }
 
         /**
@@ -395,6 +471,47 @@ public final class PhotoPickerSelectionParams implements Parcelable {
                         "Min %s cannot be greater than the max %s.",
                         param, param));
             }
+        }
+
+        /**
+         * Internal helper to perform validation, ensuring that the MIME types list is not null
+         * or empty, and each entry is a valid media type.
+         *
+         * @param mimeTypes the list of MIME types to be validated
+         * @return {@code true} if the list is valid, {@code false} otherwise
+         */
+        private boolean validateMimeType(List<String> mimeTypes) {
+            if (mimeTypes == null) {
+                Log.e(TAG,
+                        "Mime type list must not be null. MIME type constraint will not be "
+                                + "applied.");
+                return false;
+            }
+            if (mimeTypes.isEmpty()) {
+                Log.e(TAG, "Empty mime type list found. MIME type constraint will not be applied.");
+                return false;
+            }
+            for (String mimeType : mimeTypes) {
+                if (mimeType == null) {
+                    Log.e(TAG, "Mime type must not be null. "
+                            + "MIME type constraint will not be applied.");
+                    return false;
+                }
+                if (!isMimeTypeMedia(mimeType)) {
+                    Log.e(TAG, "Invalid mime type found. Only image/video mime types are "
+                            + "supported. MIME type constraint will not be applied.");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /**
+         * Checks if the given string is an image or video mime type
+         */
+        private static boolean isMimeTypeMedia(@NonNull String mimeType) {
+            return mimeType.toLowerCase(Locale.getDefault()).startsWith("image/")
+                    || mimeType.toLowerCase(Locale.getDefault()).startsWith("video/");
         }
     }
 }

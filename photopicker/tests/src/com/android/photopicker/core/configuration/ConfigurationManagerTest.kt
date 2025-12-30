@@ -69,6 +69,7 @@ class ConfigurationManagerTest {
     private val MIN_VIDEO_DURATION_SECONDS = 10L
     private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS = 1000L
     private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS = 100L
+    private val MIME_TYPES = listOf("image/png", "video/mp4")
 
     @Before
     fun setup() {
@@ -1970,6 +1971,7 @@ class ConfigurationManagerTest {
             .setMinVideoDurationInSeconds(MIN_VIDEO_DURATION_SECONDS)
             .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
             .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
+            .setMimeTypes(MIME_TYPES)
             .build()
     }
 
@@ -1982,5 +1984,6 @@ class ConfigurationManagerTest {
             .isEqualTo(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
         assertThat(params.minMediaItemResolutionInPixels)
             .isEqualTo(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
+        assertThat(params.mimeTypes).isEqualTo(MIME_TYPES)
     }
 }

@@ -68,6 +68,7 @@ package android.widget.photopicker {
     method public long getMaxMediaItemResolutionInPixels();
     method public long getMaxMediaItemSizeInBytes();
     method public long getMaxVideoDurationInSeconds();
+    method @NonNull public java.util.List<java.lang.String> getMimeTypes();
     method public long getMinMediaItemResolutionInPixels();
     method public long getMinVideoDurationInSeconds();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
@@ -80,11 +81,13 @@ package android.widget.photopicker {
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMaxMediaItemResolution();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMaxMediaItemSize();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMaxVideoDuration();
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMimeTypes();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMinMediaItemResolution();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMinVideoDuration();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxMediaItemResolutionInPixels(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxMediaItemSizeInBytes(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxVideoDurationInSeconds(long);
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMimeTypes(@NonNull java.util.List<java.lang.String>);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinMediaItemResolutionInPixels(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinVideoDurationInSeconds(long);
   }
