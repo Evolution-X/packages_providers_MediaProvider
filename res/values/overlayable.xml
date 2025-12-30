@@ -31,6 +31,8 @@
             <item type="array" name="config_foldersToSkipInDefaultCreation" />
 
             <item type="string" name="config_default_media_processing_service_package" />
+            <item type="integer" name="config_default_media_processing_job_interval_hours" />
+            <item type="bool" name="config_disable_media_processing_for_search" />
         </policy>
     </overlayable>
 </resources>
