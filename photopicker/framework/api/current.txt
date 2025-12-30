@@ -65,6 +65,7 @@ package android.widget.photopicker {
 
   @FlaggedApi("com.android.providers.media.flags.enable_photopicker_selection_params_api") public final class PhotoPickerSelectionParams implements android.os.Parcelable {
     method public int describeContents();
+    method public long getMaxMediaItemSizeInBytes();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.widget.photopicker.PhotoPickerSelectionParams> CREATOR;
   }
@@ -72,6 +73,8 @@ package android.widget.photopicker {
   public static final class PhotoPickerSelectionParams.Builder {
     ctor public PhotoPickerSelectionParams.Builder();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams build();
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMaxMediaItemSize();
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxMediaItemSizeInBytes(long);
   }
 
 }

@@ -40,6 +40,7 @@ import android.view.WindowManager
 import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import android.widget.photopicker.IEmbeddedPhotoPickerClient
 import android.widget.photopicker.ParcelableException
+import android.widget.photopicker.PhotoPickerSelectionParams
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -200,6 +201,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     val featureInfo = EmbeddedPhotoPickerFeatureInfo.Builder().build()
 
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING: String = "taken on"
+
+    private val MAX_MEDIA_ITEM_SIZE_BYTES: Long = 1024L
 
     // Session has a surfacePackage which outlives the test if not closed, so it always needs to be
     // closed at the end of each test to prevent any existing UI activity from leaking into the next
@@ -477,6 +480,37 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected configuration to contain the selection params value")
                 .that(configuration.selectionParams)
                 .isNull()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
+    fun testSessionSetsSelectionParamsInConfiguration() =
+        testScope.runTest {
+            val component = embeddedServiceComponentBuilder.build()
+            val entryPoint = EntryPoints.get(component, Session.EmbeddedEntryPoint::class.java)
+
+            // Create a session with the component and let it initialize.
+            getSessionUnderTest(component)
+            advanceTimeBy(100)
+
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxMediaItemSizeInBytes(MAX_MEDIA_ITEM_SIZE_BYTES)
+                    .build()
+            val featureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
+            entryPoint.configurationManager().get().setEmbeddedPhotopickerFeatureInfo(featureInfo)
+            advanceTimeBy(100)
+
+            val configuration = entryPoint.configurationManager().get().configuration.value
+            assertWithMessage("Expected configuration to contain the selection params value")
+                .that(configuration.selectionParams)
+                .isNotNull()
+
+            val receivedSelectionParams = configuration.selectionParams!!
+            assertWithMessage("Expected configuration to contain the max media item size")
+                .that(receivedSelectionParams.maxMediaItemSizeInBytes)
+                .isEqualTo(MAX_MEDIA_ITEM_SIZE_BYTES)
         }
 
     @Test

@@ -24,8 +24,6 @@ import androidx.annotation.NonNull;
 
 import com.android.providers.media.flags.Flags;
 
-import java.util.Locale;
-
 /**
  * An immutable parcel that carries constraints to be applied to media items displayed in the
  * Photo Picker.
@@ -38,17 +36,27 @@ import java.util.Locale;
 public final class PhotoPickerSelectionParams implements Parcelable {
     private static final String TAG = "PhotoPickerSelectionParams";
 
-    private PhotoPickerSelectionParams() {}
+    private final long mMaxMediaItemSizeInBytes;
+
+    private PhotoPickerSelectionParams(
+            long maxMediaItemSizeInBytes
+    ) {
+        mMaxMediaItemSizeInBytes = maxMediaItemSizeInBytes;
+    }
 
     /**
      * Reconstructs this object from a Parcel, maintaining the order in which fields
      * were written.
      */
-    private PhotoPickerSelectionParams(Parcel in) {}
+    private PhotoPickerSelectionParams(Parcel in) {
+        mMaxMediaItemSizeInBytes = in.readLong();
+    }
 
 
     @Override
-    public void writeToParcel(@NonNull Parcel dest, int flags) {}
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeLong(mMaxMediaItemSizeInBytes);
+    }
 
     @Override
     public int describeContents() {
@@ -70,28 +78,61 @@ public final class PhotoPickerSelectionParams implements Parcelable {
             };
 
     /**
+     * Returns the maximum allowed size, in bytes, for a media item to be selectable.
+     *
+     * <p>If the maximum media item size is not set by the caller app using {@link
+     * Builder#setMaxMediaItemSizeInBytes(long)}, this method returns -1, indicating that the
+     * photo picker will not restrict selection based on the maximum media item size.
+     */
+    public long getMaxMediaItemSizeInBytes() {
+        return mMaxMediaItemSizeInBytes;
+    }
+
+    /**
      * A builder class used to construct and validate an immutable
      * {@link PhotoPickerSelectionParams} object.
      */
     public static final class Builder {
 
-        public Builder() {}
+        private long mMaxMediaItemSizeInBytes = -1;
+
+        public Builder() {
+        }
 
         /**
-         * Internal helper to perform validation, ensuring that a minimum value does not
-         * exceed its corresponding maximum value.
+         * Sets the maximum allowed size, in bytes, for any individual media item to be selectable.
          *
-         * @param minValue minimum value of a set of params
-         * @param maxValue maximum value of a set of params
-         * @param param the set of param whose minimum and maximum values are being validated
+         * <p>The calling application can set this to limit the size of media returned by the
+         * PhotoPicker. Items exceeding this limit will be disabled for selection.
+         *
+         * <p>If it is not set, no maximum size constraint will be enforced on the media items that
+         * the user can select.
+         *
+         * @param maxMediaItemSizeInBytes The maximum size in bytes.
+         * @throws IllegalArgumentException if {@code maxMediaItemSizeInBytes} is negative or zero
          */
-        private void validateMinMax(long minValue, long maxValue, @NonNull String param) {
-            if (minValue != -1 && maxValue != -1 && minValue > maxValue) {
-                throw new IllegalArgumentException(String.format(
-                        Locale.ROOT,
-                        "Min %s cannot be greater than the max %s.",
-                        param, param));
+        @NonNull
+        public Builder setMaxMediaItemSizeInBytes(long maxMediaItemSizeInBytes) {
+            if (maxMediaItemSizeInBytes <= 0) {
+                throw new IllegalArgumentException(
+                        "Maximum media item size cannot be negative or zero.");
             }
+            mMaxMediaItemSizeInBytes = maxMediaItemSizeInBytes;
+            return this;
+        }
+
+        /**
+         * Clears the maximum media item size constraint.
+         *
+         * <p>On calling this, the PhotoPicker will not enforce an upper limit on the size of
+         * individual media items.
+         *
+         * @see #setMaxMediaItemSizeInBytes(long)
+         */
+        @NonNull
+        public Builder clearMaxMediaItemSize() {
+            mMaxMediaItemSizeInBytes = -1;
+            return this;
         }
 
         /**
@@ -104,7 +145,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         @NonNull
         public PhotoPickerSelectionParams build() {
 
-            return new PhotoPickerSelectionParams();
+            return new PhotoPickerSelectionParams(
+                    mMaxMediaItemSizeInBytes);
         }
     }
 }

@@ -19,6 +19,7 @@ package com.android.photopicker.extensions
 import android.content.Intent
 import android.platform.test.annotations.RequiresFlagsEnabled
 import android.provider.MediaStore
+import android.widget.photopicker.PhotoPickerSelectionParams
 import androidx.core.os.bundleOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
@@ -260,6 +261,35 @@ class IntentTest {
 
         assertThrows(IllegalIntentExtraException::class.java) {
             intent.isLocationMetadataAccessRequested(default = false)
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
+    fun testGetSelectionOptionsFromIntent() {
+        val maxMediaItemSizeBytes = 1024L
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder()
+                .setMaxMediaItemSizeInBytes(maxMediaItemSizeBytes)
+                .build()
+        val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+
+        val retrievedParams = intent.getPhotoPickerSelectionParams()
+
+        assertThat(retrievedParams).isNotNull()
+        assertThat(retrievedParams!!.maxMediaItemSizeInBytes).isEqualTo(maxMediaItemSizeBytes)
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
+    fun testGetSelectionOptionsFromIntentInvalidAction() {
+        val selectionOptions = PhotoPickerSelectionParams.Builder().build()
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionOptions)
+
+        assertThrows(IllegalIntentExtraException::class.java) {
+            intent.getPhotoPickerSelectionParams()
         }
     }
 }
