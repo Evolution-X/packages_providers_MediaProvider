@@ -65,6 +65,8 @@ class ConfigurationManagerTest {
     val sessionId = generatePickerSessionId()
 
     private val MAX_MEDIA_ITEM_SIZE_BYTES = 1024L
+    private val MAX_VIDEO_DURATION_SECONDS = 100L
+    private val MIN_VIDEO_DURATION_SECONDS = 10L
 
     @Before
     fun setup() {
@@ -1962,11 +1964,15 @@ class ConfigurationManagerTest {
     private fun createTestSelectionParams(): PhotoPickerSelectionParams {
         return PhotoPickerSelectionParams.Builder()
             .setMaxMediaItemSizeInBytes(MAX_MEDIA_ITEM_SIZE_BYTES)
+            .setMaxVideoDurationInSeconds(MAX_VIDEO_DURATION_SECONDS)
+            .setMinVideoDurationInSeconds(MIN_VIDEO_DURATION_SECONDS)
             .build()
     }
 
     private fun assertTestSelectionParams(params: PhotoPickerSelectionParams) {
         assertThat(params).isNotNull()
         assertThat(params.maxMediaItemSizeInBytes).isEqualTo(MAX_MEDIA_ITEM_SIZE_BYTES)
+        assertThat(params.maxVideoDurationInSeconds).isEqualTo(MAX_VIDEO_DURATION_SECONDS)
+        assertThat(params.minVideoDurationInSeconds).isEqualTo(MIN_VIDEO_DURATION_SECONDS)
     }
 }
