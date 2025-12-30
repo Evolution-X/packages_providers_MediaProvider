@@ -663,6 +663,34 @@ public class MediaStoreTrashedTest {
         }
     }
 
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashTopLevelDirectory_success() {
+        final File topLevelFolder = new File(Environment.getExternalStorageDirectory(),
+                mTestDir.getName());
+        topLevelFolder.mkdirs();
+        String trashedPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            trashedPath = MediaStore.trashFile(sIsolatedResolver, topLevelFolder.getPath());
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+
+        assertTrue(FileUtils.isTrashedFileInTrashDirectory(trashedPath));
+
+        String restoredPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            restoredPath = MediaStore.restoreFileFromTrash(sIsolatedResolver,
+                    trashedPath, /* targetPath */ null);
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+
+        assertEquals(topLevelFolder.getPath(), restoredPath);
+    }
+
     /**
      * Queries for a media item by its file path, including trashed items.
      *

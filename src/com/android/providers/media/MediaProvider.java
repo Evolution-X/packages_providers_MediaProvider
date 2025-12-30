@@ -2228,8 +2228,13 @@ public class MediaProvider extends ContentProvider {
      */
     @NonNull
     private int[] deleteOrExtendExpiredItems(@NonNull CancellationSignal signal) {
-        final ExpiredItemsUtils.ExpiredDeletionHost deletionHost =
+        final ExpiredItemsUtils.ExpiredDeletionHost expiredDeletionHost =
                 (volumeName, id) -> delete(Files.getContentUri(volumeName, id), /* extras */ null);
+
+        int deletedItems = mExternalDatabase.runWithTransaction(
+                (db) -> ExpiredItemsUtils.deleteExpiredItems(getContext(), db, signal,
+                        expiredDeletionHost));
+
         final ExpiredItemsUtils.ExpiredExtensionHost extensionHost =
                 new ExpiredItemsUtils.ExpiredExtensionHost() {
                     @Override
@@ -2237,15 +2242,28 @@ public class MediaProvider extends ContentProvider {
                             String newPath) {
                         return renameInLowerFsAndInvalidateFuseDentry(originalPath, newPath);
                     }
+
+                    @Override
+                    public boolean renameDirectoryAndInvalidateCache(String originalPath,
+                            String newPath) {
+                        int value = extendTrashedDirectoryUncheckedForFuse(originalPath, newPath);
+
+                        // Since the operation involves low-level file rename and move
+                        // operations, need to invalidate the dentry cache for the affected paths.
+                        invalidateFuseDentry(originalPath);
+                        invalidateFuseDentry(newPath);
+                        return value == 0;
+                    }
                 };
 
-        return mExternalDatabase.runWithTransaction((db) -> {
-            final int deleteCount = ExpiredItemsUtils.deleteExpiredItems(getContext(), db, signal,
-                    deletionHost);
-            final int extendCount = ExpiredItemsUtils.extendExpiredItems(getContext(), db, signal,
-                    extensionHost);
-            return new int[]{deleteCount, extendCount};
-        });
+        // File extensions are performed without a transaction, while folder extension is handled
+        // as a single atomic transaction within extendTrashedDirectoryUncheckedForFuse to ensure
+        // consistency for all descendants.
+        int extendedItems = mExternalDatabase.runWithoutTransaction(
+                (db) -> ExpiredItemsUtils.extendExpiredItems(getContext(), db, signal,
+                        extensionHost));
+
+        return new int[]{deletedItems, extendedItems};
     }
 
     private boolean renameInLowerFsAndInvalidateFuseDentry(@NonNull String originalPath,
@@ -3479,7 +3497,7 @@ public class MediaProvider extends ContentProvider {
         final Bundle queryArgs = new Bundle();
         queryArgs.putString(ContentResolver.QUERY_ARG_SQL_SELECTION, selection);
         queryArgs.putStringArray(ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, selectionArgs);
-        if (isFileTrashRestoreEnabled()) {
+        if (Flags.enableTrashAndRestoreByFilePathApi()) {
             // Explicitly include trashed items in the query results
             queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
         }
@@ -3719,6 +3737,68 @@ public class MediaProvider extends ContentProvider {
             helper.endTransaction();
         }
         // Directory movement might have made new/old path hidden.
+        scanRenamedDirectoryForFuse(oldPath, newPath);
+        return 0;
+    }
+
+    /**
+     * Rename operation for extending a trashed folder's expiry.
+     * Updates the db for all descendants before performing the OS-level move and recursive rename.
+     */
+    private int extendTrashedDirectoryUncheckedForFuse(String oldPath, String newPath) {
+        final ArrayList<String> fileList = getAllFilesForRenameDirectory(oldPath);
+        final DatabaseHelper helper;
+        try {
+            helper = getDatabaseForUri(FileUtils.getContentUriForPath(oldPath));
+        } catch (VolumeNotFoundException e) {
+            throw new IllegalStateException("Volume not found for " + oldPath, e);
+        }
+
+        // Extract the new expiration time from the new folder name
+        final Matcher matcher = FileUtils.PATTERN_EXPIRES_FILE.matcher(new File(newPath).getName());
+        if (!matcher.matches()) {
+            Log.e(TAG, "Invalid trashed path for extension: " + newPath);
+            return OsConstants.EINVAL;
+        }
+        final long newExpires = Long.parseLong(matcher.group(2));
+
+        helper.beginTransaction();
+        try {
+            for (String relativeFilePath : fileList) {
+                String oldFilePath = oldPath + "/" + relativeFilePath;
+                // Use getExtendedTrashedPath to correctly replace the expiry in descendant names
+                String newFilePath = FileTrashManager.getExtendedTrashedPath(newPath,
+                        relativeFilePath, newExpires);
+
+                Bundle extras = new Bundle();
+                extras.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
+
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DATA, newFilePath);
+                values.put(MediaStore.MediaColumns.DATE_EXPIRES, newExpires);
+
+                if (!updateDatabaseForFuseRename(helper, oldFilePath, newFilePath, values,
+                        extras, Optional.of(getIncludedDefaultDirectories()))) {
+                    Log.e(TAG, "Failed to update descendant DB row: " + oldFilePath);
+                    return OsConstants.EPERM;
+                }
+            }
+
+            int errno = renameInLowerFs(oldPath, newPath);
+            if (errno == 0) {
+                errno = FileTrashManager.extendChildrenOnDisk(new File(newPath), newExpires);
+            }
+
+            if (errno == 0) {
+                helper.setTransactionSuccessful();
+            } else {
+                return errno;
+            }
+        } finally {
+            helper.endTransaction();
+        }
+
+        // Cache invalidation and background scan
         scanRenamedDirectoryForFuse(oldPath, newPath);
         return 0;
     }

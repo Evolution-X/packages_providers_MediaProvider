@@ -17,11 +17,13 @@
 package com.android.providers.media.util;
 
 import static com.android.providers.media.scan.MediaScannerTest.stage;
+import static com.android.providers.media.util.FileUtils.PREFIX_TRASHED;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import android.Manifest;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -98,7 +100,7 @@ public class ExpiredItemsUtilsTest {
     public void testDeleteExpiredTrashedItem() throws IOException {
         final long expiredTwoDaysAgo =
                 (System.currentTimeMillis() - (2 * DateUtils.DAY_IN_MILLIS)) / 1000;
-        final Uri uri = createExpiredItem(FileUtils.PREFIX_TRASHED, expiredTwoDaysAgo, "item1");
+        final Uri uri = createExpiredItem(PREFIX_TRASHED, expiredTwoDaysAgo, "item1");
 
         MediaStore.runIdleMaintenance(mIsolatedContentResolver);
         MediaStore.waitForIdle(mIsolatedContentResolver);
@@ -133,7 +135,7 @@ public class ExpiredItemsUtilsTest {
     public void testExtendExpiredTrashedItem() throws IOException {
         final long expiredEightDaysAgo =
                 (System.currentTimeMillis() - (8 * DateUtils.DAY_IN_MILLIS)) / 1000;
-        final Uri uri = createExpiredItem(FileUtils.PREFIX_TRASHED, expiredEightDaysAgo, "item2");
+        final Uri uri = createExpiredItem(PREFIX_TRASHED, expiredEightDaysAgo, "item2");
 
         MediaStore.runIdleMaintenance(mIsolatedContentResolver);
         MediaStore.waitForIdle(mIsolatedContentResolver);
@@ -178,7 +180,7 @@ public class ExpiredItemsUtilsTest {
     @Test
     public void testNonExpiredTrashedItem_isNotTouched() throws IOException {
         final long notExpired = (System.currentTimeMillis() + DateUtils.DAY_IN_MILLIS) / 1000;
-        final Uri uri = createExpiredItem(FileUtils.PREFIX_TRASHED, notExpired, "item3");
+        final Uri uri = createExpiredItem(PREFIX_TRASHED, notExpired, "item3");
 
         MediaStore.runIdleMaintenance(mIsolatedContentResolver);
         MediaStore.waitForIdle(mIsolatedContentResolver);
@@ -222,15 +224,14 @@ public class ExpiredItemsUtilsTest {
     public void testDeleteExpiredTrashedFolder() throws IOException {
         final long expiredTwoDaysAgo =
                 (System.currentTimeMillis() - (2 * DateUtils.DAY_IN_MILLIS)) / 1000;
-        final String trashedPrefix = FileUtils.PREFIX_TRASHED;
 
         // Create the trashed folder structure directly with the .trash- prefix and expiry
-        final String trashedFolder1Name = String.format(Locale.US, ".%s-%d-%s", trashedPrefix,
+        final String trashedFolder1Name = String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED,
                 expiredTwoDaysAgo, "Folder1");
         final File trashedFolder1 = new File(mDir, trashedFolder1Name);
         assertThat(trashedFolder1.mkdirs()).isTrue();
 
-        final String trashedFolder2Name = String.format(Locale.US, ".%s-%d-%s", trashedPrefix,
+        final String trashedFolder2Name = String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED,
                 expiredTwoDaysAgo, "Folder2");
         final File trashedFolder2 = new File(trashedFolder1, trashedFolder2Name);
         assertThat(trashedFolder2.mkdirs()).isTrue();
@@ -239,17 +240,17 @@ public class ExpiredItemsUtilsTest {
         MediaStore.scanFile(mIsolatedContentResolver, trashedFolder2);
 
         // Create the trashed files directly in their respective trashed folders
-        final String trashedFile1Name = String.format(Locale.US, ".%s-%d-%s.jpg", trashedPrefix,
+        final String trashedFile1Name = String.format(Locale.US, ".%s-%d-%s.jpg", PREFIX_TRASHED,
                 expiredTwoDaysAgo, "File1");
         final File trashedFile1 = stage(R.raw.test_image,
                 new File(trashedFolder1, trashedFile1Name));
 
-        final String trashedFile2Name = String.format(Locale.US, ".%s-%d-%s.jpg", trashedPrefix,
+        final String trashedFile2Name = String.format(Locale.US, ".%s-%d-%s.jpg", PREFIX_TRASHED,
                 expiredTwoDaysAgo, "File2");
         final File trashedFile2 = stage(R.raw.test_image,
                 new File(trashedFolder2, trashedFile2Name));
 
-        final String trashedFile3Name = String.format(Locale.US, ".%s-%d-%s.jpg", trashedPrefix,
+        final String trashedFile3Name = String.format(Locale.US, ".%s-%d-%s.jpg", PREFIX_TRASHED,
                 expiredTwoDaysAgo, "File3");
         final File trashedFile3 = stage(R.raw.test_image,
                 new File(trashedFolder2, trashedFile3Name));
@@ -282,6 +283,85 @@ public class ExpiredItemsUtilsTest {
         assertThat(trashedFolder1.exists()).isFalse();
     }
 
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testExtendExpiredTrashedFolder() throws Exception {
+        // Use an expiration of 8 days ago to trigger the extend logic.
+        final long expiredEightDaysAgo =
+                (System.currentTimeMillis() - (8 * DateUtils.DAY_IN_MILLIS)) / 1000;
+        // Create nested trashed folder structure
+        final String trashedFolder1Name = String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED,
+                expiredEightDaysAgo, "Folder1");
+        final File trashedFolder1 = new File(mDir, trashedFolder1Name);
+        assertThat(trashedFolder1.mkdirs()).isTrue();
+        final String trashedFolder2Name = String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED,
+                expiredEightDaysAgo, "Folder2");
+        final File trashedFolder2 = new File(trashedFolder1, trashedFolder2Name);
+        assertThat(trashedFolder2.mkdirs()).isTrue();
+        // Create trashed files in folders
+        final String trashedFile1Name = String.format(Locale.US, ".%s-%d-%s.jpg", PREFIX_TRASHED,
+                expiredEightDaysAgo, "File1");
+        final File trashedFile1 = stage(R.raw.test_image,
+                new File(trashedFolder1, trashedFile1Name));
+
+        final String trashedFile2Name = String.format(Locale.US, ".%s-%d-%s.jpg", PREFIX_TRASHED,
+                expiredEightDaysAgo, "File2");
+        final File trashedFile2 = stage(R.raw.test_image,
+                new File(trashedFolder2, trashedFile2Name));
+
+        // Scan items to get original URIs and IDs
+        MediaStore.scanFile(mIsolatedContentResolver, trashedFolder1);
+        MediaStore.scanFile(mIsolatedContentResolver, trashedFolder2);
+        final Uri fileUri1 = MediaStore.scanFile(mIsolatedContentResolver, trashedFile1);
+        final Uri fileUri2 = MediaStore.scanFile(mIsolatedContentResolver, trashedFile2);
+        final long originalFileId1 = ContentUris.parseId(fileUri1);
+        final long originalFileId2 = ContentUris.parseId(fileUri2);
+
+        // Run idle maintenance to trigger extension
+        MediaStore.runIdleMaintenance(mIsolatedContentResolver);
+        MediaStore.waitForIdle(mIsolatedContentResolver);
+
+        // Verify physical filesystem changes
+        final File[] files = mDir.listFiles();
+        assertThat(files).hasLength(1);
+        final File newFolder1 = files[0];
+        assertThat(newFolder1.getName()).isNotEqualTo(trashedFolder1Name);
+
+        // Verify MediaStore data consistency and URI stability
+        final Bundle queryArgs = new Bundle();
+        queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
+
+        // File 1 Path updated, Expiry updated, ID/URI remained same
+        try (Cursor cursor = mIsolatedContentResolver.query(fileUri1,
+                new String[]{MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_EXPIRES,
+                        MediaStore.MediaColumns._ID},
+                queryArgs, null)) {
+            assertThat(cursor.moveToFirst()).isTrue();
+            final String newPath = cursor.getString(0);
+            final long newExpiry = cursor.getLong(1);
+            final long newId = cursor.getLong(2);
+
+            assertThat(newPath).contains(newFolder1.getName());
+            assertThat(newExpiry).isGreaterThan(expiredEightDaysAgo);
+            assertThat(newId).isEqualTo(originalFileId1);
+        }
+
+        // File 2 Nested path and expiry consistency
+        try (Cursor cursor = mIsolatedContentResolver.query(fileUri2,
+                new String[]{MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_EXPIRES,
+                        MediaStore.MediaColumns._ID},
+                queryArgs, null)) {
+            assertThat(cursor.moveToFirst()).isTrue();
+            final String newPath = cursor.getString(0);
+            final long newExpiry = cursor.getLong(1);
+            final long newId = cursor.getLong(2);
+
+            assertThat(newPath).contains(newFolder1.getName());
+            assertThat(newExpiry).isGreaterThan(expiredEightDaysAgo);
+            assertThat(newId).isEqualTo(originalFileId2);
+        }
+    }
+
     private void resetIsolatedContext() {
         if (mIsolatedContentResolver != null) {
             // This is necessary, we wait for all unfinished tasks to finish before we create a
@@ -305,7 +385,7 @@ public class ExpiredItemsUtilsTest {
 
         final String[] projection = new String[]{MediaStore.MediaColumns.DATE_EXPIRES};
         final Bundle queryArgs = new Bundle();
-        if (prefix.equals(FileUtils.PREFIX_TRASHED)) {
+        if (prefix.equals(PREFIX_TRASHED)) {
             queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_TRASHED, MediaStore.MATCH_INCLUDE);
         } else if (prefix.equals(FileUtils.PREFIX_PENDING)) {
             queryArgs.putInt(MediaStore.QUERY_ARG_MATCH_PENDING, MediaStore.MATCH_INCLUDE);
