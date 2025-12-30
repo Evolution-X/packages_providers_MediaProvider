@@ -205,6 +205,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     private val MAX_MEDIA_ITEM_SIZE_BYTES: Long = 1024L
     private val MAX_VIDEO_DURATION_SECONDS: Long = 100L
     private val MIN_VIDEO_DURATION_SECONDS: Long = 10L
+    private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 1000L
+    private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 100L
 
     // Session has a surfacePackage which outlives the test if not closed, so it always needs to be
     // closed at the end of each test to prevent any existing UI activity from leaking into the next
@@ -500,6 +502,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
                     .setMaxMediaItemSizeInBytes(MAX_MEDIA_ITEM_SIZE_BYTES)
                     .setMaxVideoDurationInSeconds(MAX_VIDEO_DURATION_SECONDS)
                     .setMinVideoDurationInSeconds(MIN_VIDEO_DURATION_SECONDS)
+                    .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
+                    .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
                     .build()
             val featureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
@@ -521,6 +525,12 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected configuration to contain the min video duration")
                 .that(receivedSelectionParams.minVideoDurationInSeconds)
                 .isEqualTo(MIN_VIDEO_DURATION_SECONDS)
+            assertWithMessage("Expected configuration to contain the max media item resolution")
+                .that(receivedSelectionParams.maxMediaItemResolutionInPixels)
+                .isEqualTo(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
+            assertWithMessage("Expected configuration to contain the min media item resolution")
+                .that(receivedSelectionParams.minMediaItemResolutionInPixels)
+                .isEqualTo(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
         }
 
     @Test

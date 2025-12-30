@@ -67,6 +67,8 @@ class ConfigurationManagerTest {
     private val MAX_MEDIA_ITEM_SIZE_BYTES = 1024L
     private val MAX_VIDEO_DURATION_SECONDS = 100L
     private val MIN_VIDEO_DURATION_SECONDS = 10L
+    private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS = 1000L
+    private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS = 100L
 
     @Before
     fun setup() {
@@ -1966,6 +1968,8 @@ class ConfigurationManagerTest {
             .setMaxMediaItemSizeInBytes(MAX_MEDIA_ITEM_SIZE_BYTES)
             .setMaxVideoDurationInSeconds(MAX_VIDEO_DURATION_SECONDS)
             .setMinVideoDurationInSeconds(MIN_VIDEO_DURATION_SECONDS)
+            .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
+            .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
             .build()
     }
 
@@ -1974,5 +1978,9 @@ class ConfigurationManagerTest {
         assertThat(params.maxMediaItemSizeInBytes).isEqualTo(MAX_MEDIA_ITEM_SIZE_BYTES)
         assertThat(params.maxVideoDurationInSeconds).isEqualTo(MAX_VIDEO_DURATION_SECONDS)
         assertThat(params.minVideoDurationInSeconds).isEqualTo(MIN_VIDEO_DURATION_SECONDS)
+        assertThat(params.maxMediaItemResolutionInPixels)
+            .isEqualTo(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
+        assertThat(params.minMediaItemResolutionInPixels)
+            .isEqualTo(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
     }
 }

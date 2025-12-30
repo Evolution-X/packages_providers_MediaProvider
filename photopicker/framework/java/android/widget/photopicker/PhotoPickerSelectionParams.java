@@ -41,15 +41,21 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     private final long mMaxMediaItemSizeInBytes;
     private final long mMaxVideoDurationInSeconds;
     private final long mMinVideoDurationInSeconds;
+    private final long mMaxMediaItemResolutionInPixels;
+    private final long mMinMediaItemResolutionInPixels;
 
     private PhotoPickerSelectionParams(
             long maxMediaItemSizeInBytes,
             long maxVideoDurationInSeconds,
-            long minVideoDurationInSeconds
+            long minVideoDurationInSeconds,
+            long maxMediaItemResolutionInPixels,
+            long minMediaItemResolutionInPixels
     ) {
         mMaxMediaItemSizeInBytes = maxMediaItemSizeInBytes;
         mMaxVideoDurationInSeconds = maxVideoDurationInSeconds;
         mMinVideoDurationInSeconds = minVideoDurationInSeconds;
+        mMaxMediaItemResolutionInPixels = maxMediaItemResolutionInPixels;
+        mMinMediaItemResolutionInPixels = minMediaItemResolutionInPixels;
     }
 
     /**
@@ -60,6 +66,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         mMaxMediaItemSizeInBytes = in.readLong();
         mMaxVideoDurationInSeconds = in.readLong();
         mMinVideoDurationInSeconds = in.readLong();
+        mMaxMediaItemResolutionInPixels = in.readLong();
+        mMinMediaItemResolutionInPixels = in.readLong();
     }
 
 
@@ -68,6 +76,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         dest.writeLong(mMaxMediaItemSizeInBytes);
         dest.writeLong(mMaxVideoDurationInSeconds);
         dest.writeLong(mMinVideoDurationInSeconds);
+        dest.writeLong(mMaxMediaItemResolutionInPixels);
+        dest.writeLong(mMinMediaItemResolutionInPixels);
     }
 
     @Override
@@ -123,6 +133,28 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     }
 
     /**
+     * Returns the maximum allowed resolution, in pixels, for a media item to be selectable.
+     *
+     * <p>If the maximum resolution is not set by the caller app using {@link
+     * Builder#setMaxMediaItemResolutionInPixels(long)}, this method returns -1, indicating that the
+     * photo picker will not restrict selection based on the maximum media item resolution.
+     */
+    public long getMaxMediaItemResolutionInPixels() {
+        return mMaxMediaItemResolutionInPixels;
+    }
+
+    /**
+     * Returns the minimum required resolution, in pixels, for a media item to be selectable.
+     *
+     * <p>If the minimum resolution is not set by the caller app using {@link
+     * Builder#setMinMediaItemResolutionInPixels(long)}, this method returns -1, indicating that the
+     * photo picker will not restrict selection based on the minimum media item resolution.
+     */
+    public long getMinMediaItemResolutionInPixels() {
+        return mMinMediaItemResolutionInPixels;
+    }
+
+    /**
      * A builder class used to construct and validate an immutable
      * {@link PhotoPickerSelectionParams} object.
      */
@@ -131,6 +163,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         private long mMaxMediaItemSizeInBytes = -1;
         private long mMaxVideoDurationInSeconds = -1;
         private long mMinVideoDurationInSeconds = -1;
+        private long mMaxMediaItemResolutionInPixels = -1;
+        private long mMinMediaItemResolutionInPixels = -1;
 
         public Builder() {
         }
@@ -247,6 +281,84 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         }
 
         /**
+         * Sets the maximum allowed resolution constraint for a media item to be selectable.
+         *
+         * <p>Items exceeding the provided resolution will be disabled for selection.
+         *
+         * <p>The maximum resolution should not be less than the minimum resolution, or an
+         * exception will be thrown during the {@link #build()} process.
+         *
+         * <p>If it is not set, no maximum resolution constraint will be enforced on the media items
+         * that the user can select.
+         *
+         * @param maxMediaItemResolutionInPixels The maximum media item resolution in pixels
+         * @throws IllegalArgumentException if {@code maxMediaItemResolutionInPixels} is negative or
+         *                                  zero
+         */
+        @NonNull
+        public Builder setMaxMediaItemResolutionInPixels(long maxMediaItemResolutionInPixels) {
+            if (maxMediaItemResolutionInPixels <= 0) {
+                throw new IllegalArgumentException(
+                        "Maximum media item resolution cannot be negative or zero.");
+            }
+            mMaxMediaItemResolutionInPixels = maxMediaItemResolutionInPixels;
+            return this;
+        }
+
+        /**
+         * Clears the maximum media item resolution constraint.
+         *
+         * <p>On calling this, the PhotoPicker will not enforce an upper limit on the total
+         * resolution of individual media items.
+         *
+         * @see #setMaxMediaItemResolutionInPixels(long)
+         */
+        @NonNull
+        public Builder clearMaxMediaItemResolution() {
+            mMaxMediaItemResolutionInPixels = -1;
+            return this;
+        }
+
+        /**
+         * Sets the minimum allowed resolution constraint for a media item to be selectable.
+         *
+         * <p>Media items with a resolution lower than the provided threshold will be disabled for
+         * selection.
+         *
+         * <p>The minimum resolution should not be greater than the maximum resolution, or an
+         * exception will be thrown during the {@link #build()} process.
+         *
+         * <p>If it is not set, no minimum resolution constraint will be enforced on the media items
+         * that the user can select.
+         *
+         * @param minMediaItemResolutionInPixels The minimum allowed resolution in total pixels.
+         * @throws IllegalArgumentException if {@code minMediaItemResolutionInPixels} is negative.
+         */
+        @NonNull
+        public Builder setMinMediaItemResolutionInPixels(long minMediaItemResolutionInPixels) {
+            if (minMediaItemResolutionInPixels < 0) {
+                throw new IllegalArgumentException(
+                        "Minimum media item resolution cannot be negative");
+            }
+            mMinMediaItemResolutionInPixels = minMediaItemResolutionInPixels;
+            return this;
+        }
+
+        /**
+         * Clears the minimum media item resolution constraint.
+         *
+         * <p>On calling this, the PhotoPicker will not enforce a lower limit on the total
+         * resolution of individual media items.
+         *
+         * @see #setMinMediaItemResolutionInPixels(long)
+         */
+        @NonNull
+        public Builder clearMinMediaItemResolution() {
+            mMinMediaItemResolutionInPixels = -1;
+            return this;
+        }
+
+        /**
          * Builds a new immutable {@link PhotoPickerSelectionParams} object.
          *
          * @return A new {@link PhotoPickerSelectionParams} object with the configured properties.
@@ -257,11 +369,15 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         public PhotoPickerSelectionParams build() {
             validateMinMax(mMinVideoDurationInSeconds, mMaxVideoDurationInSeconds,
                     "video duration");
+            validateMinMax(mMinMediaItemResolutionInPixels, mMaxMediaItemResolutionInPixels,
+                    "media item resolution");
 
             return new PhotoPickerSelectionParams(
                     mMaxMediaItemSizeInBytes,
                     mMaxVideoDurationInSeconds,
-                    mMinVideoDurationInSeconds);
+                    mMinVideoDurationInSeconds,
+                    mMaxMediaItemResolutionInPixels,
+                    mMinMediaItemResolutionInPixels);
         }
 
         /**
