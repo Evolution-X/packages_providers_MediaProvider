@@ -70,6 +70,7 @@ class ConfigurationManagerTest {
     private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS = 1000L
     private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS = 100L
     private val MIME_TYPES = listOf("image/png", "video/mp4")
+    private val MAX_SELECTION_BATCH_SIZE_BYTES = 2048L
 
     @Before
     fun setup() {
@@ -1972,6 +1973,7 @@ class ConfigurationManagerTest {
             .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
             .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
             .setMimeTypes(MIME_TYPES)
+            .setMaxSelectionBatchSizeInBytes(MAX_SELECTION_BATCH_SIZE_BYTES)
             .build()
     }
 
@@ -1985,5 +1987,6 @@ class ConfigurationManagerTest {
         assertThat(params.minMediaItemResolutionInPixels)
             .isEqualTo(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
         assertThat(params.mimeTypes).isEqualTo(MIME_TYPES)
+        assertThat(params.maxSelectionBatchSizeInBytes).isEqualTo(MAX_SELECTION_BATCH_SIZE_BYTES)
     }
 }

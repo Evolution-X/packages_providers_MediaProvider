@@ -47,6 +47,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     private final long mMaxMediaItemResolutionInPixels;
     private final long mMinMediaItemResolutionInPixels;
     private final List<String> mMimeTypes;
+    private final long mMaxSelectionBatchSizeInBytes;
 
     private PhotoPickerSelectionParams(
             long maxMediaItemSizeInBytes,
@@ -54,7 +55,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
             long minVideoDurationInSeconds,
             long maxMediaItemResolutionInPixels,
             long minMediaItemResolutionInPixels,
-            List<String> mimeTypes
+            List<String> mimeTypes,
+            long maxSelectionBatchSizeInBytes
     ) {
         mMaxMediaItemSizeInBytes = maxMediaItemSizeInBytes;
         mMaxVideoDurationInSeconds = maxVideoDurationInSeconds;
@@ -62,6 +64,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         mMaxMediaItemResolutionInPixels = maxMediaItemResolutionInPixels;
         mMinMediaItemResolutionInPixels = minMediaItemResolutionInPixels;
         mMimeTypes = List.copyOf(mimeTypes);
+        mMaxSelectionBatchSizeInBytes = maxSelectionBatchSizeInBytes;
     }
 
     /**
@@ -77,6 +80,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         List<String> mimeTypes = new ArrayList<>();
         in.readStringList(mimeTypes);
         mMimeTypes = mimeTypes;
+        mMaxSelectionBatchSizeInBytes = in.readLong();
     }
 
 
@@ -88,6 +92,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         dest.writeLong(mMaxMediaItemResolutionInPixels);
         dest.writeLong(mMinMediaItemResolutionInPixels);
         dest.writeStringList(mMimeTypes);
+        dest.writeLong(mMaxSelectionBatchSizeInBytes);
     }
 
     @Override
@@ -177,6 +182,18 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     }
 
     /**
+     * Returns the maximum allowed cumulative size, in bytes, for the entire batch of selected
+     * media items.
+     *
+     * <p>If the maximum selection batch size is not set by the caller app using {@link
+     * Builder#setMaxSelectionBatchSizeInBytes(long)}, this method returns -1, indicating that the
+     * photo picker will not restrict selection based on the total batch size.
+     */
+    public long getMaxSelectionBatchSizeInBytes() {
+        return mMaxSelectionBatchSizeInBytes;
+    }
+
+    /**
      * A builder class used to construct and validate an immutable
      * {@link PhotoPickerSelectionParams} object.
      */
@@ -188,6 +205,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         private long mMaxMediaItemResolutionInPixels = -1;
         private long mMinMediaItemResolutionInPixels = -1;
         private List<String> mMimeTypes = new ArrayList<>();
+        private long mMaxSelectionBatchSizeInBytes = -1;
 
         public Builder() {
         }
@@ -434,6 +452,45 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         }
 
         /**
+         * Sets the maximum allowed cumulative size, in bytes, for the entire batch of selected
+         * media items.
+         *
+         * <p>This limits the total aggregate size of the media selected by the user. If a new
+         * selection causes the total size to exceed this limit, the user will be alerted that they
+         * have reached the maximum selection size limit and must deselect items before proceeding.
+         *
+         * <p>If it is not set, no collective batch size constraint will be enforced on media items
+         * that the user can select.
+         *
+         * @param maxSelectionBatchSizeInBytes The maximum batch size in bytes.
+         * @throws IllegalArgumentException if {@code maxSelectionBatchSizeInBytes} is negative or
+         *                                  zero
+         */
+        @NonNull
+        public Builder setMaxSelectionBatchSizeInBytes(long maxSelectionBatchSizeInBytes) {
+            if (maxSelectionBatchSizeInBytes <= 0) {
+                throw new IllegalArgumentException(
+                        "Maximum batch size limit cannot be negative or zero");
+            }
+            mMaxSelectionBatchSizeInBytes = maxSelectionBatchSizeInBytes;
+            return this;
+        }
+
+        /**
+         * Clears the maximum cumulative selection size constraint.
+         *
+         * <p>On calling this, the PhotoPicker will not enforce a limit on the total aggregate size
+         * of the selected media items in a single session.
+         *
+         * @see #setMaxSelectionBatchSizeInBytes(long)
+         */
+        @NonNull
+        public Builder clearMaxSelectionBatchSize() {
+            mMaxSelectionBatchSizeInBytes = -1;
+            return this;
+        }
+
+        /**
          * Builds a new immutable {@link PhotoPickerSelectionParams} object.
          *
          * @return A new {@link PhotoPickerSelectionParams} object with the configured properties.
@@ -453,7 +510,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
                     mMinVideoDurationInSeconds,
                     mMaxMediaItemResolutionInPixels,
                     mMinMediaItemResolutionInPixels,
-                    mMimeTypes);
+                    mMimeTypes,
+                    mMaxSelectionBatchSizeInBytes);
         }
 
         /**

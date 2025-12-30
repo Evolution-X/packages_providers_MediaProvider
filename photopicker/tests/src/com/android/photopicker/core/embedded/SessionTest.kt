@@ -208,6 +208,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 1000L
     private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 100L
     private val MIME_TYPES = listOf("image/png", "video/mp4")
+    private val MAX_SELECTION_BATCH_SIZE_BYTES: Long = 2048L
 
     // Session has a surfacePackage which outlives the test if not closed, so it always needs to be
     // closed at the end of each test to prevent any existing UI activity from leaking into the next
@@ -506,6 +507,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
                     .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
                     .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
                     .setMimeTypes(MIME_TYPES)
+                    .setMaxSelectionBatchSizeInBytes(MAX_SELECTION_BATCH_SIZE_BYTES)
                     .build()
             val featureInfo =
                 EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
@@ -536,6 +538,9 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected configuration to contain the mime types")
                 .that(receivedSelectionParams.mimeTypes)
                 .isEqualTo(MIME_TYPES)
+            assertWithMessage("Expected configuration to contain the max selection batch size")
+                .that(receivedSelectionParams.maxSelectionBatchSizeInBytes)
+                .isEqualTo(MAX_SELECTION_BATCH_SIZE_BYTES)
         }
 
     @Test
