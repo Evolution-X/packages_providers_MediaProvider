@@ -41,6 +41,7 @@ import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import android.widget.photopicker.IEmbeddedPhotoPickerClient
 import android.widget.photopicker.ParcelableException
 import android.widget.photopicker.PhotoPickerSelectionParams
+import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -450,6 +451,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
         Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API,
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
     )
     fun testSessionSetsEmbeddedPhotopickerFeatureInfoInConfiguration() =
         testScope.runTest {
@@ -485,6 +487,9 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
                 .isEqualTo(false)
             assertWithMessage("Expected configuration to contain the selection params value")
                 .that(configuration.selectionParams)
+                .isNull()
+            assertWithMessage("Expected configuration to contain the ui customization options")
+                .that(configuration.uiCustomizationParams)
                 .isNull()
         }
 
@@ -542,6 +547,37 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
                 .that(receivedSelectionParams.maxSelectionBatchSizeInBytes)
                 .isEqualTo(MAX_SELECTION_BATCH_SIZE_BYTES)
         }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
+    fun testSessionSetsUiCustomizationParamsInConfiguration() {
+        val uiCustomizationOptions =
+            PhotoPickerUiCustomizationParams.Builder()
+                .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                .build()
+        val featureInfo =
+            EmbeddedPhotoPickerFeatureInfo.Builder()
+                .setUiCustomizationParams(uiCustomizationOptions)
+                .build()
+
+        testScope.runTest {
+            val component = embeddedServiceComponentBuilder.build()
+            val entryPoint = EntryPoints.get(component, Session.EmbeddedEntryPoint::class.java)
+
+            // Create a session with the component and let it initialize.
+            getSessionUnderTest(component)
+            advanceTimeBy(100)
+
+            // Manually update the feature info since we have a custom one
+            entryPoint.configurationManager().get().setEmbeddedPhotopickerFeatureInfo(featureInfo)
+            advanceTimeBy(100)
+
+            val configuration = entryPoint.configurationManager().get().configuration.value
+            assertWithMessage("Expected configuration to contain the ui customization options")
+                .that(configuration.uiCustomizationParams!!.aspectRatio)
+                .isEqualTo(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+        }
+    }
 
     @Test
     fun testSelectionUpdateGrantsAndRevokesPermissionSuccess() =

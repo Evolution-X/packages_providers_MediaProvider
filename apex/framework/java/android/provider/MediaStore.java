@@ -1470,6 +1470,41 @@ public final class MediaStore {
             "android.provider.extra.PICK_IMAGES_SELECTION_PARAMS";
 
     /**
+     * The name of an optional intent-extra used to set the ui customization options in the
+     * PhotoPicker.
+     * <p>
+     * The value of this intent-extra should be a
+     * {@link android.widget.photopicker.PhotoPickerUiCustomizationParams} object. The extra can
+     * only be specified in {@link MediaStore#ACTION_PICK_IMAGES}.
+     *
+     * <p>
+     * Not passing this EXTRA, means the photo picker will use its default UI (e.g. rendering the
+     * media items grid in 1:1 aspect ratio).
+     *
+     * <p>
+     * To use this key, calling apps should construct a
+     * {@link android.widget.photopicker.PhotoPickerUiCustomizationParams} object using its
+     * {@link android.widget.photopicker.PhotoPickerUiCustomizationParams.Builder} and pass it as
+     * the value.<br>
+     * Example: If the calling app wants to allow the Photo Picker to use a 9:16 aspect ratio
+     * for the thumbnails:
+     * <pre>
+     * PhotoPickerUiCustomizationParams params = new PhotoPickerUiCustomizationParams.Builder()
+     *     .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+     *     .build();
+     * Intent intent = new Intent(MediaStore.ACTION_PICK_IMAGES);
+     * intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, params);
+     * </pre>
+     *
+     * @see android.widget.photopicker.PhotoPickerUiCustomizationParams
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
+    public static final String EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS =
+            "android.provider.extra.PICK_IMAGES_UI_CUSTOMIZATION_PARAMS";
+
+    /**
+
+    /**
      * Specify that the caller wants to receive the original media format without transcoding.
      *
      * <b>Caution: using this flag can cause app
