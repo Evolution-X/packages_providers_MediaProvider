@@ -53,6 +53,5 @@
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"Чтобы выбрать фото и видео из приложения \"<xliff:g id="APP_NAME">%1$s</xliff:g>\", подключитесь к Wi-Fi или мобильной сети."</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"Требуется подключение к интернету"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"Открыть настройки"</string>
-    <!-- no translation found for photopicker_offline_banner_cloud_app_placeholder (7653739406837936359) -->
-    <skip />
+    <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"облачное приложение для мультимедиа"</string>
 </resources>
