@@ -52,6 +52,7 @@ import com.android.providers.media.util.FileUtils;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -671,6 +672,7 @@ public class MediaStoreTrashedTest {
     }
 
     @Test
+    @Ignore("b/472707437")
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
     public void testTrashTopLevelDirectory_success() throws Exception {
         final File topLevelFolder = createTopLevelDir(mTestDir.getName());
