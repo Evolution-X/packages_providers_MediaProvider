@@ -58,6 +58,11 @@ public final class AppSearchSchemaFactory {
                                         .setCardinality(CARDINALITY_REQUIRED)
                                         .setIndexingType(INDEXING_TYPE_RANGE)
                                         .build())
+                                .addProperty(new AppSearchSchema.LongPropertyConfig.Builder(
+                                        MediaItem.PROPERTY_DIRTY)
+                                        .setCardinality(CARDINALITY_REQUIRED)
+                                        .setIndexingType(INDEXING_TYPE_RANGE)
+                                        .build())
                                 .addProperty(new AppSearchSchema.StringPropertyConfig.Builder(
                                         MediaItem.PROPERTY_METADATA_EXTRACTED)
                                         .setCardinality(CARDINALITY_OPTIONAL)
@@ -77,10 +82,6 @@ public final class AppSearchSchemaFactory {
                                         .setIndexingType(
                                                 INDEXING_TYPE_EXACT_TERMS)
                                         .setTokenizerType(TOKENIZER_TYPE_PLAIN)
-                                        .build())
-                                .addProperty(new AppSearchSchema.BooleanPropertyConfig.Builder(
-                                        MediaItem.PROPERTY_DIRTY)
-                                        .setCardinality(CARDINALITY_REQUIRED)
                                         .build())
                                 .addProperty(new AppSearchSchema.StringPropertyConfig.Builder(
                                         MediaItem.PROPERTY_VOLUME_NAME)
