@@ -24,11 +24,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeNotNull;
+import static org.junit.Assume.assumeTrue;
 
+import android.app.Instrumentation;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.content.pm.ProviderInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -39,6 +43,7 @@ import android.provider.ISearchMediaService;
 import android.provider.MediaStore;
 import android.provider.SearchMediaResult;
 import android.provider.SearchMediaService;
+import android.text.TextUtils;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
@@ -127,14 +132,26 @@ public class SearchMediaServiceTest {
     }
 
     @Test
-    public void testGetPackageForSearchMediaServiceApiTest() {
+    public void testGetPackageForDefaultSearchMediaServiceApiTest() {
         String expectedPackage = mContext.getResources().getString(
                 R.string.config_default_search_media_service_package);
 
-        String packageFromApi = MediaStore.getPackageForSearchMediaService(
+        // We are only testing for default search service. Empty string here denotes that OEM has
+        // not defined their own search service and default search service will be used.
+        assumeTrue(TextUtils.isEmpty(expectedPackage));
+
+        String packageNameFromApi = MediaStore.getPackageForSearchMediaService(
                 mContext.getContentResolver());
 
-        assertEquals(expectedPackage, packageFromApi);
+        assertEquals(getMediaProviderPackageName(), packageNameFromApi);
+    }
+
+    private static String getMediaProviderPackageName() {
+        final Instrumentation inst = androidx.test.InstrumentationRegistry.getInstrumentation();
+        final PackageManager packageManager = inst.getContext().getPackageManager();
+        final ProviderInfo providerInfo = packageManager.resolveContentProvider(
+                MediaStore.AUTHORITY, PackageManager.MATCH_ALL);
+        return providerInfo.packageName;
     }
 
     private static void assertCallbackHasAllSearchResults(TestSearchMediaCallback callback,

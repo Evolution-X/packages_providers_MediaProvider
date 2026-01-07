@@ -8297,6 +8297,13 @@ public class MediaProvider extends ContentProvider {
             Resources resources = getContext().getResources();
             String packageName =
                     resources.getString(R.string.config_default_search_media_service_package);
+
+            if (TextUtils.isEmpty(packageName)) {
+                // If no search service is implemented by OEMs, we use default search service
+                // provided by MediaProvider.
+                packageName = getContext().getPackageName();
+            }
+
             Bundle result = new Bundle();
             result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, packageName);
             return result;

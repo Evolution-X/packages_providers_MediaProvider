@@ -23,14 +23,11 @@ import android.annotation.SdkConstant;
 import android.annotation.SystemApi;
 import android.app.Service;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.OutcomeReceiver;
 import android.os.RemoteException;
 import android.util.Log;
-
-import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -44,6 +41,10 @@ import com.android.providers.media.flags.Flags;
  * <p>SearchMediaService must require the permission
  * "com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE". Service will be ignored for
  * binding if permission is missing. </p>
+ *
+ * <p>Note that the calling app would still require relevant read or write permission to access the
+ * files. The "com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE" permission only
+ * allows apps to get search results in form of {@link SearchMediaResultPage}</p>
  *
  * <pre class="prettyprint">
  * {@literal
@@ -67,7 +68,6 @@ import com.android.providers.media.flags.Flags;
  * @hide
  */
 @SystemApi
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
 public abstract class SearchMediaService extends Service {
 

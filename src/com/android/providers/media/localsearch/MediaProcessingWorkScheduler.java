@@ -40,9 +40,6 @@ import java.util.concurrent.TimeUnit;
 public class MediaProcessingWorkScheduler extends Worker {
     public static final String TAG = "MediaProcessingWorker";
     static final String PERIODIC_WORK_NAME = "MediaProcessingJob";
-    private static final String DEFAULT_SEARCH_MEDIA_SERVICE_PACKAGE =
-            "com.google.android.providers.media.module";
-
     private static final String LAST_GEN_MODIFIED_WITH_MEDIA_LABEL =
             "last_gen_modified_with_media_label";
     private static final String LAST_GEN_MODIFIED_WITH_LOCATION_LABEL =
@@ -91,8 +88,8 @@ public class MediaProcessingWorkScheduler extends Worker {
         // Skip scheduling work if a custom search media service is defined
         String searchMediaServicePackage = MediaStore.getPackageForSearchMediaService(
                 mContext.getContentResolver());
-        if (!DEFAULT_SEARCH_MEDIA_SERVICE_PACKAGE.equalsIgnoreCase(searchMediaServicePackage)) {
-            Log.i(TAG, "Custom SearchMediaService defined. Skip media processing.");
+        if (!mContext.getPackageName().equalsIgnoreCase(searchMediaServicePackage)) {
+            Log.i(TAG, "OEM defined SearchMediaService is used. Skip media processing.");
             return false;
         }
 

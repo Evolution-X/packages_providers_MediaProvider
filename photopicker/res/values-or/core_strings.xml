@@ -53,6 +53,5 @@
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"<xliff:g id="APP_NAME">%1$s</xliff:g>ରୁ ଫଟୋ ଏବଂ ଭିଡିଓଗୁଡ଼ିକୁ ଚୟନ କରିବା ପାଇଁ ୱାଇ-ଫାଇ କିମ୍ବା ମୋବାଇଲ ଡାଟା ସହ କନେକ୍ଟ କରନ୍ତୁ"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"ଇଣ୍ଟର୍ନେଟ କନେକ୍ସନ ଆବଶ୍ୟକ"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"ସେଟିଂସକୁ ଯାଆନ୍ତୁ"</string>
-    <!-- no translation found for photopicker_offline_banner_cloud_app_placeholder (7653739406837936359) -->
-    <skip />
+    <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"ଏକ କ୍ଲାଉଡ ମିଡିଆ ଆପ"</string>
 </resources>
