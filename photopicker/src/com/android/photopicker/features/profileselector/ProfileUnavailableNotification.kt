@@ -16,6 +16,7 @@
 
 package com.android.photopicker.features.profileselector
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,13 +32,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.android.photopicker.R
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.user.UserProfile
 import com.android.photopicker.core.user.UserProfile.DisabledReason
 import com.android.photopicker.core.user.UserProfile.DisabledReason.CROSS_PROFILE_NOT_ALLOWED
@@ -51,49 +52,55 @@ private val MEASUREMENT_DIALOG_SPACER_SIZE = 24.dp
 private val MEASUREMENT_DIALOG_PADDING = 24.dp
 
 /**
- * Show an error dialog for a profile that is unavailable.
+ * Show a notification for a profile that is unavailable.
  *
- * The dialog will generate the correct error title and message based on the list of disabled
+ * The notification will generate the correct error title and message based on the list of disabled
  * reasons present in the [UserProfile]. If more than one reason exists, it will show the highest
- * priority error message (as determined by its own internal logic).
+ * priority error message (as determined by its own internal logic). In an embedded environment,
+ * this will be a Toast, otherwise it will be an [AlertDialog].
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun ProfileUnavailableDialog(
-    onDismissRequest: () -> Unit,
+fun ProfileUnavailableNotification(
+    runtimeEnv: PhotopickerRuntimeEnv,
+    onReset: () -> Unit,
     profile: UserProfile,
 ) {
-
-    val (dialogTitle, dialogMessage) =
+    val (title, message) =
         with(profile.disabledReasons) {
             when {
                 // These disabled reason checks are in order of error message priority. Since only
-                // one dialog can be shown for a profile, these checks are ordered by display
+                // one notification can be shown for a profile, these checks are ordered by display
                 // priority. As soon as one is found, the rest will be ignored.
                 contains(CROSS_PROFILE_NOT_ALLOWED) ->
                     getDialogContentForReason(
                         CROSS_PROFILE_NOT_ALLOWED,
-                        profile.label ?: getLabelForProfile(profile)
+                        profile.label ?: getLabelForProfile(profile),
                     )
                 contains(QUIET_MODE) ->
                     getDialogContentForReason(
                         QUIET_MODE,
-                        profile.label ?: getLabelForProfile(profile)
+                        profile.label ?: getLabelForProfile(profile),
                     )
 
-                // If a prioritized reason isn't found, generate dialog content for the first
+                // If a prioritized reason isn't found, generate notification content for the first
                 // reason in the set.
                 else ->
                     getDialogContentForReason(first(), profile.label ?: getLabelForProfile(profile))
             }
         }
-
-    // Now that the dialog's content is known, create and show the dialog.
-    ProfileUnavailableDialog(
-        onDismissRequest = onDismissRequest,
-        dialogTitle = dialogTitle,
-        dialogMessage = dialogMessage
-    )
+    if (runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED) {
+        // Show the toast message in an embedded environment.
+        ProfileUnavailableToast(toastMessage = message)
+        onReset()
+    } else {
+        // Now that the dialog's content is known, create and show the dialog.
+        ProfileUnavailableDialog(
+            onDismissRequest = onReset,
+            dialogTitle = title,
+            dialogMessage = message,
+        )
+    }
 }
 
 /**
@@ -115,7 +122,7 @@ private fun getDialogContentForReason(
         CROSS_PROFILE_NOT_ALLOWED ->
             Pair(
                 stringResource(R.string.photopicker_profile_blocked_by_admin_dialog_title),
-                stringResource(R.string.photopicker_profile_blocked_by_admin_dialog_message)
+                stringResource(R.string.photopicker_profile_blocked_by_admin_dialog_message),
             )
         QUIET_MODE,
         QUIET_MODE_DO_NOT_SHOW ->
@@ -123,26 +130,31 @@ private fun getDialogContentForReason(
                 stringResource(R.string.photopicker_profile_unavailable_dialog_title, profileLabel),
                 stringResource(
                     R.string.photopicker_profile_unavailable_dialog_message,
-                    profileLabel
-                )
+                    profileLabel,
+                ),
             )
     }
 }
 
+/**
+ * Displays an Alert dialog to inform the user that a selected profile is unavailable.
+ *
+ * @param dialogTitle The text to display as the title of the dialog.
+ * @param dialogMessage The text to display as the main body content of the dialog.
+ * @param onDismissRequest A callback invoked when the user dismisses the dialog.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileUnavailableDialog(
     onDismissRequest: () -> Unit,
     dialogTitle: String,
-    dialogMessage: String
+    dialogMessage: String,
 ) {
-    BasicAlertDialog(
-        onDismissRequest = onDismissRequest,
-    ) {
+    BasicAlertDialog(onDismissRequest = onDismissRequest) {
         Surface(
             modifier = Modifier.wrapContentWidth().wrapContentHeight(),
             shape = MaterialTheme.shapes.large,
-            tonalElevation = AlertDialogDefaults.TonalElevation
+            tonalElevation = AlertDialogDefaults.TonalElevation,
         ) {
             Column(modifier = Modifier.padding(MEASUREMENT_DIALOG_PADDING)) {
                 Text(dialogTitle, style = MaterialTheme.typography.titleLarge)
@@ -150,13 +162,22 @@ private fun ProfileUnavailableDialog(
                 Text(dialogMessage, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(MEASUREMENT_DIALOG_SPACER_SIZE))
                 Row(Modifier.align(Alignment.End)) {
-                    TextButton(
-                        onClick = onDismissRequest,
-                    ) {
+                    TextButton(onClick = onDismissRequest) {
                         Text(stringResource(android.R.string.ok))
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Displays a system Toast message to inform the user that a selected profile is unavailable.
+ *
+ * @param toastMessage The text to display inside the Toast.
+ */
+@Composable
+private fun ProfileUnavailableToast(toastMessage: String) {
+    val context = LocalContext.current
+    Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
 }
