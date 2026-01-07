@@ -1645,16 +1645,16 @@ class ConfigurationManagerTest {
 
     /**
      * Ensures that [ConfigurationManager.configuration] will emit an updated configuration with the
-     * expected location metadata access request.
+     * expected location metadata access request in ACTION_PICK_IMAGES.
      */
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
-    fun testSetIntentSetsLocationMetadataRequested() {
+    fun testSetIntentSetsLocationMetadataRequestedPickImages() {
 
         val intent =
             Intent()
                 .setAction(MediaStore.ACTION_PICK_IMAGES)
-                .putExtra(MediaStore.EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS, true)
+                .putExtra(MediaStore.EXTRA_REQUEST_LOCATION_METADATA_ACCESS, true)
 
         runTest {
             val configurationManager =
@@ -1684,11 +1684,11 @@ class ConfigurationManagerTest {
 
     /**
      * Ensures that [ConfigurationManager.configuration] will emit an updated configuration with the
-     * expected location metadata default value.
+     * expected location metadata default value in ACTION_PICK_IMAGES.
      */
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
-    fun testSetIntentSetsLocationMetadataRequestedTestDefaultValue() {
+    fun testSetIntentSetsLocationMetadataRequestedTestDefaultValuePickImages() {
 
         val intent = Intent().setAction(MediaStore.ACTION_PICK_IMAGES)
 
@@ -1714,6 +1714,81 @@ class ConfigurationManagerTest {
             assertThat(emissions.size).isEqualTo(2)
             assertThat(emissions.first()).isEqualTo(expectedConfiguration)
             assertThat(emissions.last().action).isEqualTo(MediaStore.ACTION_PICK_IMAGES)
+            assertThat(emissions.last().locationMetadataAccessRequested).isFalse()
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager.configuration] will emit an updated configuration with the
+     * expected location metadata access request in ACTION_GET_CONTENT.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    fun testSetIntentSetsLocationMetadataRequestedGetContent() {
+
+        val intent =
+            Intent()
+                .setAction(Intent.ACTION_GET_CONTENT)
+                .putExtra(MediaStore.EXTRA_REQUEST_LOCATION_METADATA_ACCESS, true)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(Intent.ACTION_GET_CONTENT)
+            assertThat(emissions.last().locationMetadataAccessRequested).isTrue()
+        }
+    }
+
+    /**
+     * Ensures that [ConfigurationManager.configuration] will emit an updated configuration with the
+     * expected location metadata default value in ACTION_GET_CONTENT.
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    fun testSetIntentSetsLocationMetadataRequestedTestDefaultValueGetContent() {
+
+        val intent = Intent().setAction(Intent.ACTION_GET_CONTENT)
+
+        runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    deviceConfigProxy,
+                    sessionId = sessionId,
+                )
+            // Expect the default configuration
+            val expectedConfiguration = PhotopickerConfiguration(action = "", sessionId = sessionId)
+
+            val emissions = mutableListOf<PhotopickerConfiguration>()
+            backgroundScope.launch { configurationManager.configuration.toList(emissions) }
+
+            advanceTimeBy(100)
+            configurationManager.setIntent(intent)
+            advanceTimeBy(100)
+
+            assertThat(emissions.size).isEqualTo(2)
+            assertThat(emissions.first()).isEqualTo(expectedConfiguration)
+            assertThat(emissions.last().action).isEqualTo(Intent.ACTION_GET_CONTENT)
             assertThat(emissions.last().locationMetadataAccessRequested).isFalse()
         }
     }
