@@ -232,9 +232,9 @@ class IntentTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
-    fun testisLocationMetadataAccessRequested() {
+    fun testisLocationMetadataAccessRequestedPickImages() {
         val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
-        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS, true)
+        intent.putExtra(MediaStore.EXTRA_REQUEST_LOCATION_METADATA_ACCESS, true)
 
         val locationMetadataRequested = intent.isLocationMetadataAccessRequested(default = false)
 
@@ -245,7 +245,18 @@ class IntentTest {
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
     fun testisLocationMetadataAccessRequestedGetContent() {
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS, true)
+        intent.putExtra(MediaStore.EXTRA_REQUEST_LOCATION_METADATA_ACCESS, true)
+
+        val locationMetadataRequested = intent.isLocationMetadataAccessRequested(default = false)
+
+        assertThat(locationMetadataRequested).isTrue()
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API)
+    fun testisLocationMetadataAccessRequestedUserSelectImagesForApp() {
+        val intent = Intent(MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP)
+        intent.putExtra(MediaStore.EXTRA_REQUEST_LOCATION_METADATA_ACCESS, true)
 
         assertThrows(IllegalIntentExtraException::class.java) {
             intent.isLocationMetadataAccessRequested(default = false)
