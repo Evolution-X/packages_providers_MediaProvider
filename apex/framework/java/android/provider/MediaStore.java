@@ -1436,6 +1436,24 @@ public final class MediaStore {
             "android.provider.extra.REQUEST_LOCATION_METADATA_ACCESS";
 
     /**
+     * The name of an optional intent-extra used to pass
+     * {@link android.widget.photopicker.PhotoPickerSelectionParams} to the photo picker. This extra
+     * can only be specified in {@link MediaStore#ACTION_PICK_IMAGES}.
+     * <p>
+     * The {@link android.widget.photopicker.PhotoPickerSelectionParams} object allows the calling
+     * app to set constraints on the media items that can be selected by the user. Media items that
+     * fail to satisfy these constraints will be disabled for selection.
+     *
+     * <p>
+     * Not passing this EXTRA, means the photo picker will not apply any restrictions on what
+     * media items users can select (except for the MIME type specified in the {@link
+     * android.content.Intent#setType(String)} extra).
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
+    public static final String EXTRA_PICK_IMAGES_SELECTION_PARAMS =
+            "android.provider.extra.PICK_IMAGES_SELECTION_PARAMS";
+
+    /**
      * Specify that the caller wants to receive the original media format without transcoding.
      *
      * <b>Caution: using this flag can cause app

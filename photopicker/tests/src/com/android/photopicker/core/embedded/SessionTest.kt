@@ -29,9 +29,11 @@ import android.os.Build
 import android.os.IBinder
 import android.os.Process
 import android.os.UserManager
+import android.platform.test.annotations.EnableFlags
 import android.platform.test.annotations.RequiresFlagsEnabled
 import android.platform.test.flag.junit.CheckFlagsRule
 import android.platform.test.flag.junit.DeviceFlagsValueProvider
+import android.platform.test.flag.junit.SetFlagsRule
 import android.test.mock.MockContentResolver
 import android.view.SurfaceView
 import android.view.WindowManager
@@ -144,6 +146,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     @get:Rule(order = 2) val glideRule = GlideTestRule()
     @get:Rule(order = 3)
     val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
+    @get:Rule(order = 4) val setFlagsRule = SetFlagsRule()
 
     /** Setup dependencies for the UninstallModules for the test class. */
     @Module
@@ -434,9 +437,10 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
         }
 
     @Test
-    @RequiresFlagsEnabled(
+    @EnableFlags(
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
         Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
     )
     fun testSessionSetsEmbeddedPhotopickerFeatureInfoInConfiguration() =
         testScope.runTest {
@@ -470,6 +474,9 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected configuration to contain the location access value")
                 .that(configuration.locationMetadataAccessRequested)
                 .isEqualTo(false)
+            assertWithMessage("Expected configuration to contain the selection params value")
+                .that(configuration.selectionParams)
+                .isNull()
         }
 
     @Test
