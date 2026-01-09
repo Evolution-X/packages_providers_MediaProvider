@@ -434,6 +434,22 @@ public final class MediaStore {
      * @hide
      */
     @VisibleForTesting
+    public static final String CREATE_DOCUMENTS_FOR_SEARCH_MEDIA_CALL =
+            "create_documents_for_search_media_call";
+
+    /**
+     * Only used for testing.
+     * @hide
+     */
+    @VisibleForTesting
+    public static final String DELETE_DOCUMENTS_FOR_SEARCH_MEDIA_CALL =
+            "delete_documents_for_search_media_call";
+
+    /**
+     * Only used for testing.
+     * @hide
+     */
+    @VisibleForTesting
     public static final String RECOVER_DATA_CALL = "recover_data_call";
 
     /**
@@ -532,6 +548,13 @@ public final class MediaStore {
      */
     @VisibleForTesting
     public static final String MARK_FILE_AS_RESTORED = "mark_file_as_restored";
+
+    /**
+     * Only used for testing.
+     * @hide
+     */
+    @VisibleForTesting
+    public static final String EXTRA_MEDIA_ITEMS = "media_items";
 
     /**
      * Activity Action: Launch a music player.
