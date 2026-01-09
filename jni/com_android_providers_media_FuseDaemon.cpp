@@ -176,6 +176,22 @@ void com_android_providers_media_FuseDaemon_invalidate_fuse_dentry_cache(JNIEnv*
     // TODO(b/145741152): Throw exception
 }
 
+void com_android_providers_media_FuseDaemon_mark_path_as_deleted_and_invalidate_fuse_dentry(
+                                                                         JNIEnv* env, jobject self,
+                                                                         jlong java_daemon,
+                                                                         jstring java_path) {
+    fuse::FuseDaemon* const daemon = reinterpret_cast<fuse::FuseDaemon*>(java_daemon);
+    if (daemon) {
+        ScopedUtfChars utf_chars_path(env, java_path);
+        if (!utf_chars_path.c_str()) {
+            return;
+        }
+
+        CHECK(pthread_getspecific(fuse::MediaProviderWrapper::gJniEnvKey) == nullptr);
+        daemon->MarkPathAsDeletedAndInvalidateFuseDentry(utf_chars_path.c_str());
+    }
+}
+
 jobject com_android_providers_media_FuseDaemon_check_fd_access(JNIEnv* env, jobject self,
                                                                jlong java_daemon, jint fd,
                                                                jint uid) {
@@ -581,6 +597,9 @@ const JNINativeMethod methods[] = {
         {"native_invalidate_fuse_dentry_cache", "(JLjava/lang/String;)V",
          reinterpret_cast<void*>(
                  com_android_providers_media_FuseDaemon_invalidate_fuse_dentry_cache)},
+        {"native_mark_path_as_deleted_and_invalidate_fuse_dentry", "(JLjava/lang/String;)V",
+         reinterpret_cast<void*>(
+                 com_android_providers_media_FuseDaemon_mark_path_as_deleted_and_invalidate_fuse_dentry)},
         {"native_check_fd_access", "(JII)Lcom/android/providers/media/FdAccessResult;",
          reinterpret_cast<void*>(com_android_providers_media_FuseDaemon_check_fd_access)},
         {"native_initialize_device_id", "(JLjava/lang/String;)V",
