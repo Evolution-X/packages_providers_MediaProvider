@@ -430,6 +430,27 @@ public final class AppSearchDbManager {
     }
 
     /**
+     * Deletes documents from AppSearch that match the given {@code query} string, additionally
+     * filtered by the criteria in the {@link SearchSpec} in a thread-safe manner.
+     *
+     * @param query      The query string.
+     * @param searchSpec The specification for the search.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void deleteDocuments(String query, SearchSpec searchSpec) throws Exception {
+        final long startTimeMillis = SystemClock.elapsedRealtime();
+        ensureAppSearchDbConnected();
+        sReadWriteLock.writeLock().lock();
+        try {
+            mAppSearchSession.removeAsync(query, searchSpec).get();
+        } finally {
+            sReadWriteLock.writeLock().unlock();
+            Log.d(TAG, "deleteDocuments() took " + (SystemClock.elapsedRealtime()
+                    - startTimeMillis) + " ms");
+        }
+    }
+
+    /**
      * Searches across documents in appsearch based on {@param searchspec}.
      * This is a read-only operation.
      *

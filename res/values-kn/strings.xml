@@ -71,7 +71,7 @@
     <string name="picker_personal_profile_label" msgid="6189198163209597344">"ವೈಯಕ್ತಿಕ"</string>
     <string name="picker_profile_admin_title" msgid="4172022376418293777">"ನಿಮ್ಮ ನಿರ್ವಾಹಕರು ನಿರ್ಬಂಧಿಸಿದ್ದಾರೆ"</string>
     <string name="picker_profile_admin_msg_from_personal" msgid="1941639895084555723">"ವೈಯಕ್ತಿಕ ಆ್ಯಪ್‌ನಿಂದ ಉದ್ಯೋಗದ ಡೇಟಾವನ್ನು ಆ್ಯಕ್ಸೆಸ್ ಮಾಡಲು ಅನುಮತಿಸಲಾಗುವುದಿಲ್ಲ"</string>
-    <string name="picker_profile_admin_msg_from_work" msgid="8048524337462790110">"ಕೆಲಸಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಆ್ಯಪ್ ಮೂಲಕ ಅಧಿಕೃತ ಡೇಟಾವನ್ನು ಪ್ರವೇಶಿಸಲು ಅನುಮತಿಸಲಾಗುವುದಿಲ್ಲ"</string>
+    <string name="picker_profile_admin_msg_from_work" msgid="8048524337462790110">"ಕೆಲಸಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಆ್ಯಪ್ ಮೂಲಕ ಅಧಿಕೃತ ಡೇಟಾವನ್ನು ಆ್ಯಕ್ಸೆಸ್ ಮಾಡಲು ಅನುಮತಿಸಲಾಗುವುದಿಲ್ಲ"</string>
     <string name="picker_profile_admin_msg" msgid="4060112887923255178">"<xliff:g id="PROFILE2">%2$s</xliff:g> ಆ್ಯಪ್‌ನಿಂದ <xliff:g id="PROFILE1">%1$s</xliff:g> ಡೇಟಾವನ್ನು ಆ್ಯಕ್ಸೆಸ್ ಮಾಡಲು ಅನುಮತಿಸಲಾಗುವುದಿಲ್ಲ"</string>
     <string name="picker_profile_switch_message" msgid="1133817927412489487">"<xliff:g id="PROFILE">%s</xliff:g> ಗೆ ಬದಲಿಸಿ"</string>
     <string name="picker_profile_work_paused_title" msgid="382212880704235925">"ಕೆಲಸಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಆ್ಯಪ್‌ಗಳನ್ನು ವಿರಾಮಗೊಳಿಸಲಾಗಿದೆ"</string>
