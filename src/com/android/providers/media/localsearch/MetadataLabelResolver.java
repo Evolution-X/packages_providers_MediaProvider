@@ -69,7 +69,7 @@ public class MetadataLabelResolver {
      * present.
      */
     @VisibleForTesting
-    String buildMetadataLabel(@NonNull MetadataInfo info) {
+    static String buildMetadataLabel(@NonNull MetadataInfo info) {
         List<String> labels = new ArrayList<>();
 
         addIfNotNull(labels, processDisplayName(info.displayName));
@@ -96,7 +96,7 @@ public class MetadataLabelResolver {
      * @return A map where keys are the media item IDs and values are the generated
      *         metadata labels.
      */
-    public Map<Long, String> generateMetadataLabels(@NonNull List<MetadataInfo> mediaInfos) {
+    public static Map<Long, String> generateMetadataLabels(@NonNull List<MetadataInfo> mediaInfos) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
                 || !Flags.enableMediaProcessing()) {
             return null;
@@ -112,7 +112,7 @@ public class MetadataLabelResolver {
     }
 
     // Converts “IMG_20240911.jpg” to “IMG_20240911 jpg”
-    private String processDisplayName(String displayName) {
+    private static String processDisplayName(String displayName) {
         if (displayName == null || TextUtils.isEmpty(displayName)) {
             return "";
         }
@@ -128,7 +128,7 @@ public class MetadataLabelResolver {
     }
 
     // Converts "/DCIM/Camera/" to "DCIM Camera"
-    private String processRelativePath(String relativePath) {
+    private static String processRelativePath(String relativePath) {
         if (relativePath == null || TextUtils.isEmpty(relativePath)) {
             return "";
         }
@@ -136,7 +136,7 @@ public class MetadataLabelResolver {
     }
 
     // Converts "image/jpeg" to "image jpeg"
-    private String processMimeType(String mimeType) {
+    private static String processMimeType(String mimeType) {
         if (mimeType == null || TextUtils.isEmpty(mimeType)) {
             return "";
         }
@@ -144,7 +144,7 @@ public class MetadataLabelResolver {
     }
 
     // Converts media_type int to a string
-    private String processMediaType(int mediaType) {
+    private static String processMediaType(int mediaType) {
         return switch (mediaType) {
             case FileColumns.MEDIA_TYPE_IMAGE -> "image images";
             case FileColumns.MEDIA_TYPE_VIDEO -> "video videos";
@@ -155,7 +155,7 @@ public class MetadataLabelResolver {
     }
 
     // Converts special_format int to a string
-    private String processSpecialFormat(int specialFormat) {
+    private static String processSpecialFormat(int specialFormat) {
         return switch (specialFormat) {
             case FileColumns.SPECIAL_FORMAT_ANIMATED_WEBP -> "animated";
             case FileColumns.SPECIAL_FORMAT_MOTION_PHOTO -> "motion photo";
@@ -165,7 +165,7 @@ public class MetadataLabelResolver {
     }
 
     // Converts 1634048606830L to "October 2021"
-    private String processTimestamp(long timestamp) {
+    private static String processTimestamp(long timestamp) {
         if (timestamp <= 0) { // MediaStore uses 0 for unknown, and negative is invalid
             return "";
         }
@@ -182,7 +182,7 @@ public class MetadataLabelResolver {
     }
 
     // Returns the label if value is non-zero (true)
-    private String processBooleanColumn(int value, String column) {
+    private static String processBooleanColumn(int value, String column) {
         // Remove is_ from column name
         return value != 0 ? column : "";
     }

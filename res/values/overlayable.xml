@@ -33,6 +33,10 @@
             <item type="string" name="config_default_media_processing_service_package" />
             <item type="integer" name="config_default_media_processing_job_interval_hours" />
             <item type="bool" name="config_disable_media_processing_for_search" />
+
+            <item type="integer" name="config_default_media_processing_batch_size" />
+            <item type="integer" name="config_default_metadata_processing_batch_size" />
+            <item type="integer" name="config_default_location_processing_batch_size" />
         </policy>
     </overlayable>
 </resources>

@@ -127,16 +127,16 @@ public class MediaLocationResolver {
         }
 
         mExecutor.execute(() -> {
-            Map<Long, String> resultsMap = processLocationLabels(mediaLocationInfos);
+            Map<Long, LocationLabelInfo> resultsMap = processLocationLabels(mediaLocationInfos);
             callback.onLabelsResult(resultsMap);
         });
     }
 
     // Asynchronous processing for API 33+
-    private Map<Long, String> processLocationLabels(
+    private Map<Long, LocationLabelInfo> processLocationLabels(
             @NonNull List<MediaLocationInfo> mediaLocationInfos) {
-        long processLocationLabelsStartTime = SystemClock.elapsedRealtimeNanos();
-        Map<Long, String> resultsMap = new ConcurrentHashMap<>();
+        long processLocationLabelsStartTime = SystemClock.elapsedRealtime();
+        Map<Long, LocationLabelInfo> resultsMap = new ConcurrentHashMap<>();
         CountDownLatch latch = new CountDownLatch(mediaLocationInfos.size());
 
         for (final MediaLocationInfo info : mediaLocationInfos) {
@@ -153,13 +153,17 @@ public class MediaLocationResolver {
                             public void onGeocode(@NonNull List<Address> addresses) {
                                 // Label is an empty string if the list of addresses is empty
                                 String label = toLocationLabel(addresses);
-                                resultsMap.put(info.id, label);
+                                resultsMap.put(info.id,
+                                        new LocationLabelInfo(info.genModified, label));
                                 latch.countDown();
                             }
 
                             @Override
                             public void onError(@Nullable String errorMessage) {
                                 Log.w(TAG, "Geocoder error for " + info.id + ": " + errorMessage);
+                                // Put null strings as label on error
+                                resultsMap.put(info.id,
+                                        new LocationLabelInfo(info.genModified, /* label */ null));
                                 latch.countDown();
                             }
                         });
@@ -181,9 +185,9 @@ public class MediaLocationResolver {
         }
 
         long processLocationLabelsExecutionTime =
-                SystemClock.elapsedRealtimeNanos() - processLocationLabelsStartTime;
+                SystemClock.elapsedRealtime() - processLocationLabelsStartTime;
         Log.i(TAG, "Time taken to process geolocation labels for " + mediaLocationInfos.size()
-                + " items: " + processLocationLabelsExecutionTime + " ns. Results generated : "
+                + " items: " + processLocationLabelsExecutionTime + " ms. Results generated : "
                 + resultsMap.size());
 
         return resultsMap;
@@ -239,7 +243,7 @@ public class MediaLocationResolver {
          *                  {@link MediaLocationInfo#id})
          *                  and values are the generated location labels.
          */
-        void onLabelsResult(@NonNull Map<Long, String> labelsMap);
+        void onLabelsResult(@NonNull Map<Long, LocationLabelInfo> labelsMap);
     }
 
     /**
@@ -247,6 +251,7 @@ public class MediaLocationResolver {
      */
     public static class MediaLocationInfo {
         public final long id;
+        public final long genModified;
         public final double latitude;
         public final double longitude;
 
@@ -257,10 +262,21 @@ public class MediaLocationResolver {
          * @param latitude The latitude of the media item.
          * @param longitude The longitude of the media item.
          */
-        public MediaLocationInfo(long id, double latitude, double longitude) {
+        public MediaLocationInfo(long id, long genModified, double latitude, double longitude) {
             this.id = id;
+            this.genModified = genModified;
             this.latitude = latitude;
             this.longitude = longitude;
+        }
+    }
+
+    public static class LocationLabelInfo {
+        public final long genModified;
+        public final Optional<String> label;
+
+        public LocationLabelInfo(long genMod, String label) {
+            this.genModified = genMod;
+            this.label = Optional.ofNullable(label);
         }
     }
 }
