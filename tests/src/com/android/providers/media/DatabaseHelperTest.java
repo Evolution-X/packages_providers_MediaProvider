@@ -50,6 +50,7 @@ import androidx.collection.ArraySet;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.providers.media.localsearch.MediaProcessingStatus;
 import com.android.providers.media.stableuris.dao.BackupIdRow;
 import com.android.providers.media.util.UserCache;
 
@@ -712,6 +713,39 @@ public class DatabaseHelperTest {
                 res.add(c.getString(0));
             }
             return res;
+        }
+    }
+
+    @Test
+    public void testMediaProcessingStatusTable() {
+        try (DatabaseHelper helper = new DatabaseHelperB(sIsolatedContext, TEST_CLEAN_DB)) {
+            SQLiteDatabase db = helper.getWritableDatabaseForTest();
+            final int testRowId = 42;
+
+            final ContentValues values = new ContentValues();
+            values.put(MediaProcessingStatus.FILE_ID_COLUMN, testRowId);
+            values.put(MediaProcessingStatus.MEDIA_TYPE, FileColumns.MEDIA_TYPE_NONE);
+            values.put(MediaProcessingStatus.GEN_MODIFIED, 1);
+            db.insert(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, values);
+
+            String selection = MediaProcessingStatus.FILE_ID_COLUMN + "=" + testRowId;
+            try (Cursor c = db.query(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null,
+                    selection, null, null, null, null)) {
+                assertEquals(1, c.getCount());
+                c.moveToNext();
+                assertEquals(testRowId,
+                        c.getInt(c.getColumnIndexOrThrow(MediaProcessingStatus.FILE_ID_COLUMN)));
+                assertEquals(FileColumns.MEDIA_TYPE_NONE,
+                        c.getInt(c.getColumnIndexOrThrow(MediaProcessingStatus.MEDIA_TYPE)));
+                assertEquals(1,
+                        c.getInt(c.getColumnIndexOrThrow(MediaProcessingStatus.GEN_MODIFIED)));
+                assertEquals(0, c.getInt(
+                        c.getColumnIndexOrThrow(MediaProcessingStatus.MEDIA_LABEL_STATUS)));
+                assertEquals(0, c.getInt(
+                        c.getColumnIndexOrThrow(MediaProcessingStatus.LOCATION_LABEL_STATUS)));
+                assertEquals(0, c.getInt(
+                        c.getColumnIndexOrThrow(MediaProcessingStatus.METADATA_LABEL_STATUS)));
+            }
         }
     }
 
