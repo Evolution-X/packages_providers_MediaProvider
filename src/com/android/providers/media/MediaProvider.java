@@ -2257,7 +2257,7 @@ public class MediaProvider extends ContentProvider {
 
                         // Since the operation involves low-level file rename and move
                         // operations, need to invalidate the dentry cache for the affected paths.
-                        invalidateFuseDentry(originalPath);
+                        markPathAsDeletedAndInvalidateFuseDentry(originalPath);
                         invalidateFuseDentry(newPath);
                         return value == 0;
                     }
@@ -2277,7 +2277,7 @@ public class MediaProvider extends ContentProvider {
             @NonNull String newPath) {
         try {
             Os.rename(originalPath, newPath);
-            invalidateFuseDentry(originalPath);
+            markPathAsDeletedAndInvalidateFuseDentry(originalPath);
             invalidateFuseDentry(newPath);
             return true;
         } catch (ErrnoException e) {
@@ -7647,7 +7647,7 @@ public class MediaProvider extends ContentProvider {
 
             // Since the trash operation involves low-level file rename and move operations,
             // need to invalidate the dentry cache for the affected paths.
-            invalidateFuseDentry(path);
+            markPathAsDeletedAndInvalidateFuseDentry(path);
             invalidateFuseDentry(trashedPath);
 
             result.putString(MediaStore.FILE_PATH, trashedPath);
@@ -7678,7 +7678,7 @@ public class MediaProvider extends ContentProvider {
 
             // Since the restore operation involves low-level file rename and move operations,
             // need to invalidate the dentry cache for the affected paths.
-            invalidateFuseDentry(trashedPath);
+            markPathAsDeletedAndInvalidateFuseDentry(trashedPath);
             invalidateFuseDentry(restoredPath);
 
             result.putString(MediaStore.FILE_PATH, restoredPath);
@@ -9831,7 +9831,7 @@ public class MediaProvider extends ContentProvider {
                         Log.DEBUG, /* logOnlyIfDebuggable */true);
                 try {
                     Os.rename(beforePath, afterPath);
-                    invalidateFuseDentry(beforePath);
+                    markPathAsDeletedAndInvalidateFuseDentry(beforePath);
                     invalidateFuseDentry(afterPath);
                 } catch (ErrnoException e) {
                     if (e.errno == OsConstants.ENOENT) {
@@ -11257,7 +11257,25 @@ public class MediaProvider extends ContentProvider {
 
     private void deleteAndInvalidate(@NonNull File file) {
         file.delete();
-        invalidateFuseDentry(file);
+        // Mark node as deleted and invalidate Fuse Dentry cache
+        markPathAsDeletedAndInvalidateFuseDentry(file.getAbsolutePath());
+    }
+
+    private void markPathAsDeletedAndInvalidateFuseDentry(@NonNull String path) {
+        try {
+            final FuseDaemon daemon = getFuseDaemonForFile(new File(path), mVolumeCache);
+            if (isFuseThread()) {
+                // If we are on a FUSE thread, we don't need to do this as it is already handled.
+                return;
+            } else if (shouldBeVisible(path)) {
+                Log.w(TAG, "Don't delete fuse dentry cache for volume root path " + path);
+                return;
+            } else {
+                daemon.markPathAsDeletedAndInvalidateFuseDentry(path);
+            }
+        } catch (FileNotFoundException e) {
+            Log.w(TAG, "Failed to mark path as deleted in FUSE", e);
+        }
     }
 
     private void deleteIfAllowed(Uri uri, Bundle extras, String path) {

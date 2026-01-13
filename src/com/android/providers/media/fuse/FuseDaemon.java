@@ -200,6 +200,21 @@ public final class FuseDaemon extends Thread {
         }
     }
 
+    /**
+     * Marks path as deleted and invalidates FUSE VFS dentry cache for {@code path}.
+     */
+    public void markPathAsDeletedAndInvalidateFuseDentry(String path) {
+        synchronized (mLock) {
+            if (mPtr == 0) {
+                Log.i(TAG,
+                        "markPathAsDeletedAndInvalidateFuseDentry failed, FUSE daemon "
+                                + "unavailable");
+                return;
+            }
+            native_mark_path_as_deleted_and_invalidate_fuse_dentry(mPtr, path);
+        }
+    }
+
     public FdAccessResult checkFdAccess(ParcelFileDescriptor fileDescriptor, int uid)
             throws IOException {
         synchronized (mLock) {
@@ -407,6 +422,8 @@ public final class FuseDaemon extends Thread {
             int fd);
     private native boolean native_uses_fuse_passthrough(long daemon);
     private native void native_invalidate_fuse_dentry_cache(long daemon, String path);
+    private native void native_mark_path_as_deleted_and_invalidate_fuse_dentry(long daemon,
+            String path);
     private native boolean native_is_started(long daemon);
     private native FdAccessResult native_check_fd_access(long daemon, int fd, int uid);
     private native void native_initialize_device_id(long daemon, String path);
