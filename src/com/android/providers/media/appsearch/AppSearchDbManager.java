@@ -289,10 +289,6 @@ public final class AppSearchDbManager {
 
                     try {
                         switch (property) {
-                            case MediaItem.PROPERTY_DATE_TAKEN ->
-                                    mediaItem.setDateTaken((long) value);
-                            case MediaItem.PROPERTY_MEDIA_TYPE ->
-                                    mediaItem.setMediaType((long) value);
                             case MediaItem.PROPERTY_METADATA_EXTRACTED ->
                                     mediaItem.setMetadataExtracted((String) value);
                             case MediaItem.PROPERTY_LOCATION_EXTRACTED ->
@@ -300,8 +296,6 @@ public final class AppSearchDbManager {
                             case MediaItem.PROPERTY_LABELS_EXTRACTED ->
                                     mediaItem.setLabelsExtracted((String) value);
                             case MediaItem.PROPERTY_DIRTY -> mediaItem.setDirty((boolean) value);
-                            case MediaItem.PROPERTY_VOLUME_NAME ->
-                                    mediaItem.setVolumeName((String) value);
                             case MediaItem.PROPERTY_EMBEDDINGS -> {
                                 @SuppressWarnings("unchecked")
                                 List<EmbeddingVector> embeddingList = (List<EmbeddingVector>) value;
@@ -493,18 +487,14 @@ public final class AppSearchDbManager {
             return null;
         }
 
-        MediaItem item = new MediaItem();
-
-        item.setId(doc.getId());
-        item.setNamespace(doc.getNamespace());
-        item.setFileId(doc.getPropertyLong(MediaItem.PROPERTY_FILE_ID));
-        item.setDateTaken(doc.getPropertyLong(MediaItem.PROPERTY_DATE_TAKEN));
-        item.setMediaType(doc.getPropertyLong(MediaItem.PROPERTY_MEDIA_TYPE));
+        MediaItem item = new MediaItem(doc.getPropertyLong(MediaItem.PROPERTY_FILE_ID),
+                doc.getPropertyLong(MediaItem.PROPERTY_MEDIA_TYPE),
+                doc.getPropertyLong(MediaItem.PROPERTY_DATE_TAKEN),
+                doc.getPropertyString(MediaItem.PROPERTY_VOLUME_NAME));
         item.setDirty(doc.getPropertyBoolean(MediaItem.PROPERTY_DIRTY));
         item.setMetadataExtracted(doc.getPropertyString(MediaItem.PROPERTY_METADATA_EXTRACTED));
         item.setLocationExtracted(doc.getPropertyString(MediaItem.PROPERTY_LOCATION_EXTRACTED));
         item.setLabelsExtracted(doc.getPropertyString(MediaItem.PROPERTY_LABELS_EXTRACTED));
-        item.setVolumeName(doc.getPropertyString(MediaItem.PROPERTY_VOLUME_NAME));
         EmbeddingVector[] embeddings = doc.getPropertyEmbeddingArray(MediaItem.PROPERTY_EMBEDDINGS);
         if (embeddings != null) {
             item.setEmbeddings(Arrays.asList(embeddings));

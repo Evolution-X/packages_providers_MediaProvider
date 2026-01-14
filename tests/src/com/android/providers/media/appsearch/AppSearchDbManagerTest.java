@@ -551,33 +551,20 @@ public class AppSearchDbManagerTest {
     }
 
 
-
     @NonNull
     private MediaItem getImageDocument() {
-        MediaItem img = new MediaItem();
-        img.setId("id1");
-        img.setFileId(100);
-        img.setMediaType(1);
-        img.setDateTaken(10000);
-        img.setNamespace(AppSearchDbManager.NAMESPACE);
+        MediaItem img = new MediaItem(100, 1, 10000, "external_primary");
         img.setLabelsExtracted("cat basket kitten");
         img.setLocationExtracted("london");
         img.setMetadataExtracted("dog");
-        img.setVolumeName("external_primary");
         img.setEmbeddings(Collections.singletonList(getEmbeddingForText("foo")));
         return img;
     }
 
     @NonNull
     private MediaItem createDocumentWithDifferentLabels(String label, int repeat, long fileId) {
-        MediaItem img = new MediaItem();
-        img.setId(label + fileId);
-        img.setFileId(fileId);
-        img.setMediaType(1);
-        img.setDateTaken(10000);
-        img.setNamespace(AppSearchDbManager.NAMESPACE);
+        MediaItem img = new MediaItem(fileId, 1, 10000, "external_primary");
         img.setMetadataExtracted("foo ".repeat(repeat) + label);
-        img.setVolumeName("external_primary");
         img.setEmbeddings(Collections.singletonList(getEmbeddingForText("bar")));
         img.setLabelsExtracted("foo");
         img.setLocationExtracted("foo");
@@ -586,16 +573,10 @@ public class AppSearchDbManagerTest {
 
     @NonNull
     private MediaItem getVideoDocument() {
-        MediaItem video = new MediaItem();
-        video.setId("id2");
-        video.setFileId(101);
-        video.setMediaType(2);
-        video.setDateTaken(20000);
-        video.setNamespace(AppSearchDbManager.NAMESPACE);
+        MediaItem video = new MediaItem(101, 2, 20000, "external_primary");
         video.setLabelsExtracted("house");
         video.setLocationExtracted("bengaluru");
         video.setMetadataExtracted("dog bark puppy");
-        video.setVolumeName("external_primary");
         video.setEmbeddings(Collections.singletonList(getEmbeddingForText("cat")));
         return video;
     }
