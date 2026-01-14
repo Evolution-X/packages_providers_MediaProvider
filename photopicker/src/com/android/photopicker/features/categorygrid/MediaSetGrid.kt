@@ -45,7 +45,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -315,7 +314,6 @@ fun mediaSetContentFactory(
     Column(
         // Apply semantics for the click handlers
         Modifier.semantics(mergeDescendants = true) {
-                contentDescription = item.mediaSet.displayName ?: ""
                 onClick(
                     action = {
                         onClick?.invoke(item)
