@@ -951,7 +951,6 @@ fun defaultBuildPersonMediaSetItem(
     Box(
         // Apply semantics for the click handlers
         Modifier.semantics(mergeDescendants = true) {
-                contentDescription = item.mediaSet.displayName ?: ""
                 onClick(
                     action = {
                         onClick?.invoke(item)
@@ -992,7 +991,6 @@ private fun defaultBuildCategoryItem(
     // Apply semantics for the click handlers
     var baseModifier =
         Modifier.semantics(mergeDescendants = true) {
-                contentDescription = item.category.displayName ?: ""
                 onClick(
                     action = {
                         onClick?.invoke(item)
