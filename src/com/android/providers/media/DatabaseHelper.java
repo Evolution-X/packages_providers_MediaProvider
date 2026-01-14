@@ -1184,6 +1184,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
                     + "audio_id INTEGER NOT NULL,playlist_id INTEGER NOT NULL,"
                     + "play_order INTEGER NOT NULL)");
             updateAddMediaGrantsTable(db);
+            createMediaProcessingStatusTable(db);
             createSearchIndexProcessingStatusTable(db);
         }
 
@@ -1231,6 +1232,14 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
         db.execSQL(
                 "CREATE INDEX generation_granted_index ON media_grants"
                         + "(generation_granted)");
+    }
+
+    private static void createMediaProcessingStatusTable(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS media_processing_status ("
+                + "file_id INTEGER PRIMARY KEY, " + "media_type INTEGER, "
+                + "generation_modified INTEGER, " + "is_media_label_processed INTEGER DEFAULT 0, "
+                + "is_location_label_processed INTEGER DEFAULT 0, "
+                + "is_metadata_label_processed INTEGER DEFAULT 0" + ")");
     }
 
     /**
@@ -2102,7 +2111,7 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
     // to go independent of U schema changes.
     static final int VERSION_U = 1409;
     static final int VERSION_V = 1506;
-    static final int VERSION_B = 1603;
+    static final int VERSION_B = 1604;
     public static final int VERSION_LATEST = VERSION_B;
 
     /**
@@ -2362,6 +2371,10 @@ public class DatabaseHelper extends SQLiteOpenHelper implements AutoCloseable {
 
             if (fromVersion < 1603) {
                 // Empty version bump to ensure triggers are recreated
+            }
+
+            if (fromVersion < 1604) {
+                createMediaProcessingStatusTable(db);
             }
 
             // If this is the legacy database, it's not worth recomputing data
