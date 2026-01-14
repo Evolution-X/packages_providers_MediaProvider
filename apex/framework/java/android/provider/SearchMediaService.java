@@ -23,11 +23,15 @@ import android.annotation.SdkConstant;
 import android.annotation.SystemApi;
 import android.app.Service;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.OutcomeReceiver;
 import android.os.RemoteException;
 import android.util.Log;
+
+import androidx.annotation.AnyThread;
+import androidx.annotation.RequiresApi;
 
 import com.android.providers.media.flags.Flags;
 
@@ -65,6 +69,7 @@ import com.android.providers.media.flags.Flags;
  * by setting value of the resource {@code config_default_media_search_media_service_package}.
  * The overlayable subset which has this resource is {@code MediaProviderConfig}
  *
+ * <p> Usage of this class is only supported on devices running Android T (API 33) or higher.
  * @hide
  */
 @SystemApi
@@ -163,13 +168,24 @@ public abstract class SearchMediaService extends Service {
      * Called when a media search is requested based on the given text.
      *
      * <p>
-     * The {@code searchId} must be unique for every call to properly identify the response.
+     * This method may be invoked on any thread and the results will be received on the
+     * calling app's thread which requested for search results.
      * </p>
      *
      * <p>
      * Search results or error message are returned asynchronously via the provided
-     * {@code callback}. The provided {@code callback} may be invoked on background thread and
-     * will be received on the calling app's thread that requested for search results.
+     * {@code callback}. This method may be invoked by framework on any thread.
+     * </p>
+     *
+     * <p>
+     * The callback would be invoked exactly once per query to deliver search results or error.
+     * If {@link SearchMediaService#onCancelSearch(String)} is called before search results or error
+     * is sent by callback, then the search will be considered cancelled and callback would not be
+     * invoked in this case.
+     * </p>
+     *
+     * <p>
+     * The {@code searchId} must be unique for every call to correctly identify the response.
      * </p>
      *
      * <p>
@@ -193,6 +209,7 @@ public abstract class SearchMediaService extends Service {
      * @param searchParams       a {@code Bundle} containing additional search parameters
      * @param outcomeReceiver    the {@code OutcomeReceiver} to send search results or errors
      */
+    @AnyThread
     public abstract void onSearchMedia(@NonNull String searchText, @NonNull String searchId,
             @NonNull Bundle searchParams, @NonNull OutcomeReceiver<SearchMediaResultPage,
                     SearchMediaException> outcomeReceiver);
@@ -206,11 +223,13 @@ public abstract class SearchMediaService extends Service {
      *
      * @param searchId an ID to uniquely identify the search request.
      */
+    @AnyThread
     public abstract void onCancelSearch(@NonNull String searchId);
 
 
     private final ISearchMediaService mInterface = new ISearchMediaService.Stub() {
         @Override
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public void searchMedia(String searchText, String searchId, Bundle searchParams,
                 ISearchMediaCallback callback) {
             OutcomeReceiver<SearchMediaResultPage, SearchMediaException> receiver = new
@@ -235,10 +254,18 @@ public abstract class SearchMediaService extends Service {
                     }
                 }
             };
-            onSearchMedia(searchText, searchId, searchParams, receiver);
+
+            try {
+                onSearchMedia(searchText, searchId, searchParams, receiver);
+            } catch (Exception e) {
+                String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
+                receiver.onError(new SearchMediaException(searchId, errorMessage,
+                        SearchMediaException.ERROR_UNKNOWN, /* isRetryable */ false));
+            }
         }
 
         @Override
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public void cancelSearch(String searchId) {
             onCancelSearch(searchId);
         }
