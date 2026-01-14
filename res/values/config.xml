@@ -51,4 +51,8 @@
     If set to true, no media processing job is scheduled. -->
     <bool name="config_disable_media_processing_for_search">false</bool>
 
+    <!-- Configuration to set the batch size for label generation. -->
+    <integer name="config_default_media_processing_batch_size">10</integer>
+    <integer name="config_default_location_processing_batch_size">50</integer>
+    <integer name="config_default_metadata_processing_batch_size">100</integer>
 </resources>

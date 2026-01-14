@@ -117,6 +117,17 @@ public class MediaProcessingWorkScheduler extends Worker {
         }
     }
 
+
+    private int getMetadataProcessingBatchSize() {
+        return mContext.getResources().getInteger(
+                R.integer.config_default_metadata_processing_batch_size);
+    }
+
+    private int getLocationProcessingBatchSize() {
+        return mContext.getResources().getInteger(
+                R.integer.config_default_location_processing_batch_size);
+    }
+
     private long getRowTrackerFromSharedPreferences(String key) {
         SharedPreferences prefs = mContext.getSharedPreferences(MEDIAPROVIDER_PREFS,
                 Context.MODE_PRIVATE);
