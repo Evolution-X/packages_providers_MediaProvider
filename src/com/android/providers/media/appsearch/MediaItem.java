@@ -16,6 +16,7 @@
 
 package com.android.providers.media.appsearch;
 
+import androidx.annotation.NonNull;
 import androidx.appsearch.app.EmbeddingVector;
 import androidx.appsearch.app.GenericDocument;
 
@@ -45,22 +46,22 @@ public class MediaItem {
     /**
      * The unique identifier for the document.
      */
-    String id;
+    final String id;
 
     /**
      * The file id corresponding to media item present in files table.
      */
-    long fileId;
+    final long fileId;
 
     /**
      * The date taken of the media item.
      */
-    long dateTaken;
+    final long dateTaken;
 
     /**
      * The media type of the media item.
      */
-    long mediaType;
+    final long mediaType;
 
     /**
      * Metadata labels extracted from file metadata.
@@ -87,14 +88,39 @@ public class MediaItem {
     /**
      * The volume to which the media item belongs to.
      */
-    String volumeName;
+    final String volumeName;
 
     /**
      * These are machine-generated embeddings. They are used for semantic search.
      */
     List<EmbeddingVector> embeddings;
 
-    public MediaItem() {
+    /**
+     * Constructs a new {@code MediaItem}.
+     *
+     * @throws IllegalArgumentException if {@code fileId} or {@code dateTaken} are invalid values
+     *                                  (less than or equal to 0).
+     */
+    public MediaItem(long fileId, long mediaType, long dateTaken, @NonNull String volumeName) {
+        validateArgs(fileId, dateTaken);
+        this.fileId = fileId;
+        this.id = String.valueOf(fileId);
+        this.namespace = AppSearchDbManager.NAMESPACE;
+        this.mediaType = mediaType;
+        this.dateTaken = dateTaken;
+        this.volumeName = volumeName;
+    }
+
+    private void validateArgs(long fileId, long dateTaken) {
+        if (fileId <= 0) {
+            throw new IllegalArgumentException(
+                    "Invalid media item. FileId must be > 0. Actual : " + fileId);
+        }
+
+        if (dateTaken <= 0) {
+            throw new IllegalArgumentException(
+                    "Invalid media item. Date taken must be > 0. Actual : " + dateTaken);
+        }
     }
 
     public String getNamespace() {
@@ -109,32 +135,16 @@ public class MediaItem {
         return id;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
     public long getFileId() {
         return fileId;
-    }
-
-    public void setFileId(long fileId) {
-        this.fileId = fileId;
     }
 
     public long getDateTaken() {
         return dateTaken;
     }
 
-    public void setDateTaken(long dateTaken) {
-        this.dateTaken = dateTaken;
-    }
-
     public long getMediaType() {
         return mediaType;
-    }
-
-    public void setMediaType(long mediaType) {
-        this.mediaType = mediaType;
     }
 
     public String getMetadataExtracted() {
@@ -171,10 +181,6 @@ public class MediaItem {
 
     public String getVolumeName() {
         return volumeName;
-    }
-
-    public void setVolumeName(String volumeName) {
-        this.volumeName = volumeName;
     }
 
     public List<EmbeddingVector> getEmbeddings() {

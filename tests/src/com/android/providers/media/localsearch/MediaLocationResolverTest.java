@@ -16,6 +16,7 @@
 
 package com.android.providers.media.localsearch;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -37,6 +38,7 @@ import androidx.test.runner.AndroidJUnit4;
 
 import com.android.providers.media.IsolatedContext;
 import com.android.providers.media.flags.Flags;
+import com.android.providers.media.localsearch.MediaLocationResolver.LocationLabelInfo;
 import com.android.providers.media.localsearch.MediaLocationResolver.MediaLocationInfo;
 
 import org.junit.Before;
@@ -59,6 +61,7 @@ public class MediaLocationResolverTest {
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
 
     private static final long TEST_URI_ID = 1;
+    private static final long TEST_GEN_MODIFIED = 100;
     private static final double TEST_LAT = 37.422;
     private static final double TEST_LONG = -122.084;
 
@@ -72,14 +75,14 @@ public class MediaLocationResolverTest {
      */
     private static class TestCallback implements MediaLocationResolver.LocationLabelsCallback {
         private final Runnable mRunnable;
-        public Map<Long, String> resultMap;
+        public Map<Long, LocationLabelInfo> resultMap;
 
         TestCallback(Runnable runnable) {
             mRunnable = runnable;
         }
 
         @Override
-        public void onLabelsResult(Map<Long, String> labelsMap) {
+        public void onLabelsResult(Map<Long, LocationLabelInfo> labelsMap) {
             this.resultMap = labelsMap;
             // Notify the runnable that the callback was invoked
             mRunnable.run();
@@ -114,7 +117,7 @@ public class MediaLocationResolverTest {
         TestCallback callback = new TestCallback(runnable);
 
         List<MediaLocationInfo> infos = Collections.singletonList(
-                new MediaLocationInfo(TEST_URI_ID, TEST_LAT, TEST_LONG));
+                new MediaLocationInfo(TEST_URI_ID, TEST_GEN_MODIFIED, TEST_LAT, TEST_LONG));
 
         mLocationResolver.generateLocationLabels(infos, callback);
 
@@ -127,7 +130,10 @@ public class MediaLocationResolverTest {
 
         if (!callback.resultMap.isEmpty()) {
             assertTrue(callback.resultMap.containsKey(TEST_URI_ID));
-            String locationLabel = callback.resultMap.get(TEST_URI_ID);
+            LocationLabelInfo labelInfo = callback.resultMap.get(TEST_URI_ID);
+            assertEquals(TEST_GEN_MODIFIED, labelInfo.genModified);
+            assertTrue(labelInfo.label.isPresent());
+            String locationLabel = labelInfo.label.get();
             assertTrue(locationLabel.contains("mountain view")); // Locality
             assertTrue(locationLabel.contains("california")); // Admin Area
             assertTrue(locationLabel.contains("united states")); // Country Name
@@ -144,9 +150,8 @@ public class MediaLocationResolverTest {
         Runnable runnable = mock(Runnable.class);
         TestCallback callback = new TestCallback(runnable);
 
-        List<MediaLocationInfo> infos = Collections.singletonList(
-                new MediaLocationInfo(TEST_URI_ID, 200.0, TEST_LONG) // Invalid Latitude
-        );
+        List<MediaLocationInfo> infos = Collections.singletonList(// Invalid Latitude
+                new MediaLocationInfo(TEST_URI_ID, TEST_GEN_MODIFIED, 200.0, TEST_LONG));
 
         mLocationResolver.generateLocationLabels(infos, callback);
 
@@ -167,7 +172,7 @@ public class MediaLocationResolverTest {
 
         List<MediaLocationInfo> infos = new ArrayList<>();
         for (int i = 0; i < MediaLocationResolver.MAX_BATCH_SIZE + 1; i++) {
-            infos.add(new MediaLocationInfo(i, TEST_LAT, TEST_LONG));
+            infos.add(new MediaLocationInfo(i, TEST_GEN_MODIFIED, TEST_LAT, TEST_LONG));
         }
 
         assertThrows(IllegalArgumentException.class, () -> {

@@ -8796,14 +8796,14 @@ public class MediaProvider extends ContentProvider {
         // Reconstruct MediaItem objects from the Bundles.
         final ArrayList<MediaItem> documents = new ArrayList<>();
         for (Bundle bundle : documentBundles) {
-            MediaItem item = new MediaItem();
+            MediaItem item = new MediaItem(
+                    bundle.getLong(MediaItem.PROPERTY_FILE_ID),
+                    bundle.getLong(MediaItem.PROPERTY_MEDIA_TYPE),
+                    bundle.getLong(MediaItem.PROPERTY_DATE_TAKEN),
+                    bundle.getString(MediaItem.PROPERTY_VOLUME_NAME)
+            );
             item.setNamespace(bundle.getString(MediaItem.PROPERTY_NAMESPACE));
-            item.setId(bundle.getString(MediaItem.PROPERTY_ID));
-            item.setFileId(bundle.getLong(MediaItem.PROPERTY_FILE_ID));
-            item.setDateTaken(bundle.getLong(MediaItem.PROPERTY_DATE_TAKEN));
-            item.setMediaType(bundle.getLong(MediaItem.PROPERTY_MEDIA_TYPE));
             item.setMetadataExtracted(bundle.getString(MediaItem.PROPERTY_METADATA_EXTRACTED));
-            item.setVolumeName(bundle.getString(MediaItem.PROPERTY_VOLUME_NAME));
             documents.add(item);
         }
 

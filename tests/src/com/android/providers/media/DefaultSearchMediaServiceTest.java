@@ -277,28 +277,16 @@ public class DefaultSearchMediaServiceTest {
     @NonNull
     private MediaItem createRelevanceMediaItem(long fileId, String metadata,
             List<EmbeddingVector> embeddingVectors) {
-        MediaItem item = new MediaItem();
-        item.setNamespace(AppSearchDbManager.NAMESPACE);
-        item.setId("relevance_" + fileId);
-        item.setFileId(fileId);
-        item.setMediaType(1);
-        item.setDateTaken(20000 + fileId);
+        MediaItem item = new MediaItem(fileId, 1, 20000 + fileId, MediaStore.VOLUME_EXTERNAL);
         item.setMetadataExtracted(metadata);
         item.setEmbeddings(embeddingVectors);
-        item.setVolumeName(MediaStore.VOLUME_EXTERNAL);
         return item;
     }
 
     @NonNull
     private MediaItem createMediaItem(String label, int repeat, long fileId) {
-        MediaItem item = new MediaItem();
-        item.setNamespace(AppSearchDbManager.NAMESPACE);
-        item.setId(label + fileId);
-        item.setFileId(fileId);
-        item.setMediaType(1);
-        item.setDateTaken(10000 + fileId);
+        MediaItem item = new MediaItem(fileId, 1, 10000 + fileId, MediaStore.VOLUME_EXTERNAL);
         item.setMetadataExtracted("foo ".repeat(repeat) + label);
-        item.setVolumeName(MediaStore.VOLUME_EXTERNAL);
 
         List<EmbeddingVector> embeddings = new ArrayList<>();
         embeddings.add(getEmbeddingForText("bar"));

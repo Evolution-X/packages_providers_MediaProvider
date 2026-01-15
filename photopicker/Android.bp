@@ -68,7 +68,7 @@ android_library {
         "mediaprovider_flags_java_lib",
         "modules-utils-build",
         "androidx.media3.media3-common",
-        "androidx.media3.media3-exoplayer",
+        "androidx.media3.media3-inspector",
     ],
     apex_available: [
         "//apex_available:platform",
