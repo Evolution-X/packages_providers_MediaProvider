@@ -2386,11 +2386,13 @@ public class MediaProvider extends ContentProvider {
             int countDeleted = 0;
             if (cursor != null) {
                 while (cursor.moveToNext()) {
-                    File file = new File(cursor.getString(1));
+                    final String path = cursor.getString(1);
                     // We check for existence to be sure we don't delete files that still exist.
                     // This can happen even if the pair (package, userid) is unknown,
                     // since some framework implementations may rely on special userids.
-                    if (!file.exists()) {
+                    // If the path is null or empty, it cannot exist on disk,
+                    // so we proceed to delete the entry.
+                    if (path == null || !new File(path).exists()) {
                         countDeleted +=
                                 db.delete("files", "_id=?", new String[]{cursor.getString(0)});
                     }
