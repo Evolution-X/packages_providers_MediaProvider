@@ -81,6 +81,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
     private final boolean mLaunchedPickerInExpandedState;
     private final boolean mLocationMetadataRequested;
     @Nullable private final PhotoPickerSelectionParams mSelectionParams;
+    @Nullable private final PhotoPickerUiCustomizationParams mUiCustomizationParams;
 
     private EmbeddedPhotoPickerFeatureInfo(
             List<String> mimeTypes,
@@ -94,7 +95,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             int highlightType,
             boolean launchedPickerInExpandedState,
             boolean locationMetadataRequested,
-            @Nullable PhotoPickerSelectionParams selectionParams
+            @Nullable PhotoPickerSelectionParams selectionParams,
+            @Nullable PhotoPickerUiCustomizationParams uiCustomizationParams
     ) {
         this.mMimeTypes = mimeTypes;
         this.mAccentColor = accentColor;
@@ -108,6 +110,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         this.mLaunchedPickerInExpandedState = launchedPickerInExpandedState;
         this.mLocationMetadataRequested = locationMetadataRequested;
         this.mSelectionParams = selectionParams;
+        this.mUiCustomizationParams = uiCustomizationParams;
     }
     @NonNull
     public List<Uri> getPreSelectedUris() {
@@ -185,6 +188,18 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
     public PhotoPickerSelectionParams getSelectionParams() {
         return mSelectionParams;
     }
+    /**
+     * Returns the ui customization options set by the app.
+     *
+     * @return The {@link PhotoPickerUiCustomizationParams} object containing the ui
+     *         customization options, or {@code null} if no custom options are set.
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
+    @Nullable
+    public PhotoPickerUiCustomizationParams getUiCustomizationParams() {
+        return mUiCustomizationParams;
+    }
+
 
     public static final class Builder {
         //All mime-types are returned by default.
@@ -207,6 +222,9 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private static final boolean DEFAULT_EXPANDED_STATE = false;
         private static final boolean DEFAULT_ACCESS_LOCATION_METADATA = false;
         private static final PhotoPickerSelectionParams DEFAULT_SELECTION_PARAMS = null;
+        private static final PhotoPickerUiCustomizationParams DEFAULT_UI_CUSTOMIZATION_PARAMS =
+                null;
+
         private List<String> mMimeTypes = DEFAULT_MIME_TYPES;
         private long mAccentColor = DEFAULT_ACCENT_COLOR;
         private boolean mOrderedSelection = DEFAULT_ORDERED_SELECTION;
@@ -219,6 +237,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         private boolean mLaunchedPickerInExpandedState = DEFAULT_EXPANDED_STATE;
         private boolean mLocationMetadataRequested = DEFAULT_ACCESS_LOCATION_METADATA;
         private PhotoPickerSelectionParams mSelectionParams = DEFAULT_SELECTION_PARAMS;
+        private PhotoPickerUiCustomizationParams mUiCustomizationParams =
+                DEFAULT_UI_CUSTOMIZATION_PARAMS;
 
         public Builder() {}
 
@@ -247,6 +267,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             this.mLaunchedPickerInExpandedState = featureInfo.isPickerLaunchedInExpandedState();
             this.mLocationMetadataRequested = featureInfo.isLocationMetadataRequested();
             this.mSelectionParams = featureInfo.getSelectionParams();
+            this.mUiCustomizationParams = featureInfo.getUiCustomizationParams();
         }
 
         /**
@@ -448,6 +469,22 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
             return this;
         }
 
+        /**
+         * Sets the ui customization params to apply to the Photo Picker.
+         *
+         * @param uiCustomizationParams The {@link PhotoPickerUiCustomizationParams} object
+         *                               containing the ui customization params, or {@code null} to
+         *                               clear any custom options.
+         * @return This Builder object to allow for chaining of calls.
+         */
+        @FlaggedApi(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
+        @NonNull
+        public Builder setUiCustomizationParams(
+                @Nullable PhotoPickerUiCustomizationParams uiCustomizationParams
+        ) {
+            mUiCustomizationParams = uiCustomizationParams;
+            return this;
+        }
 
         /**
          * Sets ordered selection of media items i.e. this allows user to view/receive items in
@@ -558,7 +595,8 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                     mHighlightType,
                     mLaunchedPickerInExpandedState,
                     mLocationMetadataRequested,
-                    mSelectionParams);
+                    mSelectionParams,
+                    mUiCustomizationParams);
         }
     }
     private EmbeddedPhotoPickerFeatureInfo(Parcel in) {
@@ -581,6 +619,10 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                 PhotoPickerSelectionParams.class.getClassLoader(),
                 PhotoPickerSelectionParams.class);
 
+        this.mUiCustomizationParams = in.readParcelable(
+                PhotoPickerUiCustomizationParams.class.getClassLoader(),
+                PhotoPickerUiCustomizationParams.class
+        );
     }
 
     @Override
@@ -597,6 +639,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
         dest.writeBoolean(mLaunchedPickerInExpandedState);
         dest.writeBoolean(mLocationMetadataRequested);
         dest.writeParcelable(mSelectionParams, flags);
+        dest.writeParcelable(mUiCustomizationParams, flags);
     }
 
     @Override
@@ -633,6 +676,7 @@ public final class EmbeddedPhotoPickerFeatureInfo implements Parcelable {
                 + ", mLaunchedPickerInExpandedState=" + mLaunchedPickerInExpandedState
                 + ", mLocationMetadataRequested=" + mLocationMetadataRequested
                 + ", mSelectionParams=" + mSelectionParams
+                + ", mUiCustomizationOptions=" + mUiCustomizationParams
                 + '}';
     }
 }

@@ -550,3 +550,11 @@ flag {
     description: "This flag exposes the APIs for applying constraints on selectable media items."
     bug: "467334899"
 }
+
+flag {
+    name: "enable_photopicker_ui_customization_params_api"
+    is_exported: true
+    namespace: "mediaprovider"
+    description: "This flag exposes the APIs for UI customization in the Photo Picker."
+    bug: "462035251"
+}

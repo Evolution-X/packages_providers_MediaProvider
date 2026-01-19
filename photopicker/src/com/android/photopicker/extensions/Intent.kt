@@ -23,6 +23,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.widget.photopicker.PhotoPickerSelectionParams
+import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.annotation.RequiresApi
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.DEFAULT_HIGHLIGHT_QUERY_RESULTS_PARAMS
@@ -327,6 +328,38 @@ fun Intent.getPhotoPickerSelectionParams(): PhotoPickerSelectionParams? {
                 // All other actions are unsupported.
                 throw IllegalIntentExtraException(
                     "EXTRA_PICK_IMAGES_SELECTION_PARAMS is not supported for $action"
+                )
+        }
+    } else {
+        return null
+    }
+}
+
+/**
+ * Validate the [MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS] extra from the intent to
+ * check if the calling app is specifying ui customization options. The extra is only applicable in
+ * ACTION_PICK_IMAGES and will be ignored in all other configurations.
+ *
+ * @return [PhotoPickerUiCustomizationParams] if specified.
+ */
+fun Intent.getPickerUiCustomizationParams(): PhotoPickerUiCustomizationParams? {
+
+    if (extras?.containsKey(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS) == true) {
+        return when (action) {
+            MediaStore.ACTION_PICK_IMAGES ->
+                if (SdkLevel.isAtLeastT()) {
+                    extras?.getParcelable(
+                        MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
+                        PhotoPickerUiCustomizationParams::class.java,
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    extras?.getParcelable(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS)
+                }
+            else ->
+                // All other actions are unsupported.
+                throw IllegalIntentExtraException(
+                    "EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS is not supported for $action"
                 )
         }
     } else {
