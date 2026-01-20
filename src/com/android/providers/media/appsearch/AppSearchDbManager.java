@@ -491,7 +491,7 @@ public final class AppSearchDbManager {
                 doc.getPropertyLong(MediaItem.PROPERTY_MEDIA_TYPE),
                 doc.getPropertyLong(MediaItem.PROPERTY_DATE_TAKEN),
                 doc.getPropertyString(MediaItem.PROPERTY_VOLUME_NAME));
-        item.setDirty(doc.getPropertyBoolean(MediaItem.PROPERTY_DIRTY));
+        item.setDirty(doc.getPropertyLong(MediaItem.PROPERTY_DIRTY) == 1L);
         item.setMetadataExtracted(doc.getPropertyString(MediaItem.PROPERTY_METADATA_EXTRACTED));
         item.setLocationExtracted(doc.getPropertyString(MediaItem.PROPERTY_LOCATION_EXTRACTED));
         item.setLabelsExtracted(doc.getPropertyString(MediaItem.PROPERTY_LABELS_EXTRACTED));
