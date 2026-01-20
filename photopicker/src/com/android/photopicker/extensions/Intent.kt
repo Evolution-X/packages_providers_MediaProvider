@@ -33,6 +33,7 @@ import com.android.photopicker.features.highlightmediaresults.model.HighlightAlb
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
+import com.android.providers.media.flags.Flags
 
 /**
  * Check the various possible actions the intent could be running under and extract a valid value
@@ -343,27 +344,28 @@ fun Intent.getPhotoPickerSelectionParams(): PhotoPickerSelectionParams? {
  * @return [PhotoPickerUiCustomizationParams] if specified.
  */
 fun Intent.getPickerUiCustomizationParams(): PhotoPickerUiCustomizationParams? {
-
-    if (extras?.containsKey(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS) == true) {
-        return when (action) {
-            MediaStore.ACTION_PICK_IMAGES ->
-                if (SdkLevel.isAtLeastT()) {
-                    extras?.getParcelable(
-                        MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
-                        PhotoPickerUiCustomizationParams::class.java,
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    extras?.getParcelable(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS)
-                }
-            else ->
-                // All other actions are unsupported.
-                throw IllegalIntentExtraException(
-                    "EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS is not supported for $action"
-                )
-        }
-    } else {
+    if (
+        !Flags.enablePhotopickerUiCustomizationParamsApi() ||
+            extras?.containsKey(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS) != true
+    ) {
         return null
+    }
+    return when (action) {
+        MediaStore.ACTION_PICK_IMAGES ->
+            if (SdkLevel.isAtLeastT()) {
+                extras?.getParcelable(
+                    MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
+                    PhotoPickerUiCustomizationParams::class.java,
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                extras?.getParcelable(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS)
+            }
+        else ->
+            // All other actions are unsupported.
+            throw IllegalIntentExtraException(
+                "EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS is not supported for $action"
+            )
     }
 }
 

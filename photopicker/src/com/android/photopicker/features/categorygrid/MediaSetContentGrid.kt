@@ -249,11 +249,13 @@ private fun MediasetContentGrid(
                     }
                 }
 
+                val aspectRatio = configuration.getAspectRatioForMediaItemGrids().ratio
                 mediaGrid(
                     modifier = Modifier.fillMaxSize(),
                     items = items,
                     isExpandedScreen = isExpandedScreen,
                     selection = selection,
+                    aspectRatio = aspectRatio,
                     dragSelectionEnabled = configuration.selectionLimit > 1,
                     dragSelectIndexOffset = 0, // by default, which is suitable here.
                     pinchToZoomEnabled = true,
