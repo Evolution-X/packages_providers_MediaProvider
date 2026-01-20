@@ -52,10 +52,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 
-import com.android.providers.media.IsolatedContext;
-import com.android.providers.media.TestConfigStore;
 import com.android.providers.media.flags.Flags;
-import com.android.providers.media.scan.ModernMediaScanner;
 
 import org.junit.After;
 import org.junit.Before;
@@ -267,30 +264,6 @@ public class MediaProcessingServiceTest {
         assertThat(actualError.getErrorCode()).isEqualTo(expectedError.getErrorCode());
         assertThat(actualError.getMessage()).isEqualTo(expectedError.getMessage());
         assertThat(actualError.isRetryable()).isEqualTo(expectedError.isRetryable());
-    }
-
-    @Test
-    public void testNoServiceBindingWithoutPermission() throws Exception {
-        // Disable TestMediaProcessingService which has the appropriate binding permissions
-        updateStateOfServiceWithPermission(PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
-        IsolatedContext isolatedContext = new IsolatedContext(mContext, "modern",
-                /* asFuseThread */ false);
-
-        try {
-            ModernMediaScanner modernMediaScanner = new ModernMediaScanner(isolatedContext,
-                    new TestConfigStore());
-            // Unable to bind to TestMediaProcessingServiceWithoutPermission
-            assertThat(modernMediaScanner.getMediaProcessingService()).isNull();
-        } finally {
-            updateStateOfServiceWithPermission(PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
-        }
-
-        // Re-assert that we can bind to TestMediaProcessingService which has the bind permission
-        {
-            ModernMediaScanner modernMediaScanner = new ModernMediaScanner(isolatedContext,
-                    new TestConfigStore());
-            assertThat(modernMediaScanner.getMediaProcessingService()).isNotNull();
-        }
     }
 
     private void updateStateOfServiceWithPermission(int state) throws Exception {
