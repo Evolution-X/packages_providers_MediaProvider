@@ -628,7 +628,6 @@ class DispatchersTest {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testDispatchReportPhotopickerApiInfoEventWithSearchQueryHighlight() = runTest {
@@ -695,7 +694,6 @@ class DispatchersTest {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testDispatchReportPhotopickerApiInfoEventWithAlbumHighlight() = runTest {
@@ -763,7 +761,6 @@ class DispatchersTest {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testDispatchReportPhotopickerApiInfoEventWithoutHighlight() = runTest {
