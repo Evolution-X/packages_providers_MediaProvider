@@ -225,6 +225,7 @@ package android.provider {
     field @FlaggedApi("com.android.providers.media.flags.pick_ordered_images") public static final String EXTRA_PICK_IMAGES_IN_ORDER = "android.provider.extra.PICK_IMAGES_IN_ORDER";
     field @FlaggedApi("com.android.providers.media.flags.picker_default_tab") public static final String EXTRA_PICK_IMAGES_LAUNCH_TAB = "android.provider.extra.PICK_IMAGES_LAUNCH_TAB";
     field public static final String EXTRA_PICK_IMAGES_MAX = "android.provider.extra.PICK_IMAGES_MAX";
+    field @FlaggedApi("com.android.providers.media.flags.enable_photopicker_selection_params_api") public static final String EXTRA_PICK_IMAGES_SELECTION_PARAMS = "android.provider.extra.PICK_IMAGES_SELECTION_PARAMS";
     field @FlaggedApi("com.android.providers.media.flags.enable_picker_location_metadata_api") public static final String EXTRA_REQUEST_LOCATION_METADATA_ACCESS = "android.provider.extra.REQUEST_LOCATION_METADATA_ACCESS";
     field public static final String EXTRA_SCREEN_ORIENTATION = "android.intent.extra.screenOrientation";
     field public static final String EXTRA_SHOW_ACTION_ICONS = "android.intent.extra.showActionIcons";

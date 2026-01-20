@@ -298,9 +298,18 @@ fun mediaGrid(
             timeStyle = DateFormat.SHORT,
         )
 
-    var zoom by rememberSaveable(initialColumns) { mutableStateOf(1f) }
-    var currentColumns by rememberSaveable(initialColumns) { mutableStateOf(initialColumns) }
+    var zoom by rememberSaveable { mutableStateOf(1f) }
+    var currentColumns by rememberSaveable { mutableStateOf(initialColumns) }
+    var previousInitialColumns by rememberSaveable { mutableStateOf(initialColumns) }
     var zoomCanPreview by remember { mutableStateOf(currentColumns == pinchToZoomMinColumns) }
+
+    // If the window size changes (indicated by a change in initialColumns), reset the zoom level
+    // and current column count to the new default values.
+    if (initialColumns != previousInitialColumns) {
+        currentColumns = initialColumns
+        zoom = 1f
+        previousInitialColumns = initialColumns
+    }
 
     val minZoomFactor =
         remember(initialColumns) { initialColumns / pinchToZoomMaxColumns.toFloat() }

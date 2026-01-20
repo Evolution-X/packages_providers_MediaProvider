@@ -29,15 +29,18 @@ import android.os.Build
 import android.os.IBinder
 import android.os.Process
 import android.os.UserManager
+import android.platform.test.annotations.EnableFlags
 import android.platform.test.annotations.RequiresFlagsEnabled
 import android.platform.test.flag.junit.CheckFlagsRule
 import android.platform.test.flag.junit.DeviceFlagsValueProvider
+import android.platform.test.flag.junit.SetFlagsRule
 import android.test.mock.MockContentResolver
 import android.view.SurfaceView
 import android.view.WindowManager
 import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import android.widget.photopicker.IEmbeddedPhotoPickerClient
 import android.widget.photopicker.ParcelableException
+import android.widget.photopicker.PhotoPickerSelectionParams
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -144,6 +147,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     @get:Rule(order = 2) val glideRule = GlideTestRule()
     @get:Rule(order = 3)
     val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
+    @get:Rule(order = 4) val setFlagsRule = SetFlagsRule()
 
     /** Setup dependencies for the UninstallModules for the test class. */
     @Module
@@ -197,6 +201,14 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     val featureInfo = EmbeddedPhotoPickerFeatureInfo.Builder().build()
 
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING: String = "taken on"
+
+    private val MAX_MEDIA_ITEM_SIZE_BYTES: Long = 1024L
+    private val MAX_VIDEO_DURATION_SECONDS: Long = 100L
+    private val MIN_VIDEO_DURATION_SECONDS: Long = 10L
+    private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 1000L
+    private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 100L
+    private val MIME_TYPES = listOf("image/png", "video/mp4")
+    private val MAX_SELECTION_BATCH_SIZE_BYTES: Long = 2048L
 
     // Session has a surfacePackage which outlives the test if not closed, so it always needs to be
     // closed at the end of each test to prevent any existing UI activity from leaking into the next
@@ -434,9 +446,10 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
         }
 
     @Test
-    @RequiresFlagsEnabled(
+    @EnableFlags(
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
         Flags.FLAG_ENABLE_PICKER_LOCATION_METADATA_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
     )
     fun testSessionSetsEmbeddedPhotopickerFeatureInfoInConfiguration() =
         testScope.runTest {
@@ -470,6 +483,64 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected configuration to contain the location access value")
                 .that(configuration.locationMetadataAccessRequested)
                 .isEqualTo(false)
+            assertWithMessage("Expected configuration to contain the selection params value")
+                .that(configuration.selectionParams)
+                .isNull()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
+    fun testSessionSetsSelectionParamsInConfiguration() =
+        testScope.runTest {
+            val component = embeddedServiceComponentBuilder.build()
+            val entryPoint = EntryPoints.get(component, Session.EmbeddedEntryPoint::class.java)
+
+            // Create a session with the component and let it initialize.
+            getSessionUnderTest(component)
+            advanceTimeBy(100)
+
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxMediaItemSizeInBytes(MAX_MEDIA_ITEM_SIZE_BYTES)
+                    .setMaxVideoDurationInSeconds(MAX_VIDEO_DURATION_SECONDS)
+                    .setMinVideoDurationInSeconds(MIN_VIDEO_DURATION_SECONDS)
+                    .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
+                    .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
+                    .setMimeTypes(MIME_TYPES)
+                    .setMaxSelectionBatchSizeInBytes(MAX_SELECTION_BATCH_SIZE_BYTES)
+                    .build()
+            val featureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
+            entryPoint.configurationManager().get().setEmbeddedPhotopickerFeatureInfo(featureInfo)
+            advanceTimeBy(100)
+
+            val configuration = entryPoint.configurationManager().get().configuration.value
+            assertWithMessage("Expected configuration to contain the selection params value")
+                .that(configuration.selectionParams)
+                .isNotNull()
+
+            val receivedSelectionParams = configuration.selectionParams!!
+            assertWithMessage("Expected configuration to contain the max media item size")
+                .that(receivedSelectionParams.maxMediaItemSizeInBytes)
+                .isEqualTo(MAX_MEDIA_ITEM_SIZE_BYTES)
+            assertWithMessage("Expected configuration to contain the max video duration")
+                .that(receivedSelectionParams.maxVideoDurationInSeconds)
+                .isEqualTo(MAX_VIDEO_DURATION_SECONDS)
+            assertWithMessage("Expected configuration to contain the min video duration")
+                .that(receivedSelectionParams.minVideoDurationInSeconds)
+                .isEqualTo(MIN_VIDEO_DURATION_SECONDS)
+            assertWithMessage("Expected configuration to contain the max media item resolution")
+                .that(receivedSelectionParams.maxMediaItemResolutionInPixels)
+                .isEqualTo(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
+            assertWithMessage("Expected configuration to contain the min media item resolution")
+                .that(receivedSelectionParams.minMediaItemResolutionInPixels)
+                .isEqualTo(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
+            assertWithMessage("Expected configuration to contain the mime types")
+                .that(receivedSelectionParams.mimeTypes)
+                .isEqualTo(MIME_TYPES)
+            assertWithMessage("Expected configuration to contain the max selection batch size")
+                .that(receivedSelectionParams.maxSelectionBatchSizeInBytes)
+                .isEqualTo(MAX_SELECTION_BATCH_SIZE_BYTES)
         }
 
     @Test

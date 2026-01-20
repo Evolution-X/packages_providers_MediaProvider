@@ -1436,6 +1436,40 @@ public final class MediaStore {
             "android.provider.extra.REQUEST_LOCATION_METADATA_ACCESS";
 
     /**
+     * The name of an optional intent-extra used to pass
+     * {@link android.widget.photopicker.PhotoPickerSelectionParams} to the photo picker. This extra
+     * can only be specified in {@link MediaStore#ACTION_PICK_IMAGES}.
+     * <p>
+     * The {@link android.widget.photopicker.PhotoPickerSelectionParams} object allows the calling
+     * app to set constraints on the media items that can be selected by the user. Media items that
+     * fail to satisfy these constraints will be disabled for selection.
+     *
+     * <p>
+     * Not passing this EXTRA, means the photo picker will not apply any restrictions on what
+     * media items users can select (except for the MIME type specified in the {@link
+     * android.content.Intent#setType(String)} extra).
+     *
+     * <p>
+     * To use this key, calling apps should construct a
+     * {@link android.widget.photopicker.PhotoPickerSelectionParams} object using its
+     * {@link android.widget.photopicker.PhotoPickerSelectionParams.Builder} and pass it as the
+     * value.<br>
+     * Example: If the calling app wants to allow selection of only those media items that have a
+     * maximum size of 10,000 bytes and a minimum resolution of 500 pixels:
+     * <pre>
+     * PhotoPickerSelectionParams selectionParams = new PhotoPickerSelectionParams.Builder()
+     *     .setMaxMediaItemSizeInBytes(10000L)
+     *     .setMinMediaItemResolutionInPixels(500L)
+     *     .build();
+     * Intent intent = new Intent(MediaStore.ACTION_PICK_IMAGES);
+     * intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams);
+     * </pre>
+     */
+    @FlaggedApi(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
+    public static final String EXTRA_PICK_IMAGES_SELECTION_PARAMS =
+            "android.provider.extra.PICK_IMAGES_SELECTION_PARAMS";
+
+    /**
      * Specify that the caller wants to receive the original media format without transcoding.
      *
      * <b>Caution: using this flag can cause app

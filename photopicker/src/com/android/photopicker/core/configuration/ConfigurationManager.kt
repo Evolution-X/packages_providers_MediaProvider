@@ -29,6 +29,7 @@ import com.android.photopicker.core.navigation.PhotopickerDestinations
 import com.android.photopicker.core.theme.AccentColorHelper
 import com.android.photopicker.extensions.getApplicationMediaCapabilities
 import com.android.photopicker.extensions.getHighlightQueryResultsParams
+import com.android.photopicker.extensions.getPhotoPickerSelectionParams
 import com.android.photopicker.extensions.getPhotopickerMimeTypes
 import com.android.photopicker.extensions.getPhotopickerSelectionLimitOrDefault
 import com.android.photopicker.extensions.getPickImagesInOrderEnabled
@@ -195,6 +196,9 @@ class ConfigurationManager(
         // Check if calling app is requesting access to metadata
         val locationMetadataAccessRequested = featureInfo.isLocationMetadataRequested
 
+        // Get calling app's constraints on items for them to be selectable
+        val selectionParams = featureInfo.selectionParams
+
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.
         _configuration.updateAndGet {
@@ -208,6 +212,7 @@ class ConfigurationManager(
                 startDestination = startDestination,
                 embeddedPickerLaunchedInExpandedState = launchedInExpandedState,
                 locationMetadataAccessRequested = locationMetadataAccessRequested,
+                selectionParams = selectionParams,
             )
         }
     }
@@ -312,6 +317,9 @@ class ConfigurationManager(
         val locationMetadataAccessRequested =
             intent.isLocationMetadataAccessRequested(default = false)
 
+        // get calling app's constraints on items for them to be selectable
+        val selectionOptions = intent.getPhotoPickerSelectionParams()
+
         // Use updateAndGet to ensure the value is set before this method returns so the new
         // intent is immediately available to new subscribers.
         _configuration.updateAndGet {
@@ -327,6 +335,7 @@ class ConfigurationManager(
                 callingPackageMediaCapabilities = applicationMediaCapabilities,
                 highlightQueryResultsParams = highlightQueryResultsParams,
                 locationMetadataAccessRequested = locationMetadataAccessRequested,
+                selectionParams = selectionOptions,
             )
         }
     }
