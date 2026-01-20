@@ -22,7 +22,7 @@ import android.provider.ISearchMediaCallback;
 /**
 * @hide
 */
-oneway interface ISearchMediaService {
+interface ISearchMediaService {
 
   /**
    * Initiates an asynchronous search for local media files based on the
@@ -59,7 +59,7 @@ oneway interface ISearchMediaService {
    * @param callback the ISearchMediaCallback.aidl implementation
    * that will receive the search results or any error messages.
    */
-  void searchMedia(in String searchText, in String searchId, in Bundle searchParams,
+  oneway void searchMedia(in String searchText, in String searchId, in Bundle searchParams,
   in ISearchMediaCallback callback);
 
 
@@ -70,5 +70,10 @@ oneway interface ISearchMediaService {
    * @param searchId An ID to uniquely identify the search request. Unique for every call,
    * to be used to identify response.
    */
-  void cancelSearch(in String searchId);
+  oneway void cancelSearch(in String searchId);
+
+  /**
+   * Returns whether semantic search is supported.
+   */
+  boolean isSemanticSearchSupported();
 }
