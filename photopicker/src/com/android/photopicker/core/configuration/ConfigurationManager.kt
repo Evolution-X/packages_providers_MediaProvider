@@ -34,6 +34,7 @@ import com.android.photopicker.extensions.getPhotopickerMimeTypes
 import com.android.photopicker.extensions.getPhotopickerSelectionLimitOrDefault
 import com.android.photopicker.extensions.getPickImagesInOrderEnabled
 import com.android.photopicker.extensions.getPickImagesPreSelectedUris
+import com.android.photopicker.extensions.getPickerUiCustomizationParams
 import com.android.photopicker.extensions.getStartDestination
 import com.android.photopicker.extensions.isLocationMetadataAccessRequested
 import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
@@ -199,6 +200,9 @@ class ConfigurationManager(
         // Get calling app's constraints on items for them to be selectable
         val selectionParams = featureInfo.selectionParams
 
+        // get calling app's ui customization params
+        val uiCustomizationParams = featureInfo.uiCustomizationParams
+
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.
         _configuration.updateAndGet {
@@ -213,6 +217,7 @@ class ConfigurationManager(
                 embeddedPickerLaunchedInExpandedState = launchedInExpandedState,
                 locationMetadataAccessRequested = locationMetadataAccessRequested,
                 selectionParams = selectionParams,
+                uiCustomizationParams = uiCustomizationParams,
             )
         }
     }
@@ -318,7 +323,10 @@ class ConfigurationManager(
             intent.isLocationMetadataAccessRequested(default = false)
 
         // get calling app's constraints on items for them to be selectable
-        val selectionOptions = intent.getPhotoPickerSelectionParams()
+        val selectionParams = intent.getPhotoPickerSelectionParams()
+
+        // get calling app's ui customization params
+        val uiCustomizationParams = intent.getPickerUiCustomizationParams()
 
         // Use updateAndGet to ensure the value is set before this method returns so the new
         // intent is immediately available to new subscribers.
@@ -335,7 +343,8 @@ class ConfigurationManager(
                 callingPackageMediaCapabilities = applicationMediaCapabilities,
                 highlightQueryResultsParams = highlightQueryResultsParams,
                 locationMetadataAccessRequested = locationMetadataAccessRequested,
-                selectionParams = selectionOptions,
+                selectionParams = selectionParams,
+                uiCustomizationParams = uiCustomizationParams,
             )
         }
     }
@@ -415,14 +424,7 @@ class ConfigurationManager(
                     /* key= */ FEATURE_PICKER_CHOICE_MANAGED_SELECTION.first,
                     /* defaultValue= */ FEATURE_PICKER_CHOICE_MANAGED_SELECTION.second,
                 ),
-            PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED =
-                Flags.enablePickerHighlightSearchResultsApis() &&
-                    (Flags.highlightSearchResultsFeature() ||
-                        deviceConfigProxy.getFlag(
-                            NAMESPACE_MEDIAPROVIDER,
-                            /* key= */ FEATURE_HIGHLIGHT_SEARCH_RESULTS.first,
-                            /* defaultValue= */ FEATURE_HIGHLIGHT_SEARCH_RESULTS.second,
-                        )),
+            PICKER_HIGHLIGHT_MEDIA_FEATURE_ENABLED = Flags.enablePickerHighlightSearchResultsApis(),
             PICKER_SEARCH_ENABLED = Flags.enablePhotopickerSearch(),
             PICKER_DATESCRUBBER_ENABLED = Flags.enablePhotopickerDatescrubber(),
             PICKER_LOCATION_METADATA_ENABLED = Flags.enablePhotopickerLocationMetadata(),
@@ -431,6 +433,7 @@ class ConfigurationManager(
             MODERN_CLOUD_SETTINGS_ENABLED = Flags.enableModernPhotopickerCloudSettingsPage(),
             PICKER_DELETE_HISTORY_SUGGESTION = Flags.enablePhotopickerDeleteHistorySuggestion(),
             PICKER_OFFLINE_BANNERS_ENABLED = Flags.enablePhotopickerOfflineBanners(),
+            PICKER_BANNER_REDESIGN_ENABLED = Flags.enablePhotopickerBannerRedesign(),
         )
     }
 

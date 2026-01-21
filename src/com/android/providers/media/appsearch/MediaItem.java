@@ -82,6 +82,7 @@ public class MediaItem {
 
     /**
      * Whether the media item is dirty.
+     * This value is stored as long values (0L/1L) in appsearch.
      */
     boolean dirty;
 

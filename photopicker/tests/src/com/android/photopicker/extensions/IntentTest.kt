@@ -20,6 +20,7 @@ import android.content.Intent
 import android.platform.test.annotations.RequiresFlagsEnabled
 import android.provider.MediaStore
 import android.widget.photopicker.PhotoPickerSelectionParams
+import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.core.os.bundleOf
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SmallTest
@@ -290,6 +291,40 @@ class IntentTest {
 
         assertThrows(IllegalIntentExtraException::class.java) {
             intent.getPhotoPickerSelectionParams()
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
+    fun testGetUiCustomizationOptionsFromIntent() {
+        val uiCustomizationOptions =
+            PhotoPickerUiCustomizationParams.Builder()
+                .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                .build()
+        val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
+        intent.putExtra(
+            MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
+            uiCustomizationOptions,
+        )
+
+        val retrievedOptions = intent.getPickerUiCustomizationParams()
+
+        assertThat(retrievedOptions!!.getAspectRatio())
+            .isEqualTo(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
+    fun testGetUiCustomizationOptionsFromIntentInvalidAction() {
+        val uiCustomizationOptions = PhotoPickerUiCustomizationParams.Builder().build()
+        val intent = Intent(Intent.ACTION_GET_CONTENT)
+        intent.putExtra(
+            MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
+            uiCustomizationOptions,
+        )
+
+        assertThrows(IllegalIntentExtraException::class.java) {
+            intent.getPickerUiCustomizationParams()
         }
     }
 }

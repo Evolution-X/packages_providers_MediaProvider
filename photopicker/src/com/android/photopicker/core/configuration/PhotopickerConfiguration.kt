@@ -26,6 +26,7 @@ import android.os.UserHandle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.photopicker.PhotoPickerSelectionParams
+import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import com.android.photopicker.core.navigation.PhotopickerDestinations
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
@@ -84,13 +85,20 @@ enum class PhotopickerRuntimeEnv {
  * @property highlightQueryResultsParams a [HighlightQueryResultsParams] object from
  *   [MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_QUERY_RESULTS] with default value signalling no media
  *   results are to be highlighted by the app.
+ * @property embeddedPickerLaunchedInExpandedState if the embedded photopicker has to be launched in
+ *   an expanded state.
+ * @property locationMetadataAccessRequested whether access to location metadata has been requested
+ *   for the current session, received as an intent extra from
+ *   [MediaStore.EXTRA_PICK_IMAGES_REQUEST_LOCATION_METADATA_ACCESS]
  * @property selectionParams a [PhotoPickerSelectionParams] object from
  *   [MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS] with default value of null.
- * @property flags a snapshot of the relevant flags in [DeviceConfig]. These are not live values.
+ * @property uiCustomizationParams a [PhotoPickerUiCustomizationParams] object from
+ *   [MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS] with default value of null.
  * @property deviceIsDebuggable if the device is running a build which has [ro.debuggable == 1]
+ * @property flags a snapshot of the relevant flags in [DeviceConfig]. These are not live values.
+ * @property sessionId identifies the current photopicker session
  * @property intent the [Intent] that Photopicker was launched with. This property is private to
  *   restrict access outside of this class.
- * @property sessionId identifies the current photopicker session
  */
 data class PhotopickerConfiguration(
     val runtimeEnv: PhotopickerRuntimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
@@ -110,6 +118,7 @@ data class PhotopickerConfiguration(
     val embeddedPickerLaunchedInExpandedState: Boolean = false,
     val locationMetadataAccessRequested: Boolean = false,
     val selectionParams: PhotoPickerSelectionParams? = null,
+    val uiCustomizationParams: PhotoPickerUiCustomizationParams? = null,
     val deviceIsDebuggable: Boolean = buildIsDebuggable,
     val flags: PhotopickerFlags = PhotopickerFlags(),
     val sessionId: Int,

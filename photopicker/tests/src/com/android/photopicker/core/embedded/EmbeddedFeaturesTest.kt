@@ -1258,7 +1258,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaSectionIsNotShownInCollapsedMode() =
@@ -1310,7 +1309,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testSearchHighlightMediaSectionIsShownInExpandedMode() =
@@ -1402,7 +1400,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
         Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API,
     )
@@ -1476,7 +1473,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
         Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API,
     )
@@ -1527,7 +1523,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testSearchHighlightMediaSectionIsShownInExpandedMode_nullCallingPackageLabel() =
@@ -1607,7 +1602,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testAlbumHighlightMediaSectionIsShownInExpandedMode() =
@@ -1717,7 +1711,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
         Flags.FLAG_ENABLE_EMBEDDED_PICKER_EXPANDED_HIGHLIGHT_TYPE_API,
     )
@@ -1829,7 +1822,6 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaSectionIsNotShownInExpandedModeWithEmptyTestQuery() =

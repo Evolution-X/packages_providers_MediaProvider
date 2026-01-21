@@ -19,6 +19,7 @@ package com.android.providers.media.mediaprocessingservice;
 import android.annotation.NonNull;
 import android.os.OutcomeReceiver;
 import android.provider.mediaprocessingservice.ErrorMessage;
+import android.provider.mediaprocessingservice.ErrorMessage.ErrorCode;
 import android.provider.mediaprocessingservice.MediaProcessingRequest;
 import android.provider.mediaprocessingservice.MediaProcessingResponse;
 import android.provider.mediaprocessingservice.MediaProcessingService;
@@ -127,7 +128,8 @@ public class TestMediaProcessingService extends MediaProcessingService {
     public void onGetEmbeddingVectorForSearchText(@NonNull String searchQuery,
             @NonNull OutcomeReceiver<QueryProcessingResponse, ErrorMessage> outcomeReceiver) {
         if (sExpectedSearchQuery == null || !sExpectedSearchQuery.equals(searchQuery)) {
-            outcomeReceiver.onError(new ErrorMessage(500, "Unexpected query", false));
+            outcomeReceiver.onError(
+                    new ErrorMessage(ErrorCode.ERROR_UNKNOWN, "Unexpected query", false));
             return;
         }
 
@@ -136,7 +138,7 @@ public class TestMediaProcessingService extends MediaProcessingService {
         } else if (sSimulateSearchQuerySuccessResponse != null) {
             outcomeReceiver.onResult(sSimulateSearchQuerySuccessResponse);
         } else {
-            outcomeReceiver.onError(new ErrorMessage(500, "Not mocked", false));
+            outcomeReceiver.onError(new ErrorMessage(ErrorCode.ERROR_UNKNOWN, "Not mocked", false));
         }
     }
 }

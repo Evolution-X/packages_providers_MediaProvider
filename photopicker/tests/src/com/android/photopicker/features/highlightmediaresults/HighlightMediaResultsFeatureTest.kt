@@ -239,8 +239,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
 
     @Test
     @EnableFlags(
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS
     )
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testHighlightMediaFeatureWhenSearchIsDisabled() {
@@ -265,7 +264,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     @DisableFlags(
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
     )
     fun testHighlightMediaFeatureWhenHighlightMediaFlagsAreDisabled() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
@@ -286,7 +284,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
-    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH, Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE)
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     @DisableFlags(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
     fun testHighlightMediaFeatureWhenHighlightMediaApiFlagIsDisabled() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
@@ -311,31 +309,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
     )
-    @DisableFlags(Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE)
-    fun testHighlightMediaFeatureWhenHighlightMediaFeatureFlagIsDisabled() {
-        val testActionPickImagesConfiguration: PhotopickerConfiguration =
-            TestPhotopickerConfiguration.build {
-                action(MediaStore.ACTION_PICK_IMAGES)
-                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
-            }
-        assertWithMessage(
-                "HighlightMediaResults feature should be disabled when feature flag is disabled"
-            )
-            .that(
-                HighlightMediaResultsFeature.isEnabled(
-                    testActionPickImagesConfiguration,
-                    deferredPrefetchResultsMap,
-                )
-            )
-            .isEqualTo(false)
-    }
-
-    @Test
-    @EnableFlags(
-        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
-    )
     fun testHighlightMediaFeatureWhenSearchAndHighlightMediaFeatureFlagAreEnabled() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
             TestPhotopickerConfiguration.build {
@@ -359,7 +332,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaFeatureInEmbeddedWhenSearchAndHighlightMediaFeatureFlagAreEnabled() {
@@ -385,8 +357,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @Test
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     @EnableFlags(
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS
     )
     fun testHighlightMediaFeatureWhenAlbumHighlightIsRequested() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
@@ -418,7 +389,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @DisableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
     )
     fun testAlbumHighlightMediaFeatureWithHighlightAndSearchFlagsDisabled() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
@@ -450,7 +420,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaDisplaysAllUiElementsForSearchHighlightType() =
@@ -583,7 +552,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightSearchMediaSeeAllButtonInteraction() =
@@ -780,7 +748,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaDisplaysAllUiElementsForAlbumHighlightType() =
@@ -932,7 +899,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightAlbumMediaSeeAllButtonInteraction() =
@@ -1117,7 +1083,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testExpandedHighlightTypeForAlbumHighlight() = runTest {
@@ -1238,7 +1203,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaSectionIsNotShownForEmptyHighlightQuery() = runTest {
@@ -1290,7 +1254,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testHighlightMediaDisplaysNoElementsForEmptyHighlightParams() =
@@ -1330,65 +1293,10 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 .assertIsNotDisplayed()
         }
 
-    @EnableFlags(
-        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
-    )
-    @DisableFlags(Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE)
-    fun testHighlightSectionIsNotDisplayedWhenFeatureFlagIsDisabled() =
-        testScope.runTest {
-            val testQuery = "cats"
-            val highlightParams =
-                HighlightQueryResultsParams(
-                    queryResultsHighlightType = QueryResultsHighlightType.HIGHLIGHT_MEDIA_SECTION,
-                    queryResultsHighlightQuery = HighlightQuery.Search(testQuery),
-                )
-
-            composeTestRule.setContent {
-                CompositionLocalProvider(
-                    LocalPhotopickerConfiguration provides
-                        TestPhotopickerConfiguration.build {
-                            highlightQueryResultsParams(highlightParams)
-                            action(MediaStore.ACTION_PICK_IMAGES)
-                            intent(Intent(MediaStore.ACTION_PICK_IMAGES))
-                            selectionLimit(50)
-                        },
-                    LocalNavController provides createNavController(),
-                    LocalSelection provides selection,
-                    LocalFeatureManager provides featureManager,
-                    LocalLocalizationHelper provides LocalizationHelper(),
-                ) {
-                    PhotopickerTheme(
-                        isDarkTheme = false,
-                        config =
-                            TestPhotopickerConfiguration.build {
-                                highlightQueryResultsParams(highlightParams)
-                                action(MediaStore.ACTION_PICK_IMAGES)
-                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
-                            },
-                    ) {
-                        // Calling just the Highlight composable to avoid any assertion conflicts
-                        // with
-                        // the photogrid
-                        HighlightGrid()
-                    }
-                }
-            }
-
-            advanceTimeBy(100)
-            composeTestRule.waitForIdle()
-
-            composeTestRule
-                .onNode(hasTestTag(HIGHLIGHT_GRID_TEST_TAG), useUnmergedTree = true)
-                .assertIsNotDisplayed()
-        }
-
     @Test
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun highlightSectionContent_initialState_showsLoadingPlaceholders() =
@@ -1470,7 +1378,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun highlightSectionContent_afterTimeout_whenNoResult_hasNoHighlight() = runTest {
@@ -1546,7 +1453,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun highlightSectionContent_whenResults_afterTimeout_showsHighlightGrid() =
@@ -1690,7 +1596,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun highlightSectionContent_onProviderChange_resetHighlightGrid() =
@@ -1867,7 +1772,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun highlightSectionContent_onProviderChange_showHighlightGrid() =
@@ -2036,7 +1940,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testExpandedHighlightTypeForNonEmptySearchQuery() =
@@ -2123,7 +2026,6 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-        Flags.FLAG_HIGHLIGHT_SEARCH_RESULTS_FEATURE,
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
     )
     fun testExpandedHighlightTypeForEmptySearchQuery() =
