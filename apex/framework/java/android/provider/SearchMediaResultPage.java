@@ -123,16 +123,36 @@ public final class SearchMediaResultPage implements Parcelable {
                 }
             };
 
+    /**
+     * Returns the unique ID that identifies the search request this page belongs to.
+     */
     @NonNull
     public String getSearchId() {
         return mSearchId;
     }
 
+
+    /**
+     * Returns the list of search results for this page.
+     */
     @NonNull
     public List<SearchMediaResult> getSearchResults() {
         return mSearchResults;
     }
 
+
+    /**
+     * Returns a {@link Bundle} containing additional metadata about the results.
+     *
+     * <p>
+     * <b>Expected keys for the {@code extras} Bundle:</b>
+     * <ul>
+     * <li><b>{@code EXTRA_NEXT_PAGE_TOKEN}</b> ({@code String}): A token required for
+     * fetching the next page of search results. The caller should pass this token
+     * as-is in the {@code searchParams} when querying for the next page.</li>
+     * </ul>
+     * </p>
+     */
     @NonNull
     public Bundle getExtras() {
         return mExtras;
