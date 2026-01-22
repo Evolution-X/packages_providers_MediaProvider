@@ -2236,13 +2236,15 @@ public final class MediaStore {
     }
 
     /**
-     * Gets the package name of the Search Media Service that client apps use to connect.
+     * Gets the package name of the {@link SearchMediaService} that client apps use to connect. If
+     * there is no OEM implementation, returns the package name of the default implementation of
+     * {@link SearchMediaService} provided by MediaProvider.
      */
     @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
     @NonNull
     public static String getPackageForSearchMediaService(@NonNull ContentResolver resolver) {
         Bundle result = resolver.call(AUTHORITY, GET_PACKAGE_FOR_SEARCH_MEDIA_SERVICE, null, null);
-        return result.getString(PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
+        return result.getString(PACKAGE_FOR_SEARCH_MEDIA_SERVICE);
     }
 
 
