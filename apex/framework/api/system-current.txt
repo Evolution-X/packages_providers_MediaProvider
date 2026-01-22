@@ -128,6 +128,7 @@ package android.provider {
     ctor public SearchMediaService();
     method @Nullable public android.os.IBinder onBind(@Nullable android.content.Intent);
     method @AnyThread public abstract void onCancelSearch(@NonNull String);
+    method public abstract boolean onCheckSemanticSearchSupport();
     method @AnyThread public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.os.OutcomeReceiver<android.provider.SearchMediaResultPage,android.provider.SearchMediaException>);
     field public static final String BIND_SEARCH_MEDIA_SERVICE_PERMISSION = "com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE";
     field public static final String EXTRA_MEDIA_TYPE_FILTER = "android.provider.extra.MEDIA_TYPE_FILTER";

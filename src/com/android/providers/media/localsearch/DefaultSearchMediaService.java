@@ -98,6 +98,17 @@ public class DefaultSearchMediaService extends SearchMediaService {
     }
 
     @Override
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public boolean onCheckSemanticSearchSupport() {
+        if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
+            throw new UnsupportedOperationException("DefaultSearchMediaService is not supported.");
+        }
+
+        // currently semantic search is not supported.
+        return false;
+    }
+
+    @Override
     public void onDestroy() {
         if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
             Log.e(TAG, "DefaultSearchMediaService is not supported.");

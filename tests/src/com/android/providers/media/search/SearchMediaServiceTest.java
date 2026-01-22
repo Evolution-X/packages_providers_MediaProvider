@@ -23,6 +23,7 @@ import static com.android.providers.media.search.TestSearchMediaService.getSearc
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
@@ -129,6 +130,12 @@ public class SearchMediaServiceTest {
 
         assertNotNull(callback.getSearchMediaException());
         assertEquals(DEFAULT_ERROR_MESSAGE, callback.getSearchMediaException().getErrorMessage());
+    }
+
+    @Test
+    public void testIsSemanticSearchSupportedApi() throws Exception {
+        boolean semanticSearchSupported = mSearchMediaService.isSemanticSearchSupported();
+        assertTrue(semanticSearchSupported);
     }
 
     @Test

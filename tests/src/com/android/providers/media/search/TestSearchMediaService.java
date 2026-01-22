@@ -57,6 +57,11 @@ public class TestSearchMediaService extends SearchMediaService {
 
     }
 
+    @Override
+    public boolean onCheckSemanticSearchSupport() {
+        return true;
+    }
+
     static List<SearchMediaResult> getSearchResults(Bundle searchParams) {
         long numResults = searchParams.getLong(DUMMY_SEARCH_RESULT_SIZE, 100L);
         List<SearchMediaResult> searchMediaResults = new ArrayList<>();

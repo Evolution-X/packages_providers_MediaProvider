@@ -215,6 +215,22 @@ public abstract class SearchMediaService extends Service {
                     SearchMediaException> outcomeReceiver);
 
     /**
+     * Called to check if semantic search is supported by this service.
+     *
+     * <p>Implementors should return {@code true} if their service is capable of performing
+     * searches based on the meaning and context of the provided search textusing AI/ML models,
+     * rather than just simple keyword matching.</p>
+     *
+     * <p>This method is useful for calling app as they may decide whether or not to fetch search
+     * results using {@link SearchMediaService#onSearchMedia(String, String, Bundle,
+     * OutcomeReceiver)} depending upon whether semantic search is supported or not.<p/>
+     *
+     * @return {@code true} if semantic search is supported, {@code false} otherwise.
+     */
+    public abstract boolean onCheckSemanticSearchSupport();
+
+
+    /**
      * Called when a request is made to cancel an ongoing search.
      *
      * <p>
@@ -268,6 +284,11 @@ public abstract class SearchMediaService extends Service {
         @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public void cancelSearch(String searchId) {
             onCancelSearch(searchId);
+        }
+
+        @Override
+        public boolean isSemanticSearchSupported() {
+            return onCheckSemanticSearchSupport();
         }
     };
 
