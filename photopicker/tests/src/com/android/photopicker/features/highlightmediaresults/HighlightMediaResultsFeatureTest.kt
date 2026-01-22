@@ -238,9 +238,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
-    @EnableFlags(
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS
-    )
+    @EnableFlags(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testHighlightMediaFeatureWhenSearchIsDisabled() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
@@ -262,9 +260,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
 
     @Test
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    @DisableFlags(
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
-    )
+    @DisableFlags(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
     fun testHighlightMediaFeatureWhenHighlightMediaFlagsAreDisabled() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
             TestPhotopickerConfiguration.build {
@@ -356,9 +352,7 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
 
     @Test
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    @EnableFlags(
-        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS
-    )
+    @EnableFlags(Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS)
     fun testHighlightMediaFeatureWhenAlbumHighlightIsRequested() {
         val testActionPickImagesConfiguration: PhotopickerConfiguration =
             TestPhotopickerConfiguration.build {
@@ -1496,6 +1490,8 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                         sizeInBytes = 1000L,
                         mimeType = "image/png",
                         standardMimeTypeExtension = 1,
+                        width = 512,
+                        height = 512,
                     )
                 )
 
@@ -1652,6 +1648,8 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                         sizeInBytes = 1000L,
                         mimeType = "image/png",
                         standardMimeTypeExtension = 1,
+                        width = 512,
+                        height = 512,
                     )
                 )
 
@@ -1875,6 +1873,8 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                         sizeInBytes = 1000L,
                         mimeType = "image/png",
                         standardMimeTypeExtension = 1,
+                        width = 512,
+                        height = 512,
                     )
                 )
 
