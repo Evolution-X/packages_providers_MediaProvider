@@ -566,3 +566,11 @@ flag {
     bug: "477829610"
 }
 
+flag {
+    name: "enable_cmp_improvements"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag pushes the missing CMP requirements to implement cloud media provider."
+    bug: "478186126"
+}
+
