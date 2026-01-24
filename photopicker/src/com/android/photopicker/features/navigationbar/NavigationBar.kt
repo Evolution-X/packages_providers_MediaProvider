@@ -91,13 +91,14 @@ private val MEASUREMENT_ICON_BUTTON_OUTSIDE_PADDING = 4.dp
 
 /* Profile selector icon and dropdown width */
 private val MEASUREMENT_PROFILE_SELECTOR_WIDTH = 72.dp
+/* Distance between the search bar and the navigation buttons */
+private val MEASUREMENT_NAV_ITEMS_VERTICAL_SPACING = 8.dp
 
 /* Distance between two navigation buttons */
 private val MEASUREMENT_SPACER_SIZE = 8.dp
 
 /* Padding values around the edges of the NavigationBar */
 private val MEASUREMENT_EDGE_PADDING = 4.dp
-private val MEASUREMENT_TOP_PADDING = 8.dp
 private val MEASUREMENT_BOT_PADDING = 24.dp
 
 /* Minimum height for the NavigationBar */
@@ -145,7 +146,6 @@ fun NavigationBar(
                 .padding(
                     start = MEASUREMENT_EDGE_PADDING,
                     end = MEASUREMENT_EDGE_PADDING,
-                    top = MEASUREMENT_TOP_PADDING,
                     bottom = MEASUREMENT_BOT_PADDING,
                 )
                 .heightIn(min = MEASUREMENT_MIN_HEIGHT),
@@ -607,10 +607,13 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.Top,
+        verticalArrangement = Arrangement.spacedBy(MEASUREMENT_NAV_ITEMS_VERTICAL_SPACING),
         horizontalAlignment = Alignment.Start,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MEASUREMENT_SPACER_SIZE),
+        ) {
             featureManager.composeLocation(
                 Location.SEARCH_BAR,
                 maxSlots = 1,
@@ -620,7 +623,7 @@ private fun NavigationBarWithSearch(modifier: Modifier, params: LocationParams) 
             featureManager.composeLocation(
                 Location.PROFILE_SELECTOR,
                 maxSlots = 1,
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier,
             )
             Row(modifier = Modifier, horizontalArrangement = Arrangement.End) {
                 val overFlowMenuEnabled =

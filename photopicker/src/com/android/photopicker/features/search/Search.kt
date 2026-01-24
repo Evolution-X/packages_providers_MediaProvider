@@ -158,8 +158,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private val MEASUREMENT_SEARCH_BAR_PADDING =
-    PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 16.dp)
+private val MEASUREMENT_SEARCH_BAR_PADDING = PaddingValues(start = 8.dp, end = 8.dp, bottom = 8.dp)
 
 private val FETCH_SUGGESTION_DEBOUNCE_DELAY = 50L // in milliseconds
 
