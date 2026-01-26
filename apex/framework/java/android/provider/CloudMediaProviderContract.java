@@ -851,7 +851,8 @@ public final class CloudMediaProviderContract {
     /**
      * Forces the {@link CloudMediaProvider#onOpenPreview} file descriptor to return a thumbnail
      * image. This is only useful for videos where the OS can either request a video or image
-     * for preview.
+     * for preview. If false or not specified, CloudMediaProvider#onOpenPreview
+     * should return the media item's file descriptor instead.
      *
      * @see CloudMediaProvider#onOpenPreview
      * <p>

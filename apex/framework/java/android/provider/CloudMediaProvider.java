@@ -661,7 +661,10 @@ public abstract class CloudMediaProvider extends ContentProvider {
      * already locally on the device and doesn't require downloading from the cloud.
      * @param extras to modify the way the fd is opened, e.g. for video files we may request a
      * thumbnail image instead of a video with
-     * {@link CloudMediaProviderContract#EXTRA_PREVIEW_THUMBNAIL}
+     * {@link CloudMediaProviderContract#EXTRA_PREVIEW_THUMBNAIL}. In the absence of this extra,
+     * this method must return a descriptor representing the actual media file, otherwise it should
+     * return the thumbnail. Failure in returning the same may cause unexpected media preview
+     * behaviour in the photopicker.
      * @param signal used by the OS to signal if the request should be cancelled
      * @return read-only file descriptor for accessing the thumbnail for the media file
      *
@@ -1064,6 +1067,8 @@ public abstract class CloudMediaProvider extends ContentProvider {
      * any heavy operation.
      * <p>Note that a single CloudMediaSurfaceController instance would be responsible for
      * rendering multiple media items associated with multiple surfaces.
+     * <p>Note: For an optimal media preview experience in the photopicker, this class must be
+     * implemented by the Cloud Media Provider.
      */
     @SuppressLint("PackageLayering") // We need to pass in a Surface which can be prepared for
     // rendering a media item.
