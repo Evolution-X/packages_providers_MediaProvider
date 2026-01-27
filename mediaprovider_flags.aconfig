@@ -566,3 +566,12 @@ flag {
     description: "This flag enables the refactored photopicker banner design"
     bug: "477014801"
 }
+
+flag {
+    name: "enable_local_search_for_photopicker"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables local search for photopicker"
+    bug: "477829610"
+}
+
