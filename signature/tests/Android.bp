@@ -1,0 +1,35 @@
+android_test {
+
+    name: "SignatureTests",
+    test_suites: ["general-tests"],
+    manifest: "AndroidManifest.xml",
+    srcs: ["src/**/*.kt"],
+    compile_multilib: "both",
+    certificate: "media",
+    sdk_version: "module_current",
+    min_sdk_version: "31",
+    static_libs: [
+        // sources
+        "SignatureLib",
+
+        // test dependencies
+        "androidx.test.core",
+        "androidx.test.rules",
+        "androidx.compose.runtime_runtime",
+        "androidx.compose.ui_ui-test-junit4",
+        "androidx.compose.ui_ui-test-manifest",
+        "truth",
+
+        // testing aconfig flags:
+        "flag-junit",
+        "platform-test-annotations",
+        "signature_flags_java_lib",
+    ],
+
+    aaptflags: ["--custom-package com.android.signature"],
+
+    flags_packages: [
+        "com.android.signature.flags-aconfig",
+    ],
+
+}

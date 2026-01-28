@@ -134,6 +134,7 @@ bootclasspath_fragment {
             "android.graphics.pdf.models.selection",
             "android.graphics.pdf.logging",
             "android.widget.photopicker",
+            "com.android.signature.flags",
         ],
     },
 }
