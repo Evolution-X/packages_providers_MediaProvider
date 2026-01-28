@@ -53,9 +53,12 @@ import java.util.stream.Collectors;
 public final class SearchMediaExecutorHelper {
     static final int DEFAULT_PAGE_SIZE = 100;
     static final int BUFFER_SIZE = 1;
-    static final double MAX_SCORE = 10000000000D;
+    /** The default upper bound for score. */
+    static final double MAX_SCORE = Double.MAX_VALUE;
     static final String SEPARATOR = "_";
-    private static final long MAX_DATE_TAKEN = 10000000000L;
+
+    /** The default upper bound for date taken in milliseconds. */
+    private static final long MAX_DATE_TAKEN_MILLIS = Long.MAX_VALUE;
     private static final double SEMANTIC_SEARCH_THRESHOLD = 0.7;
 
     private static final String OR_CONNECTOR = " OR ";
@@ -143,7 +146,7 @@ public final class SearchMediaExecutorHelper {
     private static void addTimeQueryFilter(StringBuilder builder, Bundle searchParams) {
         String pageToken = searchParams.getString(EXTRA_NEXT_PAGE_TOKEN, null);
 
-        long maxDateTaken = MAX_DATE_TAKEN;
+        long maxDateTaken = MAX_DATE_TAKEN_MILLIS;
         if (pageToken != null) {
             try {
                 maxDateTaken = Long.parseLong(pageToken);
