@@ -35,6 +35,7 @@ import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Handler;
 import android.os.OutcomeReceiver;
+import android.os.Trace;
 import android.provider.SearchMediaException;
 import android.provider.SearchMediaResult;
 import android.provider.SearchMediaResultPage;
@@ -82,10 +83,13 @@ public class SearchMediaExecutor {
     void searchMedia(@NonNull String searchText, @NonNull String searchId,
             @NonNull Bundle searchParams,
             @NonNull OutcomeReceiver<SearchMediaResultPage, SearchMediaException> receiver) {
+        Trace.beginAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
+
         if (mAppSearchDbManager == null) {
             receiver.onError(new SearchMediaException(searchId, "AppSearchDbManager is not "
                     + "initialized, cannot perform search. Please try again later.",
                     SearchMediaException.ERROR_UNKNOWN, /* retryable */ true));
+            Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
             return;
         }
 
@@ -99,6 +103,7 @@ public class SearchMediaExecutor {
             final long start = System.currentTimeMillis();
             if (isCancelled(uniqueSearchId)) {
                 Log.i(TAG, "Search was cancelled for searchId: " + searchId);
+                Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
                 return;
             }
 
@@ -119,6 +124,7 @@ public class SearchMediaExecutor {
                 } finally {
                     mCancellationSignalMap.remove(uniqueSearchId);
                 }
+                Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
                 return;
             }
 
@@ -141,20 +147,27 @@ public class SearchMediaExecutor {
                 mCancellationSignalMap.remove(uniqueSearchId);
             }
             Log.d(TAG, "searchMedia took " + (System.currentTimeMillis() - start) + "ms");
+            Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
         });
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     void cancelSearch(@NonNull String searchId) {
+        Trace.beginSection("SearchMediaExecutor.cancelSearch");
+
         final long start = System.currentTimeMillis();
         Log.d(TAG, "cancelling search request with searchId: " + searchId);
 
-        CancellationSignal signal = mCancellationSignalMap.remove(
-                getUniqueSearchIdPerUid(searchId));
-        if (signal != null) {
-            signal.cancel();
+        try {
+            CancellationSignal signal = mCancellationSignalMap.remove(
+                    getUniqueSearchIdPerUid(searchId));
+            if (signal != null) {
+                signal.cancel();
+            }
+        } finally {
+            Log.d(TAG, "cancelSearch took " + (System.currentTimeMillis() - start) + "ms");
+            Trace.endSection();
         }
-        Log.d(TAG, "cancelSearch took " + (System.currentTimeMillis() - start) + "ms");
     }
 
     void disconnect() {
@@ -284,8 +297,13 @@ public class SearchMediaExecutor {
 
     @VisibleForTesting
     protected Optional<EmbeddingVector> getEmbeddingForSearchText(String searchText) {
-        // TODO: this EmbeddingVector should be retrieved from {@link MediaProcessingService},
-        //  support for which will be added in future.
-        return Optional.empty();
+        try {
+            Trace.beginSection("SearchMediaExecutor.getEmbeddingForSearchText");
+            // TODO: this EmbeddingVector should be retrieved from {@link MediaProcessingService},
+            //  support for which will be added in future.
+            return Optional.empty();
+        } finally {
+            Trace.endSection();
+        }
     }
 }

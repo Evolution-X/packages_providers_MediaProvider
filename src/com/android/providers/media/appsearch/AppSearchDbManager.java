@@ -24,6 +24,7 @@ import static androidx.appsearch.app.Features.SCHEMA_SCORABLE_PROPERTY_CONFIG;
 import android.content.Context;
 import android.os.Build;
 import android.os.SystemClock;
+import android.os.Trace;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -193,6 +194,7 @@ public final class AppSearchDbManager {
         final long startTimeMillis = SystemClock.elapsedRealtime();
         sReadWriteLock.writeLock().lock();
         try {
+            Trace.beginSection("AppSearchDbManager.insertDocuments");
             ensureAppSearchDbConnected();
             AppSearchBatchResult<String, Void> result = putDocuments(documents);
 
@@ -201,6 +203,7 @@ public final class AppSearchDbManager {
                     + ", Failures: " + result.getFailures().size());
         } finally {
             sReadWriteLock.writeLock().unlock();
+            Trace.endSection();
             Log.d(TAG, "insertDocuments() took " + (SystemClock.elapsedRealtime()
                     - startTimeMillis) + " ms");
         }
@@ -267,6 +270,7 @@ public final class AppSearchDbManager {
         ensureAppSearchDbConnected();
         sReadWriteLock.writeLock().lock();
         try {
+            Trace.beginSection("AppSearchDbManager.updateDocuments");
             List<Long> fileIds = new ArrayList<>(updatesByFileId.keySet());
             List<GenericDocument> documents = getDocumentsByFileIds(fileIds);
             List<MediaItem> docsToUpdate = new ArrayList<>();
@@ -320,6 +324,7 @@ public final class AppSearchDbManager {
             }
         } finally {
             sReadWriteLock.writeLock().unlock();
+            Trace.endSection();
             Log.d(TAG, "updateDocuments() took " + (SystemClock.elapsedRealtime()
                     - startTimeMillis) + " ms");
         }
@@ -347,6 +352,7 @@ public final class AppSearchDbManager {
         ensureAppSearchDbConnected();
         sReadWriteLock.readLock().lock();
         try {
+            Trace.beginSection("AppSearchDbManager.getDocumentsByFileIds");
             if (fileIds.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -373,6 +379,7 @@ public final class AppSearchDbManager {
             }
             return results;
         } finally {
+            Trace.endSection();
             sReadWriteLock.readLock().unlock();
             Log.d(TAG, "getDocumentsByFileIds() took " + (SystemClock.elapsedRealtime()
                     - startTimeMillis) + " ms");
@@ -399,6 +406,7 @@ public final class AppSearchDbManager {
         ensureAppSearchDbConnected();
         sReadWriteLock.writeLock().lock();
         try {
+            Trace.beginSection("AppSearchDbManager.deleteDocumentsByFileIds");
             if (fileIds.isEmpty()) {
                 return;
             }
@@ -418,6 +426,7 @@ public final class AppSearchDbManager {
                     + ", Failures: " + result.getFailures().size());
         } finally {
             sReadWriteLock.writeLock().unlock();
+            Trace.endSection();
             Log.d(TAG, "deleteDocumentsByFileIds() took " + (SystemClock.elapsedRealtime()
                     - startTimeMillis) + " ms");
         }
@@ -436,9 +445,11 @@ public final class AppSearchDbManager {
         ensureAppSearchDbConnected();
         sReadWriteLock.writeLock().lock();
         try {
+            Trace.beginSection("AppSearchDbManager.deleteDocuments");
             mAppSearchSession.removeAsync(query, searchSpec).get();
         } finally {
             sReadWriteLock.writeLock().unlock();
+            Trace.endSection();
             Log.d(TAG, "deleteDocuments() took " + (SystemClock.elapsedRealtime()
                     - startTimeMillis) + " ms");
         }
@@ -458,12 +469,14 @@ public final class AppSearchDbManager {
         ensureAppSearchDbConnected();
         sReadWriteLock.readLock().lock();
         try {
+            Trace.beginSection("AppSearchDbManager.searchDocuments");
             return mAppSearchSession.search(query, searchSpec);
         } catch (Exception e) {
             Log.e(TAG, "searchDocuments() failed for query " + query, e);
             throw new RuntimeException(e);
         } finally {
             sReadWriteLock.readLock().unlock();
+            Trace.endSection();
             Log.d(TAG, "searchDocuments() took " + (SystemClock.elapsedRealtime()
                     - startTimeMillis) + " ms");
         }
