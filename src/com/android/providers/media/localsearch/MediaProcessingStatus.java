@@ -16,6 +16,24 @@
 
 package com.android.providers.media.localsearch;
 
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO;
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_DOCUMENT;
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_NONE;
+import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
+import static android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType.DEFAULT_LOCATION_PROCESSING;
+import static android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType.DEFAULT_MEDIA_LABELS_PROCESSING;
+import static android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType.DEFAULT_METADATA_PROCESSING;
+
+import android.content.ContentValues;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.provider.media.internal.flags.Flags;
+
+import com.android.providers.media.DatabaseHelper;
+
+import java.util.Map;
+
 /**
  * Manages the processing status of media files in the {@code MEDIA_PROCESSING_STATUS} table.
  * This class tracks the status of various processing types
@@ -31,8 +49,174 @@ public class MediaProcessingStatus {
 
     /**
      * Label Status columns track the processing state or retry count for each processing type.
+     * <p>
+     * Values:
+     * <ul>
+     * <li>{@code 0}: Default state, not processed.</li>
+     * <li>{@code > 0}: Number of failed attempts (incremented on failure). Max value:
+     * {@link #RETRY_LIMIT}</li>
+     * <li>{@code 999} ({@link #STATUS_COMPLETED}): Processing successfully completed or max
+     * retries reached.</li>
+     * </ul>
      */
     public static final String MEDIA_LABEL_STATUS = "is_media_label_processed";
     public static final String LOCATION_LABEL_STATUS = "is_location_label_processed";
     public static final String METADATA_LABEL_STATUS = "is_metadata_label_processed";
+
+    /**
+     * The maximum number of times processing will be attempted.
+     */
+    public static final int RETRY_LIMIT = 3;
+
+
+    /**
+     * The status value indicating that processing is finished. This indicates either a successful
+     * processing attempt or that the {@link #RETRY_LIMIT} was reached.
+     */
+    public static final int STATUS_COMPLETED = 999;
+
+    private static final Integer[] MEDIA_TYPES = new Integer[]{MEDIA_TYPE_AUDIO,
+            MEDIA_TYPE_VIDEO, MEDIA_TYPE_IMAGE, MEDIA_TYPE_DOCUMENT, MEDIA_TYPE_NONE};
+
+    private static int getCurrentRetryCount(SQLiteDatabase db, long mediaId,
+            String processingStatusColumn) {
+        final String selection = FILE_ID_COLUMN + "=?";
+        final String[] selectionArgs = new String[]{String.valueOf(mediaId)};
+        final String[] projection = new String[]{processingStatusColumn};
+
+        try (Cursor c = db.query(MEDIA_PROCESSING_STATUS_TABLE, projection, selection,
+                selectionArgs, /* groupBy */ null, /* having */ null, /* sortOrder */ null)) {
+            if (c.moveToFirst()) {
+                return c.getInt(0);
+            }
+        }
+        return 0;
+    }
+
+    private static int incrementRetryCount(SQLiteDatabase db, long mediaId,
+            String processingStatusColumn) {
+        return getCurrentRetryCount(db, mediaId, processingStatusColumn) + 1;
+    }
+
+    /**
+     * Inserts a new row into the media processing status table.
+     * <p>
+     * This method is called after the initial metadata extraction is complete.
+     * It initializes the row with the {@code METADATA_LABEL_STATUS} set to
+     * {@link #STATUS_COMPLETED}, while other processing statuses (Location, Media Label)
+     * remain at their default (unprocessed) state.
+     */
+    public static void insertMetadataProcessedRowInStatusTable(SQLiteDatabase db, long mediaId,
+            long mediaType,
+            long genModified) {
+        final ContentValues values = new ContentValues();
+        values.put(FILE_ID_COLUMN, mediaId);
+        values.put(MEDIA_TYPE, mediaType);
+        values.put(GEN_MODIFIED, genModified);
+        values.put(METADATA_LABEL_STATUS, STATUS_COMPLETED);
+
+        db.insert(MEDIA_PROCESSING_STATUS_TABLE, /* nullColumnHack */ null, values);
+    }
+
+    /**
+     * Updates the processing status for location labels for a specific media item.
+     * <p>
+     * If {@code isSuccess} is true, the status is marked as {@link #STATUS_COMPLETED}.
+     * If {@code isSuccess} is false, the current failure count is incremented.
+     * If the failure count reaches {@link #RETRY_LIMIT}, the status is marked as
+     * {@link #STATUS_COMPLETED}
+     *
+     * @return {@code true} if a row was updated, {@code false} otherwise.
+     */
+    public static boolean updateLocationLabelStatus(SQLiteDatabase db, long mediaId,
+            boolean isSuccess) {
+        return updateRowInStatusTable(db, mediaId, LOCATION_LABEL_STATUS, isSuccess);
+    }
+
+    /**
+     * Updates the processing status for media labels and embeddings for a specific media item.
+     * <p>
+     * If {@code isSuccess} is true, the status is marked as {@link #STATUS_COMPLETED}.
+     * If {@code isSuccess} is false, the current failure count is incremented.
+     * If the failure count reaches {@link #RETRY_LIMIT}, the status is marked as
+     * {@link #STATUS_COMPLETED} to prevent infinite retries.
+     *
+     * @return {@code true} if a row was updated, {@code false} otherwise.
+     */
+    public static boolean updateMediaLabelStatus(SQLiteDatabase db, long mediaId,
+            boolean isSuccess) {
+        return updateRowInStatusTable(db, mediaId, MEDIA_LABEL_STATUS, isSuccess);
+    }
+
+    private static boolean updateRowInStatusTable(SQLiteDatabase db, long mediaId,
+            String statusColumn, boolean isSuccess) {
+        int status = isSuccess ? STATUS_COMPLETED : incrementRetryCount(db, mediaId,
+                statusColumn);
+
+        final String selection = FILE_ID_COLUMN + "=?";
+        final String[] selectionArgs = new String[]{String.valueOf(mediaId)};
+
+        final ContentValues values = new ContentValues();
+        values.put(statusColumn, status);
+
+        int rowsUpdated = db.update(MEDIA_PROCESSING_STATUS_TABLE, values, selection,
+                selectionArgs);
+
+        return (rowsUpdated == 1);
+    }
+
+    private static String getSelectionWhereMediaProcessed(int requestedProcessing) {
+        String selection = MEDIA_TYPE + " = ?";
+        if ((requestedProcessing & DEFAULT_MEDIA_LABELS_PROCESSING) != 0) {
+            selection += " AND (" + MEDIA_LABEL_STATUS + " = " + STATUS_COMPLETED
+                    + " OR " + MEDIA_LABEL_STATUS + " >= " + RETRY_LIMIT + ")";
+        }
+        if ((requestedProcessing & DEFAULT_LOCATION_PROCESSING) != 0) {
+            selection += " AND (" + LOCATION_LABEL_STATUS + " = " + STATUS_COMPLETED
+                    + " OR " + LOCATION_LABEL_STATUS + " >= " + RETRY_LIMIT + ")";
+        }
+        if ((requestedProcessing & DEFAULT_METADATA_PROCESSING) != 0) {
+            // Metadata labels are never reprocessed.
+            selection += " AND " + METADATA_LABEL_STATUS + " = " + STATUS_COMPLETED;
+        }
+        return selection;
+    }
+
+    /**
+     * Deletes rows from the status table where all requested processing types have been completed.
+     * <p>
+     * A row is considered "stale" or "complete" if the status columns for all processing types
+     * required for that specific {@code mediaType} are marked as {@link #STATUS_COMPLETED} (10).
+     *
+     * @return The total number of rows deleted.
+     */
+    public static int deleteStaleRows(SQLiteDatabase db,
+            Map<Integer, Integer> processingRequestedPerMediaType) {
+        int totalDeleted = 0;
+        for (int mediaType : MEDIA_TYPES) {
+            int requestedProcessing = processingRequestedPerMediaType.getOrDefault(mediaType, 0);
+            String selection = getSelectionWhereMediaProcessed(requestedProcessing);
+            String[] selectionArgs = new String[]{String.valueOf(mediaType)};
+            totalDeleted += db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection, selectionArgs);
+        }
+        return totalDeleted;
+    }
+
+    /**
+     * Delete row from media_processing_status table for mediaId if file updated/deleted in the SQL
+     * files table
+     *
+     * @param helper  DatabaseHelper instance
+     * @param mediaId File id to be deleted
+     */
+    public static void deleteMediaIdFromStatusTable(DatabaseHelper helper, long mediaId) {
+        if (Flags.enableMediaProcessing()) {
+            String selection = FILE_ID_COLUMN + " = ?";
+            helper.runWithTransaction((db) -> {
+                db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection,
+                        new String[]{String.valueOf(mediaId)});
+                return null;
+            });
+        }
+    }
 }
