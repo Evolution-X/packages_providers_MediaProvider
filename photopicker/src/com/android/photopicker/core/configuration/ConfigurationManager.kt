@@ -434,6 +434,7 @@ class ConfigurationManager(
             PICKER_DELETE_HISTORY_SUGGESTION = Flags.enablePhotopickerDeleteHistorySuggestion(),
             PICKER_OFFLINE_BANNERS_ENABLED = Flags.enablePhotopickerOfflineBanners(),
             PICKER_BANNER_REDESIGN_ENABLED = Flags.enablePhotopickerBannerRedesign(),
+            CMP_IMPROVEMENTS_ENABLED = Flags.enableCmpImprovements(),
         )
     }
 

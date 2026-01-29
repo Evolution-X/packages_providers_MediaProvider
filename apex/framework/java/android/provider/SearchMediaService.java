@@ -28,6 +28,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.OutcomeReceiver;
 import android.os.RemoteException;
+import android.os.Trace;
 import android.util.Log;
 
 import androidx.annotation.AnyThread;
@@ -257,6 +258,9 @@ public abstract class SearchMediaService extends Service {
                     } catch (RemoteException ex) {
                         Log.e(TAG, "Unable to send back search results for searchId "
                                 + searchId, ex);
+                    } finally {
+                        Trace.endAsyncSection("SearchMediaService.onSearchMedia",
+                                searchId.hashCode());
                     }
                 }
 
@@ -267,11 +271,15 @@ public abstract class SearchMediaService extends Service {
                     } catch (RemoteException ex) {
                         Log.e(TAG, "Unable to send back search error for searchId "
                                 + searchId, ex);
+                    } finally {
+                        Trace.endAsyncSection("SearchMediaService.onSearchMedia",
+                                searchId.hashCode());
                     }
                 }
             };
 
             try {
+                Trace.beginAsyncSection("SearchMediaService.onSearchMedia", searchId.hashCode());
                 onSearchMedia(searchText, searchId, searchParams, receiver);
             } catch (Exception e) {
                 String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown error";
@@ -287,8 +295,14 @@ public abstract class SearchMediaService extends Service {
         }
 
         @Override
+        @RequiresApi(Build.VERSION_CODES.TIRAMISU)
         public boolean isSemanticSearchSupported() {
-            return onCheckSemanticSearchSupport();
+            try {
+                Trace.beginSection("SearchMediaService.isSemanticSearchSupported");
+                return onCheckSemanticSearchSupport();
+            } finally {
+                Trace.endSection();
+            }
         }
     };
 
