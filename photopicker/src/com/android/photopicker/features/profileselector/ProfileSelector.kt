@@ -55,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.photopicker.R
 import com.android.photopicker.core.components.ElevationTokens
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
-import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.theme.CustomAccentColorScheme
 import com.android.photopicker.core.user.UserProfile
@@ -75,11 +74,16 @@ fun ProfileSelector(
 
     val config = LocalPhotopickerConfiguration.current
 
-    // MutableState which defines which profile to use to display the [ProfileUnavailableDialog].
-    // When this value is null, the dialog is hidden.
-    var disabledDialogProfile: UserProfile? by remember { mutableStateOf(null) }
-    disabledDialogProfile?.let {
-        ProfileUnavailableDialog(onDismissRequest = { disabledDialogProfile = null }, profile = it)
+    // MutableState which defines which profile to use to display the
+    // [ProfileUnavailableNotification].
+    // When this value is null, the notification is hidden.
+    var unavailableProfile: UserProfile? by remember { mutableStateOf(null) }
+    unavailableProfile?.let {
+        ProfileUnavailableNotification(
+            runtimeEnv = config.runtimeEnv,
+            onReset = { unavailableProfile = null },
+            profile = it,
+        )
     }
 
     // Ensure there is more than one available profile before creating all of the UI.
@@ -181,19 +185,6 @@ fun ProfileSelector(
                     ) {
                         DropdownMenuItem(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled =
-                                when (config.runtimeEnv) {
-
-                                    // The button is always enabled in activity runtime, as an error
-                                    // dialog will be shown to the user if the profile cannot be
-                                    // selected.
-                                    PhotopickerRuntimeEnv.ACTIVITY,
-                                    PhotopickerRuntimeEnv.DESKTOP -> true
-
-                                    // For embedded, dialogs cannot be launched, so only allow the
-                                    // profile button to be enabled if the profile is enabled.
-                                    PhotopickerRuntimeEnv.EMBEDDED -> profile.enabled
-                                },
                             onClick = {
                                 // Only request a switch if the profile is actually different.
                                 if (currentProfile != profile) {
@@ -206,9 +197,8 @@ fun ProfileSelector(
                                         // Close the profile switcher popup
                                         expanded = false
                                     } else {
-
                                         // Show the disabled profile dialog
-                                        disabledDialogProfile = profile
+                                        unavailableProfile = profile
                                         expanded = false
                                     }
                                 }
