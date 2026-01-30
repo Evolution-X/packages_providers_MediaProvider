@@ -6,7 +6,7 @@ container: "com.android.mediaprovider"
 flag {
     name: "enable_signature"
     is_exported: false
-    namespace: "signature"
+    namespace: "pdf_viewer"
     description: "This flag controls whether to enable signature."
     bug: "477473515"
 }
