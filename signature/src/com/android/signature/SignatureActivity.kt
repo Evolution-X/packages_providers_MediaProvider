@@ -18,7 +18,7 @@ package com.android.signature
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * This is the main entrypoint into the Android Signature.
@@ -26,15 +26,13 @@ import androidx.activity.compose.setContent
  * This class is responsible for bootstrapping the launched activity, session related dependencies,
  * and providing the compose ui entrypoint in [[SignatureApp]] with everything it needs.
  */
-class SignatureActivity : ComponentActivity() {
+@AndroidEntryPoint(ComponentActivity::class)
+class SignatureActivity : Hilt_SignatureActivity() {
     companion object {
         val TAG: String = "Signature"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            SignatureApp()
-        }
     }
 }

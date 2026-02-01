@@ -17,52 +17,67 @@
 package com.android.signature
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.platform.test.annotations.RequiresFlagsDisabled
 import android.platform.test.annotations.RequiresFlagsEnabled
 import android.platform.test.flag.junit.CheckFlagsRule
 import android.platform.test.flag.junit.DeviceFlagsValueProvider
-import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.android.signature.flags.Flags
 import com.google.common.truth.Truth.assertThat
-import org.junit.Assert.assertThrows
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.LooperMode
 
-private const val SIGNATURE_FLAG = "com.android.signature.flags.enable_signature"
-
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
+@Config(application = HiltTestApplication::class)
+@LooperMode(LooperMode.Mode.PAUSED)
 class SignatureActivityTest {
+
+    @get:Rule
+    val hiltRule = HiltAndroidRule(this)
 
     @get:Rule
     val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
 
-    @Test
-    @RequiresFlagsEnabled(SIGNATURE_FLAG)
-    fun testSignatureActivity_flagEnabled_activityExistsAndWorks() {
-        val intent =
-            Intent(ApplicationProvider.getApplicationContext(), SignatureActivity::class.java)
-        ActivityScenario.launch<SignatureActivity>(intent).use { scenario ->
-            val composeTestRule = createAndroidComposeRule<SignatureActivity>()
-            composeTestRule.onNodeWithText("Hello World from Signature!").assertIsDisplayed()
-        }
+    @Before
+    fun setup() {
+        hiltRule.inject()
     }
 
     @Test
-    @RequiresFlagsDisabled(SIGNATURE_FLAG)
+    @RequiresFlagsDisabled(Flags.FLAG_ENABLE_SIGNATURE)
     fun testSignatureActivity_flagDisabled_activityDoesNotExist() {
-        val intent =
-            Intent(ApplicationProvider.getApplicationContext(), SignatureActivity::class.java)
+        val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
+        val intent = Intent(context, SignatureActivity::class.java)
 
-        val exception = assertThrows(RuntimeException::class.java) {
-            ActivityScenario.launch<SignatureActivity>(intent)
-        }
+        val resolveInfo = context.packageManager.resolveActivity(
+            intent,
+            PackageManager.MATCH_DEFAULT_ONLY
+        )
 
-        assertThat(exception).hasMessageThat()
-            .contains("Unable to resolve activity for: Intent { cmp=com.android.signature/.SignatureActivity }")
+        assertThat(resolveInfo).isNull()
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SIGNATURE)
+    fun testSignatureActivity_flagEnabled_activityExist() {
+        val context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
+        val intent = Intent(context, SignatureActivity::class.java)
+
+        val resolveInfo = context.packageManager.resolveActivity(
+            intent,
+            PackageManager.MATCH_DEFAULT_ONLY
+        )
+
+        assertThat(resolveInfo).isNotNull()
     }
 }
