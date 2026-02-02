@@ -37,10 +37,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_PROCESSING)
@@ -48,6 +52,20 @@ import java.util.Map;
 public class MetadataLabelResolverTest {
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+
+    /**
+     * Helper to compare label strings ignoring order and duplicates.
+     */
+    private void assertLabelsMatch(String expectedString, String actualString) {
+        Set<String> expectedSet = new HashSet<>(Arrays.asList(expectedString.split("\\s+")));
+        Set<String> actualSet = new HashSet<>(Arrays.asList(actualString.split("\\s+")));
+
+        // Remove empty strings that might result from splitting if strictness varies
+        expectedSet.remove("");
+        actualSet.remove("");
+
+        assertEquals("Sets of labels should match", expectedSet, actualSet);
+    }
 
     @Test
     public void testBuildMetadataLabel_allFieldsPopulated() {
@@ -72,9 +90,9 @@ public class MetadataLabelResolverTest {
 
         String label = MetadataLabelResolver.buildMetadataLabel(info);
 
-        String expected = "vacation jpg dcim camera image images image jpeg october 2021 "
+        String expected = "vacation jpg dcim camera image images jpeg october 2021 "
                 + "favorite favorites me holidays travel";
-        assertEquals(expected, label);
+        assertLabelsMatch(expected, label);
     }
 
     @Test
@@ -102,9 +120,9 @@ public class MetadataLabelResolverTest {
                 .build();
 
         String label = MetadataLabelResolver.buildMetadataLabel(info);
-        String expected = "video_clip mp4 movies scifi video videos video mp4 download downloads";
+        String expected = "video_clip mp4 movies scifi video videos download downloads";
 
-        assertEquals(expected, label);
+        assertLabelsMatch(expected, label);
     }
 
     @Test
@@ -145,20 +163,23 @@ public class MetadataLabelResolverTest {
 
         String label = MetadataLabelResolver.buildMetadataLabel(info);
         String expected = "audio audios january 2025 beethoven";
-        assertEquals(expected, label);
+        assertLabelsMatch(expected, label);
     }
 
     @Test
     public void testBuildMetadataLabel_timestampFallback() {
         // Timestamp: January 2025
-        long dateAdded = 1735689600000L; // Jan 1 2025 UTC
+        long dateAdded = LocalDate.of(2025, 1, 1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
 
         // No Date Taken, should use Date Added
         MetadataInfo info1 = new MetadataInfo.Builder()
                 .setId(6)
                 .setDateAdded(dateAdded)
                 .build();
-        assertTrue(MetadataLabelResolver.buildMetadataLabel(info1).contains("january 2025"));
+        assertLabelsMatch(MetadataLabelResolver.buildMetadataLabel(info1), "january 2025");
 
         // Invalid Date Taken, should use Date Added
         MetadataInfo info2 = new MetadataInfo.Builder()
@@ -166,16 +187,20 @@ public class MetadataLabelResolverTest {
                 .setDateTaken(0)
                 .setDateAdded(dateAdded)
                 .build();
-        assertTrue(MetadataLabelResolver.buildMetadataLabel(info2).contains("january 2025"));
+        assertLabelsMatch(MetadataLabelResolver.buildMetadataLabel(info2), "january 2025");
 
         // Both valid, should use Date Taken (December 2024 vs January 2025)
-        long dateTaken = 1733011200000L; // Dec 1 2024 UTC
+        long dateTaken = LocalDate.of(2024, 12, 1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
+
         MetadataInfo info3 = new MetadataInfo.Builder()
                 .setId(8)
                 .setDateTaken(dateTaken)
                 .setDateAdded(dateAdded)
                 .build();
-        assertTrue(MetadataLabelResolver.buildMetadataLabel(info3).contains("december 2024"));
+        assertLabelsMatch(MetadataLabelResolver.buildMetadataLabel(info3), "december 2024");
         assertFalse(MetadataLabelResolver.buildMetadataLabel(info3).contains("january 2025"));
     }
 
@@ -199,8 +224,8 @@ public class MetadataLabelResolverTest {
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertEquals("a jpg image images", result.get(10L));
-        assertEquals("b mp4 video videos", result.get(20L));
+        assertLabelsMatch("a jpg image images", result.get(10L));
+        assertLabelsMatch("b mp4 video videos", result.get(20L));
     }
 
     @Test

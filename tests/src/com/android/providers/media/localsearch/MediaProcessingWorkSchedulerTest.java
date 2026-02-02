@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.os.Build;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.DeviceFlagsValueProvider;
@@ -29,6 +30,7 @@ import android.provider.media.internal.flags.Flags;
 import android.util.Log;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.filters.SdkSuppress;
 import androidx.test.platform.app.InstrumentationRegistry;
 import androidx.work.Configuration;
 import androidx.work.WorkInfo;
@@ -85,8 +87,9 @@ public class MediaProcessingWorkSchedulerTest {
 
 
     @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.CINNAMON_BUN)
     public void testEnqueueWork() throws Exception {
-        mScheduler.enqueueWork();
+        MediaProcessingWorkScheduler.enqueueWork(mIsolatedContext);
 
         List<WorkInfo> workInfos = mWorkManager.getWorkInfosForUniqueWork(PERIODIC_WORK_NAME).get();
         assertThat(workInfos).hasSize(1);

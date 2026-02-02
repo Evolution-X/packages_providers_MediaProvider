@@ -21,6 +21,7 @@ import android.os.Build;
 import android.provider.MediaStore.Files.FileColumns;
 import android.provider.MediaStore.MediaColumns;
 import android.text.TextUtils;
+import android.util.ArraySet;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -34,11 +35,12 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Generates searchable text labels from the metadata of media files.
@@ -51,9 +53,9 @@ public class MetadataLabelResolver {
 
     // Helper method to add non-null/empty strings to the list
     // Returns true if the string was added.
-    private static boolean addIfNotNull(List<String> labels, @Nullable String label) {
+    private static boolean addIfNotNull(Set<String> labels, @Nullable String label) {
         if (!TextUtils.isEmpty(label)) {
-            labels.add(label.trim());
+            Collections.addAll(labels, label.trim().split("\\s+"));
             return true;
         }
 
@@ -70,7 +72,7 @@ public class MetadataLabelResolver {
      */
     @VisibleForTesting
     static String buildMetadataLabel(@NonNull MetadataInfo info) {
-        List<String> labels = new ArrayList<>();
+        Set<String> labels = new ArraySet<>();
 
         addIfNotNull(labels, processDisplayName(info.displayName));
         addIfNotNull(labels, processRelativePath(info.relativePath));
