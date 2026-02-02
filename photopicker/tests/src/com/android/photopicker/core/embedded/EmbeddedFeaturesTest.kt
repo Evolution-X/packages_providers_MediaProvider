@@ -34,6 +34,7 @@ import android.provider.MediaStore
 import android.test.mock.MockContentResolver
 import android.view.SurfaceControlViewHost
 import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
+import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.CompositionLocalProvider
@@ -127,6 +128,8 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -2020,5 +2023,75 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 .that(ratio)
                 .isWithin(0.05f)
                 .of(9f / 16f)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testPhotoWithDisabledReasonCannotBeSelectedInEmbedded() =
+        testScope.runTest {
+            val currentDateTime = LocalDateTime.now()
+            val maxFileSize = 100 * 1024L // 100 KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+            val mediaWithDisabledReason =
+                Media.Image(
+                    mediaId = "1",
+                    pickerId = 1L,
+                    authority = "a",
+                    mediaSource = MediaSource.LOCAL,
+                    mediaUri = Uri.parse("content://media/picker/a/1"),
+                    glideLoadableUri = Uri.parse("content://a/1"),
+                    dateTakenMillisLong = currentDateTime.toEpochSecond(ZoneOffset.UTC) * 1000,
+                    sizeInBytes = 2 * maxFileSize,
+                    mimeType = "image/png",
+                    standardMimeTypeExtension = 1,
+                    width = 512,
+                    height = 512,
+                    selectionParams = selectionParams,
+                )
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.mediaList = listOf(mediaWithDisabledReason)
+
+            // Set the selection params in the feature info
+            val info =
+                EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerMain(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .performClick()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage("Expected selection to be empty as item has disabled reason.")
+                .that(selection.get().snapshot().size)
+                .isEqualTo(0)
         }
 }

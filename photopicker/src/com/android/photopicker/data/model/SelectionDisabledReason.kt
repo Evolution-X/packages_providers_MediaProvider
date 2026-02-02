@@ -16,6 +16,12 @@
 
 package com.android.photopicker.data.model
 
+import android.content.res.Resources
+import com.android.photopicker.R
+import com.android.photopicker.core.configuration.PhotopickerConfiguration
+import com.android.photopicker.util.LocalizationHelper
+import com.android.photopicker.util.SizeUnit
+
 /**
  * Enum defining the reasons why a media item might be disabled for selection in the Photo Picker.
  *
@@ -41,6 +47,81 @@ enum class SelectionDisabledReason {
     /** The media item's MIME type is not in the list of allowed MIME types. */
     MIME_TYPE_NOT_ALLOWED;
 
+    /**
+     * Returns a localized error message for this [SelectionDisabledReason].
+     *
+     * This method uses the current [PhotopickerConfiguration] to retrieve the application name and
+     * the specific constraint values (size, video duration, resolution) to format the error
+     * message.
+     *
+     * @param configuration The current photopicker configuration.
+     * @param localizationHelper The helper for localization.
+     * @param resources The resources used to fetch strings.
+     * @return A localized and formatted error message string.
+     */
+    fun getDisabledMessage(
+        configuration: PhotopickerConfiguration,
+        localizationHelper: LocalizationHelper,
+        resources: Resources,
+    ): String {
+        val selectionParams = configuration.selectionParams
+        checkNotNull(selectionParams) {
+            "SelectionParams cannot be null when disabled reason is non-null."
+        }
+        val appName =
+            configuration.callingPackageLabel
+                ?: resources.getString(R.string.photopicker_selection_param_generic_app_label)
+
+        return when (this) {
+            EXCEEDS_MAX_SIZE -> {
+                val maxSizeInBytes = selectionParams.maxMediaItemSizeInBytes
+                val (sizeUnit, formattedValue) = localizationHelper.getFormattedSize(maxSizeInBytes)
+                val stringResourceId = fileSizeToResourceIdMap.getValue(sizeUnit)
+                resources.getString(stringResourceId, appName, formattedValue)
+            }
+            EXCEEDS_MAX_DURATION -> {
+                checkNotNull(selectionParams.maxVideoDuration) {
+                    "Max video duration param cannot be null when disabled reason is EXCEEDS_MAX_DURATION."
+                }
+                val maxDuration = selectionParams.maxVideoDuration!!.toSeconds()
+                resources.getString(
+                    R.string.photopicker_selection_max_video_duration_error,
+                    appName,
+                    localizationHelper.getLocalizedCount(maxDuration),
+                )
+            }
+            FALLS_BELOW_MIN_DURATION -> {
+                checkNotNull(selectionParams.minVideoDuration) {
+                    "Min video duration param cannot be null when disabled reason is FALLS_BELOW_MIN_DURATION."
+                }
+                val minDuration = selectionParams.minVideoDuration!!.toSeconds()
+                resources.getString(
+                    R.string.photopicker_selection_min_video_duration_error,
+                    appName,
+                    localizationHelper.getLocalizedCount(minDuration),
+                )
+            }
+            EXCEEDS_MAX_RESOLUTION -> {
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_resolution_error,
+                    appName,
+                )
+            }
+            FALLS_BELOW_MIN_RESOLUTION -> {
+                resources.getString(
+                    R.string.photopicker_selection_min_media_item_resolution_error,
+                    appName,
+                )
+            }
+            MIME_TYPE_NOT_ALLOWED -> {
+                resources.getString(
+                    R.string.photopicker_selection_unsupported_mime_type_error,
+                    appName,
+                )
+            }
+        }
+    }
+
     companion object {
         /**
          * Returns the [SelectionDisabledReason] corresponding to the given name, or null if the
@@ -49,5 +130,16 @@ enum class SelectionDisabledReason {
         fun fromName(name: String?): SelectionDisabledReason? {
             return entries.find { it.name == name }
         }
+
+        /**
+         * A mapping of [SizeUnit] to string resources specifically for individual media item size
+         * errors.
+         */
+        private val fileSizeToResourceIdMap =
+            mapOf<SizeUnit, Int>(
+                SizeUnit.KB to R.string.photopicker_selection_max_media_item_size_error_kb,
+                SizeUnit.MB to R.string.photopicker_selection_max_media_item_size_error_mb,
+                SizeUnit.GB to R.string.photopicker_selection_max_media_item_size_error_gb,
+            )
     }
 }
