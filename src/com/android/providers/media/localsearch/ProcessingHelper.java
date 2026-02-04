@@ -123,6 +123,7 @@ public class ProcessingHelper implements AutoCloseable {
     private static final int DEFAULT_LOCATION_LABEL_PROCESSING_LIMIT = 50;
     private static final int MAX_BATCH_SIZE_FOR_MEDIA_LABEL_PROCESSING = 50;
     public static final int DEFAULT_MEDIA_LABEL_PROCESSING_LIMIT = 10;
+    private static final int RETRY_LOCATION_BATCH_MULTIPLIER = 2;
 
 
     final Map<Integer, Integer> mProcessingRequestedPerMediaType;
@@ -681,6 +682,11 @@ public class ProcessingHelper implements AutoCloseable {
             }
 
             try {
+                if (mExternalDatabase == null) {
+                    Log.e(TAG, "DatabaseHelper instance is null");
+                    return;
+                }
+
                 long lastProcessedGenModifiedForLocation = mExternalDatabase.runWithTransaction(
                         (db) -> {
                             long updatedGenModified = 0;
@@ -711,6 +717,11 @@ public class ProcessingHelper implements AutoCloseable {
                             }
 
                             try {
+                                if (mAppSearchDbManager == null) {
+                                    Log.v(TAG, "AppSearchDbManager instance is null");
+                                    return 0L;
+                                }
+
                                 mAppSearchDbManager.updateDocuments(fileIdToUpdateSpecMap);
                             } catch (Exception e) {
                                 Log.e(TAG, "Failed to update documents in AppSearchDb", e);
@@ -938,6 +949,126 @@ public class ProcessingHelper implements AutoCloseable {
                     + "table");
             return null;
         });
+    }
+
+    /**
+     * Attempts to re-process media files for which location label generation previously failed or
+     * was not completed.
+     *
+     * <p>This method queries the {@code media_processing_status} table for files that meet the
+     * following criteria:
+     * <ul>
+     *   <li>The media type is configured to require location processing.
+     *   <li>The {@code generation_modified} is less than or equal to the last value fully
+     *       processed by the main location processing job (as tracked in SharedPreferences).
+     *   <li>The {@code location_label_status} indicates the file is not yet completed and has not
+     *       exceeded the maximum retry limit ({@link MediaProcessingStatus#RETRY_LIMIT}).
+     * </ul>
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void retryLocationLabels() throws InterruptedException {
+        if (mCancellationSignal.isCanceled()) {
+            return;
+        }
+
+        // Allow processing up to 2 batches at a time
+        int limit = getProcessingLimitForLocationLabels() * RETRY_LOCATION_BATCH_MULTIPLIER;
+        String[] requestedMediaTypes = getMediaTypesWithLocationRequested().toArray(new String[0]);
+
+        if (requestedMediaTypes.length == 0) {
+            Log.v(TAG, "No media types require location processing");
+            return;
+        }
+
+        if (mLocationResolver == null) {
+            Log.w(TAG, "Unable to create MediaLocationResolver");
+            return;
+        }
+
+        long lastProcessedGenModified = mPrefs.getLong(LAST_GEN_MODIFIED_WITH_LOCATION_LABEL,
+                /* defaultValue */ 0);
+
+        List<MediaLocationInfo> mediaInfos = new ArrayList<>();
+
+        try {
+            mExternalDatabase.runWithTransaction((db) -> {
+                List<Long> fileIdsToProcess = getFileIdsToRetryLocationProcessing(db,
+                        lastProcessedGenModified, requestedMediaTypes, limit);
+
+                if (fileIdsToProcess.isEmpty()) {
+                    Log.v(TAG, "No media files require location label reprocessing in this "
+                            + "job run");
+                    return null;
+                }
+
+                fetchLocationInfoForBatch(db, fileIdsToProcess, mediaInfos);
+
+                if (mediaInfos.isEmpty()) {
+                    Log.d(TAG, "No media files with non-null location metadata in this job run");
+                }
+
+                return null;
+            });
+        } catch (CancellationException | OperationCanceledException e) {
+            Log.v(TAG, "Location processing cancelled");
+            return;
+        }
+
+        // 3. Generate and store location labels for all files
+        if (mediaInfos.isEmpty()) {
+            Log.d(TAG, "No media files with non-null location metadata in this job run");
+            return;
+        }
+
+        int startIndex = 0;
+        while (mediaInfos.size() > startIndex) {
+            int toIndex = Math.min(startIndex + limit, mediaInfos.size());
+
+            if (mCancellationSignal.isCanceled()) {
+                return;
+            }
+
+            CountDownLatch latch = new CountDownLatch(1);
+            mLocationResolver.generateLocationLabels(mediaInfos.subList(startIndex, toIndex),
+                    (result) -> {
+                        try {
+                            mLocationLabelsCallback.onLabelsResult(result);
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
+            startIndex += limit;
+
+            // Block the worker thread until the async callback completes work, or the process
+            // times out
+            if (!latch.await(LOCATION_LABEL_PROCESSING_TIMEOUT_MINUTES, TimeUnit.MINUTES)) {
+                Log.e(TAG, "Timed out waiting for location processing batch to complete");
+            }
+        }
+    }
+
+    /**
+     * Retrieves the list of File IDs that require retrying of location processing in this batch.
+     */
+    private List<Long> getFileIdsToRetryLocationProcessing(SQLiteDatabase db,
+            long lastProcessedGenModified, String[] requestedMediaTypes, int limit) {
+        String selectMediaTypes = TextUtils.join(",", requestedMediaTypes);
+        String selection = GEN_MODIFIED + " <= ? "
+                + " AND " + MediaProcessingStatus.LOCATION_LABEL_STATUS + " < " + RETRY_LIMIT
+                + " AND " + MEDIA_TYPE + " IN (" + selectMediaTypes + ")";
+        String[] selectionArgs = new String[]{String.valueOf(lastProcessedGenModified)};
+
+
+        List<Long> fileIdsToProcess = new ArrayList<>();
+        try (Cursor c = db.query(/*distinct*/ true, MEDIA_PROCESSING_STATUS_TABLE,
+                /*projection*/ new String[]{FILE_ID_COLUMN}, /*selection*/ selection,
+                /*selectionArgs*/  selectionArgs, /*groupBy*/null, /*having*/ null,
+                /*orderBy*/ GEN_MODIFIED, String.valueOf(limit), mCancellationSignal)) {
+            while (c.moveToNext()) {
+                fileIdsToProcess.add(c.getLong(0));
+            }
+        }
+        return fileIdsToProcess;
     }
 
     /**

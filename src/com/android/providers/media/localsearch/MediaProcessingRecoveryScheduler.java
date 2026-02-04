@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 The Android Open Source Project
+ * Copyright (C) 2026 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import static com.android.providers.media.localsearch.ProcessingHelper.isNetwork
 
 import android.content.ContentProviderClient;
 import android.content.Context;
-import android.content.res.Resources;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -36,39 +35,38 @@ import androidx.work.WorkerParameters;
 
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.MediaProvider;
-import com.android.providers.media.R;
 import com.android.providers.media.WorkManagerInitializer;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public class MediaProcessingWorkScheduler extends Worker {
-    public static final String TAG = "MediaProcessingWorker";
-    static final String PERIODIC_WORK_NAME = "MediaProcessingJob";
-    private static final int DEFAULT_WORK_INTERVAL_HOURS = 6;
+public class MediaProcessingRecoveryScheduler extends Worker {
+    private static final String TAG = "ProcessingRecoveryJob";
+    static final String PERIODIC_WORK_NAME = "MediaProcessingRecoveryJob";
+    static final int WORK_INTERVAL_DAYS = 7;
     private Optional<ProcessingHelper> mProcessingHelper;
     private final Context mContext;
 
-    public MediaProcessingWorkScheduler(@NonNull Context context,
+    public MediaProcessingRecoveryScheduler(@NonNull Context context,
             @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         mContext = context;
     }
 
-    private static int getWorkIntervalHoursConfig(Context context) {
-        try {
-            return context.getResources().getInteger(
-                    R.integer.config_default_media_processing_job_interval_hours);
-        } catch (Resources.NotFoundException e) {
-            Log.e(TAG, "Overlayable config for media processing job interval not found. Using "
-                    + "default value " + DEFAULT_WORK_INTERVAL_HOURS, e);
-            return DEFAULT_WORK_INTERVAL_HOURS;
+    /**
+     * Enqueue unique periodic work to retry failed media processing tasks for local search.
+     */
+    public static void enqueueWork(Context context) {
+        if (isMediaProcessingRequired(context)) {
+            WorkManagerInitializer.getWorkManager(context).enqueueUniquePeriodicWork(
+                    PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.KEEP,
+                    createPeriodicWorkRequest());
         }
     }
 
-    private static PeriodicWorkRequest createPeriodicWorkRequest(int workIntervalHours) {
-        return new PeriodicWorkRequest.Builder(MediaProcessingWorkScheduler.class,
-                workIntervalHours, TimeUnit.HOURS)
+    private static PeriodicWorkRequest createPeriodicWorkRequest() {
+        return new PeriodicWorkRequest.Builder(MediaProcessingRecoveryScheduler.class,
+                WORK_INTERVAL_DAYS, TimeUnit.DAYS)
                 .setConstraints(new Constraints.Builder()
                         .setRequiresCharging(true)
                         .setRequiresBatteryNotLow(true)
@@ -77,44 +75,28 @@ public class MediaProcessingWorkScheduler extends Worker {
                 .build();
     }
 
-    /**
-     * Enqueue unique periodic work to schedule media processing tasks for local search.
-     */
-    public static void enqueueWork(Context context) {
-        if (isMediaProcessingRequired(context)) {
-            // Use ExistingPeriodicWorkPolicy.REPLACE to accommodate changes in the work interval
-            // overlayable config.
-            int workIntervalHours = getWorkIntervalHoursConfig(context);
-            WorkManagerInitializer.getWorkManager(context).enqueueUniquePeriodicWork(
-                    PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.REPLACE,
-                    createPeriodicWorkRequest(workIntervalHours));
-        }
-    }
-
     @SuppressWarnings("NewApi")
     @NonNull
     @Override
     public Result doWork() {
-        Log.v(TAG, "Media processing job run started.");
+        Log.d(TAG, "Starting media processing recovery job");
 
         synchronized (WORKER_LOCK) {
             DatabaseHelper externalDb;
-            try (ContentProviderClient cpc =
-                         mContext.getContentResolver().acquireContentProviderClient(
-                    MediaStore.AUTHORITY)) {
+            try (ContentProviderClient cpc = mContext.getContentResolver()
+                    .acquireContentProviderClient(MediaStore.AUTHORITY)) {
                 MediaProvider provider = (MediaProvider) cpc.getLocalContentProvider();
                 if (provider == null) {
                     Log.e(TAG, "Failed to get MediaProvider instance");
                     return Result.failure();
                 }
 
-                Optional<DatabaseHelper> dbHelper = provider.getDatabaseHelper(
-                        EXTERNAL_DATABASE_NAME);
+                Optional<DatabaseHelper> dbHelper =
+                        provider.getDatabaseHelper(EXTERNAL_DATABASE_NAME);
                 if (dbHelper.isEmpty()) {
                     Log.e(TAG, "Failed to get DatabaseHelper instance");
                     return Result.failure();
                 }
-
                 externalDb = dbHelper.get();
             }
 
@@ -127,28 +109,23 @@ public class MediaProcessingWorkScheduler extends Worker {
                 }
 
                 ProcessingHelper processingHelper = mProcessingHelper.get();
-
                 if (processingHelper.getProcessingRequestedPerMediaType().isEmpty()) {
                     Log.v(TAG, "No processing config available or Service unreachable. "
                             + "Skip job run.");
-                    return Result.failure();
+                    return Result.success();
                 }
 
-                processingHelper.deleteStaleRows();
-
-                processingHelper.processMetadataLabels();
-
                 if (isNetworkAvailable(mContext)) {
-                    processingHelper.processLocationLabels();
+                    processingHelper.retryLocationLabels();
                 } else {
                     Log.v(TAG, "No network connection. Skip location label processing");
                 }
 
-                // TODO(b/428140364) : Add default media label processing
-
+                // TODO(b/428140364) : Add retry for default media label processing
                 return Result.success();
             } catch (IllegalStateException e) {
                 Log.e(TAG, "Failed to initialize ProcessingHelper instance", e);
+
                 return Result.failure();
             } catch (Exception e) {
                 Log.e(TAG, "Failed to complete all requested processing in this job run", e);
@@ -161,7 +138,8 @@ public class MediaProcessingWorkScheduler extends Worker {
 
     @Override
     public void onStopped() {
-        Log.v(TAG, "MediaProcessingWorkScheduler stopped.");
+        Log.v(TAG, "MediaProcessingRecoveryScheduler stopped.");
+
         if (mProcessingHelper.isPresent()) {
             mProcessingHelper.get().cancelOutstandingWork();
         }

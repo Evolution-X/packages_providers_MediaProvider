@@ -16,6 +16,7 @@
 
 package com.android.providers.media.localsearch;
 
+import static com.android.providers.media.localsearch.MediaProcessingStatus.STATUS_COMPLETED;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_LOCATION_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_METADATA_LABEL;
 
@@ -185,6 +186,96 @@ public class ProcessingHelperTest {
                     assertThat(c.moveToFirst()).isTrue();
                     assertThat(c.getInt(0)).isNotEqualTo(0); // Should not be pending
                 }
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void testRetryLocationLabels() throws Exception {
+        assumeTrue(Geocoder.isPresent());
+
+        // 1. Insert a file with valid Lat/Long
+        long fileGenModified = 100L;
+        long fileId = insertFile(FileColumns.MEDIA_TYPE_IMAGE, "retry_geo_pic.jpg",
+                "/DCIM/retry_geo_pic.jpg", fileGenModified, TEST_LAT, TEST_LONG);
+
+        // 2. Set up a PREVIOUS FAILURE for this file in the status table.
+        mDatabaseHelper.runWithTransaction((db) -> {
+            ContentValues statusRow = new ContentValues();
+            statusRow.put(MediaProcessingStatus.FILE_ID_COLUMN, fileId);
+            statusRow.put(MediaProcessingStatus.MEDIA_TYPE, FileColumns.MEDIA_TYPE_IMAGE);
+            statusRow.put(MediaProcessingStatus.GEN_MODIFIED, fileGenModified);
+            statusRow.put(MediaProcessingStatus.METADATA_LABEL_STATUS, STATUS_COMPLETED);
+            // Status is 1 (Failed once), NOT 0 (Pending) and NOT 999 (Completed)
+            statusRow.put(MediaProcessingStatus.LOCATION_LABEL_STATUS, 1);
+            return db.insert(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
+        });
+
+        // 3. Set the last processed generation to be HIGHER than the file.
+        // This simulates that the main job has moved past this file, making it eligible for retry.
+        long lastProcessedGenModifiedForLocation = fileGenModified + 10;
+        mProcessingHelper.mPrefs.edit()
+                .putLong(LAST_GEN_MODIFIED_WITH_LOCATION_LABEL, lastProcessedGenModifiedForLocation)
+                .apply();
+
+        // 4. Trigger the retry logic
+        assumeNotNull(mProcessingHelper.mLocationResolver);
+        mProcessingHelper.retryLocationLabels();
+
+        // 5. Verify the SQLite Status Table was updated.
+        mDatabaseHelper.runWithoutTransaction((db) -> {
+            try (Cursor c = db.query(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE,
+                    new String[]{MediaProcessingStatus.LOCATION_LABEL_STATUS},
+                    MediaProcessingStatus.FILE_ID_COLUMN + "=?",
+                    new String[]{String.valueOf(fileId)}, /*groupBy*/ null,
+                    /*having*/ null, /*orderBy*/ null)) {
+
+                assertThat(c.moveToFirst()).isTrue();
+                int status = c.getInt(0);
+
+                // Check is that the processing status is NOT 1 anymore (it was touched).
+                assertThat(status).isNotEqualTo(1);
+            }
+            return null;
+        });
+    }
+
+    @Test
+    public void testRetryLocationLabels_skipsFilesNewerThanLastProcessed() throws Exception {
+        // 1. File is NEWER (Gen = 300) than the lastProcessedGenModified (Gen = 200)
+        long fileGen = 300L;
+        long lastProcessedGenModified = 200L;
+
+        long fileId = insertFile(FileColumns.MEDIA_TYPE_IMAGE, "new_pic.jpg",
+                "/DCIM/new_pic.jpg", fileGen, TEST_LAT, TEST_LONG);
+
+        // Insert new unprocessed file
+        mDatabaseHelper.runWithTransaction((db) -> {
+            ContentValues statusRow = new ContentValues();
+            statusRow.put(MediaProcessingStatus.FILE_ID_COLUMN, fileId);
+            statusRow.put(MediaProcessingStatus.MEDIA_TYPE, FileColumns.MEDIA_TYPE_IMAGE);
+            statusRow.put(MediaProcessingStatus.GEN_MODIFIED, fileGen);
+            statusRow.put(MediaProcessingStatus.METADATA_LABEL_STATUS, STATUS_COMPLETED);
+            statusRow.put(MediaProcessingStatus.LOCATION_LABEL_STATUS, 0); // Unprocessed
+            return db.insert(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
+        });
+
+        // Set lastProcessedGenModified lower than file gen
+        mProcessingHelper.mPrefs.edit()
+                .putLong(LAST_GEN_MODIFIED_WITH_LOCATION_LABEL, lastProcessedGenModified)
+                .apply();
+
+        mProcessingHelper.retryLocationLabels();
+
+        // 3. Status should STILL be 0 (Untouched)
+        mDatabaseHelper.runWithoutTransaction((db) -> {
+            try (Cursor c = db.query(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE,
+                    new String[]{MediaProcessingStatus.LOCATION_LABEL_STATUS},
+                    MediaProcessingStatus.FILE_ID_COLUMN + "=?",
+                    new String[]{String.valueOf(fileId)}, null, null, null)) {
+                assertThat(c.moveToFirst()).isTrue();
+                assertThat(c.getInt(0)).isEqualTo(0); // Unchanged
             }
             return null;
         });
