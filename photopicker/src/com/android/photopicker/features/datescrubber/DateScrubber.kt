@@ -69,10 +69,10 @@ val DATE_SCRUBBER_TOP_OFFSET_MAX = 64.dp
 
 // A constant for the bottom offset of the date scrubber cursor in dp.
 // Define maximum how far above the bottom edge the cursor is allowed to move
-val DATE_SCRUBBER_BOTTOM_OFFSET_MAX = 88.dp
+val DATE_SCRUBBER_BOTTOM_OFFSET_MAX = 130.dp
 
 // Minimum height in dp required to show the date scrubber.
-private val MIN_PARENT_HEIGHT_FOR_DATE_SCRUBBER = 250.dp
+private val MIN_PARENT_HEIGHT_FOR_DATE_SCRUBBER = 280.dp
 
 /** A Composable to enable the date scrubber to support fast scrolling in the grid */
 @Composable
@@ -165,10 +165,7 @@ fun DateScrubber(
 
                     // Define how far above the bottom edge the cursor is allowed
                     // to move (acts as a padding buffer)
-                    val bottomOffset =
-                        with(density) {
-                            (parentHeight / 5).coerceAtMost(DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx())
-                        }
+                    val bottomOffset = with(density) { DATE_SCRUBBER_BOTTOM_OFFSET_MAX.toPx() }
 
                     // Calculate the bottom coordinate the cursor can move to:
                     // - Start from center (0), move downward to the bottom edge (+halfHeight), then
