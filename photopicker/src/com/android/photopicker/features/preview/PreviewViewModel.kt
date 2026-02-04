@@ -29,6 +29,7 @@ import android.provider.CloudMediaProviderContract.METHOD_CREATE_SURFACE_CONTROL
 import android.provider.ICloudMediaSurfaceController
 import android.provider.ICloudMediaSurfaceStateChangedCallback
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.bundleOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -112,7 +113,13 @@ constructor(
 
     val deselectionSnapshot = MutableStateFlow<Set<Media>>(emptySet())
 
+    init {
+        // The snapshot is taken once when the ViewModel is first created
+        takeNewSelectionSnapshot()
+    }
+
     /** Trigger a new snapshot of the selection. */
+    @VisibleForTesting
     fun takeNewSelectionSnapshot() {
         scope.launch {
             selectionSnapshot.update { selection.snapshot() }
@@ -281,7 +288,7 @@ constructor(
                 .build()
 
         val extras =
-        @Suppress("DEPRECATION") // bundleOf is deprecated
+            @Suppress("DEPRECATION") // bundleOf is deprecated
             bundleOf(
                 EXTRA_LOOPING_PLAYBACK_ENABLED to true,
                 EXTRA_SURFACE_CONTROLLER_AUDIO_MUTE_ENABLED to true,

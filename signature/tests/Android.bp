@@ -7,6 +7,7 @@ android_test {
     compile_multilib: "both",
     certificate: "media",
     sdk_version: "module_current",
+    target_sdk_version: "36",
     min_sdk_version: "31",
     static_libs: [
         // sources

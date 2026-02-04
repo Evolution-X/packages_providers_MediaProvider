@@ -51,7 +51,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -165,8 +164,6 @@ fun PreviewSelection(
                 DateFormat.MEDIUM,
                 DateFormat.SHORT,
             )
-        // Only snapshot the selection once when the composable is created.
-        LaunchedEffect(Unit) { viewModel.takeNewSelectionSnapshot() }
         val navController = LocalNavController.current
 
         Surface(modifier = Modifier.fillMaxSize(), color = Color.Black) {
