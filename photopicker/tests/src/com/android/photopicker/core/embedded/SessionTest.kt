@@ -102,6 +102,7 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
+import java.time.Duration
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -204,8 +205,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING: String = "taken on"
 
     private val MAX_MEDIA_ITEM_SIZE_BYTES: Long = 1024L
-    private val MAX_VIDEO_DURATION_SECONDS: Long = 100L
-    private val MIN_VIDEO_DURATION_SECONDS: Long = 10L
+    private val MAX_VIDEO_DURATION: Duration = Duration.ofSeconds(100)
+    private val MIN_VIDEO_DURATION: Duration = Duration.ofSeconds(10)
     private val MAX_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 1000L
     private val MIN_MEDIA_ITEM_RESOLUTION_PIXELS: Long = 100L
     private val MIME_TYPES = listOf("image/png", "video/mp4")
@@ -507,8 +508,8 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             val selectionParams =
                 PhotoPickerSelectionParams.Builder()
                     .setMaxMediaItemSizeInBytes(MAX_MEDIA_ITEM_SIZE_BYTES)
-                    .setMaxVideoDurationInSeconds(MAX_VIDEO_DURATION_SECONDS)
-                    .setMinVideoDurationInSeconds(MIN_VIDEO_DURATION_SECONDS)
+                    .setMaxVideoDuration(MAX_VIDEO_DURATION)
+                    .setMinVideoDuration(MIN_VIDEO_DURATION)
                     .setMaxMediaItemResolutionInPixels(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
                     .setMinMediaItemResolutionInPixels(MIN_MEDIA_ITEM_RESOLUTION_PIXELS)
                     .setMimeTypes(MIME_TYPES)
@@ -529,11 +530,11 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
                 .that(receivedSelectionParams.maxMediaItemSizeInBytes)
                 .isEqualTo(MAX_MEDIA_ITEM_SIZE_BYTES)
             assertWithMessage("Expected configuration to contain the max video duration")
-                .that(receivedSelectionParams.maxVideoDurationInSeconds)
-                .isEqualTo(MAX_VIDEO_DURATION_SECONDS)
+                .that(receivedSelectionParams.maxVideoDuration)
+                .isEqualTo(MAX_VIDEO_DURATION)
             assertWithMessage("Expected configuration to contain the min video duration")
-                .that(receivedSelectionParams.minVideoDurationInSeconds)
-                .isEqualTo(MIN_VIDEO_DURATION_SECONDS)
+                .that(receivedSelectionParams.minVideoDuration)
+                .isEqualTo(MIN_VIDEO_DURATION)
             assertWithMessage("Expected configuration to contain the max media item resolution")
                 .that(receivedSelectionParams.maxMediaItemResolutionInPixels)
                 .isEqualTo(MAX_MEDIA_ITEM_RESOLUTION_PIXELS)
