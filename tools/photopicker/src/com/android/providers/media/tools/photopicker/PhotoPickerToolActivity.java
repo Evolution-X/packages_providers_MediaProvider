@@ -520,6 +520,18 @@ public class PhotoPickerToolActivity extends Activity {
         }
     }
 
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            if (mSession != null) {
+                mSession.notifyConfigurationChanged(newConfig);
+                mSession.notifyResized(mSurfaceView.getHeight(), mSurfaceView.getWidth());
+            }
+        }
+    }
+
+
     private TextView generateText(String text) {
         final TextView textView = new TextView(this);
         textView.setTextAppearance(R.style.HeaderTitle);
