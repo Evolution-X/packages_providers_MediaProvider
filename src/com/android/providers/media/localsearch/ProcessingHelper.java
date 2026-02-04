@@ -16,6 +16,7 @@
 
 package com.android.providers.media.localsearch;
 
+import static android.provider.BaseColumns._ID;
 import static android.provider.MediaStore.Images.ImageColumns.LATITUDE;
 import static android.provider.MediaStore.Images.ImageColumns.LONGITUDE;
 import static android.provider.MediaStore.MediaColumns.GENERATION_MODIFIED;
@@ -81,6 +82,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -123,6 +125,7 @@ public class ProcessingHelper implements AutoCloseable {
     private static final int DEFAULT_LOCATION_LABEL_PROCESSING_LIMIT = 50;
     private static final int MAX_BATCH_SIZE_FOR_MEDIA_LABEL_PROCESSING = 50;
     public static final int DEFAULT_MEDIA_LABEL_PROCESSING_LIMIT = 10;
+    private static final int DELETE_STALE_ROWS_FROM_APPSEARCH_LIMIT = 500;
     private static final int RETRY_LOCATION_BATCH_MULTIPLIER = 2;
 
 
@@ -1069,6 +1072,68 @@ public class ProcessingHelper implements AutoCloseable {
             }
         }
         return fileIdsToProcess;
+    }
+
+    /**
+     * Cleans up the AppSearch database by removing documents that were deleted from files table but
+     * still exist in AppSearch.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void deleteStaleRowsFromAppSearch() {
+        if (mCancellationSignal.isCanceled()) {
+            return;
+        }
+
+        try {
+            AppSearchDbManager appSearchDbManager = new AppSearchDbManager(mContext);
+            if (appSearchDbManager == null) {
+                Log.w(TAG, "Unable to create AppSearchDbManager");
+                return;
+            }
+
+            Set<Long> fileIds = appSearchDbManager.getAllFileIds();
+            if (fileIds.isEmpty()) {
+                Log.v(TAG, "No files found in AppSearch to check for staleness.");
+                return;
+            }
+
+            String selection = FileColumns.VOLUME_NAME + " = ?"
+                    + " AND " + FileColumns.IS_PENDING + " = 0"
+                    + " AND " + FileColumns.IS_TRASHED + " = 0"
+                    + " AND " + FileColumns.MIME_TYPE + " IS NOT NULL";
+
+            String[] selectionArgs = new String[]{MediaStore.VOLUME_EXTERNAL_PRIMARY};
+
+            mExternalDatabase.runWithoutTransaction((db) -> {
+                try (Cursor c = db.query(/*distinct*/ true, MediaStore.Files.TABLE,
+                        new String[]{_ID}, selection, selectionArgs, /*groupBy*/ null,
+                        /*having*/ null, /*orderBy*/ null, /*limit*/  null, mCancellationSignal)) {
+                    while (c.moveToNext()) {
+                        fileIds.remove(c.getLong(0));
+                    }
+                }
+                return null;
+            });
+
+            if (!fileIds.isEmpty()) {
+                List<Long> missingIds = new ArrayList<>(fileIds);
+
+                for (int startIndex = 0; startIndex < missingIds.size();
+                        startIndex += DELETE_STALE_ROWS_FROM_APPSEARCH_LIMIT) {
+                    int endIndex = Math.min(startIndex + DELETE_STALE_ROWS_FROM_APPSEARCH_LIMIT,
+                            missingIds.size());
+
+                    appSearchDbManager.deleteDocumentsByFileIds(
+                            missingIds.subList(startIndex, endIndex));
+                }
+
+                Log.i(TAG, "Cleaned " + missingIds.size() + " stale documents from AppSearch");
+            }
+        } catch (OperationCanceledException e) {
+            Log.v(TAG, "AppSearch db cleanup cancelled");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to clean stale documents from AppSearch", e);
+        }
     }
 
     /**

@@ -281,6 +281,42 @@ public class ProcessingHelperTest {
         });
     }
 
+    @Test
+    public void testDeleteStaleRowsFromAppSearch() throws Exception {
+        // 1. Insert two files into SQLite and AppSearch
+        long genModified = 100L;
+
+        long fileIdToKeep = insertFile(FileColumns.MEDIA_TYPE_IMAGE, "keep.jpg",
+                "/storage/emulated/0/DCIM/keep.jpg", genModified, null, null);
+        long fileIdToDelete = insertFile(FileColumns.MEDIA_TYPE_IMAGE, "delete.jpg",
+                "/storage/emulated/0/DCIM/delete.jpg", genModified, null, null);
+
+        // Put these files into AppSearch
+        mProcessingHelper.processMetadataLabels();
+
+        // Verify both exist in AppSearch initially
+        List<GenericDocument> initialDocs = mAppSearchDbManager
+                .getDocumentsByFileIds(List.of(fileIdToKeep, fileIdToDelete));
+        assertThat(initialDocs).hasSize(2);
+
+        // 2. Remove one file from the SQLite files table
+        mDatabaseHelper.runWithTransaction((db) -> {
+            return db.delete(MediaStore.Files.TABLE, FileColumns._ID + "=?",
+                    new String[]{String.valueOf(fileIdToDelete)});
+        });
+
+        // 3. Run the cleanup method
+        mProcessingHelper.deleteStaleRowsFromAppSearch();
+
+        // 4. Verify results
+        List<GenericDocument> finalDocs = mAppSearchDbManager
+                .getDocumentsByFileIds(List.of(fileIdToKeep, fileIdToDelete));
+
+        // We expect only the 'keep' file to remain
+        assertThat(finalDocs).hasSize(1);
+        assertThat(finalDocs.get(0).getId()).isEqualTo(String.valueOf(fileIdToKeep));
+    }
+
     /**
      * Helper to insert a file into the real (isolated) SQLute DV
      */

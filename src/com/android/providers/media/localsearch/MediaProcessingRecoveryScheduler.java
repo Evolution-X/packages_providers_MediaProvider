@@ -115,6 +115,8 @@ public class MediaProcessingRecoveryScheduler extends Worker {
                     return Result.success();
                 }
 
+                processingHelper.deleteStaleRowsFromAppSearch();
+
                 if (isNetworkAvailable(mContext)) {
                     processingHelper.retryLocationLabels();
                 } else {
@@ -122,6 +124,7 @@ public class MediaProcessingRecoveryScheduler extends Worker {
                 }
 
                 // TODO(b/428140364) : Add retry for default media label processing
+
                 return Result.success();
             } catch (IllegalStateException e) {
                 Log.e(TAG, "Failed to initialize ProcessingHelper instance", e);

@@ -147,9 +147,12 @@ import static com.android.providers.media.PickerUriResolver.getMediaUri;
 import static com.android.providers.media.flags.Flags.enableSpecialFormatColumn;
 import static com.android.providers.media.flags.Flags.indexMediaLatitudeLongitude;
 import static com.android.providers.media.flags.Flags.versionLockdown;
+import static com.android.providers.media.localsearch.MediaProcessingStatus.FILE_ID_COLUMN;
+import static com.android.providers.media.localsearch.MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_LOCATION_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_MEDIA_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_METADATA_LABEL;
+import static com.android.providers.media.localsearch.ProcessingHelper.isMediaProcessingRequired;
 import static com.android.providers.media.photopicker.data.ItemsProvider.EXTRA_MIME_TYPE_SELECTION;
 import static com.android.providers.media.scan.MediaScanner.REASON_DEMAND;
 import static com.android.providers.media.scan.MediaScanner.REASON_IDLE;
@@ -1164,6 +1167,7 @@ public class MediaProvider extends ContentProvider {
             });
         }
 
+        @SuppressWarnings("NewApi")
         @Override
         public void onUpdate(@NonNull DatabaseHelper helper, @NonNull FileRow oldRow,
                 @NonNull FileRow newRow) {
@@ -1183,6 +1187,15 @@ public class MediaProvider extends ContentProvider {
                     oldRow.getMediaType(), isDownload);
 
             mDatabaseBackupAndRecovery.updateNextRowIdAndSetDirty(helper, oldRow, newRow);
+
+            if (VOLUME_EXTERNAL_PRIMARY.equals(oldRow.getVolumeName())
+                    && isMediaProcessingRequired(getContext())) {
+                helper.runWithoutTransaction((db) -> {
+                    db.delete(MEDIA_PROCESSING_STATUS_TABLE, FILE_ID_COLUMN + "=?",
+                            new String[]{String.valueOf(oldRow.getId())});
+                    return null;
+                });
+            }
 
             helper.postBackground(() -> {
                 if (helper.isExternal()) {
@@ -1211,6 +1224,16 @@ public class MediaProvider extends ContentProvider {
                                 parentFile -> scanFileAsMediaProvider(parentFile));
                     }
                 }
+
+                if (VOLUME_EXTERNAL_PRIMARY.equals(oldRow.getVolumeName())
+                        && isMediaProcessingRequired(getContext())) {
+                    try {
+                        AppSearchDbManager appSearchDb = new AppSearchDbManager(getContext());
+                        appSearchDb.deleteDocumentsByFileIds(List.of(oldRow.getId()));
+                    } catch (Exception e) {
+                        Log.v(TAG, "Failed to delete documents from AppSearch", e);
+                    }
+                }
             });
 
             if (newRow.getMediaType() != oldRow.getMediaType()) {
@@ -1230,6 +1253,7 @@ public class MediaProvider extends ContentProvider {
             });
         }
 
+        @SuppressWarnings("NewApi")
         @Override
         public void onDelete(@NonNull DatabaseHelper helper, @NonNull FileRow deletedRow) {
             if (helper.isDatabaseRecovering()) {
@@ -1248,6 +1272,15 @@ public class MediaProvider extends ContentProvider {
                     PickerSyncController.LOCAL_PICKER_PROVIDER_AUTHORITY, deletedRow.getId());
             if (Flags.queryLeveldbForFileAttributes()) {
                 mDatabaseBackupAndRecovery.markBackupAsDirty(helper, deletedRow);
+            }
+
+            if (VOLUME_EXTERNAL_PRIMARY.equals(deletedRow.getVolumeName())
+                    && isMediaProcessingRequired(getContext())) {
+                helper.runWithoutTransaction((db) -> {
+                    db.delete(MEDIA_PROCESSING_STATUS_TABLE, FILE_ID_COLUMN + "=?",
+                            new String[]{String.valueOf(deletedRow.getId())});
+                    return null;
+                });
             }
 
             helper.postBackground(() -> {
@@ -1296,6 +1329,16 @@ public class MediaProvider extends ContentProvider {
                         && FileUtils.isTrashedFileInTrashDirectory(deletedRow.getPath())) {
                     FileRestoreManager.deleteAllParentIfNonTrashed(new File(deletedRow.getPath()),
                             (file) -> scanFileAsMediaProvider(file));
+                }
+
+                if (VOLUME_EXTERNAL_PRIMARY.equals(deletedRow.getVolumeName())
+                        && isMediaProcessingRequired(getContext())) {
+                    try {
+                        AppSearchDbManager appSearchDb = new AppSearchDbManager(getContext());
+                        appSearchDb.deleteDocumentsByFileIds(List.of(deletedRow.getId()));
+                    } catch (Exception e) {
+                        Log.v(TAG, "Failed to delete documents from AppSearch", e);
+                    }
                 }
             });
         }
