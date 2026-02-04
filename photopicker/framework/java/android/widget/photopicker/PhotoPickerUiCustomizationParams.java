@@ -38,8 +38,12 @@ import java.util.Set;
 @FlaggedApi(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
 public final class PhotoPickerUiCustomizationParams implements Parcelable {
     /**
-     * Default aspect ratio, allowing the Photo Picker to use its default 1:1 thumbnail sizing
-     * within the media grid.
+     * Aspect ratio option sent to photo picker when no aspect ratio is set by the calling app.
+     */
+    public static final int ASPECT_RATIO_UNDEFINED = -1;
+
+    /**
+     * Aspect ratio option requesting square 1:1 thumbnail sizing within the media grid.
      */
     public static final int ASPECT_RATIO_SQUARE_1_1 = 0;
 
@@ -49,7 +53,7 @@ public final class PhotoPickerUiCustomizationParams implements Parcelable {
     public static final int ASPECT_RATIO_PORTRAIT_9_16 = 1;
 
     /** @hide */
-    @IntDef({ASPECT_RATIO_SQUARE_1_1, ASPECT_RATIO_PORTRAIT_9_16})
+    @IntDef({ASPECT_RATIO_UNDEFINED, ASPECT_RATIO_SQUARE_1_1, ASPECT_RATIO_PORTRAIT_9_16})
     @Retention(RetentionPolicy.SOURCE)
     public @interface AspectRatio {
     }
@@ -108,10 +112,11 @@ public final class PhotoPickerUiCustomizationParams implements Parcelable {
     public static final class Builder {
         // Helper for runtime check, add all supported aspect ratios to this set.
         private static final Set<Integer> VALID_ASPECT_RATIOS = Set.of(
+                ASPECT_RATIO_UNDEFINED,
                 ASPECT_RATIO_SQUARE_1_1,
                 ASPECT_RATIO_PORTRAIT_9_16
         );
-        private @AspectRatio int mAspectRatio = ASPECT_RATIO_SQUARE_1_1;
+        private @AspectRatio int mAspectRatio = ASPECT_RATIO_UNDEFINED;
 
         public Builder() {
         }
@@ -121,17 +126,17 @@ public final class PhotoPickerUiCustomizationParams implements Parcelable {
          *
          * <p>The value must be one of the following constants:
          * <ul>
+         * <li> {@link #ASPECT_RATIO_UNDEFINED}
          * <li> {@link #ASPECT_RATIO_SQUARE_1_1}
          * <li> {@link #ASPECT_RATIO_PORTRAIT_9_16}
          * </ul>
          * Any other value will result in throwing {@code IllegalArgumentException}.
          *
-         * <p>If not set, the Photo Picker will use its default 1:1 media grid aspect ratio.
+         * <p>If not set, the {@link #ASPECT_RATIO_UNDEFINED} will be used.
          *
          * @param aspectRatio The aspect ratio constant.
          * @throws IllegalArgumentException if the provided {@code aspectRatio} is not one of the
-         *                                  supported constants({@link #ASPECT_RATIO_SQUARE_1_1} or
-         *                                  {@link #ASPECT_RATIO_PORTRAIT_9_16}).
+         *                                  supported constants ({@link #VALID_ASPECT_RATIOS}).
          */
         public @NonNull Builder setAspectRatio(@AspectRatio int aspectRatio) {
             if (!VALID_ASPECT_RATIOS.contains(aspectRatio)) {
@@ -139,17 +144,6 @@ public final class PhotoPickerUiCustomizationParams implements Parcelable {
                         "Unrecognized aspect ratio constant: " + aspectRatio);
             }
             mAspectRatio = aspectRatio;
-            return this;
-        }
-
-        /**
-         * Clears the aspect ratio customization, resetting it to the default square (1:1) aspect
-         * ratio.
-         *
-         * @see #setAspectRatio(int)
-         */
-        public @NonNull Builder clearAspectRatio() {
-            mAspectRatio = ASPECT_RATIO_SQUARE_1_1;
             return this;
         }
 
