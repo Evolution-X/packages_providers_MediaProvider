@@ -42,8 +42,11 @@
     <!-- Search disabled hint message -->
     <string name="photopicker_search_disabled_hint" translation_description="Hint message shown on search bar click when search state is not enabled">Search disabled.</string>
 
-    <!-- Empty state search message to show for search when cloud search has no results -->
-    <string name="photopicker_search_result_empty_state_message" translation_description="Message shown to the user when no search results are able to be shown underneath the primary message title informing only backed up items will be shown in search results">Try searching for similar words.\n\nOnly items that are backed up will appear in your search results.</string>
+    <!-- Empty state search message to show for search when local provider is disabled and cloud search has no results -->
+    <string name="photopicker_search_result_empty_state_message_when_local_search_disabled" translation_description="Message shown to the user when no search results are able to be shown underneath the primary message title informing only backed up items will be shown in search results">Try searching for similar words.\n\nOnly photos and videos that are backed up will appear in your search results.</string>
+
+    <!-- Empty state search message to show for search when local provider is enabled, and we have no search results -->
+    <string name="photopicker_search_result_empty_state_message_when_local_search_enabled" translation_description="Message shown to the user when local search is enabled and, no search results are able to be shown underneath the primary message title">Try searching for similar words</string>
 
     <!-- Search bar placeholder text when a cloud provider is available with search enabled -->
     <string name="photopicker_search_provider_placeholder_text" translation_description="Placeholder text shown in the search bar when the searchable provider is only a cloud provider.">Search <xliff:g id="provider_name" example="Photos">%1$s</xliff:g></string>

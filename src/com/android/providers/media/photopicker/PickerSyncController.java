@@ -2254,7 +2254,7 @@ public class PickerSyncController {
         final String localProvider = getLocalProvider();
         return localProvider != null
                 && providers.contains(localProvider)
-                && getSearchState().isLocalSearchEnabled();
+                && getSearchState().isLocalSearchEnabled(mContext);
     }
 
     /**

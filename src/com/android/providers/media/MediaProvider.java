@@ -8918,6 +8918,14 @@ public class MediaProvider extends ContentProvider {
             }
         }
 
+        try {
+            // clear media_processing_status table
+            mExternalDatabase.runWithTransaction((db) -> db.delete(
+                    MEDIA_PROCESSING_STATUS_TABLE, /* whereClause */ null, /* whereArgs */ null));
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to delete documents from " + MEDIA_PROCESSING_STATUS_TABLE, e);
+        }
+
         // Reset shared preferences used to track generation numbers of different media processing.
         SharedPreferences prefs = getContext().getSharedPreferences(MEDIAPROVIDER_PREFS,
                 Context.MODE_PRIVATE);

@@ -38,4 +38,9 @@ public class TestDefaultSearchMediaService extends DefaultSearchMediaService {
         }
         setSearchMediaExecutor(searchMediaExecutor);
     }
+
+    @Override
+    public boolean onCheckSemanticSearchSupport() {
+        return true;
+    }
 }

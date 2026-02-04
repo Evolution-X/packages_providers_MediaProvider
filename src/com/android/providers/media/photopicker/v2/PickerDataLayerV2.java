@@ -57,6 +57,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Process;
+import android.os.SystemClock;
 import android.provider.CloudMediaProviderContract;
 import android.provider.CloudMediaProviderContract.AlbumColumns;
 import android.provider.MediaStore;
@@ -108,6 +109,7 @@ import com.android.providers.media.photopicker.v2.sqlite.SearchSuggestionsQuery;
 import com.android.providers.media.util.BackgroundThreadPool;
 import com.android.providers.media.util.ForegroundThreadPool;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -135,6 +137,9 @@ public class PickerDataLayerV2 {
             MEDIA_TABLE + " LEFT JOIN " + MEDIA_GRANTS_TABLE
                     + " ON " + MEDIA_TABLE + "." + KEY_LOCAL_ID
                     + " = " + MEDIA_GRANTS_TABLE + "." + FILE_ID_COLUMN;
+    private static final Duration TOTAL_SEARCH_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration LOCAL_SEARCH_TIMEOUT = Duration.ofSeconds(3);
+    private static final Duration GET_SEARCH_PROVIDERS_TIMEOUT = Duration.ofMillis(150);
 
     // Local and merged albums have a predefined order that they should be displayed in. They always
     // need to be displayed above the cloud albums too.
@@ -1190,16 +1195,21 @@ public class PickerDataLayerV2 {
             @Nullable String cloudAuthority) {
         final SearchState searchState = PickerSyncController.getInstanceOrThrow().getSearchState();
 
+        final long startTime = SystemClock.elapsedRealtime();
         if (localAuthority != null) {
             Log.d(TAG, "Waiting for local search results");
             SyncCompletionWaiter.waitForSyncWithTimeout(
-                    SyncTrackerRegistry.getLocalSearchSyncTracker(), /* timeoutInMillis */ 500);
+                    SyncTrackerRegistry.getLocalSearchSyncTracker(),
+                    (int) LOCAL_SEARCH_TIMEOUT.toMillis());
         }
+
+        final long elapsedTime = SystemClock.elapsedRealtime() - startTime;
+        final long remainingTimeMillis = TOTAL_SEARCH_TIMEOUT.toMillis() - elapsedTime;
 
         if (cloudAuthority != null) {
             Log.d(TAG, "Waiting for cloud search results");
             SyncCompletionWaiter.waitForSyncWithTimeout(
-                    SyncTrackerRegistry.getCloudSearchSyncTracker(), /* timeoutInMillis */ 5000);
+                    SyncTrackerRegistry.getCloudSearchSyncTracker(), (int) remainingTimeMillis);
         }
     }
 
@@ -1894,8 +1904,8 @@ public class PickerDataLayerV2 {
     public static Bundle getSearchProviders(@NonNull Context context) {
         return getSearchProviders(
                 context,
-                /*fetchSearchStateExecutor*/ForegroundThreadPool.getExecutor(),
-                /*cachingSearchStateExecutor*/BackgroundThreadPool.getExecutor());
+                /*fetchSearchStateExecutor*/ ForegroundThreadPool.getExecutor(),
+                /*cachingSearchStateExecutor*/ BackgroundThreadPool.getExecutor());
     }
 
     /**
@@ -1923,47 +1933,62 @@ public class PickerDataLayerV2 {
         final String cloudProvider = syncController.getCloudProviderOrDefault(null);
         final SearchState searchState = syncController.getSearchState();
 
-        CompletableFuture<Boolean> searchCapabilityFuture =
-                CompletableFuture.supplyAsync(() ->
-                                searchState.doesCloudProviderSupportSearch(
-                                                context, cloudProvider
-                                ), fetchSearchStateExecutor
-                        );
+        CompletableFuture<Boolean> cloudFuture = CompletableFuture.supplyAsync(
+                () -> searchState.isCloudSearchEnabled(context),
+                fetchSearchStateExecutor);
 
-        // Attempt to fetch the search capability from the future and also cache the same
-        boolean isCloudSearchEnabled = false;
-        boolean doesPickerSupportCloudSearch =
-                searchState.doesPickerSupportSearch(context, cloudProvider);
-        if (doesPickerSupportCloudSearch) {
-            try {
-                isCloudSearchEnabled = searchCapabilityFuture.get(
-                        /* timeout */ 150, TimeUnit.MILLISECONDS);
-                Log.d(TAG, "Caching the recently fetched search state:"
-                        + isCloudSearchEnabled);
-                searchCapabilityFuture.thenAcceptAsync(
-                        (searchCapability) ->
-                                syncController.cacheCloudSearchCapability(
-                                        searchCapability
-                                ),
-                        cachingSearchStateExecutor
-                );
-            }  catch (TimeoutException e) {
-                Log.e(TAG, "Could not get search capability from cloud provider in time. "
-                        + "Falling back to the cache");
-                // Fallback to the cached value in case we timeout to fetch the search capability
-                isCloudSearchEnabled = readLastKnownSearchCapability(syncController);
-            } catch (RuntimeException | ExecutionException | InterruptedException e) {
-                Log.e(TAG, ("Something went wrong, "
-                        + "could not fetch search capability from the cloud provider"), e);
-            }
+        CompletableFuture<Boolean> localFuture = CompletableFuture.supplyAsync(
+                () -> searchState.isLocalSearchEnabled(context),
+                fetchSearchStateExecutor);
+
+        try {
+            CompletableFuture.allOf(cloudFuture, localFuture).get(
+                    GET_SEARCH_PROVIDERS_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            Log.e(TAG, "Timed out waiting for search capabilities.", e);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get search capabilities.", e);
         }
 
-        final boolean isLocalSearchEnabled = syncController.getSearchState().isLocalSearchEnabled();
+        boolean isCloudSearchEnabled;
+        if (cloudFuture.isDone() && !cloudFuture.isCompletedExceptionally()) {
+            try {
+                isCloudSearchEnabled = cloudFuture.get();
+                final boolean finalIsCloudSearchEnabled = isCloudSearchEnabled;
+                cachingSearchStateExecutor.execute(() ->
+                        syncController.cacheCloudSearchCapability(finalIsCloudSearchEnabled));
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get cloud search capability result, falling back to cache",
+                        e);
+                isCloudSearchEnabled = readLastKnownSearchCapability(syncController);
+            }
+        } else {
+            // Fallback to cache if the future did not complete successfully.
+            Log.w(TAG, "Cloud search capability check did not complete. Falling back to cache.");
+            isCloudSearchEnabled = readLastKnownSearchCapability(syncController);
+        }
+
+        boolean isLocalSearchEnabled;
+        if (localFuture.isDone() && !localFuture.isCompletedExceptionally()) {
+            try {
+                isLocalSearchEnabled = localFuture.get();
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get local search capability result.", e);
+                isLocalSearchEnabled = false;
+            }
+        } else {
+            Log.w(TAG, "Local search capability check did not complete.");
+            isLocalSearchEnabled = false;
+        }
 
         // Prepare a bundle response with the result.
         final ArrayList<String> searchProviderAuthorities = new ArrayList<>();
-        if (isCloudSearchEnabled) searchProviderAuthorities.add(cloudProvider);
-        if (isLocalSearchEnabled) searchProviderAuthorities.add(syncController.getLocalProvider());
+        if (isCloudSearchEnabled) {
+            searchProviderAuthorities.add(cloudProvider);
+        }
+        if (isLocalSearchEnabled) {
+            searchProviderAuthorities.add(syncController.getLocalProvider());
+        }
 
         final Bundle result = new Bundle();
         result.putStringArrayList(
