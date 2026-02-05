@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-package com.android.signature
+package com.android.signature.data
 
-import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
+import androidx.room.Database
+import androidx.room.RoomDatabase
 
-/**
- * The Application class for the signature app.
- *
- * This class is responsible for initializing and holding the application-wide
- * dependency container.
- */
-@HiltAndroidApp(Application::class)
-class SignatureApp : Hilt_SignatureApp() {
-    // Container is no longer needed with Hilt
+@Database(entities = [Signature::class], version = 1, exportSchema = false)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun signatureDao(): SignatureDao
 }

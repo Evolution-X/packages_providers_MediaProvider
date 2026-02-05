@@ -105,7 +105,9 @@ private val NAV_BAR_EMBEDDED_EXIT_ANIMATION =
     shrinkVertically(animationSpec = tween(durationMillis = 500)) + fadeOut()
 
 private const val MEASUREMENT_SCRIM_ALPHA = 0.32f
-private val MEASUREMENT_DESKTOP_VERTICAL_PADDING = 30.dp
+private val MEASUREMENT_DESKTOP_DIALOG_VERTICAL_PADDING = 56.dp
+private val MEASUREMENT_DESKTOP_HORIZONTAL_PADDING = 24.dp
+private val MEASUREMENT_DESKTOP_VERT_PADDING = 16.dp
 private val MEASUREMENT_DESKTOP_MAX_WIDTH = 640.dp
 private val MEASUREMENT_DESKTOP_SHADOW_ELEVATION = 3.dp
 private val MEASUREMENT_DESKTOP_TONAL_ELEVATION = 2.dp
@@ -343,7 +345,7 @@ fun PhotopickerDesktop(
                 Surface(
                     modifier =
                         Modifier.align(Alignment.TopCenter)
-                            .padding(vertical = MEASUREMENT_DESKTOP_VERTICAL_PADDING)
+                            .padding(vertical = MEASUREMENT_DESKTOP_DIALOG_VERTICAL_PADDING)
                             .widthIn(max = MEASUREMENT_DESKTOP_MAX_WIDTH)
                             .fillMaxWidth(),
                     contentColor = MaterialTheme.colorScheme.onSurface,
@@ -352,11 +354,29 @@ fun PhotopickerDesktop(
                     tonalElevation = MEASUREMENT_DESKTOP_TONAL_ELEVATION,
                     shape = RoundedCornerShape(MEASUREMENT_DESKTOP_CORNER_RADIUS),
                 ) {
-                    PhotopickerMain(disruptiveDataNotification, onDismissRequest = onDismissRequest)
+                    Column(
+                        modifier =
+                            Modifier.padding(
+                                PaddingValues(
+                                    top = MEASUREMENT_DESKTOP_VERT_PADDING,
+                                    start = MEASUREMENT_DESKTOP_HORIZONTAL_PADDING,
+                                    end = MEASUREMENT_DESKTOP_HORIZONTAL_PADDING,
+                                    bottom = MEASUREMENT_DESKTOP_VERT_PADDING,
+                                )
+                            )
+                    ) {
+                        PhotopickerMain(
+                            disruptiveDataNotification,
+                            onDismissRequest = onDismissRequest,
+                        )
+                    }
                 }
                 Column(
                     modifier =
-                        Modifier.padding(vertical = MEASUREMENT_DESKTOP_VERTICAL_PADDING)
+                        Modifier.padding(
+                                vertical = MEASUREMENT_DESKTOP_DIALOG_VERTICAL_PADDING,
+                                horizontal = MEASUREMENT_DESKTOP_HORIZONTAL_PADDING,
+                            )
                             .widthIn(max = MEASUREMENT_DESKTOP_MAX_WIDTH)
                             .fillMaxWidth()
                 ) {

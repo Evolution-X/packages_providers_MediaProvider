@@ -19,7 +19,7 @@
     package="com.android.signature">
 
     <application
-        android:name="com.android.signature.SignatureApplication"
+        android:name="com.android.signature.SignatureApp"
         android:label="@string/signature_application_label"
         android:allowBackup="false"
         android:supportsRtl="true">

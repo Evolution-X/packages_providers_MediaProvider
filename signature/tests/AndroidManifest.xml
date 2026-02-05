@@ -15,14 +15,20 @@
   -->
 <manifest
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.android.signature">
 
-    <application android:debuggable="true">
+    <application
+        android:name="dagger.hilt.android.testing.HiltTestApplication"
+        tools:replace="android:name">
+        <activity
+            android:name="com.android.signature.HiltTestActivity"
+            android:exported="false"/>
         <uses-library android:name="android.test.runner"/>
     </application>
 
     <instrumentation
-        android:name="androidx.test.runner.AndroidJUnitRunner"
+        android:name="com.android.signature.HiltTestRunner"
         android:targetPackage="com.android.signature"
         android:label="Tests for Android Signature"/>
 </manifest>
