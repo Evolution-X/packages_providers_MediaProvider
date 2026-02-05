@@ -19,6 +19,7 @@ package com.android.signature.data
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.annotation.IntDef
+import androidx.compose.ui.text.font.FontFamily
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.UUID
@@ -146,3 +147,11 @@ data class Signature(
         }
     }
 }
+
+/**
+ * Extension property to get the Compose FontFamily for this signature.
+ */
+val Signature.composeFontFamily: FontFamily
+    get() = fontName?.let { name ->
+        SignatureFonts.defaultFonts.find { it.name == name }?.composeFontFamily
+    } ?: FontFamily.Default

@@ -20,10 +20,11 @@
 
     <application
         android:name="dagger.hilt.android.testing.HiltTestApplication"
+        android:theme="@style/Theme.Signature"
         tools:replace="android:name">
         <activity
             android:name="com.android.signature.HiltTestActivity"
-            android:exported="false"/>
+            android:exported="true"/>
         <uses-library android:name="android.test.runner"/>
     </application>
 
