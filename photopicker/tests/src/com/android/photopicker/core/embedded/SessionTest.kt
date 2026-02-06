@@ -881,7 +881,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             val initialColor = node.extractTextColor()
 
             // Create new configuration which will update theme to dark
-            val newConfig = Configuration()
+            val newConfig = Configuration(getTestableContext().resources.configuration)
             newConfig.uiMode = Configuration.UI_MODE_NIGHT_YES
             session.notifyConfigurationChanged(newConfig)
             advanceTimeBy(100)
