@@ -52,6 +52,7 @@ import android.os.Build;
 import android.os.CancellationSignal;
 import android.os.IBinder;
 import android.os.OperationCanceledException;
+import android.os.Trace;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Files.FileColumns;
 import android.provider.mediaprocessingservice.IMediaProcessingService;
@@ -302,6 +303,7 @@ public class ProcessingHelper implements AutoCloseable {
     };
 
     private synchronized void connectMediaProcessingService() {
+        Trace.beginSection("MediaProcessing.connectMediaProcessingService");
         try {
             if (!Flags.enableMediaProcessingService()) {
                 return;
@@ -338,6 +340,8 @@ public class ProcessingHelper implements AutoCloseable {
                     SERVICE_CONNECTION_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
             Log.e(TAG, "Exception in connecting MediaProcessingService", e);
+        } finally {
+            Trace.endSection();
         }
     }
 
@@ -354,6 +358,7 @@ public class ProcessingHelper implements AutoCloseable {
             return mProcessingRequestedPerMediaType;
         }
 
+        Trace.beginSection("MediaProcessing.getProcessingRequestedPerMediaType");
         try {
             if (mMediaProcessingServicePackage.isEmpty()) {
                 return DefaultMediaLabelResolver.getProcessingRequestedPerMediaType();
@@ -373,6 +378,8 @@ public class ProcessingHelper implements AutoCloseable {
         } catch (Exception e) {
             Log.e(TAG, "Error in fetching requested processing from MediaProcessingService", e);
             return new HashMap<>();
+        } finally {
+            Trace.endSection();
         }
     }
 
@@ -396,6 +403,7 @@ public class ProcessingHelper implements AutoCloseable {
      * Gets the map of processing types requested per media type from MediaProcessingService.
      */
     public int getProcessingLimitForMediaLabels() {
+        Trace.beginSection("MediaProcessing.getProcessingLimitForMediaLabels");
         try {
             if (mMediaProcessingServicePackage.isEmpty()) {
                 return DefaultMediaLabelResolver.getProcessingLimit(mContext);
@@ -422,6 +430,8 @@ public class ProcessingHelper implements AutoCloseable {
         } catch (Exception e) {
             Log.e(TAG, "Error in fetching requested processing from MediaProcessingService", e);
             return 0;
+        } finally {
+            Trace.endSection();
         }
     }
 
@@ -465,6 +475,20 @@ public class ProcessingHelper implements AutoCloseable {
         SharedPreferences.Editor editor = mPrefs.edit();
         editor.putLong(key, lastUpdatedRow);
         editor.apply();
+    }
+
+    /**
+     * Executes the {@link #processMetadataLabels()} method within and measures its execution
+     * time using system trace markers.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void runProcessMetadataLabels() {
+        Trace.beginSection("MediaProcessing.processMetadataLabels");
+        try {
+            processMetadataLabels();
+        } finally {
+            Trace.endSection();
+        }
     }
 
     /**
@@ -568,6 +592,20 @@ public class ProcessingHelper implements AutoCloseable {
     }
 
     /**
+     * Executes the {@link #processLocationLabels()} method within and measures its execution
+     * time using system trace markers.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void runProcessLocationLabels() throws InterruptedException {
+        Trace.beginSection("MediaProcessing.processLocationLabels");
+        try {
+            processLocationLabels();
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    /**
      * Processes a batch of media files to resolve and store location labels (geocoding).
      * <p>
      * This method identifies media files from the {@code media_processing_status} table
@@ -579,7 +617,7 @@ public class ProcessingHelper implements AutoCloseable {
      * updates the database transactionally.
      */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    public void processLocationLabels() throws InterruptedException {
+    private void processLocationLabels() throws InterruptedException {
         if (mCancellationSignal.isCanceled()) {
             return;
         }
@@ -945,13 +983,32 @@ public class ProcessingHelper implements AutoCloseable {
             return;
         }
 
-        mExternalDatabase.runWithTransaction((db) -> {
-            int totalDeleted = MediaProcessingStatus.deleteStaleRows(db,
-                    mProcessingRequestedPerMediaType);
-            Log.v(TAG, "Deleted " + totalDeleted + " stale rows from media_processing_status "
-                    + "table");
-            return null;
-        });
+        Trace.beginSection("MediaProcessing.deleteStaleRows");
+        try {
+            mExternalDatabase.runWithTransaction((db) -> {
+                int totalDeleted = MediaProcessingStatus.deleteStaleRows(db,
+                        mProcessingRequestedPerMediaType);
+                Log.v(TAG, "Deleted " + totalDeleted + " stale rows from media_processing_status "
+                        + "table");
+                return null;
+            });
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    /**
+     * Executes the {@link #retryLocationLabels()} method within and measures its execution
+     * time using system trace markers.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void runRetryLocationLabels() throws InterruptedException {
+        Trace.beginSection("MediaProcessing.retryLocationLabels");
+        try {
+            retryLocationLabels();
+        } finally {
+            Trace.endSection();
+        }
     }
 
     /**
@@ -969,7 +1026,7 @@ public class ProcessingHelper implements AutoCloseable {
      * </ul>
      */
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    public void retryLocationLabels() throws InterruptedException {
+    private void retryLocationLabels() throws InterruptedException {
         if (mCancellationSignal.isCanceled()) {
             return;
         }
@@ -1084,6 +1141,8 @@ public class ProcessingHelper implements AutoCloseable {
             return;
         }
 
+        Trace.beginSection("MediaProcessing.deleteStaleRowsFromAppSearch");
+
         try {
             AppSearchDbManager appSearchDbManager = new AppSearchDbManager(mContext);
             if (appSearchDbManager == null) {
@@ -1133,6 +1192,8 @@ public class ProcessingHelper implements AutoCloseable {
             Log.v(TAG, "AppSearch db cleanup cancelled");
         } catch (Exception e) {
             Log.e(TAG, "Failed to clean stale documents from AppSearch", e);
+        } finally {
+            Trace.endSection();
         }
     }
 
@@ -1164,4 +1225,3 @@ public class ProcessingHelper implements AutoCloseable {
         }
     }
 }
-

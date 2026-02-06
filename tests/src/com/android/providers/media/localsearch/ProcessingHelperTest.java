@@ -118,7 +118,7 @@ public class ProcessingHelperTest {
         String fileName = "party_photo.jpg";
         long fileId = insertFile(FileColumns.MEDIA_TYPE_IMAGE, fileName,
                 "/storage/emulated/0/DCIM/" + fileName, genModified, null, null);
-        mProcessingHelper.processMetadataLabels();
+        mProcessingHelper.runProcessMetadataLabels();
 
         // Verify SharedPreferences updated
         long lastGen = mProcessingHelper.mPrefs.getLong(LAST_GEN_MODIFIED_WITH_METADATA_LABEL, -1);
@@ -158,7 +158,7 @@ public class ProcessingHelperTest {
         });
 
         assumeNotNull(mProcessingHelper.mLocationResolver);
-        mProcessingHelper.processLocationLabels();
+        mProcessingHelper.runProcessLocationLabels();
 
         // Verify SharedPreferences updated
         long lastGen = mProcessingHelper.mPrefs.getLong(LAST_GEN_MODIFIED_WITH_LOCATION_LABEL, -1);
@@ -221,7 +221,7 @@ public class ProcessingHelperTest {
 
         // 4. Trigger the retry logic
         assumeNotNull(mProcessingHelper.mLocationResolver);
-        mProcessingHelper.retryLocationLabels();
+        mProcessingHelper.runRetryLocationLabels();
 
         // 5. Verify the SQLite Status Table was updated.
         mDatabaseHelper.runWithoutTransaction((db) -> {
@@ -266,7 +266,7 @@ public class ProcessingHelperTest {
                 .putLong(LAST_GEN_MODIFIED_WITH_LOCATION_LABEL, lastProcessedGenModified)
                 .apply();
 
-        mProcessingHelper.retryLocationLabels();
+        mProcessingHelper.runRetryLocationLabels();
 
         // 3. Status should STILL be 0 (Untouched)
         mDatabaseHelper.runWithoutTransaction((db) -> {

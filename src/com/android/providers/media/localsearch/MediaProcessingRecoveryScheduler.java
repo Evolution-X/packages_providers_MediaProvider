@@ -23,6 +23,7 @@ import static com.android.providers.media.localsearch.ProcessingHelper.isNetwork
 
 import android.content.ContentProviderClient;
 import android.content.Context;
+import android.os.Trace;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -75,10 +76,19 @@ public class MediaProcessingRecoveryScheduler extends Worker {
                 .build();
     }
 
-    @SuppressWarnings("NewApi")
     @NonNull
     @Override
     public Result doWork() {
+        Trace.beginSection("MediaProcessing.doRecoveryWork");
+        try {
+            return doRecoveryWork();
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    @SuppressWarnings("NewApi")
+    private Result doRecoveryWork() {
         Log.d(TAG, "Starting media processing recovery job");
 
         synchronized (WORKER_LOCK) {
@@ -118,7 +128,7 @@ public class MediaProcessingRecoveryScheduler extends Worker {
                 processingHelper.deleteStaleRowsFromAppSearch();
 
                 if (isNetworkAvailable(mContext)) {
-                    processingHelper.retryLocationLabels();
+                    processingHelper.runRetryLocationLabels();
                 } else {
                     Log.v(TAG, "No network connection. Skip location label processing");
                 }

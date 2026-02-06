@@ -24,6 +24,7 @@ import static com.android.providers.media.localsearch.ProcessingHelper.isNetwork
 import android.content.ContentProviderClient;
 import android.content.Context;
 import android.content.res.Resources;
+import android.os.Trace;
 import android.provider.MediaStore;
 import android.util.Log;
 
@@ -91,17 +92,26 @@ public class MediaProcessingWorkScheduler extends Worker {
         }
     }
 
-    @SuppressWarnings("NewApi")
     @NonNull
     @Override
     public Result doWork() {
+        Trace.beginSection("MediaProcessing.doWork");
+        try {
+            return doProcessingWork();
+        } finally {
+            Trace.endSection();
+        }
+    }
+
+    @SuppressWarnings("NewApi")
+    private Result doProcessingWork() {
         Log.v(TAG, "Media processing job run started.");
 
         synchronized (WORKER_LOCK) {
             DatabaseHelper externalDb;
             try (ContentProviderClient cpc =
                          mContext.getContentResolver().acquireContentProviderClient(
-                    MediaStore.AUTHORITY)) {
+                                 MediaStore.AUTHORITY)) {
                 MediaProvider provider = (MediaProvider) cpc.getLocalContentProvider();
                 if (provider == null) {
                     Log.e(TAG, "Failed to get MediaProvider instance");
@@ -136,10 +146,10 @@ public class MediaProcessingWorkScheduler extends Worker {
 
                 processingHelper.deleteStaleRows();
 
-                processingHelper.processMetadataLabels();
+                processingHelper.runProcessMetadataLabels();
 
                 if (isNetworkAvailable(mContext)) {
-                    processingHelper.processLocationLabels();
+                    processingHelper.runProcessLocationLabels();
                 } else {
                     Log.v(TAG, "No network connection. Skip location label processing");
                 }
