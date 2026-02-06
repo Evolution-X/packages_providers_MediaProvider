@@ -70,10 +70,10 @@ package android.widget.photopicker {
     method public long getMaxMediaItemResolutionInPixels();
     method public long getMaxMediaItemSizeInBytes();
     method public long getMaxSelectionBatchSizeInBytes();
-    method public long getMaxVideoDurationInSeconds();
+    method @Nullable public java.time.Duration getMaxVideoDuration();
     method @NonNull public java.util.List<java.lang.String> getMimeTypes();
     method public long getMinMediaItemResolutionInPixels();
-    method public long getMinVideoDurationInSeconds();
+    method @Nullable public java.time.Duration getMinVideoDuration();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field @NonNull public static final android.os.Parcelable.Creator<android.widget.photopicker.PhotoPickerSelectionParams> CREATOR;
   }
@@ -91,10 +91,10 @@ package android.widget.photopicker {
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxMediaItemResolutionInPixels(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxMediaItemSizeInBytes(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxSelectionBatchSizeInBytes(long);
-    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxVideoDurationInSeconds(long);
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxVideoDuration(@NonNull java.time.Duration);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMimeTypes(@NonNull java.util.List<java.lang.String>);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinMediaItemResolutionInPixels(long);
-    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinVideoDurationInSeconds(long);
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinVideoDuration(@NonNull java.time.Duration);
   }
 
   @FlaggedApi("com.android.providers.media.flags.enable_photopicker_ui_customization_params_api") public final class PhotoPickerUiCustomizationParams implements android.os.Parcelable {
