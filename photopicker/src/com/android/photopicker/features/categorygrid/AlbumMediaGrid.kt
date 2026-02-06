@@ -192,6 +192,7 @@ private fun AlbumMediaGrid(
                         navController.navigateToPreviewMedia(item.media)
                     }
                 }
+                val aspectRatio = configuration.getAspectRatioForMediaItemGrids().ratio
                 mediaGrid(
                     modifier = Modifier.fillMaxSize(),
                     items = items,
@@ -201,6 +202,7 @@ private fun AlbumMediaGrid(
                     dragSelectIndexOffset = 0, // by default, which is suitable here.
                     pinchToZoomEnabled = true,
                     onZoomAtMaxZoom = onItemPreview,
+                    aspectRatio = aspectRatio,
                     onItemClick = { item ->
                         if (item is MediaGridItem.MediaItem) {
                             viewModel.handleAlbumMediaGridItemSelection(

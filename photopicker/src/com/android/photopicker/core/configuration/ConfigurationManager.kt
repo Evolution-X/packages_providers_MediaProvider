@@ -201,7 +201,12 @@ class ConfigurationManager(
         val selectionParams = featureInfo.selectionParams
 
         // get calling app's ui customization params
-        val uiCustomizationParams = featureInfo.uiCustomizationParams
+        val uiCustomizationParams =
+            if (Flags.enablePhotopickerUiCustomizationParamsApi()) {
+                featureInfo.uiCustomizationParams
+            } else {
+                null
+            }
 
         // Use updateAndGet to ensure that the values are set before this method returns so that
         // the new configuration is immediately available to the new subscribers.

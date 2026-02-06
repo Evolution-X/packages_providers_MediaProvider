@@ -31,6 +31,7 @@ import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -647,6 +648,146 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("Expected swipe to navigate to Album Grid for category")
                 .that(route)
                 .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
+        }
+    }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+    )
+    fun testPhotoGrid_withDefaultAspectRatio_displaysSquareThumbnail() {
+        testScope.runTest {
+            // No UI params set, should use default 1:1
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Default aspect ratio should be 1:1")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(1f)
+        }
+    }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+    )
+    fun testPhotoGrid_withPortraitAspectRatio_displaysPortraitThumbnail() {
+        testScope.runTest {
+            val uiParams =
+                PhotoPickerUiCustomizationParams.Builder()
+                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                    .build()
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Aspect ratio should be 9:16")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(9f / 16f)
+        }
+    }
+
+    @Test
+    @DisableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+    )
+    fun testPhotoGrid_withUiCustomizationParams_isIgnoredIfFlagDisabled() {
+        testScope.runTest {
+            val uiParams =
+                PhotoPickerUiCustomizationParams.Builder()
+                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                    .build()
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+                    .assert(hasClickAction())
+                    .assertIsDisplayed()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Aspect ratio should be 1:1 when flag is disabled")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(1f)
         }
     }
 }

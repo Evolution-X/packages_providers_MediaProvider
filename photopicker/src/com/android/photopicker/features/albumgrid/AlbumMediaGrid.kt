@@ -165,11 +165,13 @@ private fun AlbumMediaGrid(
                 )
             }
             else -> {
+                val aspectRatio = configuration.getAspectRatioForMediaItemGrids().ratio
                 mediaGrid(
                     // Album content grid
                     items = items,
                     isExpandedScreen = isExpandedScreen,
                     selection = selection,
+                    aspectRatio = aspectRatio,
                     onItemClick = { item ->
                         if (item is MediaGridItem.MediaItem) {
                             viewModel.handleAlbumMediaGridItemSelection(

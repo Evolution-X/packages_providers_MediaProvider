@@ -28,6 +28,7 @@ import android.util.Log
 import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import com.android.photopicker.core.navigation.PhotopickerDestinations
+import com.android.photopicker.data.model.AspectRatio
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQuery
 import com.android.photopicker.features.highlightmediaresults.model.HighlightQueryResultsParams
 import com.android.photopicker.features.highlightmediaresults.model.QueryResultsHighlightType
@@ -248,5 +249,24 @@ data class PhotopickerConfiguration(
      */
     fun hasOnlyVideoMimeTypes(): Boolean {
         return mimeTypes.isNotEmpty() && mimeTypes.all { it.startsWith("video/") }
+    }
+
+    /**
+     * Returns the target aspect ratio for all grids displaying media items in the current session.
+     * If [PhotoPickerUiCustomizationParams] is not set then it defaults to 1:1 (Square).
+     *
+     * @return The target [AspectRatio] for media grid items.
+     */
+    fun getAspectRatioForMediaItemGrids(): AspectRatio {
+        return when {
+
+            // If params exist AND the ratio is set to 9:16, return 9:16.
+            uiCustomizationParams?.aspectRatio ==
+                PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16 ->
+                AspectRatio.PORTRAIT_9_16
+
+            // For everything else
+            else -> AspectRatio.SQUARE_1_1
+        }
     }
 }

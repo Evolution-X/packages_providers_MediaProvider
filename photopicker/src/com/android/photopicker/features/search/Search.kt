@@ -95,7 +95,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.dismiss
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -1408,6 +1407,7 @@ private fun ResultMediaGrid(
             ) {
                 val state = rememberMediaGridState()
                 val currentBanner by viewModel.getBanners().collectAsStateWithLifecycle()
+                val aspectRatio = configuration.getAspectRatioForMediaItemGrids().ratio
                 val bannerContentSelector =
                     object : StateSelector.AnimatedVisibilityInEmbedded {
                         override val visible = LocalEmbeddedState.current?.isExpanded ?: false
@@ -1421,6 +1421,7 @@ private fun ResultMediaGrid(
                     items = items,
                     isExpandedScreen = isExpandedScreen,
                     selection = selection,
+                    aspectRatio = aspectRatio,
                     bannerContent = {
                         if (configuration.flags.PICKER_OFFLINE_BANNERS_ENABLED) {
                             hideWhenState(selector = bannerContentSelector) {

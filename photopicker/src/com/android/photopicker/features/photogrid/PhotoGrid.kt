@@ -332,12 +332,14 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                     }
                 }
                 val state = rememberMediaGridState()
+                val aspectRatio = configuration.getAspectRatioForMediaItemGrids().ratio
                 mediaGrid(
                     state = state,
                     modifier = Modifier.fillMaxSize(),
                     items = items,
                     isExpandedScreen = isExpandedScreen,
                     selection = selection,
+                    aspectRatio = aspectRatio,
                     dragSelectionEnabled = configuration.selectionLimit > 1,
                     /* index offset for banner and highlight content */
                     dragSelectIndexOffset = 2,

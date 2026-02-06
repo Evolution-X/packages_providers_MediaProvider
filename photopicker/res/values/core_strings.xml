@@ -140,4 +140,7 @@
     <!-- Placeholder text for cloud app name in the offline banner. [CHAR LIMIT=50] -->
     <string name="photopicker_offline_banner_cloud_app_placeholder"
         translation_description="App placeholder text for cloud app name in the Photo grid offline banner.">a cloud media app</string>
+
+    <!-- Content description for the loading placeholder in the media grid [CHAR LIMIT=50] -->
+    <string name="photopicker_mediagrid_placeholder" translation_description="Accessibility text denoting an element that represents a loading item in a grid of media.">loading media item</string>
 </resources>

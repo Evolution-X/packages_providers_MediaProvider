@@ -32,6 +32,7 @@ import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -120,6 +121,7 @@ import org.mockito.MockitoAnnotations
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTestApi::class)
 class SearchFeatureTest : PhotopickerFeatureBaseTest() {
+
     /* Hilt's rule needs to come first to ensure the DI container is setup for the test. */
     @get:Rule(order = 0) val hiltRule = HiltAndroidRule(this)
     @get:Rule(order = 1)
@@ -174,14 +176,215 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
     var localProvider = Provider("local_authority", MediaSource.LOCAL, 0, "Local")
     var cloudProvider = Provider("cloud_authority", MediaSource.REMOTE, 1, cloudProviderName)
 
+    private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
+
     @Before
     fun setup() {
-
         MockitoAnnotations.openMocks(this)
         hiltRule.inject()
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
         mockSystemService(mockContext, ConnectivityManager::class.java) { mockConnectivityManager }
     }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+    )
+    fun testSearchGrid_withDefaultAspectRatio_displaysSquareThumbnail() =
+        testScope.runTest {
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceUntilIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            advanceUntilIdle()
+
+            // Enter a query and perform search
+            val searchQuery = "test"
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .performTextInput(searchQuery)
+            composeTestRule.onNodeWithText(searchQuery).performImeAction()
+
+            // Wait for results
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Default aspect ratio should be 1:1")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(1f)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+    )
+    fun testSearchGrid_withPortraitAspectRatio_displaysPortraitThumbnail() =
+        testScope.runTest {
+            val uiParams =
+                PhotoPickerUiCustomizationParams.Builder()
+                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                    .build()
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceUntilIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            advanceUntilIdle()
+
+            // Enter a query and perform search
+            val searchQuery = "test"
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .performTextInput(searchQuery)
+            composeTestRule.onNodeWithText(searchQuery).performImeAction()
+
+            // Wait for results
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Aspect ratio should be 9:16")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(9f / 16f)
+        }
+
+    @Test
+    @DisableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+    )
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchGrid_withUiCustomizationParams_isIgnoredIfFlagDisabled() =
+        testScope.runTest {
+            val uiParams =
+                PhotoPickerUiCustomizationParams.Builder()
+                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                    .build()
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceUntilIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            advanceUntilIdle()
+
+            // Enter a query and perform search
+            val searchQuery = "test"
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .performTextInput(searchQuery)
+            composeTestRule.onNodeWithText(searchQuery).performImeAction()
+
+            // Wait for results
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Aspect ratio should be 1:1 when flag is disabled")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(1f)
+        }
 
     /* Ensures the Search feature is not enabled when flag is disabled. */
     @Test
