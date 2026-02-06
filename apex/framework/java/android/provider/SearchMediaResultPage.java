@@ -91,16 +91,18 @@ public final class SearchMediaResultPage implements Parcelable {
 
     private SearchMediaResultPage(Parcel in) {
         mSearchId = in.readString();
-        CursorWindow cursorWindow = in.readParcelable(CursorWindow.class.getClassLoader());
-        mSearchResults = convertToSearchMediaResultList(cursorWindow);
+        try (CursorWindow cursorWindow = in.readParcelable(CursorWindow.class.getClassLoader())) {
+            mSearchResults = convertToSearchMediaResultList(cursorWindow);
+        }
         mExtras = in.readBundle();
     }
 
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeString(mSearchId);
-        CursorWindow cursorWindow = convertToCursorWindow(mSearchResults);
-        dest.writeParcelable(cursorWindow, flags);
+        try (CursorWindow cursorWindow = convertToCursorWindow(mSearchResults)) {
+            dest.writeParcelable(cursorWindow, flags);
+        }
         dest.writeBundle(mExtras);
     }
 
