@@ -103,13 +103,13 @@ package android.widget.photopicker {
     method public void writeToParcel(@NonNull android.os.Parcel, int);
     field public static final int ASPECT_RATIO_PORTRAIT_9_16 = 1; // 0x1
     field public static final int ASPECT_RATIO_SQUARE_1_1 = 0; // 0x0
+    field public static final int ASPECT_RATIO_UNDEFINED = -1; // 0xffffffff
     field @NonNull public static final android.os.Parcelable.Creator<android.widget.photopicker.PhotoPickerUiCustomizationParams> CREATOR;
   }
 
   public static final class PhotoPickerUiCustomizationParams.Builder {
     ctor public PhotoPickerUiCustomizationParams.Builder();
     method @NonNull public android.widget.photopicker.PhotoPickerUiCustomizationParams build();
-    method @NonNull public android.widget.photopicker.PhotoPickerUiCustomizationParams.Builder clearAspectRatio();
     method @NonNull public android.widget.photopicker.PhotoPickerUiCustomizationParams.Builder setAspectRatio(int);
   }
 
