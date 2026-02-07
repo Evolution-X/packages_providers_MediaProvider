@@ -22,9 +22,11 @@ import android.os.Parcelable;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.android.providers.media.flags.Flags;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -42,8 +44,10 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     private static final String TAG = "PhotoPickerSelectionParams";
 
     private final long mMaxMediaItemSizeInBytes;
-    private final long mMaxVideoDurationInSeconds;
-    private final long mMinVideoDurationInSeconds;
+    @Nullable
+    private final Duration mMaxVideoDuration;
+    @Nullable
+    private final Duration mMinVideoDuration;
     private final long mMaxMediaItemResolutionInPixels;
     private final long mMinMediaItemResolutionInPixels;
     private final List<String> mMimeTypes;
@@ -51,16 +55,16 @@ public final class PhotoPickerSelectionParams implements Parcelable {
 
     private PhotoPickerSelectionParams(
             long maxMediaItemSizeInBytes,
-            long maxVideoDurationInSeconds,
-            long minVideoDurationInSeconds,
+            @Nullable Duration maxVideoDuration,
+            @Nullable Duration minVideoDuration,
             long maxMediaItemResolutionInPixels,
             long minMediaItemResolutionInPixels,
             List<String> mimeTypes,
             long maxSelectionBatchSizeInBytes
     ) {
         mMaxMediaItemSizeInBytes = maxMediaItemSizeInBytes;
-        mMaxVideoDurationInSeconds = maxVideoDurationInSeconds;
-        mMinVideoDurationInSeconds = minVideoDurationInSeconds;
+        mMaxVideoDuration = maxVideoDuration;
+        mMinVideoDuration = minVideoDuration;
         mMaxMediaItemResolutionInPixels = maxMediaItemResolutionInPixels;
         mMinMediaItemResolutionInPixels = minMediaItemResolutionInPixels;
         mMimeTypes = List.copyOf(mimeTypes);
@@ -73,8 +77,12 @@ public final class PhotoPickerSelectionParams implements Parcelable {
      */
     private PhotoPickerSelectionParams(Parcel in) {
         mMaxMediaItemSizeInBytes = in.readLong();
-        mMaxVideoDurationInSeconds = in.readLong();
-        mMinVideoDurationInSeconds = in.readLong();
+        long maxDurationSeconds = in.readLong();
+        mMaxVideoDuration = maxDurationSeconds == -1
+                ? null : Duration.ofSeconds(maxDurationSeconds);
+        long minDurationSeconds = in.readLong();
+        mMinVideoDuration = minDurationSeconds == -1
+                ? null : Duration.ofSeconds(minDurationSeconds);
         mMaxMediaItemResolutionInPixels = in.readLong();
         mMinMediaItemResolutionInPixels = in.readLong();
         List<String> mimeTypes = new ArrayList<>();
@@ -87,8 +95,10 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     @Override
     public void writeToParcel(@NonNull Parcel dest, int flags) {
         dest.writeLong(mMaxMediaItemSizeInBytes);
-        dest.writeLong(mMaxVideoDurationInSeconds);
-        dest.writeLong(mMinVideoDurationInSeconds);
+        dest.writeLong(mMaxVideoDuration != null
+                ? mMaxVideoDuration.toSeconds() : -1);
+        dest.writeLong(mMinVideoDuration != null
+                ? mMinVideoDuration.toSeconds() : -1);
         dest.writeLong(mMaxMediaItemResolutionInPixels);
         dest.writeLong(mMinMediaItemResolutionInPixels);
         dest.writeStringList(mMimeTypes);
@@ -126,25 +136,29 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     }
 
     /**
-     * Returns the maximum allowed duration, in seconds, for a video to be selectable.
+     * Returns the maximum allowed duration for a video to be selectable.
      *
      * <p>If the maximum video duration is not set by the caller app using {@link
-     * Builder#setMaxVideoDurationInSeconds(long)}, this method returns -1, indicating that the
-     * photo picker will not restrict selection based on the maximum video duration.
+     * Builder#setMaxVideoDuration(Duration)}, this method returns {@code null},
+     * indicating that the photo picker will not restrict selection based on the maximum video
+     * duration.
      */
-    public long getMaxVideoDurationInSeconds() {
-        return mMaxVideoDurationInSeconds;
+    @Nullable
+    public Duration getMaxVideoDuration() {
+        return mMaxVideoDuration;
     }
 
     /**
-     * Returns the minimum required duration, in seconds, for a video to be selectable.
+     * Returns the minimum required duration for a video to be selectable.
      *
      * <p>If the minimum video duration is not set by the caller app using {@link
-     * Builder#setMinVideoDurationInSeconds(long)}, this method returns -1, indicating that the
-     * photo picker will not restrict selection based on the minimum video duration.
+     * Builder#setMinVideoDuration(Duration)}, this method returns {@code null},
+     * indicating that the photo picker will not restrict selection based on the minimum video
+     * duration.
      */
-    public long getMinVideoDurationInSeconds() {
-        return mMinVideoDurationInSeconds;
+    @Nullable
+    public Duration getMinVideoDuration() {
+        return mMinVideoDuration;
     }
 
     /**
@@ -200,8 +214,8 @@ public final class PhotoPickerSelectionParams implements Parcelable {
     public static final class Builder {
 
         private long mMaxMediaItemSizeInBytes = -1;
-        private long mMaxVideoDurationInSeconds = -1;
-        private long mMinVideoDurationInSeconds = -1;
+        @Nullable private Duration mMaxVideoDuration = null;
+        @Nullable private Duration mMinVideoDuration = null;
         private long mMaxMediaItemResolutionInPixels = -1;
         private long mMinMediaItemResolutionInPixels = -1;
         private List<String> mMimeTypes = new ArrayList<>();
@@ -247,7 +261,7 @@ public final class PhotoPickerSelectionParams implements Parcelable {
         }
 
         /**
-         * Sets the maximum allowed duration, in seconds, for a video media item to be selectable.
+         * Sets the maximum allowed duration for a video media item to be selectable.
          *
          * <p>Videos exceeding this duration will be disabled for selection.
          *
@@ -257,16 +271,20 @@ public final class PhotoPickerSelectionParams implements Parcelable {
          * <p>If it is not set, no maximum video duration constraint will be enforced on the videos
          * that the user can select.
          *
-         * @param maxVideoDurationInSeconds The maximum video duration in seconds.
-         * @throws IllegalArgumentException if {@code maxVideoDurationInSeconds} is negative or zero
+         * @param maxVideoDuration The maximum video duration.
+         * @throws IllegalArgumentException if {@code maxVideoDuration} is null, negative
+         * or zero
          */
         @NonNull
-        public Builder setMaxVideoDurationInSeconds(long maxVideoDurationInSeconds) {
-            if (maxVideoDurationInSeconds <= 0) {
+        public Builder setMaxVideoDuration(@NonNull Duration maxVideoDuration) {
+            if (maxVideoDuration == null) {
+                throw new IllegalArgumentException("Maximum video duration cannot be null");
+            }
+            if (!maxVideoDuration.isPositive()) {
                 throw new IllegalArgumentException(
                         "Maximum video duration cannot be negative or zero.");
             }
-            mMaxVideoDurationInSeconds = maxVideoDurationInSeconds;
+            mMaxVideoDuration = maxVideoDuration;
             return this;
         }
 
@@ -276,16 +294,16 @@ public final class PhotoPickerSelectionParams implements Parcelable {
          * <p>On calling this, the PhotoPicker will not enforce an upper limit on the duration of
          * video media items.
          *
-         * @see #setMaxVideoDurationInSeconds(long)
+         * @see #setMaxVideoDuration(Duration)
          */
         @NonNull
         public Builder clearMaxVideoDuration() {
-            mMaxVideoDurationInSeconds = -1;
+            mMaxVideoDuration = null;
             return this;
         }
 
         /**
-         * Sets the minimum allowed duration, in seconds, for a video media item to be selectable.
+         * Sets the minimum allowed duration for a video media item to be selectable.
          *
          * <p>Videos shorter than this duration will be disabled for selection.
          *
@@ -295,15 +313,18 @@ public final class PhotoPickerSelectionParams implements Parcelable {
          * <p>If it is not set, no minimum video duration constraint will be enforced on the videos
          * that the user can select.
          *
-         * @param minVideoDurationInSeconds The minimum video duration in seconds.
-         * @throws IllegalArgumentException if {@code minVideoDurationInSeconds} is negative
+         * @param minVideoDuration The minimum video duration.
+         * @throws IllegalArgumentException if {@code minVideoDuration} is negative
          */
         @NonNull
-        public Builder setMinVideoDurationInSeconds(long minVideoDurationInSeconds) {
-            if (minVideoDurationInSeconds < 0) {
+        public Builder setMinVideoDuration(@NonNull Duration minVideoDuration) {
+            if (minVideoDuration == null) {
+                throw new IllegalArgumentException("Minimum video duration cannot be null");
+            }
+            if (!minVideoDuration.isPositive()) {
                 throw new IllegalArgumentException("Minimum video duration cannot be negative.");
             }
-            mMinVideoDurationInSeconds = minVideoDurationInSeconds;
+            mMinVideoDuration = minVideoDuration;
             return this;
         }
 
@@ -313,11 +334,11 @@ public final class PhotoPickerSelectionParams implements Parcelable {
          * <p>On calling this, the PhotoPicker will not enforce a lower limit on the duration of
          * video media items.
          *
-         * @see #setMinVideoDurationInSeconds(long)
+         * @see #setMinVideoDuration(Duration)
          */
         @NonNull
         public Builder clearMinVideoDuration() {
-            mMinVideoDurationInSeconds = -1;
+            mMinVideoDuration = null;
             return this;
         }
 
@@ -499,15 +520,14 @@ public final class PhotoPickerSelectionParams implements Parcelable {
          */
         @NonNull
         public PhotoPickerSelectionParams build() {
-            validateMinMax(mMinVideoDurationInSeconds, mMaxVideoDurationInSeconds,
-                    "video duration");
+            validateMinMaxDuration(mMinVideoDuration, mMaxVideoDuration, "video duration");
             validateMinMax(mMinMediaItemResolutionInPixels, mMaxMediaItemResolutionInPixels,
                     "media item resolution");
 
             return new PhotoPickerSelectionParams(
                     mMaxMediaItemSizeInBytes,
-                    mMaxVideoDurationInSeconds,
-                    mMinVideoDurationInSeconds,
+                    mMaxVideoDuration,
+                    mMinVideoDuration,
                     mMaxMediaItemResolutionInPixels,
                     mMinMediaItemResolutionInPixels,
                     mMimeTypes,
@@ -524,6 +544,27 @@ public final class PhotoPickerSelectionParams implements Parcelable {
          */
         private void validateMinMax(long minValue, long maxValue, @NonNull String param) {
             if (minValue != -1 && maxValue != -1 && minValue > maxValue) {
+                throw new IllegalArgumentException(String.format(
+                        Locale.ROOT,
+                        "Min %s cannot be greater than the max %s.",
+                        param, param));
+            }
+        }
+
+        /**
+         * Internal helper to perform validation, ensuring that a minimum duration does not
+         * exceed its corresponding maximum duration.
+         *
+         * @param minValue minimum duration value
+         * @param maxValue maximum duration value
+         * @param param the parameter name being validated
+         */
+        private void validateMinMaxDuration(Duration minValue, Duration maxValue,
+                @NonNull String param) {
+            if (minValue == null || maxValue == null) {
+                return;
+            }
+            if (minValue.compareTo(maxValue) > 0) {
                 throw new IllegalArgumentException(String.format(
                         Locale.ROOT,
                         "Min %s cannot be greater than the max %s.",
