@@ -54,4 +54,6 @@
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"අන්තර්ජාල සම්බන්ධතාව අවශ්‍ය වේ"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"සැකසීම් වෙත යන්න"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"ක්ලවුඩ් මාධ්‍ය යෙදුමක්"</string>
+    <!-- no translation found for photopicker_mediagrid_placeholder (8289749862416745432) -->
+    <skip />
 </resources>
