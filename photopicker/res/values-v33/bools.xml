@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<!-- Copyright (C) 2024 The Android Open Source Project
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2026 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -14,10 +14,7 @@
      limitations under the License.
 -->
 
-<resources xmlns:android="http://schemas.android.com/apk/res/android">
-    <overlayable name="PhotoPickerConfig">
-        <policy type="product|system|vendor">
-            <item type="bool" name="config_enablePhotopickerDeviceConfigReceiver"/>
-        </policy>
-    </overlayable>
+<resources>
+    <!-- boolean to indicate if modern Photopicker activity is enabled in T+ -->
+    <bool name="modern_picker_enabled">true</bool>
 </resources>

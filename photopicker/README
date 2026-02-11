@@ -25,10 +25,8 @@ It is very important that Photopicker apk is signed by the same certificate as t
 installed MediaProvider.apk. Photopicker relies on signature permissions declared in
 MediaProvider, and will fail to obtain them if signed separately.
 
-Additionally, the DeviceConfig `enable_modern_picker` in the `mediaprovider` namespace
-needs to be enabled to `true` in order for the new photopicker to become active.
-
-```adb shell device_config put mediaprovider enable_modern_picker true`
+By default the new photopicker is enabled on T+ devices and the legacy java picker
+is enabled on devices below T.
 
 #############################################
 # Troubleshooting

@@ -90,7 +90,7 @@ public class ConfigStoreTest {
         assertFalse(mConfigStore.shouldPickerRespectPreloadArgumentForPickImages());
         assertFalse(mConfigStore.shouldTranscodeDefault());
         assertTrue(mConfigStore.isPrivateSpaceInPhotoPickerEnabled());
-        assertFalse(mConfigStore.isModernPickerEnabled());
+        assertTrue(mConfigStore.isModernPickerEnabled());
         assertTrue(mConfigStore.getDefaultOemMetadataServicePackage().isEmpty());
         assertTrue(mConfigStore.getDefaultMediaProcessingServicePackage().isEmpty());
     }

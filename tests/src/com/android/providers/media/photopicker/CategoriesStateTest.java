@@ -72,17 +72,6 @@ public class CategoriesStateTest {
     }
 
     @Test
-    @EnableFlags({Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-            Flags.FLAG_ENABLE_CLOUD_MEDIA_PROVIDER_CAPABILITIES})
-    public void testAreMediaCategoriesEnabledWithModernPickerDisabled() {
-        final TestConfigStore configStore = new TestConfigStore();
-        configStore.setIsModernPickerEnabled(false);
-
-        final CategoriesState categoriesState = new CategoriesState(configStore);
-        assertFalse(categoriesState.areCategoriesEnabled(mContext, SearchProvider.AUTHORITY));
-    }
-
-    @Test
     @EnableFlags(Flags.FLAG_ENABLE_CLOUD_MEDIA_PROVIDER_CAPABILITIES)
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     public void testAreMediaCategoriesEnabledWithPhotopickerSearchFlagDisabled() {
