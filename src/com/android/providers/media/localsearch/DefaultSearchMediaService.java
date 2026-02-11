@@ -133,6 +133,12 @@ public class DefaultSearchMediaService extends SearchMediaService {
             return false;
         }
 
+        if (!Flags.enableMediaProcessing()) {
+            Log.e(TAG, "enable_media_processing flag is enabled. "
+                    + "Service will not be created.");
+            return false;
+        }
+
         return true;
     }
 
