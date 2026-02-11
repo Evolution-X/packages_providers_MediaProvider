@@ -37,6 +37,7 @@ import androidx.work.WorkerParameters;
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.MediaProvider;
 import com.android.providers.media.WorkManagerInitializer;
+import com.android.providers.media.appsearch.AppSearchDbManager;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -126,6 +127,9 @@ public class MediaProcessingRecoveryScheduler extends Worker {
                 }
 
                 processingHelper.deleteStaleRowsFromAppSearch();
+
+                processingHelper.enforceAppSearchDocumentLimit(
+                        AppSearchDbManager.MAX_DOCUMENT_COUNT);
 
                 if (isNetworkAvailable(mContext)) {
                     processingHelper.runRetryLocationLabels();
