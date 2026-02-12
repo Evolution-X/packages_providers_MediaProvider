@@ -29,9 +29,11 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.provider.media.internal.flags.Flags;
+import android.text.TextUtils;
 
 import com.android.providers.media.DatabaseHelper;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -115,7 +117,8 @@ public class MediaProcessingStatus {
         values.put(GEN_MODIFIED, genModified);
         values.put(METADATA_LABEL_STATUS, STATUS_COMPLETED);
 
-        db.insert(MEDIA_PROCESSING_STATUS_TABLE, /* nullColumnHack */ null, values);
+        db.insertWithOnConflict(MEDIA_PROCESSING_STATUS_TABLE, /* nullColumnHack */ null, values,
+                SQLiteDatabase.CONFLICT_REPLACE);
     }
 
     /**
@@ -163,6 +166,25 @@ public class MediaProcessingStatus {
                 selectionArgs);
 
         return (rowsUpdated == 1);
+    }
+
+    /**
+     * Updates the processing status for labels as completed for a list of media items.
+     *
+     * @param db           SQLite external.db database instance
+     * @param fileIds      List of media item file IDs.
+     * @param statusColumn Column name for the processing status.
+     * @return number of rows affected with the update
+     */
+    public static int bulkUpdateLabelStatusAsSuccess(SQLiteDatabase db, List<Long> fileIds,
+            String statusColumn) {
+        final ContentValues values = new ContentValues();
+        values.put(statusColumn, STATUS_COMPLETED);
+
+        String whereClauseForUpdate =
+                FILE_ID_COLUMN + " IN (" + TextUtils.join(",", fileIds) + ")";
+        return db.update(MEDIA_PROCESSING_STATUS_TABLE, values, whereClauseForUpdate,
+                null);
     }
 
     private static String getSelectionWhereMediaProcessed(int requestedProcessing) {
