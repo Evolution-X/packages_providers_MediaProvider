@@ -38,5 +38,28 @@
             </intent-filter>
         </activity>
 
+        <!-- Declare the new SettingsActivity -->
+        <!-- @FlaggedApi("com.android.signature.flags.enable_signature") -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="true"
+            android:label="@string/title_activity_settings"
+            android:featureFlag="com.android.signature.flags.enable_signature">
+            <!-- This intent filter allows the activity to be launched
+                 from the "App Info" screen in Android Settings -->
+            <intent-filter>
+                <action android:name="android.intent.action.APPLICATION_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- @FlaggedApi("com.android.signature.flags.enable_signature") -->
+        <provider
+            android:name=".provider.SignatureProvider"
+            android:authorities="com.android.signature.provider"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:featureFlag="com.android.signature.flags.enable_signature"/>
+
     </application>
 </manifest>

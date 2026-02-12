@@ -1,5 +1,5 @@
 <!--
- Copyright 2024 The Android Open Source Project
+ Copyright 2026 The Android Open Source Project
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -16,7 +16,19 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 
-    <!-- Label to show to user for this package and for Photo picker. -->
-    <string name="signature_application_label" translation_description="Label for the application that handles picking media files to share with other apps. [CHAR_LIMIT=NONE]">Signature</string>
+    <!-- Label to show to user for this package and for Signature. -->
+    <string name="signature_application_label" translation_description="Label for the application that handles user created signatures to share with other apps. [CHAR_LIMIT=NONE]">Signature</string>
+    <string name="title_activity_settings">Signature Settings</string>
+
+    <!-- Settings Screen -->
+    <string name="manage_signatures_title">Manage Signatures</string>
+    <string name="no_signatures_saved">No signatures saved.</string>
+    <string name="delete_signature_title">Delete Signature</string>
+    <string name="delete_signature_message">Are you sure you want to permanently delete this signature?</string>
+    <string name="delete_action">Delete</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="back_content_description">Back</string>
+    <string name="drawn_signature_content_description">Drawn Signature</string>
+    <string name="delete_signature_content_description">Delete Signature</string>
 
 </resources>

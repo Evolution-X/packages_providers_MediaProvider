@@ -31,7 +31,6 @@ android_test {
         "kotlinx_coroutines",
         "kotlinx_coroutines_test",
         "mockito-kotlin2",
-        "Robolectric_all-target",
         "mockito-target",
         "truth",
 
@@ -47,4 +46,33 @@ android_test {
         "com.android.signature.flags-aconfig",
     ],
 
+    // Use a custom test config to include FeatureFlagTargetPreparer
+    test_config: "AndroidTest.xml",
+}
+
+// NEW: Build configuration for tests with the flag ENABLED
+test_module_config {
+    name: "SignatureTestsFlagEnabled",
+    base: "SignatureTests",
+    test_suites: ["general-tests"],
+    // These options are passed to FeatureFlagTargetPreparer
+    options: [
+        {
+            name: "flag-value",
+            value: "pdf_viewer/com.android.signature.flags.enable_signature=true",
+        },
+    ],
+}
+
+// NEW: Build configuration for tests with the flag DISABLED
+test_module_config {
+    name: "SignatureTestsFlagDisabled",
+    base: "SignatureTests",
+    test_suites: ["general-tests"],
+    options: [
+        {
+            name: "flag-value",
+            value: "pdf_viewer/com.android.signature.flags.enable_signature=false",
+        },
+    ],
 }

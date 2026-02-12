@@ -38,14 +38,10 @@ import org.junit.runner.RunWith
 import org.mockito.Mockito
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.stub
-import org.robolectric.annotation.Config
 
 @HiltAndroidTest
 @UninstallModules(DatabaseModule::class)
 @RunWith(AndroidJUnit4::class)
-@Config(
-    application = HiltTestApplication::class, instrumentedPackages = ["androidx.loader.content"]
-)
 class SignatureProviderTest {
 
     @get:Rule
@@ -71,8 +67,7 @@ class SignatureProviderTest {
 
     @Test
     fun getType_drawnSignature_returnsImagePng() {
-        val signature =
-            Signature(id = "1", type = Signature.TYPE_DRAWN, imageData = ByteArray(0))
+        val signature = Signature(id = "1", type = Signature.TYPE_DRAWN, imageData = ByteArray(0))
         signatureDao.stub {
             onBlocking { getSignatureById("1") }.doReturn(signature)
         }
