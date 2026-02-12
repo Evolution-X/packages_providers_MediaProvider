@@ -1227,11 +1227,14 @@ public class MediaProvider extends ContentProvider {
 
                 if (VOLUME_EXTERNAL_PRIMARY.equals(oldRow.getVolumeName())
                         && isMediaProcessingRequired(getContext())) {
+                    Trace.beginSection("MP.onUpdate.cleanupAppSearch");
                     try {
                         AppSearchDbManager appSearchDb = new AppSearchDbManager(getContext());
                         appSearchDb.deleteDocumentsByFileIds(List.of(oldRow.getId()));
                     } catch (Exception e) {
                         Log.v(TAG, "Failed to delete documents from AppSearch", e);
+                    } finally {
+                        Trace.endSection();
                     }
                 }
             });
@@ -1333,11 +1336,14 @@ public class MediaProvider extends ContentProvider {
 
                 if (VOLUME_EXTERNAL_PRIMARY.equals(deletedRow.getVolumeName())
                         && isMediaProcessingRequired(getContext())) {
+                    Trace.beginSection("MP.onDelete.cleanupAppSearch");
                     try {
                         AppSearchDbManager appSearchDb = new AppSearchDbManager(getContext());
                         appSearchDb.deleteDocumentsByFileIds(List.of(deletedRow.getId()));
                     } catch (Exception e) {
                         Log.v(TAG, "Failed to delete documents from AppSearch", e);
+                    } finally {
+                        Trace.endSection();
                     }
                 }
             });
