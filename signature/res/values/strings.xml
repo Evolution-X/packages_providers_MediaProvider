@@ -19,6 +19,8 @@
     <!-- Label to show to user for this package and for Signature. -->
     <string name="signature_application_label" translation_description="Label for the application that handles user created signatures to share with other apps. [CHAR_LIMIT=NONE]">Signature</string>
     <string name="title_activity_settings">Signature Settings</string>
+    <string name="title_activity_create_signature">Create Signature</string>
+
 
     <!-- Settings Screen -->
     <string name="manage_signatures_title">Manage Signatures</string>
@@ -30,5 +32,10 @@
     <string name="back_content_description">Back</string>
     <string name="drawn_signature_content_description">Drawn Signature</string>
     <string name="delete_signature_content_description">Delete Signature</string>
+
+    <!-- Picker Screen -->
+    <string name="picker_title">Select Signature</string>
+    <string name="picker_add_new">Add New</string>
+    <string name="picker_no_signatures">No signatures found.\nAdd a new one to get started.</string>
 
 </resources>

@@ -22,4 +22,6 @@
     <dimen name="card_elevation">2dp</dimen>
     <dimen name="signature_image_height">100dp</dimen>
     <dimen name="signature_text_size">28sp</dimen>
+    <dimen name="signature_item_height">150dp</dimen>
+    <dimen name="bottom_sheet_max_height">400dp</dimen>
 </resources>
