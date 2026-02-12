@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -112,6 +113,7 @@ private val MEASUREMENT_OVERLAPPING_BADGES_BOX_SIZE =
     MEASUREMENT_BADGE_ICON_SIZE + MEASUREMENT_BADGE_ICON_SIZE - MEASUREMENT_BADGE_NEGATIVE_OFFSET
 
 private val MODIFIER_BADGE_ICON = Modifier.size(MEASUREMENT_BADGE_ICON_SIZE)
+private val BUTTON_CONTENT_PADDING = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
 
 /**
  * Top of the NavigationBar feature.
@@ -213,7 +215,7 @@ fun NavigationBarButton(
         onClick = onClick,
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
-        contentPadding = ButtonDefaults.TextButtonContentPadding,
+        contentPadding = BUTTON_CONTENT_PADDING,
         colors =
             if (isCurrentRoute(currentRoute ?: "")) {
                 ButtonDefaults.filledTonalButtonColors(
