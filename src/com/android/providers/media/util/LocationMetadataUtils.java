@@ -188,9 +188,8 @@ public class LocationMetadataUtils {
                     + " files with null location metadata");
             int evaluatedRows = 0;
             for (FileInfo fileToUpdate : filesToUpdate) {
-                try {
-                    File file = new File(fileToUpdate.mFilepath);
-                    FileInputStream is = new FileInputStream(file);
+                File file = new File(fileToUpdate.mFilepath);
+                try (FileInputStream is = new FileInputStream(file)) {
                     final ExifInterface exif = new ExifInterface(is);
                     float[] locationCoordinates = new float[2];
                     if (exif.getLatLong(locationCoordinates)) {
@@ -202,9 +201,10 @@ public class LocationMetadataUtils {
                         db.update(Files.TABLE, values, selection, null);
                     }
                     evaluatedRows++;
-                    lastUpdatedRow = fileToUpdate.mId;
                 } catch (Exception e) {
                     Log.e(TAG, "Couldn't update location metadata for " + fileToUpdate.mId, e);
+                } finally {
+                    lastUpdatedRow = fileToUpdate.mId;
                 }
             }
 
