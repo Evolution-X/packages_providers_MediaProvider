@@ -26,6 +26,8 @@ import static android.provider.DocumentsContract.QUERY_ARG_MIME_TYPES;
 import static android.provider.MediaStore.GET_MEDIA_URI_CALL;
 import static android.provider.MediaStore.MATCH_INCLUDE;
 
+import static com.android.providers.media.flags.Flags.enableMimeTypeUpdateOnRename;
+
 import android.annotation.NonNull;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -75,7 +77,9 @@ import androidx.core.content.MimeTypeFilter;
 
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.util.FileUtils;
+import com.android.providers.media.util.MimeUtils;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -539,6 +543,12 @@ public class MediaDocumentsProvider extends DocumentsProvider {
         try {
             final ContentValues values = new ContentValues();
             values.put(FileColumns.DISPLAY_NAME, displayName);
+            if (enableMimeTypeUpdateOnRename()) {
+                // Allow  all mime types to be used when renaming file.
+                // This allows for files to be renamed without any extension.
+                final String mimeType = MimeUtils.resolveMimeType(new File(displayName));
+                values.put(FileColumns.MIME_TYPE, mimeType);
+            }
             Bundle extras = new Bundle();
             extras.putBoolean(MediaStore.QUERY_ARG_ALLOW_MOVEMENT, true);
             getContext().getContentResolver().update(target, values, extras);
