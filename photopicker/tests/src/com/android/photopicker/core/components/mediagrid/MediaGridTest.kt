@@ -256,8 +256,6 @@ class MediaGridTest {
                                 sizeInBytes = 1000L,
                                 mimeType = "image/png",
                                 standardMimeTypeExtension = 1,
-                                width = 512,
-                                height = 512,
                             )
                     )
                 )
@@ -307,8 +305,6 @@ class MediaGridTest {
                                 sizeInBytes = 100L * i,
                                 mimeType = "image/png",
                                 standardMimeTypeExtension = 1,
-                                width = 512,
-                                height = 512,
                             )
                     )
                 )
@@ -651,8 +647,6 @@ class MediaGridTest {
                 sizeInBytes = 1000L,
                 mimeType = "image/png",
                 standardMimeTypeExtension = 1,
-                width = 512,
-                height = 512,
             )
 
         // 2. Item 2 (The "after" item)
@@ -686,8 +680,6 @@ class MediaGridTest {
                 sizeInBytes = 1000L,
                 mimeType = "image/png",
                 standardMimeTypeExtension = 1,
-                width = 512,
-                height = 512,
             )
 
         val testPager =

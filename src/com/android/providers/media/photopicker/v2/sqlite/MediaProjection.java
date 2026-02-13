@@ -99,8 +99,6 @@ public class MediaProjection {
                 get(PickerSQLConstants.MediaResponse.MIME_TYPE),
                 get(PickerSQLConstants.MediaResponse.STANDARD_MIME_TYPE),
                 get(PickerSQLConstants.MediaResponse.DURATION_MS),
-                get(PickerSQLConstants.MediaResponse.WIDTH),
-                get(PickerSQLConstants.MediaResponse.HEIGHT),
                 get(PickerSQLConstants.MediaResponse.IS_PRE_GRANTED)
         );
     }

@@ -179,8 +179,6 @@ class MediaPreparerTest : PhotopickerFeatureBaseTest() {
             mimeType = "video/mp4",
             standardMimeTypeExtension = 1,
             duration = 45_000,
-            width = 512,
-            height = 512,
         )
     val DATA =
         buildList<Media>() {
@@ -210,8 +208,6 @@ class MediaPreparerTest : PhotopickerFeatureBaseTest() {
                         sizeInBytes = 1000L,
                         mimeType = "image/png",
                         standardMimeTypeExtension = 1,
-                        width = 512,
-                        height = 512,
                     )
                 )
             }
@@ -239,8 +235,6 @@ class MediaPreparerTest : PhotopickerFeatureBaseTest() {
                         sizeInBytes = 1000L,
                         mimeType = "image/png",
                         standardMimeTypeExtension = 1,
-                        width = 512,
-                        height = 512,
                     )
                 )
             }
@@ -278,8 +272,6 @@ class MediaPreparerTest : PhotopickerFeatureBaseTest() {
                         mimeType = "video/mp4",
                         standardMimeTypeExtension = 1,
                         duration = 45_000,
-                        width = 512,
-                        height = 512,
                     )
                 )
             }
@@ -317,8 +309,6 @@ class MediaPreparerTest : PhotopickerFeatureBaseTest() {
                                 true -> 90_000
                                 false -> 45_000
                             },
-                        width = 512,
-                        height = 512,
                     )
                 )
             }
