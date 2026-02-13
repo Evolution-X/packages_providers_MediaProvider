@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -137,7 +138,8 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
     val items = itemsFlow.collectAsLazyPagingItems()
 
     val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
-    val localizedSelectionLimit = LocalLocalizationHelper.current.getLocalizedCount(selectionLimit)
+    val localizationHelper = LocalLocalizationHelper.current
+    val localizedSelectionLimit = localizationHelper.getLocalizedCount(selectionLimit)
 
     val selectionLimitExceededMessage =
         stringResource(
@@ -148,6 +150,7 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
     val events = LocalEvents.current
     val scope = rememberCoroutineScope()
     val configuration = LocalPhotopickerConfiguration.current
+    val resources = LocalContext.current.resources
 
     // Modifier applied when photo grid to album grid navigation is disabled
     val baseModifier = Modifier.fillMaxSize()
@@ -283,9 +286,16 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                 // implementations differ based on flags, but both use the same click handler.
                 val onItemClick = { item: MediaGridItem ->
                     if (item is MediaGridItem.MediaItem) {
+                        val disabledReasonMessage =
+                            item.media.disabledReason?.getDisabledMessage(
+                                configuration,
+                                localizationHelper,
+                                resources,
+                            )
                         viewModel.handleGridItemSelection(
                             item = item.media,
                             selectionLimitExceededMessage = selectionLimitExceededMessage,
+                            disabledReasonMessage,
                         )
                         // Log user's interaction with picker's main grid(photo grid)
                         scope.launch {
