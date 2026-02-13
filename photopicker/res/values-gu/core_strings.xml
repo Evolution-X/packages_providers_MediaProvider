@@ -54,4 +54,5 @@
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"ઇન્ટરનેટ કનેક્શન આવશ્યક છે"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"સેટિંગ પર જાઓ"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"ક્લાઉડ મીડિયા ઍપ"</string>
+    <string name="photopicker_mediagrid_placeholder" msgid="8289749862416745432">"મીડિયા આઇટમ લોડ કરી રહ્યાં છીએ"</string>
 </resources>

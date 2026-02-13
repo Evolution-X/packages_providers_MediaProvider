@@ -16,13 +16,16 @@
 
 package com.android.providers.media.localsearch;
 
-import static com.android.providers.media.MediaProvider.MEDIAPROVIDER_PREFS;
+import static com.android.providers.media.DatabaseHelper.EXTERNAL_DATABASE_NAME;
+import static com.android.providers.media.localsearch.ProcessingConstants.WORKER_LOCK;
+import static com.android.providers.media.localsearch.ProcessingHelper.isMediaProcessingRequired;
+import static com.android.providers.media.localsearch.ProcessingHelper.isNetworkAvailable;
 
+import android.content.ContentProviderClient;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.os.Trace;
 import android.provider.MediaStore;
-import android.provider.media.internal.flags.Flags;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -32,23 +35,19 @@ import androidx.work.PeriodicWorkRequest;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
+import com.android.providers.media.DatabaseHelper;
+import com.android.providers.media.MediaProvider;
 import com.android.providers.media.R;
 import com.android.providers.media.WorkManagerInitializer;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class MediaProcessingWorkScheduler extends Worker {
     public static final String TAG = "MediaProcessingWorker";
     static final String PERIODIC_WORK_NAME = "MediaProcessingJob";
-    public static final String LAST_GEN_MODIFIED_WITH_MEDIA_LABEL =
-            "last_gen_modified_with_media_label";
-    public static final String LAST_GEN_MODIFIED_WITH_LOCATION_LABEL =
-            "last_gen_modified_with_location";
-    public static final String LAST_GEN_MODIFIED_WITH_METADATA_LABEL =
-            "last_gen_modified_with_metadata";
     private static final int DEFAULT_WORK_INTERVAL_HOURS = 6;
-
-
+    private Optional<ProcessingHelper> mProcessingHelper;
     private final Context mContext;
 
     public MediaProcessingWorkScheduler(@NonNull Context context,
@@ -57,9 +56,9 @@ public class MediaProcessingWorkScheduler extends Worker {
         mContext = context;
     }
 
-    private int getWorkIntervalHoursConfig() {
+    private static int getWorkIntervalHoursConfig(Context context) {
         try {
-            return mContext.getResources().getInteger(
+            return context.getResources().getInteger(
                     R.integer.config_default_media_processing_job_interval_hours);
         } catch (Resources.NotFoundException e) {
             Log.e(TAG, "Overlayable config for media processing job interval not found. Using "
@@ -68,9 +67,9 @@ public class MediaProcessingWorkScheduler extends Worker {
         }
     }
 
-    private PeriodicWorkRequest createPeriodicWorkRequest() {
+    private static PeriodicWorkRequest createPeriodicWorkRequest(int workIntervalHours) {
         return new PeriodicWorkRequest.Builder(MediaProcessingWorkScheduler.class,
-                getWorkIntervalHoursConfig(), TimeUnit.HOURS)
+                workIntervalHours, TimeUnit.HOURS)
                 .setConstraints(new Constraints.Builder()
                         .setRequiresCharging(true)
                         .setRequiresBatteryNotLow(true)
@@ -79,81 +78,102 @@ public class MediaProcessingWorkScheduler extends Worker {
                 .build();
     }
 
-    private boolean isMediaProcessingRequired() {
-        if (!Flags.enableMediaProcessing()) {
-            Log.v(TAG, "Media processing feature flag is disabled. Skip media processing.");
-            return false;
-        }
-
-        // Skip scheduling work if a custom search media service is defined
-        String searchMediaServicePackage = MediaStore.getPackageForSearchMediaService(
-                mContext.getContentResolver());
-        if (!mContext.getPackageName().equalsIgnoreCase(searchMediaServicePackage)) {
-            Log.i(TAG, "OEM defined SearchMediaService is used. Skip media processing.");
-            return false;
-        }
-
-        boolean disableMediaProcessing = mContext.getResources().getBoolean(
-                R.bool.config_disable_media_processing_for_search);
-        if (disableMediaProcessing) {
-            Log.i(TAG, "Media processing disabled via overlayable configuration. Skip media "
-                    + "processing");
-            return false;
-        }
-
-        return true;
-    }
-
     /**
      * Enqueue unique periodic work to schedule media processing tasks for local search.
      */
-    public void enqueueWork() {
-        if (isMediaProcessingRequired()) {
+    public static void enqueueWork(Context context) {
+        if (isMediaProcessingRequired(context)) {
             // Use ExistingPeriodicWorkPolicy.REPLACE to accommodate changes in the work interval
             // overlayable config.
-            WorkManagerInitializer.getWorkManager(mContext).enqueueUniquePeriodicWork(
+            int workIntervalHours = getWorkIntervalHoursConfig(context);
+            WorkManagerInitializer.getWorkManager(context).enqueueUniquePeriodicWork(
                     PERIODIC_WORK_NAME, ExistingPeriodicWorkPolicy.REPLACE,
-                    createPeriodicWorkRequest());
+                    createPeriodicWorkRequest(workIntervalHours));
         }
-    }
-
-
-    private int getMetadataProcessingBatchSize() {
-        return mContext.getResources().getInteger(
-                R.integer.config_default_metadata_processing_batch_size);
-    }
-
-    private int getLocationProcessingBatchSize() {
-        return mContext.getResources().getInteger(
-                R.integer.config_default_location_processing_batch_size);
-    }
-
-    private long getRowTrackerFromSharedPreferences(String key) {
-        SharedPreferences prefs = mContext.getSharedPreferences(MEDIAPROVIDER_PREFS,
-                Context.MODE_PRIVATE);
-        return prefs.getLong(key, 0);
-    }
-
-    private void updateRowTrackerInSharedPreferences(String key, long lastUpdatedRow) {
-        SharedPreferences preferences = mContext.getSharedPreferences(MEDIAPROVIDER_PREFS,
-                Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putLong(key, lastUpdatedRow);
-        editor.apply();
     }
 
     @NonNull
     @Override
     public Result doWork() {
-        long lastGenModWithMediaLabel = getRowTrackerFromSharedPreferences(
-                LAST_GEN_MODIFIED_WITH_MEDIA_LABEL);
-        long lastGenModWithLocation = getRowTrackerFromSharedPreferences(
-                LAST_GEN_MODIFIED_WITH_LOCATION_LABEL);
-        long lastGenModWithMetadata = getRowTrackerFromSharedPreferences(
-                LAST_GEN_MODIFIED_WITH_METADATA_LABEL);
+        Trace.beginSection("MediaProcessing.doWork");
+        try {
+            return doProcessingWork();
+        } finally {
+            Trace.endSection();
+        }
+    }
 
-        //TODO : Add support for processing different labels in this periodic job.
+    @SuppressWarnings("NewApi")
+    private Result doProcessingWork() {
+        Log.v(TAG, "Media processing job run started.");
 
-        return Result.success();
+        synchronized (WORKER_LOCK) {
+            DatabaseHelper externalDb;
+            try (ContentProviderClient cpc =
+                         mContext.getContentResolver().acquireContentProviderClient(
+                                 MediaStore.AUTHORITY)) {
+                MediaProvider provider = (MediaProvider) cpc.getLocalContentProvider();
+                if (provider == null) {
+                    Log.e(TAG, "Failed to get MediaProvider instance");
+                    return Result.failure();
+                }
+
+                Optional<DatabaseHelper> dbHelper = provider.getDatabaseHelper(
+                        EXTERNAL_DATABASE_NAME);
+                if (dbHelper.isEmpty()) {
+                    Log.e(TAG, "Failed to get DatabaseHelper instance");
+                    return Result.failure();
+                }
+
+                externalDb = dbHelper.get();
+            }
+
+            try (ProcessingHelper helper = new ProcessingHelper(mContext, externalDb)) {
+                mProcessingHelper = Optional.of(helper);
+
+                if (mProcessingHelper.isEmpty()) {
+                    Log.v(TAG, "Failed to initialize ProcessingHelper instance");
+                    return Result.failure();
+                }
+
+                ProcessingHelper processingHelper = mProcessingHelper.get();
+
+                if (processingHelper.getProcessingRequestedPerMediaType().isEmpty()) {
+                    Log.v(TAG, "No processing config available or Service unreachable. "
+                            + "Skip job run.");
+                    return Result.failure();
+                }
+
+                processingHelper.deleteStaleRows();
+
+                processingHelper.runProcessMetadataLabels();
+
+                if (isNetworkAvailable(mContext)) {
+                    processingHelper.runProcessLocationLabels();
+                } else {
+                    Log.v(TAG, "No network connection. Skip location label processing");
+                }
+
+                // TODO(b/428140364) : Add default media label processing
+
+                return Result.success();
+            } catch (IllegalStateException e) {
+                Log.e(TAG, "Failed to initialize ProcessingHelper instance", e);
+                return Result.failure();
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to complete all requested processing in this job run", e);
+                return Result.failure();
+            } finally {
+                mProcessingHelper = Optional.empty();
+            }
+        }
+    }
+
+    @Override
+    public void onStopped() {
+        Log.v(TAG, "MediaProcessingWorkScheduler stopped.");
+        if (mProcessingHelper.isPresent()) {
+            mProcessingHelper.get().cancelOutstandingWork();
+        }
     }
 }

@@ -73,7 +73,8 @@ import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
 @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
-@RequiresFlagsEnabled(com.android.providers.media.flags.Flags.FLAG_ENABLE_MEDIA_SEARCH)
+@RequiresFlagsEnabled({com.android.providers.media.flags.Flags.FLAG_ENABLE_MEDIA_SEARCH,
+        com.android.providers.media.flags.Flags.FLAG_ENABLE_MEDIA_PROCESSING})
 public class DefaultSearchMediaServiceTest {
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();

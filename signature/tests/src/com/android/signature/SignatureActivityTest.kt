@@ -33,13 +33,9 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.robolectric.annotation.Config
-import org.robolectric.annotation.LooperMode
 
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
-@Config(application = HiltTestApplication::class)
-@LooperMode(LooperMode.Mode.PAUSED)
 class SignatureActivityTest {
 
     @get:Rule
@@ -60,8 +56,7 @@ class SignatureActivityTest {
         val intent = Intent(context, SignatureActivity::class.java)
 
         val resolveInfo = context.packageManager.resolveActivity(
-            intent,
-            PackageManager.MATCH_DEFAULT_ONLY
+            intent, PackageManager.MATCH_DEFAULT_ONLY
         )
 
         assertThat(resolveInfo).isNull()
@@ -74,8 +69,7 @@ class SignatureActivityTest {
         val intent = Intent(context, SignatureActivity::class.java)
 
         val resolveInfo = context.packageManager.resolveActivity(
-            intent,
-            PackageManager.MATCH_DEFAULT_ONLY
+            intent, PackageManager.MATCH_DEFAULT_ONLY
         )
 
         assertThat(resolveInfo).isNotNull()

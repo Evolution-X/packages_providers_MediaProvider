@@ -51,7 +51,13 @@
     If set to true, no media processing job is scheduled. -->
     <bool name="config_disable_media_processing_for_search">false</bool>
 
-    <!-- Configuration to set the batch size for label generation. -->
+    <!-- Configuration to set the batch size for label generation.
+    Note: The system enforces maximum allowed batch sizes to prevent excessive
+         resource usage and to stay within AppSearch limits. If the values
+         configured here (or in overlays) exceed the hard-coded maximums,
+         the system will use the maximum allowed value instead.
+    The maximums are defined in com.android.providers.media.localsearch.ProcessingHelper,
+         e.g., MAX_BATCH_SIZE_FOR_METADATA_PROCESSING. -->
     <integer name="config_default_media_processing_batch_size">10</integer>
     <integer name="config_default_location_processing_batch_size">50</integer>
     <integer name="config_default_metadata_processing_batch_size">100</integer>
