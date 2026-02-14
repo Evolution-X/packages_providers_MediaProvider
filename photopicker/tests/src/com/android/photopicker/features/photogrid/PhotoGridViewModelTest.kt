@@ -127,8 +127,6 @@ class PhotoGridViewModelTest {
             sizeInBytes = 1000L,
             mimeType = "image/png",
             standardMimeTypeExtension = 1,
-            width = 512,
-            height = 512,
         )
     val updatedMediaItem =
         mediaItem.copy(mediaItemAlbum = null, selectionSource = Telemetry.MediaLocation.MAIN_GRID)
