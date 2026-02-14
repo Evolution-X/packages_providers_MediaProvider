@@ -32,6 +32,7 @@ import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORIT
 import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_VIDEOS
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -185,164 +186,6 @@ class AlbumGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
         setupTestForUserMonitor(mockContext, mockUserManager, contentResolver, mockPackageManager)
     }
-
-    @Test
-    @EnableFlags(
-        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
-        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
-    )
-    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    fun testAlbumMediaGrid_withDefaultAspectRatio_displaysSquareThumbnail() =
-        testScope.runTest {
-            composeTestRule.setContent {
-                callPhotopickerMain(
-                    featureManager = featureManager,
-                    selection = selection,
-                    events = events,
-                )
-            }
-
-            advanceTimeBy(100)
-            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-
-            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
-            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-            composeTestRule.waitForIdle()
-
-            val mediaItem =
-                composeTestRule
-                    .onAllNodes(
-                        hasContentDescription(
-                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
-                            substring = true,
-                        )
-                    )
-                    .onFirst()
-            mediaItem.assertExists()
-
-            val size = mediaItem.fetchSemanticsNode().size
-            val ratio = size.width.toFloat() / size.height.toFloat()
-            assertWithMessage("Default aspect ratio should be 1:1")
-                .that(ratio)
-                .isWithin(0.05f)
-                .of(1f)
-        }
-
-    @Test
-    @EnableFlags(
-        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
-        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
-    )
-    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    fun testAlbumMediaGrid_withPortraitAspectRatio_displaysPortraitThumbnail() =
-        testScope.runTest {
-            val uiParams =
-                PhotoPickerUiCustomizationParams.Builder()
-                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
-                    .build()
-            val testIntent =
-                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
-                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
-                }
-            configurationManager.get().setIntent(testIntent)
-
-            composeTestRule.setContent {
-                callPhotopickerMain(
-                    featureManager = featureManager,
-                    selection = selection,
-                    events = events,
-                )
-            }
-
-            advanceTimeBy(100)
-            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-
-            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
-            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-            composeTestRule.waitForIdle()
-
-            val mediaItem =
-                composeTestRule
-                    .onAllNodes(
-                        hasContentDescription(
-                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
-                            substring = true,
-                        )
-                    )
-                    .onFirst()
-            mediaItem.assertExists()
-
-            val size = mediaItem.fetchSemanticsNode().size
-            val ratio = size.width.toFloat() / size.height.toFloat()
-            assertWithMessage("Aspect ratio should be 9:16")
-                .that(ratio)
-                .isWithin(0.05f)
-                .of(9f / 16f)
-        }
-
-    @Test
-    @DisableFlags(
-        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
-        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
-        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
-    )
-    fun testAlbumMediaGrid_withUiCustomizationParams_isIgnoredIfFlagDisabled() =
-        testScope.runTest {
-            val uiParams =
-                PhotoPickerUiCustomizationParams.Builder()
-                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
-                    .build()
-            val testIntent =
-                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
-                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
-                }
-            configurationManager.get().setIntent(testIntent)
-
-            composeTestRule.setContent {
-                callPhotopickerMain(
-                    featureManager = featureManager,
-                    selection = selection,
-                    events = events,
-                )
-            }
-
-            advanceTimeBy(100)
-            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-
-            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
-            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-            composeTestRule.waitForIdle()
-
-            val mediaItem =
-                composeTestRule
-                    .onAllNodes(
-                        hasContentDescription(
-                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
-                            substring = true,
-                        )
-                    )
-                    .onFirst()
-            mediaItem.assertExists()
-
-            val size = mediaItem.fetchSemanticsNode().size
-            val ratio = size.width.toFloat() / size.height.toFloat()
-            assertWithMessage("Aspect ratio should be 1:1 when flag is disabled")
-                .that(ratio)
-                .isWithin(0.05f)
-                .of(1f)
-        }
 
     @Test
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
@@ -995,5 +838,253 @@ class AlbumGridFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("Expected swipe to navigate to PhotoGrid")
                 .that(route)
                 .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+    )
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testAlbumMediaGrid_withDefaultAspectRatio_displaysSquareThumbnail() =
+        testScope.runTest {
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Default aspect ratio should be 1:1")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(1f)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+    )
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testAlbumMediaGrid_withPortraitAspectRatio_displaysPortraitThumbnail() =
+        testScope.runTest {
+            val uiParams =
+                PhotoPickerUiCustomizationParams.Builder()
+                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                    .build()
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Aspect ratio should be 9:16")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(9f / 16f)
+        }
+
+    @Test
+    @DisableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+    )
+    fun testAlbumMediaGrid_withUiCustomizationParams_isIgnoredIfFlagDisabled() =
+        testScope.runTest {
+            val uiParams =
+                PhotoPickerUiCustomizationParams.Builder()
+                    .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
+                    .build()
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val mediaItem =
+                composeTestRule
+                    .onAllNodes(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+                    .onFirst()
+            mediaItem.assertExists()
+
+            val size = mediaItem.fetchSemanticsNode().size
+            val ratio = size.width.toFloat() / size.height.toFloat()
+            assertWithMessage("Aspect ratio should be 1:1 when flag is disabled")
+                .that(ratio)
+                .isWithin(0.05f)
+                .of(1f)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testAlbumMediaGridItemWithDisabledReasonCannotBeSelected() =
+        testScope.runTest {
+            val testDataService = dataService as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+            val mediaWithDisabledReason =
+                createImage(
+                    mediaId = "1",
+                    pickerId = 1L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = 2 * maxFileSize,
+                )
+
+            testDataService.albumMediaList = listOf(mediaWithDisabledReason)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
+
+            assertWithMessage("Expected route to be albumgrid")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            advanceTimeBy(100)
+
+            val testAlbumDisplayName = TEST_ALBUM_NAME_PREFIX + "1"
+            // In the [FakeInMemoryPagingSource] the albums are names using TEST_ALBUM_NAME_PREFIX
+            // appended by a count in their sequence. Verify that an album with the name exists
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).assertIsDisplayed()
+
+            composeTestRule.onNode(hasText(testAlbumDisplayName)).performClick()
+
+            composeTestRule.waitForIdle()
+
+            // Allow the PreviewViewModel to collect flows
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            assertWithMessage("Expected route to be albummediagrid")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.ALBUM_MEDIA_GRID.route)
+
+            // Attempt to select the disabled media item
+            composeTestRule
+                .onNode(
+                    hasContentDescription(
+                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .performClick()
+
+            composeTestRule.waitForIdle()
+
+            assertWithMessage("Media item with disabled reason should not be selectable")
+                .that(selection.size())
+                .isEqualTo(0)
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxFileSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
 }
