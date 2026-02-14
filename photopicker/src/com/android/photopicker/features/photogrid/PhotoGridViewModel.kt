@@ -197,17 +197,7 @@ constructor(
      * in the viewModelScope to ensure they aren't canceled if the user navigates away from the
      * PhotoGrid composable.
      */
-    fun handleGridItemSelection(
-        item: Media,
-        selectionLimitExceededMessage: String,
-        disabledReasonMessage: String? = null,
-    ) {
-        disabledReasonMessage?.let {
-            scope.launch {
-                events.dispatch(Event.ShowSnackbarMessage(PHOTO_GRID.token, disabledReasonMessage))
-            }
-            return
-        }
+    fun handleGridItemSelection(item: Media, selectionLimitExceededMessage: String) {
         // Update the selectable values in the received media object.
         val updatedMediaItem =
             Media.withSelectable(
