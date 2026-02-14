@@ -279,13 +279,19 @@ fun HighlightMedia(
                             modifier = modifier,
                             dispatcher = viewModel.backgroundDispatcher,
                             onGridItemSelection = { highlightMediaItem ->
+                                val disabledReasonMessage =
+                                    highlightMediaItem.media.disabledReason?.getDisabledMessage(
+                                        configuration,
+                                        localizationHelper,
+                                        resources,
+                                    )
                                 viewModel.handleAlbumMediaGridItemSelection(
                                     highlightMediaItem.media,
                                     selectionLimitExceededMessage,
                                     highlightBaseAlbum,
+                                    disabledReasonMessage,
+                                    selectionBatchSizeLimitExceededMessage,
                                     Telemetry.MediaLocation.HIGHLIGHT_MEDIA_GRID,
-                                    selectionBatchSizeLimitExceededMessage =
-                                        selectionBatchSizeLimitExceededMessage,
                                 )
                                 scope.launch {
                                     events.dispatch(

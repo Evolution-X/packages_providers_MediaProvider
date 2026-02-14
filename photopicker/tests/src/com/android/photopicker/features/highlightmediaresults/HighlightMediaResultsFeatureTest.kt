@@ -2110,6 +2110,126 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
     )
+    fun testHighlightAlbumMediaGridItemWithDisabledReasonCannotBeSelected() =
+        testScope.runTest {
+            val testDataService = dataService as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+            val mediaWithDisabledReason =
+                createImage(
+                    mediaId = "1",
+                    pickerId = 1L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = 2 * maxFileSize,
+                )
+
+            testDataService.albumsList =
+                listOf(
+                    Group.Album(
+                        id = ALBUM_ID_FAVORITES,
+                        pickerId = 1234L,
+                        authority = "a",
+                        displayName = "Favorites",
+                        coverUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority("a")
+                                    path("1234")
+                                }
+                                .build(),
+                        dateTakenMillisLong = 12345678L,
+                        coverMediaSource = MediaSource.LOCAL,
+                    )
+                )
+            testDataService.albumMediaList = listOf(mediaWithDisabledReason)
+            testDataService._availableProviders.value =
+                listOf(
+                    Provider(
+                        authority = "local_authority",
+                        mediaSource = MediaSource.LOCAL,
+                        uid = 1,
+                        displayName = "Local Provider",
+                    )
+                )
+
+            val highlightBundle =
+                Bundle().apply {
+                    putInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                    )
+                    putString(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_ALBUM_ID,
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES,
+                    )
+                }
+
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_ALBUM, highlightBundle)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callHighlightGridWithSnackbar(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                    modifier = Modifier.testTag(HIGHLIGHT_GRID_TEST_TAG),
+                )
+            }
+
+            // Wait sufficiently for the album list to be available.
+            awaitHighlightItems()
+
+            // Click on the photo in the highlight grid
+            composeTestRule
+                .onNodeWithContentDescription(
+                    getTestableContext().resources.getString(R.string.photopicker_hsr_media_text)
+                )
+                .onChildren()
+                .filter(
+                    hasContentDescription(
+                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .onFirst()
+                .performClick()
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage("Expected selection to be empty as item has disabled reason.")
+                .that(selection.snapshot().size)
+                .isEqualTo(0)
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxFileSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
     fun testHighlightAlbumMediaGridItemCannotBeSelectedWhenBatchSizeLimitIsExceeded() =
         testScope.runTest {
             val testDataService = dataService as? TestDataServiceImpl

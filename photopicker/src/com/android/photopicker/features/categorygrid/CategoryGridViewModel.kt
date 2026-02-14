@@ -263,9 +263,14 @@ constructor(
         item: Media,
         selectionLimitExceededMessage: String,
         album: Group.BaseAlbum,
-        selectionSource: Telemetry.MediaLocation = Telemetry.MediaLocation.ALBUM,
+        disabledReasonMessage: String? = null,
         selectionBatchSizeLimitExceededMessage: String? = null,
+        selectionSource: Telemetry.MediaLocation = Telemetry.MediaLocation.ALBUM,
     ) {
+        disabledReasonMessage?.let {
+            scope.launch { events.dispatch(Event.ShowSnackbarMessage(CATEGORY_GRID.token, it)) }
+            return
+        }
         // Update the selectable values in the received media item.
         val updatedMediaItem =
             Media.withSelectable(item, /* selectionSource */ selectionSource, album)

@@ -219,12 +219,18 @@ private fun AlbumMediaGrid(
                     aspectRatio = aspectRatio,
                     onItemClick = { item ->
                         if (item is MediaGridItem.MediaItem) {
+                            val disabledReasonMessage =
+                                item.media.disabledReason?.getDisabledMessage(
+                                    configuration,
+                                    localizationHelper,
+                                    resources,
+                                )
                             viewModel.handleAlbumMediaGridItemSelection(
                                 item.media,
                                 selectionLimitExceededMessage,
                                 album,
-                                selectionBatchSizeLimitExceededMessage =
-                                    selectionBatchSizeLimitExceededMessage,
+                                disabledReasonMessage,
+                                selectionBatchSizeLimitExceededMessage,
                             )
                         }
                     },

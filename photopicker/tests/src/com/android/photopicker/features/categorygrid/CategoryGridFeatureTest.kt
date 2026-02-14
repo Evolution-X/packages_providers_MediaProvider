@@ -2784,6 +2784,100 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
 
     @Test
     @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+    )
+    fun testAlbumMediaGridItemWithDisabledReasonCannotBeSelected() {
+        val testCategoryDataService = categoryDataService as? TestCategoryDataServiceImpl
+        checkNotNull(testCategoryDataService) { "Expected a TestCategoryDataServiceImpl" }
+        val testDataService = dataService as? TestDataServiceImpl
+        checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+
+        val maxFileSize = SIZE_100KB
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+        val mediaWithDisabledReason =
+            createImage(
+                mediaId = "1",
+                pickerId = 1L,
+                selectionParams = selectionParams,
+                sizeInBytes = 2 * maxFileSize,
+            )
+        val albumName = "Camera"
+
+        testDataService.albumMediaList = listOf(mediaWithDisabledReason)
+        testCategoryDataService.categoryAlbumList =
+            listOf(
+                Group.Album(
+                    id = "Camera",
+                    pickerId = 1234L,
+                    authority = "a",
+                    displayName = albumName,
+                    coverUri = Uri.parse(""),
+                    dateTakenMillisLong = 12345678L,
+                    coverMediaSource = MediaSource.LOCAL,
+                )
+            )
+
+        testScope.runTest {
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({ navController.navigateToCategoryGrid() })
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            composeTestRule.onNode(hasText(albumName)).performClick()
+
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onAllNodes(hasContentDescription(value = "taken on", substring = true))
+                .onFirst()
+                .performClick()
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage("Expected selection to be empty as item has disabled reason.")
+                .that(selection.snapshot().size)
+                .isEqualTo(0)
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxFileSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+    }
+
+    @Test
+    @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
