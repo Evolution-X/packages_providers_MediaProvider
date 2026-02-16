@@ -18,6 +18,8 @@ package com.android.photopicker.extensions
 
 import android.content.Intent
 import android.platform.test.annotations.RequiresFlagsEnabled
+import android.platform.test.flag.junit.CheckFlagsRule
+import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.provider.MediaStore
 import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
@@ -32,6 +34,7 @@ import com.android.photopicker.features.highlightmediaresults.model.QueryResults
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertThat
 import org.junit.Assert.assertThrows
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -39,6 +42,8 @@ import org.junit.runner.RunWith
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class IntentTest {
+
+    @get:Rule val checkFlagsRule: CheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule()
 
     @Test
     fun testGetSelectionLimitFromIntentActionPickImages() {
@@ -267,7 +272,7 @@ class IntentTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
-    fun testGetSelectionOptionsFromIntent() {
+    fun testGetSelectionParamsFromIntent() {
         val maxMediaItemSizeBytes = 1024L
         val selectionParams =
             PhotoPickerSelectionParams.Builder()
@@ -284,10 +289,10 @@ class IntentTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API)
-    fun testGetSelectionOptionsFromIntentInvalidAction() {
-        val selectionOptions = PhotoPickerSelectionParams.Builder().build()
+    fun testGetSelectionParamsFromIntentInvalidAction() {
+        val selectionParams = PhotoPickerSelectionParams.Builder().build()
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionOptions)
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
 
         assertThrows(IllegalIntentExtraException::class.java) {
             intent.getPhotoPickerSelectionParams()
@@ -296,16 +301,13 @@ class IntentTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
-    fun testGetUiCustomizationOptionsFromIntent() {
-        val uiCustomizationOptions =
+    fun testGetUiCustomizationParamsFromIntent() {
+        val uiCustomizationParams =
             PhotoPickerUiCustomizationParams.Builder()
                 .setAspectRatio(PhotoPickerUiCustomizationParams.ASPECT_RATIO_PORTRAIT_9_16)
                 .build()
         val intent = Intent(MediaStore.ACTION_PICK_IMAGES)
-        intent.putExtra(
-            MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
-            uiCustomizationOptions,
-        )
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiCustomizationParams)
 
         val retrievedOptions = intent.getPickerUiCustomizationParams()
 
@@ -315,13 +317,10 @@ class IntentTest {
 
     @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API)
-    fun testGetUiCustomizationOptionsFromIntentInvalidAction() {
-        val uiCustomizationOptions = PhotoPickerUiCustomizationParams.Builder().build()
+    fun testGetUiCustomizationParamsFromIntentInvalidAction() {
+        val uiCustomizationParams = PhotoPickerUiCustomizationParams.Builder().build()
         val intent = Intent(Intent.ACTION_GET_CONTENT)
-        intent.putExtra(
-            MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS,
-            uiCustomizationOptions,
-        )
+        intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_UI_CUSTOMIZATION_PARAMS, uiCustomizationParams)
 
         assertThrows(IllegalIntentExtraException::class.java) {
             intent.getPickerUiCustomizationParams()
