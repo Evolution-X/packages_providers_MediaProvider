@@ -76,7 +76,6 @@ import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.core.database.DatabaseManager
-import com.android.photopicker.core.embedded.EmbeddedLifecycle
 import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.events.generatePickerSessionId
@@ -192,7 +191,6 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var bannerManager: Lazy<BannerManager>
     @Inject lateinit var dataService: Lazy<DataService>
     @Inject lateinit var databaseManager: Lazy<DatabaseManager>
-    @Inject lateinit var embeddedLifecycle: Lazy<EmbeddedLifecycle>
 
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
 
