@@ -137,19 +137,16 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
         }
     val items = itemsFlow.collectAsLazyPagingItems()
 
-    val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
+    val configuration = LocalPhotopickerConfiguration.current
+    val selectionLimit = configuration.selectionLimit
     val localizationHelper = LocalLocalizationHelper.current
-    val localizedSelectionLimit = localizationHelper.getLocalizedCount(selectionLimit)
-
     val selectionLimitExceededMessage =
         stringResource(
             R.string.photopicker_selection_limit_exceeded_snackbar,
-            localizedSelectionLimit,
+            localizationHelper.getLocalizedCount(selectionLimit),
         )
-
     val events = LocalEvents.current
     val scope = rememberCoroutineScope()
-    val configuration = LocalPhotopickerConfiguration.current
     val resources = LocalContext.current.resources
 
     // Modifier applied when photo grid to album grid navigation is disabled
