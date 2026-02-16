@@ -312,27 +312,29 @@ fun Intent.isLocationMetadataAccessRequested(default: Boolean): Boolean {
  */
 fun Intent.getPhotoPickerSelectionParams(): PhotoPickerSelectionParams? {
 
-    if (extras?.containsKey(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS) == true) {
-        return when (action) {
-            MediaStore.ACTION_PICK_IMAGES -> {
-                if (SdkLevel.isAtLeastT()) {
-                    extras?.getParcelable(
-                        MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS,
-                        PhotoPickerSelectionParams::class.java,
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    extras?.getParcelable(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS)
-                }
-            }
-            else ->
-                // All other actions are unsupported.
-                throw IllegalIntentExtraException(
-                    "EXTRA_PICK_IMAGES_SELECTION_PARAMS is not supported for $action"
-                )
-        }
-    } else {
+    if (
+        !Flags.enablePhotopickerSelectionParamsApi() ||
+            extras?.containsKey(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS) != true
+    ) {
         return null
+    }
+    return when (action) {
+        MediaStore.ACTION_PICK_IMAGES -> {
+            if (SdkLevel.isAtLeastT()) {
+                extras?.getParcelable(
+                    MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS,
+                    PhotoPickerSelectionParams::class.java,
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                extras?.getParcelable(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS)
+            }
+        }
+        else ->
+            // All other actions are unsupported.
+            throw IllegalIntentExtraException(
+                "EXTRA_PICK_IMAGES_SELECTION_PARAMS is not supported for $action"
+            )
     }
 }
 

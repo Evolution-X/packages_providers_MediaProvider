@@ -156,6 +156,8 @@ class PreviewViewModelTest {
             sizeInBytes = 1000L,
             mimeType = "image/png",
             standardMimeTypeExtension = 1,
+            width = 512,
+            height = 512,
         )
 
     val TEST_PRE_GRANTED_MEDIA_IMAGE =
@@ -186,6 +188,8 @@ class PreviewViewModelTest {
             sizeInBytes = 1000L,
             mimeType = "image/png",
             standardMimeTypeExtension = 1,
+            width = 512,
+            height = 512,
             isPreGranted = true,
         )
 
@@ -216,6 +220,8 @@ class PreviewViewModelTest {
             mimeType = "video/mp4",
             standardMimeTypeExtension = 1,
             duration = 10000,
+            width = 512,
+            height = 512,
         )
 
     @Before
