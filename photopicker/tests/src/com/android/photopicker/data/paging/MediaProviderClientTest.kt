@@ -20,6 +20,7 @@ import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.CancellationSignal
+import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import androidx.paging.PagingSource.LoadResult
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -27,6 +28,8 @@ import androidx.test.filters.SmallTest
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.configuration.TestPhotopickerConfiguration
 import com.android.photopicker.core.events.generatePickerSessionId
+import com.android.photopicker.data.DEFAULT_MEDIA_ITEM_HEIGHT
+import com.android.photopicker.data.DEFAULT_MEDIA_ITEM_WIDTH
 import com.android.photopicker.data.DEFAULT_PROVIDERS
 import com.android.photopicker.data.DEFAULT_SEARCH_REQUEST_ID
 import com.android.photopicker.data.DEFAULT_SEARCH_SUGGESTIONS
@@ -45,12 +48,16 @@ import com.android.photopicker.features.search.model.SearchSuggestion
 import com.android.photopicker.features.search.model.SearchSuggestionType
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @SmallTest
 @RunWith(AndroidJUnit4::class)
 class MediaProviderClientTest {
+
+    @get:Rule val setFlagsRule = SetFlagsRule()
+
     private val testContentProvider: TestMediaProvider = TestMediaProvider()
     private val testContentResolver: ContentResolver = ContentResolver.wrap(testContentProvider)
     private val sessionId = generatePickerSessionId()
@@ -93,6 +100,8 @@ class MediaProviderClientTest {
         assertThat(media.count()).isEqualTo(testContentProvider.media.count())
         for (index in media.indices) {
             assertThat(media[index]).isEqualTo(testContentProvider.media[index])
+            assertThat(media[index].width).isEqualTo(DEFAULT_MEDIA_ITEM_WIDTH.toInt())
+            assertThat(media[index].height).isEqualTo(DEFAULT_MEDIA_ITEM_HEIGHT.toInt())
         }
 
         assertThat(itemsBeforeCount).isEqualTo(testContentProvider.itemsBeforeCount)

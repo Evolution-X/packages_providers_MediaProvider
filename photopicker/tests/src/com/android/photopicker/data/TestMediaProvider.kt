@@ -75,6 +75,7 @@ val DEFAULT_MEDIA: List<Media> =
         createMediaImage(10L, 1709299200000L), // 1st March 2024
         createMediaImage(14L, 1706793600000L), // 1st February 2024
         createMediaImage(15L, 1707542400000L), // 10th February 2024
+        createMediaVideo(16L, 1707974400000L, duration = 60000), // 15th February 2024 Video (60s)
         createMediaImage(13L, 1706707200000L), // 31st January 2024
     )
 
@@ -141,6 +142,9 @@ val DEFAULT_CATEGORIES_AND_ALBUMS: List<Group> =
 val DEFAULT_MEDIA_SETS: List<Group.MediaSet> =
     listOf(createMediaSet("1"), createMediaSet("2"), createMediaSet("3"))
 
+val DEFAULT_MEDIA_ITEM_WIDTH = "1920"
+val DEFAULT_MEDIA_ITEM_HEIGHT = "1080"
+
 fun createMediaImage(pickerId: Long, dateTakenMillisLong: Long = Long.MAX_VALUE): Media {
     return Media.Image(
         mediaId = UUID.randomUUID().toString(),
@@ -153,6 +157,30 @@ fun createMediaImage(pickerId: Long, dateTakenMillisLong: Long = Long.MAX_VALUE)
         sizeInBytes = 10,
         mimeType = "image/*",
         standardMimeTypeExtension = 0,
+        width = 512,
+        height = 512,
+    )
+}
+
+fun createMediaVideo(
+    pickerId: Long,
+    dateTakenMillisLong: Long = Long.MAX_VALUE,
+    duration: Int = 10000,
+): Media {
+    return Media.Video(
+        mediaId = UUID.randomUUID().toString(),
+        pickerId = pickerId,
+        authority = "authority",
+        mediaSource = MediaSource.LOCAL,
+        mediaUri = Uri.parse("content://media/picker/authority/media/$pickerId"),
+        glideLoadableUri = Uri.parse("content://authority/media/$pickerId"),
+        dateTakenMillisLong = dateTakenMillisLong,
+        sizeInBytes = 10,
+        mimeType = "video/mp4",
+        standardMimeTypeExtension = 0,
+        duration = duration,
+        width = 512,
+        height = 512,
     )
 }
 
@@ -367,6 +395,8 @@ class TestMediaProvider(
                     MediaProviderClient.MediaResponse.MIME_TYPE.key,
                     MediaProviderClient.MediaResponse.STANDARD_MIME_TYPE_EXT.key,
                     MediaProviderClient.MediaResponse.DURATION.key,
+                    MediaProviderClient.MediaResponse.WIDTH.key,
+                    MediaProviderClient.MediaResponse.HEIGHT.key,
                     MediaProviderClient.MediaResponse.IS_PRE_GRANTED.key,
                 )
             )
@@ -384,6 +414,8 @@ class TestMediaProvider(
                     mediaItem.mimeType,
                     mediaItem.standardMimeTypeExtension.toString(),
                     if (mediaItem is Media.Video) mediaItem.duration else "0",
+                    DEFAULT_MEDIA_ITEM_WIDTH,
+                    DEFAULT_MEDIA_ITEM_HEIGHT,
                     if (mediaItem.isPreGranted) 1 else 0,
                 )
             )
@@ -516,6 +548,8 @@ class TestMediaProvider(
                     MediaProviderClient.MediaResponse.MIME_TYPE.key,
                     MediaProviderClient.MediaResponse.STANDARD_MIME_TYPE_EXT.key,
                     MediaProviderClient.MediaResponse.DURATION.key,
+                    MediaProviderClient.MediaResponse.WIDTH.key,
+                    MediaProviderClient.MediaResponse.HEIGHT.key,
                     MediaProviderClient.MediaResponse.IS_PRE_GRANTED.key,
                 )
             )
@@ -535,6 +569,8 @@ class TestMediaProvider(
                             mediaItem.mimeType,
                             mediaItem.standardMimeTypeExtension.toString(),
                             if (mediaItem is Media.Video) mediaItem.duration else "0",
+                            mediaItem.width.toString(),
+                            mediaItem.height.toString(),
                             if (mediaItem.isPreGranted) 1 else 0,
                         )
                     )

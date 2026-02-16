@@ -178,6 +178,10 @@ public class PickerSQLConstants {
         STANDARD_MIME_TYPE(KEY_STANDARD_MIME_TYPE_EXTENSION,
                 CloudMediaProviderContract.MediaColumns.STANDARD_MIME_TYPE_EXTENSION),
         DURATION_MS(KEY_DURATION_MS, CloudMediaProviderContract.MediaColumns.DURATION_MILLIS),
+        WIDTH(com.android.providers.media.photopicker.data.PickerDbFacade.KEY_WIDTH,
+                CloudMediaProviderContract.MediaColumns.WIDTH),
+        HEIGHT(com.android.providers.media.photopicker.data.PickerDbFacade.KEY_HEIGHT,
+                CloudMediaProviderContract.MediaColumns.HEIGHT),
         IS_PRE_GRANTED("is_pre_granted");
 
         @Nullable
