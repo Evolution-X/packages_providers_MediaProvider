@@ -54,6 +54,5 @@
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"انٹرنیٹ کنکشن کی ضرورت ہے"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"ترتیبات پر جائیں"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"کلاؤڈ میڈیا ایپ"</string>
-    <!-- no translation found for photopicker_mediagrid_placeholder (8289749862416745432) -->
-    <skip />
+    <string name="photopicker_mediagrid_placeholder" msgid="8289749862416745432">"میڈیا آئٹم لوڈ ہو رہا ہے"</string>
 </resources>

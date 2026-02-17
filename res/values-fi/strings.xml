@@ -46,7 +46,7 @@
     <string name="picker_settings_selection_message" msgid="245453573086488596">"Pääsy pilvimediaan:"</string>
     <string name="picker_settings_no_provider" msgid="2582311853680058223">"–"</string>
     <string name="picker_settings_toast_error" msgid="697274445512467469">"Pilvimediasovellusta ei voitu vaihtaa."</string>
-    <string name="picker_settings_no_account_access_summary" msgid="7529782752439588436">"Tilille ei ole pääsyä"</string>
+    <string name="picker_settings_no_account_access_summary" msgid="7529782752439588436">"Ei pääsyä tilille"</string>
     <string name="picker_sync_notification_channel" msgid="1867105708912627993">"Mediavalitsin"</string>
     <string name="picker_sync_notification_title" msgid="1122713382122055246">"Mediavalitsin"</string>
     <string name="picker_sync_notification_text" msgid="8204423917712309382">"Synkronoidaan mediaa…"</string>
