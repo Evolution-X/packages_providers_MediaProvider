@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
- Copyright 2024 The Android Open Source Project
+ Copyright 2026 The Android Open Source Project
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -18,4 +18,24 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="signature_application_label" msgid="2165514625410136890">"التوقيع"</string>
+    <!-- no translation found for title_activity_settings (2027968183034900900) -->
+    <skip />
+    <!-- no translation found for manage_signatures_title (2048802605316814543) -->
+    <skip />
+    <!-- no translation found for no_signatures_saved (6010088180603151224) -->
+    <skip />
+    <!-- no translation found for delete_signature_title (4344529382215682683) -->
+    <skip />
+    <!-- no translation found for delete_signature_message (1123315908697286809) -->
+    <skip />
+    <!-- no translation found for delete_action (4988241346510490913) -->
+    <skip />
+    <!-- no translation found for cancel_action (1513533057071552402) -->
+    <skip />
+    <!-- no translation found for back_content_description (3424363456229458016) -->
+    <skip />
+    <!-- no translation found for drawn_signature_content_description (441057598353735826) -->
+    <skip />
+    <!-- no translation found for delete_signature_content_description (3012748259309806715) -->
+    <skip />
 </resources>
