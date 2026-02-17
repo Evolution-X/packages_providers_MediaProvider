@@ -48,4 +48,7 @@
 
     <!-- Error message shown when the total selection size exceeds the limit (GB) -->
     <string name="photopicker_selection_max_selection_batch_size_error_gb" translation_description="Error message shown when the collective size of selected media items exceeds the maximum allowed batch size. %1$s is the app name. %2$s is the maximum batch size in GB."><xliff:g id="app_name" example="App">%1$s</xliff:g> requires the total file size to be smaller than <xliff:g id="size" example="100">%2$s</xliff:g> GB</string>
+
+    <!-- A generic term to replace app name if callingPackageLabel can't be determined at runtime. -->
+    <string name="photopicker_selection_param_generic_app_label" translation_description="A generic identifier of an application that is used in place of the name of the app if one is not defined or can not be fetched.">This app</string>
 </resources>

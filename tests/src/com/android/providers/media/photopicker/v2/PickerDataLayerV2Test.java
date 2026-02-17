@@ -157,7 +157,6 @@ import kotlin.Triple;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -2801,6 +2800,13 @@ public class PickerDataLayerV2Test {
         Cursor cursor2 = getAlbumMediaCursor(LOCAL_ID_2, /* cloudId */ null, DATE_TAKEN_MS);
         Cursor cursor3 = getAlbumMediaCursor(/* localId */ null, CLOUD_ID_1, DATE_TAKEN_MS);
 
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER,
+                getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1), 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER,
+                getLocalMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS), 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER,
+                getCloudMediaCursor(CLOUD_ID_1, null, DATE_TAKEN_MS), 1);
+
         assertAddAlbumMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1, ALBUM_ID);
         assertAddAlbumMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1, ALBUM_ID);
         assertAddAlbumMediaOperation(mFacade, CLOUD_PROVIDER, cursor3, 1, ALBUM_ID);
@@ -2834,6 +2840,11 @@ public class PickerDataLayerV2Test {
         Cursor cursor1 = getAlbumMediaCursor(LOCAL_ID_1, /* cloudId */ null, DATE_TAKEN_MS);
         Cursor cursor2 = getAlbumMediaCursor(/* localId */ null, CLOUD_ID_1, DATE_TAKEN_MS);
 
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER,
+                getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS), 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER,
+                getCloudMediaCursor(CLOUD_ID_1, null, DATE_TAKEN_MS), 1);
+
         assertAddAlbumMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1, ALBUM_ID);
         assertAddAlbumMediaOperation(mFacade, CLOUD_PROVIDER, cursor2, 1, ALBUM_ID);
 
@@ -2862,11 +2873,60 @@ public class PickerDataLayerV2Test {
     }
 
     @Test
-    @Ignore("TODO(b/339604051): Enable when the bug is fixed.")
+    public void testCloudAlbumMediaQueryWithLocalCopyOfCloudItem() {
+        // Item 1: present both locally and on cloud (deduped)
+        Cursor cursor1 = getAlbumMediaCursor(LOCAL_ID_1, CLOUD_ID_1, DATE_TAKEN_MS);
+        // Item 2: purely cloud
+        Cursor cursor2 = getAlbumMediaCursor(/* localId */ null, CLOUD_ID_2, DATE_TAKEN_MS - 1);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER,
+                getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS), 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER,
+                getCloudMediaCursor(CLOUD_ID_1, LOCAL_ID_1, DATE_TAKEN_MS), 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER,
+                getCloudMediaCursor(CLOUD_ID_2, null, DATE_TAKEN_MS - 1), 1);
+
+        assertAddAlbumMediaOperation(mFacade, CLOUD_PROVIDER, cursor1, 1, ALBUM_ID);
+        assertAddAlbumMediaOperation(mFacade, CLOUD_PROVIDER, cursor2, 1, ALBUM_ID);
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        try (Cursor cr = PickerDataLayerV2.queryAlbumMedia(
+                mMockContext, getAlbumMediaQueryExtras(
+                        Long.MAX_VALUE, Long.MAX_VALUE, /* pageSize */ 10,
+                        new ArrayList<>(Arrays.asList(LOCAL_PROVIDER, CLOUD_PROVIDER)),
+                        CLOUD_PROVIDER),
+                ALBUM_ID)) {
+
+            assertWithMessage(
+                    "Unexpected number of rows in media query result")
+                    .that(cr.getCount()).isEqualTo(2);
+
+            cr.moveToFirst();
+            // Deduplicated item should return local info
+            assertMediaCursor(cr, LOCAL_ID_1, LOCAL_PROVIDER, DATE_TAKEN_MS,
+                    MP4_VIDEO_MIME_TYPE);
+
+            cr.moveToNext();
+            // Pure cloud item should return cloud info
+            assertMediaCursor(cr, CLOUD_ID_2, CLOUD_PROVIDER, DATE_TAKEN_MS - 1,
+                    MP4_VIDEO_MIME_TYPE);
+        }
+    }
+
+    @Test
     public void testCloudAlbumMediaQueryWhenCloudIsDisabled() {
         Cursor cursor1 = getAlbumMediaCursor(LOCAL_ID_1, /* cloudId */ null, DATE_TAKEN_MS + 1);
         Cursor cursor2 = getAlbumMediaCursor(LOCAL_ID_2, /* cloudId */ null, DATE_TAKEN_MS);
         Cursor cursor3 = getAlbumMediaCursor(/* localId */ null, CLOUD_ID_1, DATE_TAKEN_MS);
+
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER,
+                getLocalMediaCursor(LOCAL_ID_1, DATE_TAKEN_MS + 1), 1);
+        assertAddMediaOperation(mFacade, LOCAL_PROVIDER,
+                getLocalMediaCursor(LOCAL_ID_2, DATE_TAKEN_MS), 1);
+        assertAddMediaOperation(mFacade, CLOUD_PROVIDER,
+                getCloudMediaCursor(CLOUD_ID_1, null, DATE_TAKEN_MS), 1);
 
         assertAddAlbumMediaOperation(mFacade, LOCAL_PROVIDER, cursor1, 1, ALBUM_ID);
         assertAddAlbumMediaOperation(mFacade, LOCAL_PROVIDER, cursor2, 1, ALBUM_ID);
@@ -2884,7 +2944,15 @@ public class PickerDataLayerV2Test {
 
             assertWithMessage(
                     "Unexpected number of rows in media query result")
-                    .that(cr.getCount()).isEqualTo(0);
+                    .that(cr.getCount()).isEqualTo(2);
+
+            cr.moveToFirst();
+            assertMediaCursor(cr, LOCAL_ID_1, LOCAL_PROVIDER, DATE_TAKEN_MS + 1,
+                    MP4_VIDEO_MIME_TYPE);
+
+            cr.moveToNext();
+            assertMediaCursor(cr, LOCAL_ID_2, LOCAL_PROVIDER, DATE_TAKEN_MS,
+                    MP4_VIDEO_MIME_TYPE);
         }
     }
 

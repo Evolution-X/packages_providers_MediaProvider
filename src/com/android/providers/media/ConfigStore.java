@@ -409,7 +409,7 @@ public interface ConfigStore {
 
         @Override
         public boolean isSdCardCategoryInPhotoPickerEnabled() {
-            return isLocalCategoriesInPhotoPickerEnabled() && Flags.enableSdCardCategory();
+            return isLocalCategoriesInPhotoPickerEnabled();
         }
 
         @Override

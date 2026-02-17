@@ -205,7 +205,7 @@ public class PickerMediaDatabaseUtil {
                                 appContext,
                                 query,
                                 database,
-                                PickerSQLConstants.Table.ALBUM_MEDIA,
+                                PickerSQLConstants.Table.MEDIA,
                                 localAuthority,
                                 cloudAuthority
                         ),
@@ -218,7 +218,7 @@ public class PickerMediaDatabaseUtil {
                                 appContext,
                                 query,
                                 database,
-                                PickerSQLConstants.Table.ALBUM_MEDIA,
+                                PickerSQLConstants.Table.MEDIA,
                                 localAuthority,
                                 cloudAuthority
                         ),
@@ -231,7 +231,7 @@ public class PickerMediaDatabaseUtil {
                                 appContext,
                                 query,
                                 database,
-                                PickerSQLConstants.Table.ALBUM_MEDIA,
+                                PickerSQLConstants.Table.MEDIA,
                                 localAuthority,
                                 cloudAuthority
                         ),
@@ -245,7 +245,7 @@ public class PickerMediaDatabaseUtil {
                                     appContext,
                                     query,
                                     database,
-                                    PickerSQLConstants.Table.ALBUM_MEDIA,
+                                    PickerSQLConstants.Table.MEDIA,
                                     localAuthority,
                                     cloudAuthority
                             ),
@@ -260,7 +260,7 @@ public class PickerMediaDatabaseUtil {
                                     appContext,
                                     query,
                                     database,
-                                    PickerSQLConstants.Table.ALBUM_MEDIA,
+                                    PickerSQLConstants.Table.MEDIA,
                                     localAuthority,
                                     cloudAuthority
                             ),

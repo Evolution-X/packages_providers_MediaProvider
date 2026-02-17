@@ -123,6 +123,8 @@ class DispatchersTest {
             sizeInBytes = 0,
             mimeType = "image/jpeg",
             standardMimeTypeExtension = 0,
+            width = 512,
+            height = 512,
             selectionSource = Telemetry.MediaLocation.MAIN_GRID,
             mediaItemAlbum = mediaItemAlbum,
         )

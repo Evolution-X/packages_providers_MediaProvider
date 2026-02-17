@@ -23,6 +23,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.util.Log
+import android.widget.photopicker.PhotoPickerSelectionParams
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderCopy
 import androidx.compose.material.icons.outlined.SdCard
@@ -158,6 +159,8 @@ open class MediaProviderClient {
         MIME_TYPE("mime_type"),
         STANDARD_MIME_TYPE_EXT("standard_mime_type_extension"),
         DURATION("duration_millis"),
+        WIDTH("width"),
+        HEIGHT("height"),
         IS_PRE_GRANTED("is_pre_granted"),
     }
 
@@ -327,7 +330,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMedia(),
+                            data = cursor.getListOfMedia(config.selectionParams),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
@@ -386,7 +389,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMedia(),
+                            data = cursor.getListOfMedia(config.selectionParams),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
@@ -446,7 +449,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMedia(),
+                            data = cursor.getListOfMedia(config.selectionParams),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
                         )
@@ -549,7 +552,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMedia(),
+                            data = cursor.getListOfMedia(config.selectionParams),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
@@ -670,7 +673,7 @@ open class MediaProviderClient {
                     input,
                     /* cancellationSignal */ null, // TODO(b/405340486)
                 )
-                ?.getListOfMedia() ?: ArrayList()
+                ?.getListOfMedia(config.selectionParams) ?: ArrayList()
         } catch (e: Exception) {
             throw RuntimeException("Could not fetch media", e)
         }
@@ -873,7 +876,7 @@ open class MediaProviderClient {
                 .use { cursor ->
                     cursor?.let {
                         LoadResult.Page(
-                            data = cursor.getListOfMedia(),
+                            data = cursor.getListOfMedia(config.selectionParams),
                             prevKey = cursor.getPrevMediaPageKey(),
                             nextKey = cursor.getNextMediaPageKey(),
                             itemsBefore =
@@ -1424,7 +1427,9 @@ open class MediaProviderClient {
      *
      * [Media] can be of type [Media.Image] or [Media.Video].
      */
-    private fun Cursor.getListOfMedia(): List<Media> {
+    private fun Cursor.getListOfMedia(
+        selectionParams: PhotoPickerSelectionParams? = null
+    ): List<Media> {
         val result: MutableList<Media> = mutableListOf<Media>()
         val itemsBeforeCount: Int? = getItemsBeforeCount()
         var indexCounter: Int? = itemsBeforeCount
@@ -1451,6 +1456,9 @@ open class MediaProviderClient {
                     getInt(getColumnIndexOrThrow(MediaResponse.STANDARD_MIME_TYPE_EXT.key))
                 val isPregranted: Int =
                     getInt(getColumnIndexOrThrow(MediaResponse.IS_PRE_GRANTED.key))
+                val width = getInt(getColumnIndexOrThrow(MediaResponse.WIDTH.key))
+                val height = getInt(getColumnIndexOrThrow(MediaResponse.HEIGHT.key))
+
                 if (mimeType.startsWith("image/")) {
                     result.add(
                         Media.Image(
@@ -1466,9 +1474,13 @@ open class MediaProviderClient {
                             mimeType = mimeType,
                             standardMimeTypeExtension = standardMimeTypeExtension,
                             isPreGranted = (isPregranted == 1), // here 1 denotes true else false
+                            width = width,
+                            height = height,
+                            selectionParams = selectionParams,
                         )
                     )
                 } else if (mimeType.startsWith("video/")) {
+                    val duration = getInt(getColumnIndexOrThrow(MediaResponse.DURATION.key))
                     result.add(
                         Media.Video(
                             mediaId = mediaId,
@@ -1482,8 +1494,11 @@ open class MediaProviderClient {
                             sizeInBytes = sizeInBytes,
                             mimeType = mimeType,
                             standardMimeTypeExtension = standardMimeTypeExtension,
-                            duration = getInt(getColumnIndexOrThrow(MediaResponse.DURATION.key)),
+                            duration = duration,
                             isPreGranted = (isPregranted == 1), // here 1 denotes true else false
+                            width = width,
+                            height = height,
+                            selectionParams = selectionParams,
                         )
                     )
                 } else {
