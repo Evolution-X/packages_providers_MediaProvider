@@ -91,7 +91,7 @@ fun ProfileUnavailableNotification(
         }
     if (runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED) {
         // Show the toast message in an embedded environment.
-        ProfileUnavailableToast(toastMessage = message)
+        ProfileUnavailableToast(toastMessage = title)
         onReset()
     } else {
         // Now that the dialog's content is known, create and show the dialog.
@@ -121,8 +121,8 @@ private fun getDialogContentForReason(
     return when (reason) {
         CROSS_PROFILE_NOT_ALLOWED ->
             Pair(
-                stringResource(R.string.photopicker_profile_blocked_by_admin_dialog_title),
-                stringResource(R.string.photopicker_profile_blocked_by_admin_dialog_message),
+                stringResource(R.string.photopicker_profile_access_blocked_dialog_title),
+                stringResource(R.string.photopicker_profile_contact_admin_dialog_message),
             )
         QUIET_MODE,
         QUIET_MODE_DO_NOT_SHOW ->
@@ -179,5 +179,5 @@ private fun ProfileUnavailableDialog(
 @Composable
 private fun ProfileUnavailableToast(toastMessage: String) {
     val context = LocalContext.current
-    Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
+    Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
 }
