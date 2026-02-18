@@ -16,7 +16,23 @@
 
 package com.android.signature
 
+import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint(ComponentActivity::class) class HiltTestActivity : Hilt_HiltTestActivity()
+@AndroidEntryPoint(ComponentActivity::class)
+class HiltTestActivity : Hilt_HiltTestActivity() {
+    var lastResult: ActivityResult? = null
+
+    private val launcher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            lastResult = it
+        }
+
+    fun launchActivityForResult(intent: Intent) {
+        lastResult = null
+        launcher.launch(intent)
+    }
+}

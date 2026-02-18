@@ -20,6 +20,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.signature.flags.Flags
 import com.android.signature.ui.theme.SignatureTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -34,6 +35,13 @@ import dagger.hilt.android.AndroidEntryPoint
 class SettingsActivity : Hilt_SettingsActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Runtime check for the feature flag
+        if (!Flags.enableSignature()) {
+            finish()
+            return
+        }
+
         setContent {
             SignatureTheme {
                 // Use Hilt to create the ViewModel

@@ -14,24 +14,27 @@
  * limitations under the License.
  */
 
-package com.android.signature.ui.settings
+package com.android.signature.ui.common
 
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
@@ -41,37 +44,94 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import com.android.signature.R
 import com.android.signature.data.Signature
 import com.android.signature.data.composeFontFamily
+import com.android.signature.ui.theme.SignatureTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Composable function that displays a single signature item in the list.
+ * A composable that displays an empty state message when no signatures are available.
  *
- * @param signature The [Signature] object to display.
- * @param onDelete Callback invoked when the delete button is clicked.
- * @param modifier Modifier to be applied to the root layout.
+ * @param modifier Modifier to be applied to the layout.
+ * @param text The text to display. Defaults to "No signatures saved."
  */
 @Composable
-fun SignatureListItem(
-    signature: Signature, onDelete: () -> Unit, modifier: Modifier = Modifier
+fun EmptyState(
+    modifier: Modifier = Modifier, text: String = stringResource(R.string.no_signatures_saved)
+) {
+    Box(
+        modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyLarge
+        )
+    }
+}
+
+/**
+ * A dialog that asks for confirmation before deleting a signature.
+ *
+ * @param onConfirm Callback invoked when the user confirms deletion.
+ * @param onDismiss Callback invoked when the user dismisses the dialog.
+ */
+@Composable
+fun DeleteSignatureDialog(
+    onConfirm: () -> Unit, onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.delete_signature_title)) },
+        text = { Text(stringResource(R.string.delete_signature_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.delete_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel_action))
+            }
+        })
+}
+
+/**
+ * A card displaying a signature (image or text) with a delete button.
+ *
+ * @param signature The signature to display.
+ * @param onDelete Callback invoked when the delete button is clicked.
+ * @param modifier Modifier to be applied to the card.
+ * @param onClick Optional callback invoked when the card is clicked.
+ * @param isHighlighted Whether to show a highlight border around the card.
+ */
+@Composable
+fun SignatureCard(
+    signature: Signature,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    isHighlighted: Boolean = false
 ) {
     Card(
-        modifier = modifier, elevation = CardDefaults.cardElevation(
+        modifier = modifier.fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        elevation = CardDefaults.cardElevation(
             defaultElevation = dimensionResource(R.dimen.card_elevation)
-        )
+        ),
+        border = if (isHighlighted) BorderStroke(
+            dimensionResource(R.dimen.card_elevation), MaterialTheme.colorScheme.primary
+        ) else null
     ) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            // Box for the signature content, centered
             Box(
-                modifier = Modifier.fillMaxSize().padding(
-                    horizontal = dimensionResource(R.dimen.padding_medium),
-                    vertical = dimensionResource(R.dimen.padding_small)
-                ), contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize()
+                    .padding(dimensionResource(R.dimen.padding_medium)),
+                contentAlignment = Alignment.Center
             ) {
                 when (signature.type) {
                     Signature.TYPE_DRAWN, Signature.TYPE_UPLOADED -> {
@@ -113,11 +173,27 @@ fun SignatureListItem(
                 onClick = onDelete, modifier = Modifier.align(Alignment.TopEnd)
             ) {
                 Icon(
-                    Icons.Default.Delete, contentDescription = stringResource(
-                        R.string.delete_signature_content_description
-                    ), tint = MaterialTheme.colorScheme.error
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete_signature_content_description),
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun PreviewEmptyState() {
+    SignatureTheme {
+        EmptyState()
+    }
+}
+
+@Preview
+@Composable
+fun PreviewDeleteSignatureDialog() {
+    SignatureTheme {
+        DeleteSignatureDialog(onConfirm = {}, onDismiss = {})
     }
 }
