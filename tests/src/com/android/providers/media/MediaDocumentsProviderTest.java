@@ -17,6 +17,7 @@
 package com.android.providers.media;
 
 import static com.android.providers.media.MediaDocumentsProvider.AUTHORITY;
+import static com.android.providers.media.flags.Flags.FLAG_ENABLE_MIME_TYPE_UPDATE_ON_RENAME;
 import static com.android.providers.media.scan.MediaScanner.REASON_UNKNOWN;
 import static com.android.providers.media.scan.MediaScannerTest.stage;
 
@@ -270,7 +271,7 @@ public class MediaDocumentsProviderTest {
             final String docId = c.getString(c.getColumnIndex(Document.COLUMN_DOCUMENT_ID));
             final String displayName = c.getString(
                     c.getColumnIndex(Document.COLUMN_DISPLAY_NAME));
-            final String newName = displayName.concat("test");
+            final String newName = "test_" + displayName;
 
             final File currentFile = new File(stageDir, displayName);
             assertTrue(currentFile.exists());
@@ -282,6 +283,97 @@ public class MediaDocumentsProviderTest {
 
             assertFalse(currentFile.exists());
             assertTrue(renamedFile.exists());
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled({
+        Flags.FLAG_ENABLE_MEDIA_DOCUMENTS_PROVIDER_ALLFILES_ROOT,
+        FLAG_ENABLE_MIME_TYPE_UPDATE_ON_RENAME
+    })
+    public void testRenameInFilesRootWithMimeTypeUpdateEnabled() throws Exception {
+        final Context context = InstrumentationRegistry.getTargetContext();
+        final Context isolatedContext =
+                new IsolatedContext(context, "modern", /*asFuseThread*/ false);
+        final ContentResolver resolver = isolatedContext.getContentResolver();
+
+        // Give ourselves some basic media to work with
+        final File stageDir = stageTestMedia(isolatedContext);
+
+        final Uri recentsUri =
+                DocumentsContract.buildRecentDocumentsUri(
+                        AUTHORITY, MediaDocumentsProvider.TYPE_FILES_ROOT);
+        try (Cursor c = resolver.query(recentsUri, null, null, null)) {
+            // Find and rename document.txt replacing its mime type.
+            String docId = null;
+            String displayName = null;
+
+            while (c.moveToNext()) {
+                displayName = c.getString(c.getColumnIndex(Document.COLUMN_DISPLAY_NAME));
+                if (displayName.equals("document.txt")) {
+                    docId = c.getString(c.getColumnIndex(Document.COLUMN_DOCUMENT_ID));
+                    break;
+                }
+            }
+            assertNotNull("Could not find document.txt to rename", docId);
+
+            final String newName = "document.ipynb";
+            final File currentFile = new File(stageDir, displayName);
+            assertTrue(currentFile.exists());
+            final File renamedFile = new File(stageDir, newName);
+            assertFalse(renamedFile.exists());
+
+            final Uri fileUri = DocumentsContract.buildDocumentUri(AUTHORITY, docId);
+            assertNotNull(DocumentsContract.renameDocument(resolver, fileUri, newName));
+            assertFalse("Original file should no longer exist", currentFile.exists());
+            assertTrue("Renamed file should exist", renamedFile.exists());
+        }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_MEDIA_DOCUMENTS_PROVIDER_ALLFILES_ROOT)
+    @RequiresFlagsDisabled(FLAG_ENABLE_MIME_TYPE_UPDATE_ON_RENAME)
+    public void testRenameInFilesRootWithMimeTypeUpdateDisabled() throws Exception {
+        final Context context = InstrumentationRegistry.getTargetContext();
+        final Context isolatedContext =
+                new IsolatedContext(context, "modern", /*asFuseThread*/ false);
+        final ContentResolver resolver = isolatedContext.getContentResolver();
+
+        // Give ourselves some basic media to work with
+        final File stageDir = stageTestMedia(isolatedContext);
+
+        final Uri recentsUri =
+                DocumentsContract.buildRecentDocumentsUri(
+                        AUTHORITY, MediaDocumentsProvider.TYPE_FILES_ROOT);
+        try (Cursor c = resolver.query(recentsUri, null, null, null)) {
+            // Find and rename document.txt replacing its mime type.
+            String docId = null;
+            String displayName = null;
+
+            while (c.moveToNext()) {
+                displayName = c.getString(c.getColumnIndex(Document.COLUMN_DISPLAY_NAME));
+                if (displayName.equals("document.txt")) {
+                    docId = c.getString(c.getColumnIndex(Document.COLUMN_DOCUMENT_ID));
+                    break;
+                }
+            }
+            assertNotNull("Could not find document.txt to rename", docId);
+
+            final String newName = "document.ipynb";
+            final File currentFile = new File(stageDir, displayName);
+            assertTrue(currentFile.exists());
+            final File renamedFile = new File(stageDir, newName);
+            assertFalse(renamedFile.exists());
+
+            // with the flag disabled the renamed file will be forced to keep existing extension
+            final File forcedFile = new File(stageDir, newName + ".txt");
+            assertFalse(renamedFile.exists());
+
+            final Uri fileUri = DocumentsContract.buildDocumentUri(AUTHORITY, docId);
+            assertNotNull(DocumentsContract.renameDocument(resolver, fileUri, newName));
+            assertFalse("Original file should no longer exist", currentFile.exists());
+            assertFalse("Renamed file should not exist", renamedFile.exists());
+            assertTrue("Forced file should exist", forcedFile.exists());
         }
     }
 
