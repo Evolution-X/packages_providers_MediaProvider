@@ -565,3 +565,10 @@ flag {
     bug: "478186126"
 }
 
+flag {
+    name: "enable_mime_type_update_on_rename"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables updating the mime type when renaming a file."
+    bug: "481516249"
+}

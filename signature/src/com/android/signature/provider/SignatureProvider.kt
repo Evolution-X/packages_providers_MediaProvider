@@ -25,18 +25,20 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
+import com.android.signature.flags.Flags
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import java.io.FileOutputStream
-import java.io.IOException
 
 /**
  * A [ContentProvider] that exposes signature images to other applications.
@@ -60,8 +62,13 @@ class SignatureProvider : ContentProvider() {
     }
 
     override fun onCreate(): Boolean {
+        if (!Flags.enableSignature()) {
+            Log.w(TAG, "SignatureProvider is disabled by flag.")
+            return false // Provider is not available
+        }
         val context = context ?: return false
-        val entryPoint = EntryPointAccessors.fromApplication(context, SignatureProviderEntryPoint::class.java)
+        val entryPoint =
+            EntryPointAccessors.fromApplication(context, SignatureProviderEntryPoint::class.java)
         signatureDao = entryPoint.signatureRepository().signatureDao
         return true
     }
@@ -72,6 +79,10 @@ class SignatureProvider : ContentProvider() {
     }
 
     override fun getType(uri: Uri): String? {
+        if (!Flags.enableSignature()) {
+            Log.w(TAG, "getType called when SignatureProvider is disabled")
+            return null
+        }
         val signatureId = getSignatureId(uri) ?: return null
         // Verify signature exists
         val signature = runBlocking { signatureDao.getSignatureById(signatureId) }
@@ -79,25 +90,33 @@ class SignatureProvider : ContentProvider() {
     }
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor? {
+        if (!Flags.enableSignature()) {
+            Log.e(TAG, "openFile called when SignatureProvider is disabled")
+            throw FileNotFoundException("Provider not available")
+        }
         if (mode != "r") {
             throw IllegalArgumentException("Only read mode is supported")
         }
 
-        val signatureId = getSignatureId(uri) ?: return null
+        val signatureId = getSignatureId(uri) ?: throw FileNotFoundException("Invalid URI")
         val (pipeRead, pipeWrite) = ParcelFileDescriptor.createPipe()
 
         scope.launch {
             try {
                 FileOutputStream(pipeWrite.fileDescriptor).use { outputStream ->
-                    val signature = signatureDao.getSignatureById(signatureId)
-                        ?: throw IOException("Signature not found")
+                    val signature =
+                        signatureDao.getSignatureById(signatureId)
+                            ?: throw IOException("Signature not found")
 
                     signature.imageData?.let { outputStream.write(it) }
                         ?: throw IOException("Signature image data is missing")
                 }
             } catch (e: IOException) {
-                Log.e("SignatureProvider", "Error writing to pipe", e)
-                pipeWrite.closeWithError(e.message)
+                Log.e(TAG, "Error writing to pipe", e)
+                // Try to close the pipe with an error, and log if that fails too.
+                runCatching { pipeWrite.closeWithError(e.message) }.onFailure { closeException ->
+                    Log.e(TAG, "Error closing pipe with error", closeException)
+                }
             }
         }
         return pipeRead
@@ -118,31 +137,47 @@ class SignatureProvider : ContentProvider() {
         selectionArgs: Array<out String>?,
         sortOrder: String?
     ): Cursor? {
+        if (!Flags.enableSignature()) {
+            Log.w(TAG, "query called when SignatureProvider is disabled")
+            return null
+        }
+        // Not implemented
         return null
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? {
+        if (!Flags.enableSignature()) {
+            Log.w(TAG, "insert called when SignatureProvider is disabled")
+            return null
+        }
+        // Not implemented
         return null
     }
 
     override fun delete(
-        uri: Uri,
-        selection: String?,
-        selectionArgs: Array<out String>?
+        uri: Uri, selection: String?, selectionArgs: Array<out String>?
     ): Int {
+        if (!Flags.enableSignature()) {
+            Log.w(TAG, "delete called when SignatureProvider is disabled")
+            return 0
+        }
+        // Not implemented
         return 0
     }
 
     override fun update(
-        uri: Uri,
-        values: ContentValues?,
-        selection: String?,
-        selectionArgs: Array<out String>?
+        uri: Uri, values: ContentValues?, selection: String?, selectionArgs: Array<out String>?
     ): Int {
+        if (!Flags.enableSignature()) {
+            Log.w(TAG, "update called when SignatureProvider is disabled")
+            return 0
+        }
+        // Not implemented
         return 0
     }
 
     companion object {
+        private const val TAG = "SignatureProvider"
         private const val AUTHORITY = "com.android.signature.provider"
         val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/signatures")
 

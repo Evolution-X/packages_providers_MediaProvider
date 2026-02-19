@@ -21,6 +21,7 @@ android_test {
         // test dependencies
         "androidx.test.core",
         "androidx.test.rules",
+        "androidx.test.espresso.intents",
         "androidx.compose.runtime_runtime",
         "androidx.compose.ui_ui-test-junit4",
         "androidx.compose.ui_ui-test-manifest",

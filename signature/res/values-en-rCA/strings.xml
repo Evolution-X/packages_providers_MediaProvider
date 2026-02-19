@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- 
- Copyright 2024 The Android Open Source Project
+ Copyright 2026 The Android Open Source Project
 
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
@@ -18,4 +18,14 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="signature_application_label" msgid="2165514625410136890">"Signature"</string>
+    <string name="title_activity_settings" msgid="2027968183034900900">"Signature Settings"</string>
+    <string name="manage_signatures_title" msgid="2048802605316814543">"Manage Signatures"</string>
+    <string name="no_signatures_saved" msgid="6010088180603151224">"No signatures saved."</string>
+    <string name="delete_signature_title" msgid="4344529382215682683">"Delete Signature"</string>
+    <string name="delete_signature_message" msgid="1123315908697286809">"Are you sure you want to permanently delete this signature?"</string>
+    <string name="delete_action" msgid="4988241346510490913">"Delete"</string>
+    <string name="cancel_action" msgid="1513533057071552402">"Cancel"</string>
+    <string name="back_content_description" msgid="3424363456229458016">"Back"</string>
+    <string name="drawn_signature_content_description" msgid="441057598353735826">"Drawn Signature"</string>
+    <string name="delete_signature_content_description" msgid="3012748259309806715">"Delete Signature"</string>
 </resources>

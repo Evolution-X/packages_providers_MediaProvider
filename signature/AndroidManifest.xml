@@ -15,23 +15,19 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     package="com.android.signature">
 
     <application
         android:name="com.android.signature.SignatureApp"
-        android:label="@string/signature_application_label"
         android:allowBackup="false"
+        android:label="@string/signature_application_label"
         android:supportsRtl="true">
 
-        <!-- @FlaggedApi("com.android.signature.flags.enable_signature") -->
         <activity
-            android:name="com.android.signature.SignatureActivity"
+            android:name=".ui.picker.SignaturePickerActivity"
             android:exported="true"
-            android:theme="@style/Theme.Signature"
-            android:label="@string/signature_application_label"
-            android:excludeFromRecents="true"
-            android:featureFlag="com.android.signature.flags.enable_signature">
+            android:label="@string/picker_title"
+            android:theme="@style/Theme.Signature.BottomSheet">
             <intent-filter>
                 <action android:name="com.android.signature.ACTION_PICK_SIGNATURE" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -39,12 +35,10 @@
         </activity>
 
         <!-- Declare the new SettingsActivity -->
-        <!-- @FlaggedApi("com.android.signature.flags.enable_signature") -->
         <activity
             android:name=".ui.settings.SettingsActivity"
             android:exported="true"
-            android:label="@string/title_activity_settings"
-            android:featureFlag="com.android.signature.flags.enable_signature">
+            android:label="@string/title_activity_settings">
             <!-- This intent filter allows the activity to be launched
                  from the "App Info" screen in Android Settings -->
             <intent-filter>
@@ -53,13 +47,11 @@
             </intent-filter>
         </activity>
 
-        <!-- @FlaggedApi("com.android.signature.flags.enable_signature") -->
         <provider
             android:name=".provider.SignatureProvider"
             android:authorities="com.android.signature.provider"
             android:exported="true"
-            android:grantUriPermissions="true"
-            android:featureFlag="com.android.signature.flags.enable_signature"/>
+            android:grantUriPermissions="true" />
 
     </application>
 </manifest>
