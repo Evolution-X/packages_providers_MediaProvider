@@ -24,6 +24,7 @@ import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.UserHandle
 import android.os.UserManager
 import android.platform.test.annotations.DisableFlags
@@ -32,8 +33,13 @@ import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORITES
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import android.widget.photopicker.PhotoPickerSelectionParams
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -53,7 +59,7 @@ import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
-import androidx.core.os.bundleOf
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.photopicker.R
@@ -79,6 +85,7 @@ import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.LocalFeatureManager
+import com.android.photopicker.core.features.Location
 import com.android.photopicker.core.features.PrefetchResultKey
 import com.android.photopicker.core.glide.GlideTestRule
 import com.android.photopicker.core.navigation.LocalNavController
@@ -1861,11 +1868,13 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
         testScope.runTest {
             val testQuery = "cats"
             val bundle =
-                bundleOf(
-                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                Bundle().apply {
+                    putInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
                         MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
-                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY to testQuery,
-                )
+                    )
+                    putString(MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY, testQuery)
+                }
             val intent =
                 Intent(MediaStore.ACTION_PICK_IMAGES).apply {
                     putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS, bundle)
@@ -1941,11 +1950,13 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
         testScope.runTest {
             val testQuery = ""
             val bundle =
-                bundleOf(
-                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE to
+                Bundle().apply {
+                    putInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
                         MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_EXPANDED,
-                    MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY to testQuery,
-                )
+                    )
+                    putString(MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY, testQuery)
+                }
             val intent =
                 Intent(MediaStore.ACTION_PICK_IMAGES).apply {
                     putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS, bundle)
@@ -2002,8 +2013,143 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
                 .assertIsDisplayed()
         }
 
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testHighlightSearchMediaItemWithDisabledReasonCannotBeSelected() =
+        testScope.runTest {
+            val testSearchDataService = searchDataService as? TestSearchDataServiceImpl
+            checkNotNull(testSearchDataService) { "Expected a TestSearchDataServiceImpl" }
+
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+            val mediaWithDisabledReason =
+                createImage(
+                    mediaId = "1",
+                    pickerId = 1L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = 2 * maxFileSize,
+                )
+            val resources = getTestableContext().resources
+
+            testSearchDataService.mediaList = listOf(mediaWithDisabledReason)
+
+            val testQuery = "Test"
+            val highlightBundle =
+                Bundle().apply {
+                    putInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                    )
+                    putString(MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY, testQuery)
+                }
+
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS, highlightBundle)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callHighlightGridWithSnackbar(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                    modifier = Modifier.testTag(HIGHLIGHT_GRID_TEST_TAG),
+                )
+            }
+
+            // Wait for results
+            awaitHighlightItems()
+
+            composeTestRule
+                .onNodeWithContentDescription(
+                    getTestableContext().resources.getString(R.string.photopicker_hsr_media_text)
+                )
+                .onChildren()
+                .filter(
+                    hasContentDescription(
+                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .onFirst()
+                .performClick()
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage("Expected selection to be empty as item has disabled reason.")
+                .that(selection.snapshot().size)
+                .isEqualTo(0)
+
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxFileSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+
     @Composable
     private fun HighlightGrid(modifier: Modifier = Modifier.testTag(HIGHLIGHT_GRID_TEST_TAG)) {
         HighlightMedia(modifier = modifier)
+    }
+
+    @Composable
+    private fun callHighlightGridWithSnackbar(
+        featureManager: FeatureManager,
+        selection: Selection<Media>,
+        events: Events,
+        modifier: Modifier = Modifier,
+    ) {
+        val photopickerConfiguration by
+            configurationManager.get().configuration.collectAsStateWithLifecycle()
+
+        CompositionLocalProvider(
+            LocalPhotopickerConfiguration provides photopickerConfiguration,
+            LocalNavController provides createNavController(),
+            LocalSelection provides selection,
+            LocalFeatureManager provides featureManager,
+            LocalEvents provides events,
+            LocalLocalizationHelper provides LocalizationHelper(),
+        ) {
+            PhotopickerTheme(isDarkTheme = false, config = photopickerConfiguration) {
+                Box(
+                    modifier = Modifier.fillMaxHeight(),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    HighlightMedia(modifier = modifier)
+                    LocalFeatureManager.current.composeLocation(Location.SNACK_BAR)
+                }
+            }
+        }
+    }
+
+    private fun TestScope.awaitHighlightItems(highlightItemCount: Int = 1) {
+        composeTestRule.waitUntil(timeoutMillis = 5_000) {
+            advanceTimeBy(100)
+            composeTestRule
+                .onAllNodes(
+                    hasContentDescription(
+                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+                .fetchSemanticsNodes()
+                .size >= highlightItemCount
+        }
     }
 }
