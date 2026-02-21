@@ -20,6 +20,8 @@
     <string name="signature_application_label" msgid="2165514625410136890">"Υπογραφή"</string>
     <!-- no translation found for title_activity_settings (2027968183034900900) -->
     <skip />
+    <!-- no translation found for title_activity_create_signature (5731623895687807258) -->
+    <skip />
     <!-- no translation found for manage_signatures_title (2048802605316814543) -->
     <skip />
     <!-- no translation found for no_signatures_saved (6010088180603151224) -->
@@ -37,5 +39,11 @@
     <!-- no translation found for drawn_signature_content_description (441057598353735826) -->
     <skip />
     <!-- no translation found for delete_signature_content_description (3012748259309806715) -->
+    <skip />
+    <!-- no translation found for picker_title (4461848688877096453) -->
+    <skip />
+    <!-- no translation found for picker_add_new (100188209321837181) -->
+    <skip />
+    <!-- no translation found for picker_no_signatures (7560452872095947936) -->
     <skip />
 </resources>

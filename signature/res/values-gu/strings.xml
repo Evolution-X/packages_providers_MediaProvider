@@ -18,24 +18,18 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="signature_application_label" msgid="2165514625410136890">"સહી"</string>
-    <!-- no translation found for title_activity_settings (2027968183034900900) -->
-    <skip />
-    <!-- no translation found for manage_signatures_title (2048802605316814543) -->
-    <skip />
-    <!-- no translation found for no_signatures_saved (6010088180603151224) -->
-    <skip />
-    <!-- no translation found for delete_signature_title (4344529382215682683) -->
-    <skip />
-    <!-- no translation found for delete_signature_message (1123315908697286809) -->
-    <skip />
-    <!-- no translation found for delete_action (4988241346510490913) -->
-    <skip />
-    <!-- no translation found for cancel_action (1513533057071552402) -->
-    <skip />
-    <!-- no translation found for back_content_description (3424363456229458016) -->
-    <skip />
-    <!-- no translation found for drawn_signature_content_description (441057598353735826) -->
-    <skip />
-    <!-- no translation found for delete_signature_content_description (3012748259309806715) -->
-    <skip />
+    <string name="title_activity_settings" msgid="2027968183034900900">"સહી માટેના સેટિંગ"</string>
+    <string name="title_activity_create_signature" msgid="5731623895687807258">"સહી બનાવો"</string>
+    <string name="manage_signatures_title" msgid="2048802605316814543">"સહીને મેનેજ કરો"</string>
+    <string name="no_signatures_saved" msgid="6010088180603151224">"કોઈ સહી સાચવવામાં આવી નથી."</string>
+    <string name="delete_signature_title" msgid="4344529382215682683">"સહી ડિલીટ કરો"</string>
+    <string name="delete_signature_message" msgid="1123315908697286809">"શું તમે ખરેખર આ સહી કાયમી રીતે ડિલીટ કરવા માગો છો?"</string>
+    <string name="delete_action" msgid="4988241346510490913">"ડિલીટ કરો"</string>
+    <string name="cancel_action" msgid="1513533057071552402">"રદ કરો"</string>
+    <string name="back_content_description" msgid="3424363456229458016">"પાછળ"</string>
+    <string name="drawn_signature_content_description" msgid="441057598353735826">"હસ્તલિખિત સહી"</string>
+    <string name="delete_signature_content_description" msgid="3012748259309806715">"સહી ડિલીટ કરો"</string>
+    <string name="picker_title" msgid="4461848688877096453">"સહી પસંદ કરો"</string>
+    <string name="picker_add_new" msgid="100188209321837181">"નવી ઉમેરો"</string>
+    <string name="picker_no_signatures" msgid="7560452872095947936">"કોઈ સહી મળી નથી.\nશરૂ કરવા માટે કોઈ નવી સહી ઉમેરો."</string>
 </resources>
