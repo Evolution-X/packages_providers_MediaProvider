@@ -20,6 +20,7 @@
     <string name="signature_application_label" msgid="2165514625410136890">"ลายเซ็น"</string>
     <!-- no translation found for title_activity_settings (2027968183034900900) -->
     <skip />
+    <string name="title_activity_create_signature" msgid="5731623895687807258">"สร้างลายเซ็น"</string>
     <!-- no translation found for manage_signatures_title (2048802605316814543) -->
     <skip />
     <!-- no translation found for no_signatures_saved (6010088180603151224) -->
@@ -38,4 +39,7 @@
     <skip />
     <!-- no translation found for delete_signature_content_description (3012748259309806715) -->
     <skip />
+    <string name="picker_title" msgid="4461848688877096453">"เลือกลายเซ็น"</string>
+    <string name="picker_add_new" msgid="100188209321837181">"เพิ่มใหม่"</string>
+    <string name="picker_no_signatures" msgid="7560452872095947936">"ไม่พบลายเซ็น\nเพิ่มลายเซ็นใหม่เพื่อเริ่มต้นใช้งาน"</string>
 </resources>
