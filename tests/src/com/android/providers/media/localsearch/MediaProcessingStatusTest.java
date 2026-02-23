@@ -20,10 +20,8 @@ import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
 
 import static com.android.providers.media.localsearch.MediaProcessingStatus.STATUS_COMPLETED;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.deleteMediaIdFromStatusTable;
-import static com.android.providers.media.localsearch.MediaProcessingStatus.deleteStaleRows;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.insertMetadataProcessedRowInStatusTable;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.updateLocationLabelStatus;
-import static com.android.providers.media.localsearch.MediaProcessingStatus.updateMediaLabelStatus;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -36,7 +34,6 @@ import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.MediaStore.Files.FileColumns;
 import android.provider.media.internal.flags.Flags;
-import android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -49,9 +46,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RunWith(AndroidJUnit4.class)
 public class MediaProcessingStatusTest {
@@ -207,41 +201,6 @@ public class MediaProcessingStatusTest {
         mHelper.runWithoutTransaction((db) -> {
             try (Cursor c = queryForMediaId(db, 5L)) {
                 assertThat(c.getCount()).isEqualTo(0);
-            }
-            return null;
-        });
-    }
-
-    @Test
-    public void testDeleteStaleRows() {
-        mHelper.runWithTransaction((db) -> {
-            // This row has all labels marked as processed, should be deleted
-            insertMetadataProcessedRowInStatusTable(db, /* fileId */ 6L,
-                    /* mediaType */ MEDIA_TYPE_IMAGE, /* generationModified */ 105L);
-            updateLocationLabelStatus(db, /* fileId */ 6L, /* isSuccess */ true);
-            updateMediaLabelStatus(db, /* fileId */ 6L, /* isSuccess */ true);
-
-            // This row has location unprocessed, should not be deleted
-            insertMetadataProcessedRowInStatusTable(db, /* fileId */ 7L,
-                    /* mediaType */ MEDIA_TYPE_IMAGE, /* generationModified */ 106L);
-            updateMediaLabelStatus(db, /* fileId */ 7L, /* isSuccess */ true);
-            updateLocationLabelStatus(db, /* fileId */ 7L, /* isSuccess */ false);
-
-            Map<Integer, Integer> processingMap = new HashMap<>();
-            int requestedProcessing = ProcessingType.DEFAULT_METADATA_PROCESSING
-                    | ProcessingType.DEFAULT_LOCATION_PROCESSING
-                    | ProcessingType.DEFAULT_MEDIA_LABELS_PROCESSING;
-            processingMap.put(MEDIA_TYPE_IMAGE,
-                    requestedProcessing); // Request all processing types
-
-            int deleted = deleteStaleRows(db, processingMap);
-
-            assertThat(deleted).isEqualTo(1);
-            try (Cursor c = queryForMediaId(db, 6L)) {
-                assertThat(c.getCount()).isEqualTo(0);
-            }
-            try (Cursor c = queryForMediaId(db, 7L)) {
-                assertThat(c.getCount()).isEqualTo(1);
             }
             return null;
         });

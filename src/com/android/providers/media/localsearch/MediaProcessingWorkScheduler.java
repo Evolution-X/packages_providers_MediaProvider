@@ -144,8 +144,6 @@ public class MediaProcessingWorkScheduler extends Worker {
                     return Result.failure();
                 }
 
-                processingHelper.deleteStaleRows();
-
                 processingHelper.runProcessMetadataLabels();
 
                 if (isNetworkAvailable(mContext)) {
