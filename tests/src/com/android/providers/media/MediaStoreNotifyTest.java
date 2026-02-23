@@ -185,6 +185,7 @@ public class MediaStoreNotifyTest {
             // Rename the folder on disk.
             final File newFolder = new File(mDir, "renamed-" + System.nanoTime());
             assertTrue(folder.renameTo(newFolder));
+            MediaStore.scanFile(mContentResolver,  newFolder);
             // Wait for the update notification to be received.
             insertObserver.waitForChange();
             deleteObserver.waitForChange();
