@@ -28,6 +28,5 @@
     <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"<xliff:g id="APP_NAME">%1$s</xliff:g> vereis dat die totale lêergrootte kleiner as <xliff:g id="SIZE">%2$s</xliff:g> KB moet wees"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"<xliff:g id="APP_NAME">%1$s</xliff:g> vereis dat die totale lêergrootte kleiner as <xliff:g id="SIZE">%2$s</xliff:g> MB moet wees"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"<xliff:g id="APP_NAME">%1$s</xliff:g> vereis dat die totale lêergrootte kleiner as <xliff:g id="SIZE">%2$s</xliff:g> GB moet wees"</string>
-    <!-- no translation found for photopicker_selection_param_generic_app_label (7183699800416571898) -->
-    <skip />
+    <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"Hierdie app"</string>
 </resources>
