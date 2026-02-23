@@ -83,16 +83,29 @@ public class LocationMetadataUtils {
                 preferences);
         long lastRowUpdatedWithLocation = preferences.getLong(LAST_ROW_UPDATED_WITH_LOCATION, 0);
 
-        long lastUpdatedRow = externalDatabase.runWithTransaction(
-                (db) -> updateLocationMetadataColumns(db,
-                        lastRowUpdatedWithLocation, maxRowIdBeforeLocationBackfill, signal));
+        try {
+            while (lastRowUpdatedWithLocation <= maxRowIdBeforeLocationBackfill) {
+                if (signal.isCanceled()) {
+                    Log.w(TAG, "Received cancellation signal while backfilling location metadata");
+                    break;
+                }
 
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putLong(LAST_ROW_UPDATED_WITH_LOCATION, lastUpdatedRow);
-        if (lastUpdatedRow > maxRowIdBeforeLocationBackfill) {
-            editor.putBoolean(LOCATION_METADATA_UPDATED_SHARED_PREFERENCE, true);
+                final long currentUpdatedRow = lastRowUpdatedWithLocation;
+                lastRowUpdatedWithLocation = externalDatabase.runWithTransaction((db) -> {
+                    return updateLocationMetadataColumns(db, currentUpdatedRow,
+                            maxRowIdBeforeLocationBackfill, signal);
+                });
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error while backfilling location metadata", e);
+        } finally {
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putLong(LAST_ROW_UPDATED_WITH_LOCATION, lastRowUpdatedWithLocation);
+            if (lastRowUpdatedWithLocation > maxRowIdBeforeLocationBackfill) {
+                editor.putBoolean(LOCATION_METADATA_UPDATED_SHARED_PREFERENCE, true);
+            }
+            editor.apply();
         }
-        editor.apply();
     }
 
     /**
@@ -162,55 +175,47 @@ public class LocationMetadataUtils {
     @VisibleForTesting
     static long updateLocationMetadataColumns(SQLiteDatabase db, long lastUpdatedRow,
             long maxRowIdBeforeLocationBackfill, @NonNull CancellationSignal signal) {
-        while (lastUpdatedRow <= maxRowIdBeforeLocationBackfill) {
-            if (signal.isCanceled()) {
-                Log.w(TAG, "Received cancellation signal while backfilling location metadata");
-                break;
+        ArrayList<FileInfo> filesToUpdate = new ArrayList<>();
+        try (Cursor c = queryForNullLocationMetadataColumns(db, lastUpdatedRow)) {
+            while (c.moveToNext()) {
+                long fileId = c.getLong(c.getColumnIndexOrThrow(FileColumns._ID));
+                String data = c.getString(c.getColumnIndexOrThrow(FileColumns.DATA));
+
+                filesToUpdate.add(new FileInfo(fileId, data));
             }
-
-            ArrayList<FileInfo> filesToUpdate = new ArrayList<>();
-            try (Cursor c = queryForNullLocationMetadataColumns(db, lastUpdatedRow)) {
-                while (c.moveToNext()) {
-                    long fileId = c.getLong(c.getColumnIndexOrThrow(FileColumns._ID));
-                    String data = c.getString(c.getColumnIndexOrThrow(FileColumns.DATA));
-
-                    filesToUpdate.add(new FileInfo(fileId, data));
-                }
-            }
-
-            if (filesToUpdate.isEmpty()) {
-                // All subsequent rows have updated location metadata
-                lastUpdatedRow = maxRowIdBeforeLocationBackfill + 1;
-                break;
-            }
-
-            Log.d(TAG, "Incrementally updating " + filesToUpdate.size()
-                    + " files with null location metadata");
-            int evaluatedRows = 0;
-            for (FileInfo fileToUpdate : filesToUpdate) {
-                File file = new File(fileToUpdate.mFilepath);
-                try (FileInputStream is = new FileInputStream(file)) {
-                    final ExifInterface exif = new ExifInterface(is);
-                    float[] locationCoordinates = new float[2];
-                    if (exif.getLatLong(locationCoordinates)) {
-                        ContentValues values = new ContentValues();
-                        values.put(LATITUDE, locationCoordinates[0]);
-                        values.put(LONGITUDE, locationCoordinates[1]);
-
-                        String selection = FileColumns._ID + "=" + fileToUpdate.mId;
-                        db.update(Files.TABLE, values, selection, null);
-                    }
-                    evaluatedRows++;
-                } catch (Exception e) {
-                    Log.e(TAG, "Couldn't update location metadata for " + fileToUpdate.mId, e);
-                } finally {
-                    lastUpdatedRow = fileToUpdate.mId;
-                }
-            }
-
-            Log.d(TAG, "Scanned " + evaluatedRows + " files. Expected : "
-                    + filesToUpdate.size());
         }
+
+        if (filesToUpdate.isEmpty()) {
+            // All subsequent rows have updated location metadata
+            return maxRowIdBeforeLocationBackfill + 1;
+        }
+
+        Log.d(TAG, "Incrementally updating " + filesToUpdate.size()
+                + " files with null location metadata");
+        int evaluatedRows = 0;
+        for (FileInfo fileToUpdate : filesToUpdate) {
+            File file = new File(fileToUpdate.mFilepath);
+            try (FileInputStream is = new FileInputStream(file)) {
+                final ExifInterface exif = new ExifInterface(is);
+                float[] locationCoordinates = new float[2];
+                if (exif.getLatLong(locationCoordinates)) {
+                    ContentValues values = new ContentValues();
+                    values.put(LATITUDE, locationCoordinates[0]);
+                    values.put(LONGITUDE, locationCoordinates[1]);
+
+                    String selection = FileColumns._ID + "=" + fileToUpdate.mId;
+                    db.update(Files.TABLE, values, selection, null);
+                }
+                evaluatedRows++;
+            } catch (Exception e) {
+                Log.e(TAG, "Couldn't update location metadata for " + fileToUpdate.mId, e);
+            } finally {
+                lastUpdatedRow = fileToUpdate.mId;
+            }
+        }
+
+        Log.d(TAG, "Scanned " + evaluatedRows + " files. Expected : " + filesToUpdate.size());
+
         return lastUpdatedRow;
     }
 

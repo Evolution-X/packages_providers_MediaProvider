@@ -107,7 +107,7 @@ public class LocationMetadataUtilsTest {
 
     @Test
     @EnableFlags(Flags.FLAG_INDEX_MEDIA_LATITUDE_LONGITUDE)
-    public void testUpdateLocationMetadataColumns() {
+    public void testUpdateLocationMetadataColumnsInSingleBatch() {
         insertFile(1, mTestImageWithLocation.getAbsolutePath(), /* mediaType */ 1, /* latitude */
                 null, /* longitude */ null);
         insertFile(2, mTestImageWithoutLocation.getAbsolutePath(), /* mediaType */ 1, /* latitude */
@@ -119,7 +119,9 @@ public class LocationMetadataUtilsTest {
         long lastRowUpdated = LocationMetadataUtils.updateLocationMetadataColumns(mDb, 0, lastRowId,
                 new CancellationSignal());
 
-        assertEquals(lastRowId + 1, lastRowUpdated);
+        // updateLocationMetadataColumns will return the last row ID updated with location metadata
+        // in a single batch.
+        assertEquals(2, lastRowUpdated);
         assertLocation(/* rowId */ 1, TEST_LATITUDE, TEST_LONGITUDE);
         assertLocation(/* rowId */ 2, /* expectedLatitude */ 0, /* expectedLongitude */ 0);
         assertLocation(/* rowId */ 3, /* expectedLatitude */ 1.0, /* expectedLongitude */ 1.0);
