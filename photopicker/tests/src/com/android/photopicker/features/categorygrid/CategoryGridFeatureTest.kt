@@ -36,6 +36,7 @@ import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_FAVORIT
 import android.provider.CloudMediaProviderContract.AlbumColumns.ALBUM_ID_VIDEOS
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -1686,6 +1687,142 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testAlbumMediaGridDragSelectSkipsDisabledItems() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            // 1st item: enabled
+            // 2nd item: disabled
+            // 3rd item: enabled
+            val mediaList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = 2 * maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "3",
+                        pickerId = 3L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                )
+
+            val testDataService = dataService as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.albumMediaList = mediaList
+
+            val cameraAlbum =
+                Group.Album(
+                    id = ALBUM_ID_CAMERA,
+                    pickerId = 1234L,
+                    authority = "a",
+                    displayName = "Camera",
+                    coverUri =
+                        Uri.EMPTY.buildUpon()
+                            .apply {
+                                scheme("content")
+                                authority("a")
+                                path("1234")
+                            }
+                            .build(),
+                    dateTakenMillisLong = 12345678L,
+                    coverMediaSource = MediaSource.LOCAL,
+                )
+
+            // Update configuration to support multi-select. Use a high limit to avoid capping.
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+            advanceTimeBy(100)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({
+                navController.navigateToAlbumMediaGridForCategories(album = cameraAlbum)
+            })
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            assertWithMessage("Expected route to be category album grid")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.ALBUM_MEDIA_GRID.route)
+
+            // Let collectors run
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val allPhotosMatcher =
+                hasContentDescription(
+                    value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                    substring = true,
+                )
+
+            composeTestRule.waitUntil(timeoutMillis = 5_000) {
+                composeTestRule.onAllNodes(allPhotosMatcher).fetchSemanticsNodes().isNotEmpty()
+            }
+
+            val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+            val screenWidthPx =
+                with(composeTestRule.density) { (rootBounds.right - rootBounds.left).toPx() }
+
+            // Start drag on the first photo
+            composeTestRule.onAllNodes(allPhotosMatcher).onFirst().performTouchInput {
+                down(center)
+                advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                // Drag across the screen to select items in the first row.
+                dragInIncrements(totalOffset = screenWidthPx, vertical = false)
+                advanceEventTime(1000)
+                up()
+            }
+
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            // Verify that items 1 and 3 are selected, but 2 is not.
+            val selectedItems = selection.snapshot()
+            assertWithMessage("Expected 2 items in selection").that(selectedItems.size).isEqualTo(2)
+
+            assertWithMessage("Item 2 should not be selected")
+                .that(selectedItems.any { it.mediaId == "2" })
+                .isFalse()
+
+            assertWithMessage("Item 1 should be selected")
+                .that(selectedItems.any { it.mediaId == "1" })
+                .isTrue()
+
+            assertWithMessage("Item 3 should be selected")
+                .that(selectedItems.any { it.mediaId == "3" })
+                .isTrue()
+        }
+
+    @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testMediaSetGridDragSelect() =
         testScope.runTest {
@@ -1775,6 +1912,135 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("Expected $columns items in selection, but found ${selection.size()}")
                 .that(selection.size())
                 .isEqualTo(columns)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testMediaSetGridDragSelectSkipsDisabledItems() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            // 1st item: enabled
+            // 2nd item: disabled
+            // 3rd item: enabled
+            val mediaList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = 2 * maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "3",
+                        pickerId = 3L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                )
+
+            val testCategoryDataService = categoryDataService as? TestCategoryDataServiceImpl
+            checkNotNull(testCategoryDataService) { "Expected a TestCategoryDataServiceImpl" }
+            testCategoryDataService.mediaSetContentList = mediaList
+
+            val testMediaSet =
+                Group.MediaSet(
+                    id = "mediaset",
+                    pickerId = 1234L,
+                    authority = "a",
+                    displayName = "Media Set",
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.DEVICE_FOLDERS.key,
+                )
+
+            // Update configuration to support multi-select. Use a high limit to avoid capping.
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+            advanceTimeBy(100)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({
+                navController.navigateToMediaSetContentGrid(mediaSet = testMediaSet)
+            })
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            assertWithMessage("Expected route to be media set content grid")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.MEDIA_SET_CONTENT_GRID.route)
+
+            // Let collectors run
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val allPhotosMatcher =
+                hasContentDescription(
+                    value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                    substring = true,
+                )
+
+            composeTestRule.waitUntil(timeoutMillis = 5_000) {
+                composeTestRule.onAllNodes(allPhotosMatcher).fetchSemanticsNodes().isNotEmpty()
+            }
+
+            val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+            val screenWidthPx =
+                with(composeTestRule.density) { (rootBounds.right - rootBounds.left).toPx() }
+
+            // Start drag on the first photo
+            composeTestRule.onAllNodes(allPhotosMatcher).onFirst().performTouchInput {
+                down(center)
+                advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                // Drag across the screen to select items in the first row.
+                dragInIncrements(totalOffset = screenWidthPx, vertical = false)
+                advanceEventTime(1000)
+                up()
+            }
+
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            // Verify that items 1 and 3 are selected, but 2 is not.
+            val selectedItems = selection.snapshot()
+            assertWithMessage("Expected 2 items in selection").that(selectedItems.size).isEqualTo(2)
+
+            assertWithMessage("Item 2 should not be selected")
+                .that(selectedItems.any { it.mediaId == "2" })
+                .isFalse()
+
+            assertWithMessage("Item 1 should be selected")
+                .that(selectedItems.any { it.mediaId == "1" })
+                .isTrue()
+
+            assertWithMessage("Item 3 should be selected")
+                .that(selectedItems.any { it.mediaId == "3" })
+                .isTrue()
         }
 
     @Test

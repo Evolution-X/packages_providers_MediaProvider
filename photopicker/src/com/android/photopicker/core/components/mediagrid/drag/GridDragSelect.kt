@@ -167,6 +167,9 @@ class GridDragSelectNode(
                     item?.let {
                         when (it) {
                             is MediaGridItem.MediaItem -> {
+                                if (it.media.disabledReason != null) {
+                                    return@detectDragGesturesAfterLongPress
+                                }
                                 // Start the drag operation.
                                 dragJob?.cancel()
                                 dragJob =
@@ -455,7 +458,9 @@ private fun LazyPagingItems<MediaGridItem>.getMediaSlice(fromIndex: Int, toIndex
         item?.let {
             when (it) {
                 is MediaGridItem.MediaItem -> {
-                    targets.add(it.media) // Add media if the item is a MediaItem
+                    if (it.media.disabledReason == null) {
+                        targets.add(it.media) // Add media if the item is an enabled MediaItem
+                    }
                 }
                 else -> {} // Ignore other item types (e.g., headers)
             }

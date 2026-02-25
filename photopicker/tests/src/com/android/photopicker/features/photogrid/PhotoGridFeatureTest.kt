@@ -583,6 +583,106 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testPhotoGridDragSelect_skipsDisabledItems() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            // 1st item: enabled
+            // 2nd item: disabled
+            // 3rd item: enabled
+            val mediaList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = 2 * maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "3",
+                        pickerId = 3L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                )
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.mediaList = mediaList
+
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+            advanceTimeBy(100)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val allPhotosMatcher =
+                hasContentDescription(
+                    value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                    substring = true,
+                )
+
+            val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+            val screenWidthPx =
+                with(composeTestRule.density) { (rootBounds.right - rootBounds.left).toPx() }
+
+            // Start drag on the first photo
+            composeTestRule.onAllNodes(allPhotosMatcher).onFirst().performTouchInput {
+                down(center)
+                advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                // Drag across the screen to select items in the first row.
+                dragInIncrements(totalOffset = screenWidthPx, vertical = false)
+                advanceEventTime(1000)
+                up()
+            }
+
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            // Verify that items 1 and 3 are selected, but 2 is not.
+            val selectedItems = selection.get().snapshot()
+            assertWithMessage("Expected 2 items in selection").that(selectedItems.size).isEqualTo(2)
+
+            assertWithMessage("Item 2 should not be selected")
+                .that(selectedItems.any { it.mediaId == "2" })
+                .isFalse()
+
+            assertWithMessage("Item 1 should be selected")
+                .that(selectedItems.any { it.mediaId == "1" })
+                .isTrue()
+
+            assertWithMessage("Item 3 should be selected")
+                .that(selectedItems.any { it.mediaId == "3" })
+                .isTrue()
+        }
+
+    @Test
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testSwipeRightToNavigateToAlbumGridInRtl_searchFlagOff() {
         testScope.runTest {

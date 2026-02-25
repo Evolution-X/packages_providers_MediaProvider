@@ -32,6 +32,7 @@ import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
@@ -885,6 +886,129 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
             assertWithMessage("expected items in selection from search grid drag")
                 .that(selection.size())
                 .isEqualTo(3)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSearchGridDragSelectSkipsDisabledItems() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            // 1st item: enabled
+            // 2nd item: disabled
+            // 3rd item: enabled
+            val mediaList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = 2 * maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "3",
+                        pickerId = 3L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                )
+
+            val testSearchDataService = searchDataService as TestSearchDataServiceImpl
+            testSearchDataService.mediaList = mediaList
+
+            // Update configuration to support multi-select
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+            advanceTimeBy(100)
+
+            val resources = getTestableContext().getResources()
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceUntilIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            advanceUntilIdle()
+
+            // Enter a query and perform search
+            val searchQuery = "test"
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .performTextInput(searchQuery)
+            composeTestRule.onNodeWithText(searchQuery).performImeAction()
+
+            // Wait for results
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            val firstPhoto =
+                composeTestRule
+                    .onAllNodes(hasContentDescription(value = "taken on", substring = true))
+                    .onFirst()
+
+            with(firstPhoto) {
+                assertIsDisplayed()
+                performTouchInput {
+                    down(center)
+                    // Wait for the long press to register to enable drag-to-select
+                    advanceEventTime(viewConfiguration.longPressTimeoutMillis + 100)
+                    dragInIncrements(
+                        // Drag across 3 items in the grid.
+                        totalOffset = getBoundsInRoot().right.toPx() * 3,
+                        vertical = false,
+                    )
+                    // Wait for the scroll to finish.
+                    advanceEventTime(1000)
+                    up()
+                }
+            }
+
+            advanceUntilIdle()
+
+            // Verify that items 1 and 3 are selected, but 2 is not.
+            val selectedItems = selection.snapshot()
+            assertWithMessage("Expected 2 items in selection").that(selectedItems.size).isEqualTo(2)
+
+            assertWithMessage("Item 2 should not be selected")
+                .that(selectedItems.any { it.mediaId == "2" })
+                .isFalse()
+
+            assertWithMessage("Item 1 should be selected")
+                .that(selectedItems.any { it.mediaId == "1" })
+                .isTrue()
+
+            assertWithMessage("Item 3 should be selected")
+                .that(selectedItems.any { it.mediaId == "3" })
+                .isTrue()
         }
 
     @Test
