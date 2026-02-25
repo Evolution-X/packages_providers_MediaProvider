@@ -16,12 +16,7 @@
 
 package com.android.providers.media.localsearch;
 
-import java.util.Optional;
-
 public class ProcessingConstants {
-    // Static constant to check if media processing is required on this device.
-    public static Optional<Boolean> sIsMediaProcessingRequired = Optional.empty();
-
     // Lock object to ensure only one of MediaProcessingWorkScheduler and
     // MediaProcessingRecoveryScheduler performs work at the same time
     public static final Object WORKER_LOCK = new Object();

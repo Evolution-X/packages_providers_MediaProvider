@@ -16,6 +16,8 @@
 
 package com.android.providers.media.localsearch;
 
+import static com.android.providers.media.localsearch.ProcessingUtils.isDefaultSearchMediaServiceSupported;
+
 import android.annotation.NonNull;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,9 +30,6 @@ import android.util.Log;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 
-import com.android.modules.utils.build.SdkLevel;
-import com.android.providers.media.flags.Flags;
-
 /**
  * Default implementation of {@link SearchMediaService} that performs local media search using
  * AppSearch.
@@ -42,15 +41,13 @@ import com.android.providers.media.flags.Flags;
  */
 public class DefaultSearchMediaService extends SearchMediaService {
     private static final String TAG = DefaultSearchMediaService.class.getSimpleName();
-    private static final boolean DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED =
-            isDefaultSearchMediaServiceSupported();
     private SearchMediaExecutor mSearchMediaExecutor;
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
+        if (!isDefaultSearchMediaServiceSupported(this)) {
             Log.e(TAG, "DefaultSearchMediaService is not supported.");
             return;
         }
@@ -67,7 +64,7 @@ public class DefaultSearchMediaService extends SearchMediaService {
     public void onSearchMedia(@NonNull String searchText, @NonNull String searchId,
             @NonNull Bundle searchParams,
             @NonNull OutcomeReceiver<SearchMediaResultPage, SearchMediaException> receiver) {
-        if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
+        if (!isDefaultSearchMediaServiceSupported(this)) {
             throw new UnsupportedOperationException("DefaultSearchMediaService is not supported.");
         }
 
@@ -86,7 +83,7 @@ public class DefaultSearchMediaService extends SearchMediaService {
     @Override
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public void onCancelSearch(@NonNull String searchId) {
-        if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
+        if (!isDefaultSearchMediaServiceSupported(this)) {
             throw new UnsupportedOperationException("DefaultSearchMediaService is not supported.");
         }
 
@@ -100,7 +97,7 @@ public class DefaultSearchMediaService extends SearchMediaService {
     @Override
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     public boolean onCheckSemanticSearchSupport() {
-        if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
+        if (!isDefaultSearchMediaServiceSupported(this)) {
             throw new UnsupportedOperationException("DefaultSearchMediaService is not supported.");
         }
 
@@ -110,7 +107,7 @@ public class DefaultSearchMediaService extends SearchMediaService {
 
     @Override
     public void onDestroy() {
-        if (!DEFAULT_SEARCH_MEDIA_SERVICE_SUPPORTED) {
+        if (!isDefaultSearchMediaServiceSupported(this)) {
             Log.e(TAG, "DefaultSearchMediaService is not supported.");
             return;
         }
@@ -118,28 +115,6 @@ public class DefaultSearchMediaService extends SearchMediaService {
         if (mSearchMediaExecutor != null) {
             mSearchMediaExecutor.disconnect();
         }
-    }
-
-    private static boolean isDefaultSearchMediaServiceSupported() {
-        if (!SdkLevel.isAtLeastT()) {
-            Log.e(TAG, "DefaultSearchMediaService requires API level "
-                    + Build.VERSION_CODES.TIRAMISU + " or higher");
-            return false;
-        }
-
-        if (!Flags.enableMediaSearch()) {
-            Log.e(TAG, "enable_media_search flag is not enabled. "
-                    + "Service will not be created.");
-            return false;
-        }
-
-        if (!Flags.enableMediaProcessing()) {
-            Log.e(TAG, "enable_media_processing flag is enabled. "
-                    + "Service will not be created.");
-            return false;
-        }
-
-        return true;
     }
 
     /**

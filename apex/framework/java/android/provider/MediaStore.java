@@ -2237,8 +2237,8 @@ public final class MediaStore {
 
     /**
      * Gets the package name of the {@link SearchMediaService} that client apps use to connect. If
-     * there is no OEM implementation, returns the package name of the default implementation of
-     * {@link SearchMediaService} provided by MediaProvider.
+     * the package name is an empty string, it indicates that search service is not supported or
+     * there are no valid implementations of the service.
      */
     @FlaggedApi(Flags.FLAG_ENABLE_MEDIA_SEARCH)
     @NonNull

@@ -31,9 +31,7 @@ import static com.android.providers.media.localsearch.MediaProcessingStatus.RETR
 import static com.android.providers.media.localsearch.MediaProcessingStatus.bulkUpdateLabelStatusAsSuccess;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.insertMetadataProcessedRowInStatusTable;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.updateLocationLabelStatus;
-import static com.android.providers.media.localsearch.ProcessingConstants.sIsMediaProcessingRequired;
 
-import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -168,71 +166,6 @@ public class ProcessingHelper implements AutoCloseable {
                 .orElse(null);
         mAppSearchDbManager = new AppSearchDbManager(context);
         mPrefs = context.getSharedPreferences(MEDIAPROVIDER_PREFS, Context.MODE_PRIVATE);
-    }
-
-    /**
-     * Returns whether media processing tasks should be scheduled on this device
-     */
-    public static boolean isMediaProcessingRequired(Context context) {
-        if (sIsMediaProcessingRequired.isPresent()) {
-            return sIsMediaProcessingRequired.get();
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
-            Log.v(TAG, "Media processing is not supported on this Android version. "
-                    + "Skip media processing.");
-            sIsMediaProcessingRequired = Optional.of(false);
-            return false;
-        }
-
-        if (!Flags.enableMediaProcessing()) {
-            Log.v(TAG, "Media processing feature flag is disabled. Skip media processing.");
-            sIsMediaProcessingRequired = Optional.of(false);
-            return false;
-        }
-
-        boolean disableMediaProcessing = context.getResources().getBoolean(
-                R.bool.config_disable_media_processing_for_search);
-        if (disableMediaProcessing) {
-            Log.v(TAG, "Media processing disabled via overlayable configuration. Skip media "
-                    + "processing");
-            sIsMediaProcessingRequired = Optional.of(false);
-            return false;
-        }
-
-        // Support media processing only on phones, tablets and PC device types which can possibly
-        // support UI for search services.
-        PackageManager pm = context.getPackageManager();
-        if (pm.hasSystemFeature(PackageManager.FEATURE_WATCH)
-                || pm.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)
-                || pm.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
-                || pm.hasSystemFeature(PackageManager.FEATURE_EMBEDDED)
-                || pm.hasSystemFeature(PackageManager.FEATURE_XR_PERIPHERAL)) {
-            Log.v(TAG, "Media processing is not supported on this device type. "
-                    + "Skip media processing.");
-            sIsMediaProcessingRequired = Optional.of(false);
-            return false;
-        }
-
-        if (context.getSystemService(ActivityManager.class).isLowRamDevice()) {
-            Log.v(TAG, "Media processing is not supported on low RAM devices. "
-                    + "Skip media processing.");
-            sIsMediaProcessingRequired = Optional.of(false);
-            return false;
-        }
-
-        // Skip scheduling work if a custom search media service is defined
-        String searchMediaServicePackage = MediaStore.getPackageForSearchMediaService(
-                context.getContentResolver());
-        if (!context.getPackageName().equalsIgnoreCase(searchMediaServicePackage)) {
-            Log.i(TAG, "OEM defined SearchMediaService is used or SearchMediaService is not "
-                    + "enabled. Skip media processing.");
-            sIsMediaProcessingRequired = Optional.of(false);
-            return false;
-        }
-
-        sIsMediaProcessingRequired = Optional.of(true);
-        return true;
     }
 
     /**
