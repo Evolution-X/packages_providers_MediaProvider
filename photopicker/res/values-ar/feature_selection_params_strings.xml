@@ -28,6 +28,5 @@
     <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن يكون إجمالي حجم الملف أصغر من <xliff:g id="SIZE">%2$s</xliff:g> كيلوبايت"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن يكون إجمالي حجم الملفات أقل من <xliff:g id="SIZE">%2$s</xliff:g> ميغابايت"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن يكون إجمالي حجم الملف أقل من <xliff:g id="SIZE">%2$s</xliff:g> غيغابايت"</string>
-    <!-- no translation found for photopicker_selection_param_generic_app_label (7183699800416571898) -->
-    <skip />
+    <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"هذا التطبيق"</string>
 </resources>

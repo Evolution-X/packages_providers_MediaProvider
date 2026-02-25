@@ -19,21 +19,17 @@
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="signature_application_label" msgid="2165514625410136890">"簽名"</string>
     <string name="title_activity_settings" msgid="2027968183034900900">"簽名設定"</string>
-    <!-- no translation found for title_activity_create_signature (5731623895687807258) -->
-    <skip />
+    <string name="title_activity_create_signature" msgid="5731623895687807258">"建立簽名"</string>
     <string name="manage_signatures_title" msgid="2048802605316814543">"管理簽名"</string>
-    <string name="no_signatures_saved" msgid="6010088180603151224">"未儲存任何簽名。"</string>
+    <string name="no_signatures_saved" msgid="6010088180603151224">"沒有儲存任何簽名。"</string>
     <string name="delete_signature_title" msgid="4344529382215682683">"刪除簽名"</string>
-    <string name="delete_signature_message" msgid="1123315908697286809">"確定要永久刪除這個簽名嗎？"</string>
+    <string name="delete_signature_message" msgid="1123315908697286809">"確定要永久刪除此簽名嗎？"</string>
     <string name="delete_action" msgid="4988241346510490913">"刪除"</string>
     <string name="cancel_action" msgid="1513533057071552402">"取消"</string>
     <string name="back_content_description" msgid="3424363456229458016">"返回"</string>
-    <string name="drawn_signature_content_description" msgid="441057598353735826">"手繪簽名"</string>
+    <string name="drawn_signature_content_description" msgid="441057598353735826">"手寫簽名"</string>
     <string name="delete_signature_content_description" msgid="3012748259309806715">"刪除簽名"</string>
-    <!-- no translation found for picker_title (4461848688877096453) -->
-    <skip />
-    <!-- no translation found for picker_add_new (100188209321837181) -->
-    <skip />
-    <!-- no translation found for picker_no_signatures (7560452872095947936) -->
-    <skip />
+    <string name="picker_title" msgid="4461848688877096453">"選取簽名"</string>
+    <string name="picker_add_new" msgid="100188209321837181">"新增"</string>
+    <string name="picker_no_signatures" msgid="7560452872095947936">"找不到簽名。\n請新增簽名以開始使用。"</string>
 </resources>

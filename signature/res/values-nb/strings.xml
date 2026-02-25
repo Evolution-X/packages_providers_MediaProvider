@@ -19,8 +19,7 @@
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="signature_application_label" msgid="2165514625410136890">"Signatur"</string>
     <string name="title_activity_settings" msgid="2027968183034900900">"Signaturinnstillinger"</string>
-    <!-- no translation found for title_activity_create_signature (5731623895687807258) -->
-    <skip />
+    <string name="title_activity_create_signature" msgid="5731623895687807258">"Opprett signatur"</string>
     <string name="manage_signatures_title" msgid="2048802605316814543">"Administrer signaturer"</string>
     <string name="no_signatures_saved" msgid="6010088180603151224">"Ingen signaturer er lagret."</string>
     <string name="delete_signature_title" msgid="4344529382215682683">"Slett signaturen"</string>
@@ -30,10 +29,7 @@
     <string name="back_content_description" msgid="3424363456229458016">"Tilbake"</string>
     <string name="drawn_signature_content_description" msgid="441057598353735826">"Tegnet signatur"</string>
     <string name="delete_signature_content_description" msgid="3012748259309806715">"Slett signaturen"</string>
-    <!-- no translation found for picker_title (4461848688877096453) -->
-    <skip />
-    <!-- no translation found for picker_add_new (100188209321837181) -->
-    <skip />
-    <!-- no translation found for picker_no_signatures (7560452872095947936) -->
-    <skip />
+    <string name="picker_title" msgid="4461848688877096453">"Velg signatur"</string>
+    <string name="picker_add_new" msgid="100188209321837181">"Legg til ny"</string>
+    <string name="picker_no_signatures" msgid="7560452872095947936">"Fant ingen signaturer.\nLegg til en ny for å komme i gang."</string>
 </resources>
