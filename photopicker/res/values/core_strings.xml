@@ -129,6 +129,10 @@
   <string name="photopicker_banner_no_network_connection_message"
       translation_description="Banner message informing the user there is no internet connection.">Connect to Wi-Fi or mobile data to select photos and videos from <xliff:g id="app_name" example="Cloud media provider">%1$s</xliff:g> </string>
 
+  <!-- Description for offline banner in Photos grid notifying user to connect to network to select cloud photos and videos [CHAR LIMIT=120] -->
+  <string name="photopicker_banner_internet_connection_required_message"
+      translation_description="Banner message informing the user to connect to Wi-Fi or mobile network.">Connect to Wi-Fi or a mobile network so photos and videos from <xliff:g id="media_provider" example="Cloud media provider">%1$s</xliff:g> will also be available</string>
+
   <!-- Title for the offline banner notifying user network connecton required to select cloud photos and videos  [CHAR LIMIT=50] -->
   <string name="photopicker_banner_no_network_connection_title"
 	  translation_description="Banner message informing the user there is no internet connection.">Internet connection required</string>

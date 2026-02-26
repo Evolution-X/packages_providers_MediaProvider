@@ -43,4 +43,12 @@
 
   <string name="photopicker_profile_switch_banner_message" translation_description="">You\'re in your <xliff:g id="current_profile_name" example = "Work">%1$s</xliff:g> profile. Switch to your <xliff:g id="target_profile_name" example = "Personal">%2$s</xliff:g> profile? </string>
 
+  <!-- Description for the banner shown  when photopicker is in work profile informing user the photos and videos are from their work profile [CHAR LIMIT=NONE] -->
+  <string name="photopicker_work_profile_switch_banner_message" translation_description="Banner message informing user that they are viewing photos and videos from their work profile. ">You\'re viewing photos and videos from your <xliff:g id="current_profile_name" example = "Work">%1$s</xliff:g> profile</string>
+
+  <!-- Description for the banner shown when photopicker is in private space informing user the photos and videos are from their private space [CHAR LIMIT=NONE] -->
+  <string name="photopicker_private_profile_switch_banner_message" translation_description="Banner message informing user that they are viewing photos and videos from their private space.">You\'re viewing photos and videos in your <xliff:g id="current_profile_name" example = "Private">%1$s</xliff:g> space</string>
+
+  <!-- Title for the banner providing the user with option to switch to personal profile [CHAR LIMIT=NONE] -->
+  <string name="photopicker_profile_switch_banner_title" translation_description="Title for the banner asking the user if they want to switch to Personal profile.">Switch to your <xliff:g id="target_profile_name" example = "Personal">%1$s</xliff:g> profile?</string>
 </resources>
