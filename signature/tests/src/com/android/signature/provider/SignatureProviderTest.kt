@@ -143,6 +143,32 @@ class SignatureProviderTest {
     }
 
     @Test
+    @EnableFlags(Flags.FLAG_ENABLE_SIGNATURE)
+    fun openFile_invalidMode_throwsIllegalArgumentException() {
+        assertTrue(provider.onCreate())
+        val uri = Uri.parse("content://com.android.signature.provider/signatures/1")
+        try {
+            provider.openFile(uri, "w")
+            fail("Expected IllegalArgumentException")
+        } catch (e: IllegalArgumentException) {
+            assertEquals("Only read mode is supported", e.message)
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_SIGNATURE)
+    fun openFile_invalidUri_throwsFileNotFoundException() {
+        assertTrue(provider.onCreate())
+        val uri = Uri.parse("content://com.android.signature.provider/invalid/1")
+        try {
+            provider.openFile(uri, "r")
+            fail("Expected FileNotFoundException")
+        } catch (e: FileNotFoundException) {
+            assertEquals("Invalid URI", e.message)
+        }
+    }
+
+    @Test
     @DisableFlags(Flags.FLAG_ENABLE_SIGNATURE)
     fun openFile_flagDisabled_throwsFileNotFoundAndNoDaoInteraction() {
         assertFalse(provider.onCreate())
