@@ -105,6 +105,37 @@ class SignatureViewModelTest {
         }
 
     @Test
+    fun newlyAddedSignatureIndex_calculatesCorrectly() =
+        runTest {
+            val sig1 = Signature(id = "id_1", type = Signature.TYPE_TYPED, textData = "Sig 1")
+            val sig2 = Signature(id = "id_2", type = Signature.TYPE_TYPED, textData = "Sig 2")
+            val sig3 = Signature(id = "id_3", type = Signature.TYPE_TYPED, textData = "Sig 3")
+
+            // 1. Initially null
+            assertNull(viewModel.newlyAddedSignatureIndex.first())
+
+            // 2. Set signatures
+            signaturesFlow.emit(listOf(sig1, sig2, sig3))
+
+            // Still null because newSignatureId is null
+            assertNull(viewModel.newlyAddedSignatureIndex.first())
+
+            // 3. Set an ID that exists
+            viewModel.setNewSignatureId("id_2")
+
+            // The index of "id_2" is 1
+            assertEquals(1, viewModel.newlyAddedSignatureIndex.first())
+
+            // 4. Set an ID that does NOT exist
+            viewModel.setNewSignatureId("id_missing")
+            assertNull(viewModel.newlyAddedSignatureIndex.first())
+
+            // 5. Reset to null
+            viewModel.setNewSignatureId(null)
+            assertNull(viewModel.newlyAddedSignatureIndex.first())
+        }
+
+    @Test
     fun setNewSignatureId_updatesState() =
         runTest {
             assertNull(viewModel.newSignatureId.value)
