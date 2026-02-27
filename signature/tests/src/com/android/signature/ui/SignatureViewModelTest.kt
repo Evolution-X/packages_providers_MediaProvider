@@ -247,7 +247,7 @@ class SignatureViewModelTest {
                 whenever(signatureDao.insertSignature(any())).thenReturn(Unit)
             }
 
-            viewModel.saveDrawnSignature(bitmap, emptyList())
+            viewModel.saveDrawnSignature(bitmap)
 
             val captor = argumentCaptor<Signature>()
             verify(signatureDao).insertSignature(captor.capture())

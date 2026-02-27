@@ -202,17 +202,14 @@ class SignatureViewModel @Inject constructor(
      * Saves a drawn signature.
      *
      * @param bitmap The bitmap of the drawn signature.
-     * @param paths The list of paths drawn.
      * @return The saved [Signature].
      */
-    suspend fun saveDrawnSignature(
-        bitmap: Bitmap,
-        paths: List<PathState> = emptyList()
-    ): Signature {
+    suspend fun saveDrawnSignature(bitmap: Bitmap): Signature {
         checkSignatureLimit()
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, COMPRESSION_QUALITY, stream)
 
+        val paths = _drawingPaths.value
         val serializedPaths = if (paths.isNotEmpty()) {
             paths.joinToString("|") { pathState ->
                 pathState.points.joinToString(";") { "${it.x},${it.y}" }

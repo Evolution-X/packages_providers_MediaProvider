@@ -16,7 +16,6 @@
 
 package com.android.signature.ui.create
 
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,17 +31,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.android.signature.R
 import com.android.signature.data.Signature
 import com.android.signature.ui.SignatureViewModel
+import com.android.signature.ui.util.createBitmapFromText
 import kotlinx.coroutines.launch
 
 /**
@@ -64,150 +66,170 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateSignatureScreen(
+internal fun CreateSignatureScreen(
     viewModel: SignatureViewModel,
     onSignatureCreated: (Signature) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
     val selectedTabIndex by viewModel.selectedTabIndex.collectAsState()
-    val tabs = listOf(
-        stringResource(R.string.tab_draw),
-        stringResource(R.string.tab_type),
-        stringResource(R.string.tab_upload)
-    )
+    val tabs =
+        listOf(
+            stringResource(R.string.tab_draw),
+            stringResource(R.string.tab_type),
+            stringResource(R.string.tab_upload),
+        )
     val density = LocalDensity.current
-    val bitmapTextSize = with(density) {
-        dimensionResource(R.dimen.signature_bitmap_text_size).toPx()
-    }
+    val bitmapTextSize =
+        with(density) {
+            dimensionResource(R.dimen.signature_bitmap_text_size).toPx()
+        }
+    val errorSave = stringResource(R.string.error_save_signature)
 
     // The root is a Column, suitable for a bottom sheet.
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceContainerLow) // Use theme color
-            .navigationBarsPadding() // Add padding for system navigation bars
-            .imePadding() // Handle keyboard
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceContainerLow) // Use theme color
+                .navigationBarsPadding() // Add padding for system navigation bars
+                .imePadding(),
+        // Handle keyboard
     ) {
-        // A custom header to replace the TopAppBar
-        Text(
-            text = stringResource(R.string.create_signature_title),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(dimensionResource(R.dimen.padding_medium)),
-            textAlign = TextAlign.Start
-        )
+        Column {
+            // A custom header to replace the TopAppBar
+            Text(
+                text = stringResource(R.string.create_signature_title),
+                style = MaterialTheme.typography.titleLarge,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(dimensionResource(R.dimen.padding_medium)),
+                textAlign = TextAlign.Start,
+            )
 
-        // Chip bar style tabs
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = dimensionResource(R.dimen.padding_medium))
-                .height(dimensionResource(R.dimen.chip_bar_height))
-                .shadow(
-                    elevation = dimensionResource(R.dimen.card_elevation),
-                    shape = CircleShape
-                )
-                .background(
-                    color = MaterialTheme.colorScheme.surface,
-                    shape = CircleShape
-                )
-                .clip(CircleShape),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            tabs.forEachIndexed { index, title ->
-                val isSelected = selectedTabIndex == index
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(dimensionResource(R.dimen.chip_height))
-                        .padding(horizontal = dimensionResource(R.dimen.chip_spacing))
-                        .clip(CircleShape)
-                        .background(
-                            color = if (isSelected) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                Color.Transparent
-                            },
-                            shape = CircleShape
+            // Chip bar style tabs
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = dimensionResource(R.dimen.padding_medium))
+                        .height(dimensionResource(R.dimen.chip_bar_height))
+                        .shadow(
+                            elevation = dimensionResource(R.dimen.card_elevation),
+                            shape = CircleShape,
+                        ).background(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = CircleShape,
+                        ).clip(CircleShape),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    val isSelected = selectedTabIndex == index
+                    Box(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .height(dimensionResource(R.dimen.chip_height))
+                                .padding(horizontal = dimensionResource(R.dimen.chip_spacing))
+                                .clip(CircleShape)
+                                .background(
+                                    color =
+                                        if (isSelected) {
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        } else {
+                                            Color.Transparent
+                                        },
+                                    shape = CircleShape,
+                                ).clickable { viewModel.setSelectedTabIndex(index) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge,
+                            color =
+                                if (isSelected) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
                         )
-                        .clickable { viewModel.setSelectedTabIndex(index) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
+                    }
+                }
+            }
+
+            // The content of the tabs is placed in a Box with a maximum height
+            // to ensure it fits well within a bottom sheet and becomes scrollable if needed.
+            Box(
+                modifier =
+                    Modifier.heightIn(
+                        max = dimensionResource(R.dimen.bottom_sheet_max_height),
+                    ),
+            ) {
+                when (selectedTabIndex) {
+                    0 -> {
+                        DrawTab(
+                            viewModel = viewModel,
+                            onSave = { bitmap ->
+                                scope.launch {
+                                    try {
+                                        val newSignature = viewModel.saveDrawnSignature(bitmap)
+                                        onSignatureCreated(newSignature)
+                                    } catch (e: Exception) {
+                                        snackbarHostState.showSnackbar(errorSave)
+                                    }
+                                }
+                            },
+                            onCancel = onCancel,
+                        )
+                    }
+
+                    1 -> {
+                        TypeTab(viewModel = viewModel, onSave = { text, font ->
+                            scope.launch {
+                                try {
+                                    val bitmap =
+                                        createBitmapFromText(
+                                            text,
+                                            font.androidTypeface,
+                                            bitmapTextSize,
+                                        )
+                                    val newSignature =
+                                        viewModel.saveTypedSignature(text, font.name, bitmap)
+                                    onSignatureCreated(newSignature)
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar(errorSave)
+                                }
+                            }
+                        })
+                    }
+
+                    2 -> {
+                        UploadTab(onSave = { bitmap ->
+                            scope.launch {
+                                try {
+                                    val newSignature = viewModel.saveUploadedSignature(bitmap)
+                                    onSignatureCreated(newSignature)
+                                } catch (e: Exception) {
+                                    snackbarHostState.showSnackbar(errorSave)
+                                }
+                            }
+                        }, onCancel = onCancel, onShowError = { message ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message)
+                            }
+                        })
+                    }
                 }
             }
         }
 
-        // The content of the tabs is placed in a Box with a maximum height
-        // to ensure it fits well within a bottom sheet and becomes scrollable if needed.
-        Box(
-            modifier = Modifier.heightIn(
-                max = dimensionResource(R.dimen.bottom_sheet_max_height)
-            )
-        ) {
-            when (selectedTabIndex) {
-                0 -> DrawTab(
-                    viewModel = viewModel,
-                    onSave = { bitmap, paths ->
-                        scope.launch {
-                            try {
-                                val newSignature = viewModel.saveDrawnSignature(bitmap, paths)
-                                onSignatureCreated(newSignature)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
-                    onCancel = onCancel
-                )
-
-                1 -> TypeTab(
-                    viewModel = viewModel,
-                    onSave = { text, font ->
-                        scope.launch {
-                            try {
-                                val bitmap = createBitmapFromText(
-                                    text,
-                                    font.androidTypeface,
-                                    bitmapTextSize
-                                )
-                                val newSignature =
-                                    viewModel.saveTypedSignature(text, font.name, bitmap)
-                                onSignatureCreated(newSignature)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
-                    onCancel = onCancel
-                )
-
-                2 -> UploadTab(
-                    onSave = { bitmap ->
-                        scope.launch {
-                            try {
-                                val newSignature = viewModel.saveUploadedSignature(bitmap)
-                                onSignatureCreated(newSignature)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, e.message, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    },
-                    onCancel = onCancel
-                )
-            }
-        }
+        // SnackbarHost
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }
