@@ -49,6 +49,7 @@ import com.android.photopicker.core.Background
 import com.android.photopicker.core.ConcurrencyModule
 import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
+import com.android.photopicker.core.banners.BannerDefinition
 import com.android.photopicker.core.banners.BannerDefinitions
 import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
@@ -61,13 +62,18 @@ import com.android.photopicker.core.configuration.FEATURE_CLOUD_MEDIA_FEATURE_EN
 import com.android.photopicker.core.configuration.FEATURE_CLOUD_MEDIA_PROVIDER_ALLOWLIST
 import com.android.photopicker.core.configuration.NAMESPACE_MEDIAPROVIDER
 import com.android.photopicker.core.configuration.PhotopickerFlags
+import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.configuration.TestDeviceConfigProxyImpl
 import com.android.photopicker.core.configuration.TestPhotopickerConfiguration
+import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.core.database.DatabaseManager
 import com.android.photopicker.core.events.Events
+import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
+import com.android.photopicker.core.features.Priority
 import com.android.photopicker.core.glide.GlideTestRule
 import com.android.photopicker.core.selection.Selection
+import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.model.CollectionInfo
@@ -76,12 +82,14 @@ import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
 import com.android.photopicker.features.PhotopickerFeatureBaseTest
 import com.android.photopicker.features.overflowmenu.OverflowMenuFeature
+import com.android.photopicker.features.profileselector.SwitchProfileBannerTest.Companion.USER_HANDLE_PRIMARY
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
 import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.nonNullableEq
 import com.android.photopicker.util.test.whenever
 import com.android.providers.media.flags.Flags
+import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Lazy
 import dagger.Module
@@ -99,6 +107,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -396,6 +405,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testCloudMediaAvailableBanner() =
         testScope.runTest {
             val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
@@ -469,6 +479,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testCloudMediaAvailableBannerAsDismissed() =
         testScope.runTest {
             val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
@@ -546,6 +557,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testCloudChooseAccountBanner() =
         testScope.runTest {
             val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
@@ -689,6 +701,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testCloudChooseProviderBanner() =
         testScope.runTest {
             val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
@@ -742,6 +755,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testCloudChooseProviderBannerAsDismissed() =
         testScope.runTest {
             val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
@@ -807,6 +821,7 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
 
     @Test
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_OFFLINE_BANNERS)
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testNetworkUnavailable_whenFlagEnabled_bannerIsShown() =
         testScope.runTest {
             // No network available
@@ -924,5 +939,291 @@ class CloudMediaFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
 
             composeTestRule.onNode(hasText(expectedTitle)).assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testCloudFeatureOwnedBanners_withBannerRedesignEnabled() {
+        testScope.runTest {
+            val feature = CloudMediaFeature()
+            val bannerDefinitions = feature.ownedBannersDefinitions
+            assertThat(bannerDefinitions).hasSize(3)
+            assertThat(bannerDefinitions).contains(BannerDefinition.CLOUD_MEDIA_AVAILABLE)
+            assertThat(bannerDefinitions).contains(BannerDefinition.CLOUD_CHOOSE_ACCOUNT)
+            assertThat(bannerDefinitions).contains(BannerDefinition.CLOUD_CHOOSE_PROVIDER)
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testCloudFeatureBannerPriority_withBannerRedesignEnabled() {
+        testScope.runTest {
+            val configurationManager =
+                ConfigurationManager(
+                    runtimeEnv = PhotopickerRuntimeEnv.ACTIVITY,
+                    scope = this.backgroundScope,
+                    dispatcher = StandardTestDispatcher(this.testScheduler),
+                    TestDeviceConfigProxyImpl(),
+                    generatePickerSessionId(),
+                )
+            val userMonitor =
+                UserMonitor(
+                    mockContext,
+                    provideTestConfigurationFlow(
+                        scope = this.backgroundScope,
+                        defaultConfiguration =
+                            TestPhotopickerConfiguration.build {
+                                intent(Intent(MediaStore.ACTION_PICK_IMAGES))
+                            },
+                    ),
+                    this.backgroundScope,
+                    StandardTestDispatcher(this.testScheduler),
+                    USER_HANDLE_PRIMARY,
+                )
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.allowedProviders = listOf(cloudProvider)
+            testDataService.setAvailableProviders(listOf(localProvider))
+            val feature = CloudMediaFeature()
+            val chooseProviderPriority =
+                feature.getBannerPriority(
+                    BannerDefinition.CLOUD_CHOOSE_PROVIDER,
+                    bannerInteractionState = null,
+                    config = configurationManager.configuration.value,
+                    dataService = testDataService,
+                    userMonitor = userMonitor,
+                    bannerLocation = BannerLocation.PHOTO_GRID_BANNER,
+                )
+            assertThat(chooseProviderPriority).isEqualTo(Priority.MEDIUM.priority)
+
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+            testDataService.collectionInfo.put(
+                cloudProvider,
+                CollectionInfo(
+                    authority = cloudProvider.authority,
+                    collectionId = null,
+                    accountName = null,
+                    accountConfigurationIntent = Intent(),
+                ),
+            )
+
+            val chooseAccountPriority =
+                feature.getBannerPriority(
+                    BannerDefinition.CLOUD_CHOOSE_ACCOUNT,
+                    bannerInteractionState = null,
+                    config = configurationManager.configuration.value,
+                    dataService = testDataService,
+                    userMonitor = userMonitor,
+                    bannerLocation = BannerLocation.PHOTO_GRID_BANNER,
+                )
+            assertThat(chooseAccountPriority).isEqualTo(Priority.MEDIUM.priority)
+
+            testDataService.collectionInfo.put(
+                cloudProvider,
+                CollectionInfo(
+                    authority = cloudProvider.authority,
+                    collectionId = "collection-id",
+                    accountName = "abc@xyz.com",
+                    accountConfigurationIntent = Intent(),
+                ),
+            )
+
+            val cloudMediaAvailablePriority =
+                feature.getBannerPriority(
+                    BannerDefinition.CLOUD_MEDIA_AVAILABLE,
+                    bannerInteractionState = null,
+                    config = configurationManager.configuration.value,
+                    dataService = testDataService,
+                    userMonitor = userMonitor,
+                    bannerLocation = BannerLocation.PHOTO_GRID_BANNER,
+                )
+            assertThat(cloudMediaAvailablePriority).isEqualTo(Priority.MEDIUM.priority)
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testCloudMediaAvailableBanner_withBannerRedesign_Enabled() =
+        testScope.runTest {
+            val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
+
+            // Treat privacy explainer as already dismissed since it's a higher priority.
+            whenever(
+                bannerStateDao.getBannerState(
+                    nonNullableEq(BannerDefinitions.PRIVACY_EXPLAINER.id),
+                    anyInt(),
+                )
+            ) {
+                BannerState(
+                    bannerId = BannerDefinitions.PRIVACY_EXPLAINER.id,
+                    dismissed = true,
+                    uid = 12345,
+                )
+            }
+            whenever(
+                bannerStateDao.getBannerState(
+                    nonNullableEq(BannerDefinitions.CLOUD_MEDIA_AVAILABLE.id),
+                    anyInt(),
+                )
+            ) {
+                null
+            }
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+            testDataService.collectionInfo.put(
+                cloudProvider,
+                CollectionInfo(
+                    authority = cloudProvider.authority,
+                    collectionId = "collection-id",
+                    accountName = "abc@xyz.com",
+                    accountConfigurationIntent = Intent(),
+                ),
+            )
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(
+                    R.string.photopicker_banner_backed_up_cloud_media_available_title
+                )
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_banner_cloud_backed_up_media_available_message,
+                    "abc@xyz.com",
+                    cloudProvider.displayName,
+                )
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+
+            advanceUntilIdle()
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
+            composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testCloudChooseAccountBanner_withBannerRedesign_Enabled() =
+        testScope.runTest {
+            val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
+
+            // Treat privacy explainer as already dismissed since it's a higher priority.
+            whenever(
+                bannerStateDao.getBannerState(
+                    nonNullableEq(BannerDefinitions.PRIVACY_EXPLAINER.id),
+                    anyInt(),
+                )
+            ) {
+                BannerState(
+                    bannerId = BannerDefinitions.PRIVACY_EXPLAINER.id,
+                    dismissed = true,
+                    uid = 12345,
+                )
+            }
+
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.setAvailableProviders(listOf(localProvider, cloudProvider))
+            testDataService.collectionInfo.put(
+                cloudProvider,
+                CollectionInfo(
+                    authority = cloudProvider.authority,
+                    collectionId = null,
+                    accountName = null,
+                    accountConfigurationIntent = Intent(),
+                ),
+            )
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(R.string.photopicker_banner_cloud_select_account_title)
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_banner_cloud_select_account_message,
+                    cloudProvider.displayName,
+                )
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceUntilIdle()
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
+            composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testCloudChooseProviderBanner_withBannerRedesign_Enabled() =
+        testScope.runTest {
+            val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
+
+            // Treat privacy explainer as already dismissed since it's a higher priority.
+            whenever(
+                bannerStateDao.getBannerState(
+                    nonNullableEq(BannerDefinitions.PRIVACY_EXPLAINER.id),
+                    anyInt(),
+                )
+            ) {
+                BannerState(
+                    bannerId = BannerDefinitions.PRIVACY_EXPLAINER.id,
+                    dismissed = true,
+                    uid = 12345,
+                )
+            }
+
+            val networkCap: NetworkCapabilities =
+                NetworkCapabilities.Builder()
+                    .apply { addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) }
+                    .build()
+
+            whenever(mockConnectivityManager.getNetworkCapabilities(any())) { networkCap }
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.allowedProviders = listOf(cloudProvider)
+            testDataService.setAvailableProviders(listOf(localProvider))
+
+            val resources = getTestableContext().getResources()
+            val expectedTitle =
+                resources.getString(R.string.photopicker_banner_cloud_choose_media_app_title)
+            val expectedMessage =
+                resources.getString(R.string.photopicker_banner_cloud_choose_media_app_message)
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceUntilIdle()
+            composeTestRule.onNode(hasText(expectedTitle)).assertIsDisplayed()
+            composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
         }
 }

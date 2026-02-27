@@ -458,6 +458,7 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testShowsBannersInGrid() {
 
         testScope.runTest {

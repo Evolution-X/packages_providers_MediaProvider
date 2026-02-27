@@ -19,7 +19,6 @@ package com.android.photopicker.core.banners
 import android.os.UserHandle
 import android.util.Log
 import com.android.photopicker.core.configuration.ConfigurationManager
-import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.database.DatabaseManager
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.PhotopickerUiFeature
@@ -412,7 +411,7 @@ class BannerManagerImpl(
             },
             dataService,
             userMonitor,
-            configurationManager.configuration.value.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED,
+            configurationManager.configuration.value,
         )
     }
 }

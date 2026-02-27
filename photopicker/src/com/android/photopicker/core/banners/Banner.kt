@@ -63,6 +63,12 @@ interface Banner {
     val declaration: BannerDeclaration
 
     /**
+     * The [BannerDefinition] of the banner. This is used when flag PICKER_BANNER_REDESIGN_ENABLED
+     * is enabled.
+     */
+    val bannerDefinition: BannerDefinition
+
+    /**
      * [Composable] function that returns a localized title string for the banner.
      *
      * @see [stringResource] to fetch a localized resource from a composable.
@@ -203,7 +209,13 @@ fun Banner(banner: Banner, modifier: Modifier = Modifier, onDismiss: () -> Unit 
 
             // The action Row, which sometimes may be empty if the banner is not dismissable and
             // does not provide its own Action
-            if (banner.declaration.dismissable || banner.actionLabel() != null) {
+            if (
+                if (config.flags.PICKER_BANNER_REDESIGN_ENABLED) {
+                    banner.bannerDefinition.manualDismissible || banner.actionLabel() != null
+                } else {
+                    banner.declaration.dismissable || banner.actionLabel() != null
+                }
+            ) {
                 val scope = rememberCoroutineScope()
 
                 Row(
@@ -245,7 +257,13 @@ fun Banner(banner: Banner, modifier: Modifier = Modifier, onDismiss: () -> Unit 
                     // button needs to be shown to the user. What happens when the dismiss button is
                     // clicked is up to the caller. A core string is used here to ensure consistency
                     // between banners.
-                    if (banner.declaration.dismissable) {
+                    if (
+                        if (config.flags.PICKER_BANNER_REDESIGN_ENABLED) {
+                            banner.bannerDefinition.manualDismissible
+                        } else {
+                            banner.declaration.dismissable
+                        }
+                    ) {
                         TextButton(
                             onClick = {
                                 scope.launch {
