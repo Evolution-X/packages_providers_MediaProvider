@@ -33,20 +33,22 @@ private const val ERROR_EMPTY_TEXT = "Text cannot be empty"
  * @return A [Bitmap] containing the drawn text.
  * @throws IllegalArgumentException if the text is empty.
  */
-internal fun createBitmapFromText(text: String, typeface: Typeface, textSize: Float): Bitmap {
+internal fun createBitmapFromText(
+    text: String,
+    typeface: Typeface,
+    textSize: Float,
+): Bitmap {
     require(text.isNotEmpty()) { ERROR_EMPTY_TEXT }
-
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        this.textSize = textSize
-        color = Color.BLACK
-        this.typeface = typeface
-        textAlign = Paint.Align.LEFT
-    }
-
+    val paint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.textSize = textSize
+            color = Color.BLACK
+            this.typeface = typeface
+            textAlign = Paint.Align.LEFT
+        }
     val baseline = -paint.ascent() // ascent() is negative
     val width = (paint.measureText(text) + 0.5f).toInt().coerceAtLeast(1)
     val height = (baseline + paint.descent() + 0.5f).toInt().coerceAtLeast(1)
-
     val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(image)
     canvas.drawText(text, 0f, baseline, paint)
