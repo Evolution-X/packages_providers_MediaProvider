@@ -40,6 +40,13 @@ java_aconfig_library {
     defaults: ["framework-minus-apex-aconfig-java-defaults"],
 }
 
+// Rename the plugin to be unique to this project.
+java_plugin {
+    name: "signature-room-compiler-plugin",
+    processor_class: "androidx.room.RoomProcessor",
+    static_libs: ["androidx.room_room-compiler"],
+}
+
 android_library {
     name: "SignatureLib",
     defaults: ["framework-module-defaults"],
@@ -66,6 +73,10 @@ android_library {
         "kotlinx-coroutines-android",
         "kotlinx_coroutines",
         "signature_flags_java_lib",
+    ],
+    plugins: [
+        // Use the new, unique plugin names.
+        "signature-room-compiler-plugin",
     ],
     kotlincflags: [
         "-Werror",
