@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.android.signature.ui.create
 
 import androidx.compose.foundation.background
@@ -85,8 +84,7 @@ internal fun CreateSignatureScreen(
         with(density) {
             dimensionResource(R.dimen.signature_bitmap_text_size).toPx()
         }
-    val errorSave = stringResource(R.string.error_save_signature)
-
+    val errorSavingMessage = stringResource(R.string.error_save_signature)
     // The root is a Column, suitable for a bottom sheet.
     Box(
         modifier =
@@ -108,7 +106,6 @@ internal fun CreateSignatureScreen(
                         .padding(dimensionResource(R.dimen.padding_medium)),
                 textAlign = TextAlign.Start,
             )
-
             // Chip bar style tabs
             Row(
                 modifier =
@@ -159,7 +156,6 @@ internal fun CreateSignatureScreen(
                     }
                 }
             }
-
             // The content of the tabs is placed in a Box with a maximum height
             // to ensure it fits well within a bottom sheet and becomes scrollable if needed.
             Box(
@@ -178,7 +174,7 @@ internal fun CreateSignatureScreen(
                                         val newSignature = viewModel.saveDrawnSignature(bitmap)
                                         onSignatureCreated(newSignature)
                                     } catch (e: Exception) {
-                                        snackbarHostState.showSnackbar(errorSave)
+                                        snackbarHostState.showSnackbar(errorSavingMessage)
                                     }
                                 }
                             },
@@ -200,7 +196,7 @@ internal fun CreateSignatureScreen(
                                         viewModel.saveTypedSignature(text, font.name, bitmap)
                                     onSignatureCreated(newSignature)
                                 } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar(errorSave)
+                                    snackbarHostState.showSnackbar(errorSavingMessage)
                                 }
                             }
                         })
@@ -213,7 +209,7 @@ internal fun CreateSignatureScreen(
                                     val newSignature = viewModel.saveUploadedSignature(bitmap)
                                     onSignatureCreated(newSignature)
                                 } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar(errorSave)
+                                    snackbarHostState.showSnackbar(errorSavingMessage)
                                 }
                             }
                         }, onCancel = onCancel, onShowError = { message ->
@@ -225,7 +221,6 @@ internal fun CreateSignatureScreen(
                 }
             }
         }
-
         // SnackbarHost
         SnackbarHost(
             hostState = snackbarHostState,

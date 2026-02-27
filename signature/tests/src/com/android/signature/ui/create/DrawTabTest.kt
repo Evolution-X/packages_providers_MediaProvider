@@ -28,12 +28,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.android.signature.HiltTestActivity
 import com.android.signature.data.Signature
 import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
+import com.android.signature.test.TestUtils
 import com.android.signature.ui.SignatureViewModel
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -62,13 +61,7 @@ class DrawTabTest {
     @Before
     fun setup() {
         hiltRule.inject()
-        val uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        try {
-            uiDevice.wakeUp()
-            uiDevice.executeShellCommand("wm dismiss-keyguard")
-        } catch (e: Exception) {
-            // Ignore
-        }
+        TestUtils.wakeUpDevice()
         try {
             composeTestRule.activityRule.scenario.onActivity {
                 it.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
