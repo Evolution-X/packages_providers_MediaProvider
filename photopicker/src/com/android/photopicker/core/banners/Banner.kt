@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.android.photopicker.R
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
+import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.events.Telemetry.BannerType
@@ -237,10 +238,7 @@ fun Banner(banner: Banner, modifier: Modifier = Modifier, onDismiss: () -> Unit 
                                         Event.LogPhotopickerBannerInteraction(
                                             dispatcherToken = CORE.token,
                                             sessionId = config.sessionId,
-                                            bannerType =
-                                                BannerType.fromBannerDeclaration(
-                                                    banner.declaration
-                                                ),
+                                            bannerType = getBannerType(banner, config),
                                             userInteraction =
                                                 UserBannerInteraction.CLICK_BANNER_ACTION_BUTTON,
                                         )
@@ -271,10 +269,7 @@ fun Banner(banner: Banner, modifier: Modifier = Modifier, onDismiss: () -> Unit 
                                         Event.LogPhotopickerBannerInteraction(
                                             dispatcherToken = CORE.token,
                                             sessionId = config.sessionId,
-                                            bannerType =
-                                                BannerType.fromBannerDeclaration(
-                                                    banner.declaration
-                                                ),
+                                            bannerType = getBannerType(banner, config),
                                             userInteraction =
                                                 UserBannerInteraction.CLICK_BANNER_DISMISS_BUTTON,
                                         )
@@ -297,10 +292,28 @@ fun Banner(banner: Banner, modifier: Modifier = Modifier, onDismiss: () -> Unit 
             Event.LogPhotopickerBannerInteraction(
                 dispatcherToken = CORE.token,
                 sessionId = config.sessionId,
-                bannerType = BannerType.fromBannerDeclaration(banner.declaration),
+                bannerType = getBannerType(banner, config),
                 // TODO(b/357010907): Add banner shown interaction when the atom exists.
                 userInteraction = UserBannerInteraction.UNSET_BANNER_INTERACTION,
             )
         )
+    }
+}
+
+/**
+ * Resolves the [BannerType] for the given [Banner] based on the current configuration.
+ *
+ * This helper selects the appropriate banner type depending on whether the banner redesign flag is
+ * enabled.
+ *
+ * @param banner The [Banner] to resolve the type for.
+ * @param config The current [PhotopickerConfiguration] which contains the flag.
+ * @return The resolved [BannerType] used for telemetry and logging.
+ */
+private fun getBannerType(banner: Banner, config: PhotopickerConfiguration): BannerType {
+    if (config.flags.PICKER_BANNER_REDESIGN_ENABLED) {
+        return BannerType.fromBannerDefinition(banner.bannerDefinition)
+    } else {
+        return BannerType.fromBannerDeclaration(banner.declaration)
     }
 }

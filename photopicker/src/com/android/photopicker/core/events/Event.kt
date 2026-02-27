@@ -17,6 +17,7 @@
 package com.android.photopicker.core.events
 
 import com.android.photopicker.core.banners.BannerDeclaration
+import com.android.photopicker.core.banners.BannerDefinition
 import com.android.photopicker.core.banners.BannerDefinitions
 import com.android.photopicker.data.model.Group
 import com.android.providers.media.MediaProviderStatsLog
@@ -823,6 +824,20 @@ interface Telemetry {
                     BannerDefinitions.CLOUD_UPDATED_ACCOUNT.id -> BannerType.ACCOUNT_UPDATED
                     // TODO(b/357010907): add a BannerType enum for the PRIVACY_EXPLAINER
                     BannerDefinitions.PRIVACY_EXPLAINER.id -> BannerType.UNSET_BANNER_TYPE
+                    else -> BannerType.UNSET_BANNER_TYPE
+                }
+            }
+
+            fun fromBannerDefinition(definition: BannerDefinition): BannerType {
+                return when (definition) {
+                    BannerDefinition.CLOUD_CHOOSE_ACCOUNT -> BannerType.CHOOSE_ACCOUNT
+                    BannerDefinition.CLOUD_CHOOSE_PROVIDER -> BannerType.CHOOSE_APP
+                    BannerDefinition.CLOUD_MEDIA_AVAILABLE -> BannerType.CLOUD_MEDIA_AVAILABLE
+                    // TODO(b/357010907): add BannerType enum for the PRIVACY_EXPLAINER,
+                    // and PRIVACY_EXPLAINER_LIMITED_ACCESS
+                    BannerDefinition.PRIVACY_EXPLAINER -> BannerType.UNSET_BANNER_TYPE
+                    BannerDefinition.PRIVACY_EXPLAINER_LIMITED_ACCESS ->
+                        BannerType.UNSET_BANNER_TYPE
                     else -> BannerType.UNSET_BANNER_TYPE
                 }
             }

@@ -25,6 +25,7 @@ import androidx.paging.PagingData
 import androidx.paging.PagingSource.LoadResult
 import androidx.paging.cachedIn
 import com.android.photopicker.core.banners.Banner
+import com.android.photopicker.core.banners.BannerDefinition
 import com.android.photopicker.core.banners.BannerDefinitions
 import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
@@ -191,6 +192,10 @@ constructor(
      */
     fun markBannerAsDismissed(banner: BannerDefinitions) {
         scope.launch { bannerManager.markBannerAsDismissed(banner) }
+    }
+
+    fun markBannerDefinitionAsDismissed(bannerDefinition: BannerDefinition) {
+        scope.launch { bannerManager.markBannerAsManuallyDismissed(bannerDefinition) }
     }
 
     /**

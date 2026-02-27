@@ -388,9 +388,14 @@ fun PhotoGrid(
                                 onDismiss = { banner ->
                                     // Coerce the type back to [BannerDefinitions]
                                     // so that it can be dismissed.
-                                    val declaration = banner.declaration
-                                    if (declaration is BannerDefinitions) {
-                                        viewModel.markBannerAsDismissed(declaration)
+                                    if (configuration.flags.PICKER_BANNER_REDESIGN_ENABLED) {
+                                        val bannerDefinition = banner.bannerDefinition
+                                        viewModel.markBannerDefinitionAsDismissed(bannerDefinition)
+                                    } else {
+                                        val declaration = banner.declaration
+                                        if (declaration is BannerDefinitions) {
+                                            viewModel.markBannerAsDismissed(declaration)
+                                        }
                                     }
                                 },
                             )
