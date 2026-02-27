@@ -30,6 +30,7 @@ import android.platform.test.flag.junit.DeviceFlagsValueProvider
 import android.platform.test.flag.junit.SetFlagsRule
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
+import androidx.activity.compose.setContent
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -46,6 +47,8 @@ import com.android.photopicker.core.Main
 import com.android.photopicker.core.ViewModelModule
 import com.android.photopicker.core.banners.BannerDefinition
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerInteractionState
+import com.android.photopicker.core.banners.BannerInteractionStateDao
 import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.banners.BannerState
@@ -88,11 +91,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mock
@@ -158,12 +161,16 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
     @Inject lateinit var bannerManager: Lazy<BannerManager>
     @Inject lateinit var databaseManager: DatabaseManager
     @Inject override lateinit var configurationManager: Lazy<ConfigurationManager>
+    @Inject @Background lateinit var injectedBackgroundDispatcher: CoroutineDispatcher
+    private lateinit var testBackgroundDispatcher: TestDispatcher
 
     @Before
     fun setup() {
         MockitoAnnotations.openMocks(this)
 
         hiltRule.inject()
+
+        testBackgroundDispatcher = injectedBackgroundDispatcher as TestDispatcher
 
         // Stub for MockContentResolver constructor
         whenever(mockContext.getApplicationInfo()) { getTestableContext().getApplicationInfo() }
@@ -362,8 +369,11 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testPrivacyExplainerBannerIsShown_withBannerRedesignEnabled() =
         testScope.runTest {
-            val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
-            whenever(bannerStateDao.getBannerState(anyString(), anyInt())) { null }
+            val bannerInteractionState =
+                databaseManager.acquireDao(BannerInteractionStateDao::class.java)
+            whenever(bannerInteractionState.getBannerInteractionStates(anyInt(), anyString())) {
+                null
+            }
 
             configurationManager
                 .get()
@@ -394,14 +404,12 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule.onNode(hasText(expectedPrivacyMessage)).assertIsDisplayed()
         }
 
-    // TODO(b/492208460) : Enable test after fixing the failure
-    @Ignore
     @Test
     @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testPrivacyExplainerLimitedAccessBannerIsShown_withBannerRedesignEnabled() =
         testScope.runTest {
-            val bannerStateDao = databaseManager.acquireDao(BannerStateDao::class.java)
-            whenever(bannerStateDao.getBannerState(anyString(), anyInt())) { null }
+            val bannerStateDao = databaseManager.acquireDao(BannerInteractionStateDao::class.java)
+            whenever(bannerStateDao.getBannerInteractionStates(anyInt(), anyString())) { null }
 
             val intent = Intent(MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP)
             intent.setAction(MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP)
@@ -441,5 +449,96 @@ class PrivacyExplainerFeatureTest : PhotopickerFeatureBaseTest() {
             composeTestRule.waitForIdle()
 
             composeTestRule.onNode(hasText(expectedPrivacyMessage)).assertIsDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testPrivacyExplainerBannerIsHiddenWhenDismissed_withBannerRedesignEnabled() =
+        testScope.runTest {
+            val bannerStateDao = databaseManager.acquireDao(BannerInteractionStateDao::class.java)
+            whenever(bannerStateDao.getBannerInteractionStates(12345, "com.android.test.package")) {
+                listOf(
+                    BannerInteractionState(
+                        bannerId = BannerDefinition.PRIVACY_EXPLAINER,
+                        appUid = 0,
+                        packageName = "system",
+                        isDismissed = true,
+                        shownCount = 1,
+                    )
+                )
+            }
+            // Mock out database state with previously dismissed state.
+            configurationManager
+                .get()
+                .setCaller(
+                    callingPackage = "com.android.test.package",
+                    callingPackageUid = 12345,
+                    callingPackageLabel = "Test Package",
+                )
+
+            val resources = getTestableContext().getResources()
+            val expectedPrivacyMessage =
+                resources.getString(R.string.photopicker_privacy_explainer_message, "Test Package")
+
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            testBackgroundDispatcher.scheduler.advanceUntilIdle()
+
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            // Wait for the PhotoGrid to load.
+            testBackgroundDispatcher.scheduler.advanceUntilIdle()
+            composeTestRule.onNode(hasText(expectedPrivacyMessage)).assertIsNotDisplayed()
+        }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testPrivacyExplainerLimitedAccessBannerIsHiddenWhenDismissed_withBannerRedesignEnabled() =
+        testScope.runTest {
+            val bannerStateDao = databaseManager.acquireDao(BannerInteractionStateDao::class.java)
+
+            whenever(bannerStateDao.getBannerInteractionStates(anyInt(), anyString())) {
+                listOf(
+                    BannerInteractionState(
+                        bannerId = BannerDefinition.PRIVACY_EXPLAINER_LIMITED_ACCESS,
+                        appUid = 12345,
+                        packageName = "com.android.test.package",
+                        isDismissed = true,
+                        shownCount = 1,
+                    )
+                )
+            }
+            // Mock out database state with previously dismissed state.
+            configurationManager
+                .get()
+                .setCaller(
+                    callingPackage = "com.android.test.package",
+                    callingPackageUid = 12345,
+                    callingPackageLabel = "Test Package",
+                )
+            advanceTimeBy(1000)
+            val resources = getTestableContext().getResources()
+            val expectedPrivacyMessage =
+                resources.getString(
+                    R.string.photopicker_privacy_explainer_limited_access_permission_mode,
+                    "Test Package",
+                )
+
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            testBackgroundDispatcher.scheduler.advanceUntilIdle()
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            // Wait for the PhotoGrid to load.
+            testBackgroundDispatcher.scheduler.advanceUntilIdle()
+            composeTestRule.onNode(hasText(expectedPrivacyMessage)).assertIsNotDisplayed()
         }
 }

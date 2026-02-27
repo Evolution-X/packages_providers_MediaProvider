@@ -63,13 +63,14 @@ open class SimpleUiFeature : PhotopickerUiFeature {
         val UI_STRING = "I'm a simple string, from a SimpleUiFeature"
         val SIMPLE_ROUTE = "simple"
         val BUTTON_LABEL = "Simple"
+
+        val OWNED_BANNER_DEFINITION = BannerDefinition.PRIVACY_EXPLAINER
     }
 
     override val token = TAG
 
     /** Only one banner is claimed */
     override val ownedBanners = setOf(BannerDefinitions.PRIVACY_EXPLAINER)
-
     override val ownedBannersDefinitions = setOf(BannerDefinition.PRIVACY_EXPLAINER)
 
     override suspend fun getBannerPriority(

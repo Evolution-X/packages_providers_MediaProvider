@@ -78,6 +78,7 @@ class HighPriorityUiFeature : PhotopickerUiFeature {
         val START_STRING = "I'm the start location."
         val DIALOG_ROUTE = "highpriority/dialog"
         val DIALOG_STRING = "I'm the dialog location."
+        val OWNED_BANNER_DEFINITION = BannerDefinition.CLOUD_CHOOSE_ACCOUNT
     }
 
     override val token = TAG
@@ -166,7 +167,7 @@ class HighPriorityUiFeature : PhotopickerUiFeature {
     }
 
     override suspend fun buildBanner(
-        banner: BannerDefinition,
+        bannerDefinition: BannerDefinition,
         dataService: DataService,
         userMonitor: UserMonitor,
     ): Banner {
