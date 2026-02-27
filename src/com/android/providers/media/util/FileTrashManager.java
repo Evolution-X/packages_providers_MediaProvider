@@ -17,10 +17,12 @@
 package com.android.providers.media.util;
 
 import static com.android.providers.media.util.FileUtils.DEFAULT_FOLDER_NAMES;
+import static com.android.providers.media.util.FileUtils.MAX_FILENAME_BYTES;
 import static com.android.providers.media.util.FileUtils.PREFIX_TRASHED;
 import static com.android.providers.media.util.FileUtils.extractDisplayName;
 import static com.android.providers.media.util.FileUtils.extractRelativePath;
 import static com.android.providers.media.util.FileUtils.sanitizePath;
+import static com.android.providers.media.util.FileUtils.trimFilename;
 
 import android.system.ErrnoException;
 import android.system.Os;
@@ -77,7 +79,7 @@ public final class FileTrashManager {
      * Trashes a file or directory by moving it to a designated trash location
      * on external storage and updates MediaStore via the provided callback.
      *
-     * @param filePath             The absolute path of the file or directory to be trashed.
+     * @param filePath           The absolute path of the file or directory to be trashed.
      * @param fileRenameCallback A callback to rename the file.
      * @return The absolute path of the trashed item in the trash directory.
      * @throws IllegalArgumentException if the file path is null or empty.
@@ -118,8 +120,7 @@ public final class FileTrashManager {
         }
 
         for (File child : children) {
-            final String newChildName = String.format(
-                    Locale.US, ".%s-%d-%s", PREFIX_TRASHED, parentTrashedDateExpires,
+            final String newChildName = buildExpiresDisplayName(parentTrashedDateExpires,
                     child.getName());
 
             File renamedChildFile = new File(parentDir, newChildName);
@@ -158,8 +159,7 @@ public final class FileTrashManager {
                 .map(component -> {
                     // Strip the old .trashed-OLD_EXPIRY- prefix and add the new one
                     String originalName = FileRestoreManager.cleanTrashPrefix(component);
-                    return String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED, dateExpires,
-                            originalName);
+                    return buildExpiresDisplayName(dateExpires, originalName);
                 })
                 .collect(Collectors.joining("/"));
         return parentPath + "/" + newRelativePath;
@@ -180,8 +180,8 @@ public final class FileTrashManager {
 
         for (File child : children) {
             String originalName = FileRestoreManager.cleanTrashPrefix(child.getName());
-            String newChildName = String.format(Locale.US, ".%s-%d-%s", PREFIX_TRASHED,
-                    newDateExpires, originalName);
+            String newChildName = buildExpiresDisplayName(newDateExpires,
+                    originalName);
 
             File renamedChildFile = new File(parentDir, newChildName);
             try {
@@ -210,9 +210,7 @@ public final class FileTrashManager {
      */
     public static String getTrashedPath(String parentPath, String relativePath, long dateExpires) {
         String newRelativePath = Arrays.stream(relativePath.split("/"))
-                .map(component -> String.format(
-                        Locale.US, ".%s-%d-%s", FileUtils.PREFIX_TRASHED, dateExpires,
-                        component))
+                .map(component -> buildExpiresDisplayName(dateExpires, component))
                 .collect(Collectors.joining("/"));
         return parentPath + "/" + newRelativePath;
     }
@@ -255,7 +253,7 @@ public final class FileTrashManager {
      * @param currentPath   The original path of the file before being trashed.
      * @param resultantPath The path of the file after it was moved to the trash.
      * @return {@code true} if the file was moved to the expected trash directory,
-     *         {@code false} otherwise.
+     * {@code false} otherwise.
      */
     public static boolean isValidTrashOperation(String currentPath, String resultantPath) {
         try {
@@ -333,8 +331,8 @@ public final class FileTrashManager {
             throws IllegalStateException {
         final String displayName = originalFile.getName();
 
-        final String updatedDisplayName = String.format(
-                Locale.US, ".%s-%d-%s", PREFIX_TRASHED, dateExpires, displayName);
+        final String updatedDisplayName = buildExpiresDisplayName(
+                dateExpires, displayName);
 
         String volumeRoot = FileUtils.extractVolumePath(originalFile.getAbsolutePath());
         String relPath = originalFile.getAbsolutePath().substring(volumeRoot.length());
@@ -429,4 +427,15 @@ public final class FileTrashManager {
 
         return false;
     }
+
+    /**
+     * Builds a display name for a file that is pending or trashed, including the expiration
+     * timestamp and ensuring the filename does not exceed {@link FileUtils#MAX_FILENAME_BYTES}.
+     */
+    private static String buildExpiresDisplayName(long dateExpires, String displayName) {
+        final String combinedString = String.format(
+                Locale.US, ".%s-%d-%s", PREFIX_TRASHED, dateExpires, displayName);
+        return trimFilename(combinedString, MAX_FILENAME_BYTES);
+    }
+
 }
