@@ -1068,29 +1068,6 @@ public class ProcessingHelper implements AutoCloseable {
     }
 
     /**
-     * Cleans up the {@code media_processing_status} table by removing rows that have fully
-     * completed all required processing.
-     */
-    public void deleteStaleRows() {
-        if (mCancellationSignal.isCanceled()) {
-            return;
-        }
-
-        Trace.beginSection("MediaProcessing.deleteStaleRows");
-        try {
-            mExternalDatabase.runWithTransaction((db) -> {
-                int totalDeleted = MediaProcessingStatus.deleteStaleRows(db,
-                        mProcessingRequestedPerMediaType);
-                Log.v(TAG, "Deleted " + totalDeleted + " stale rows from media_processing_status "
-                        + "table");
-                return null;
-            });
-        } finally {
-            Trace.endSection();
-        }
-    }
-
-    /**
      * Executes the {@link #retryLocationLabels()} method within and measures its execution
      * time using system trace markers.
      */
