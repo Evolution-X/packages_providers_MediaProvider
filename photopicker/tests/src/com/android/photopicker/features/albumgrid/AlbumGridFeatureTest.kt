@@ -1087,4 +1087,116 @@ class AlbumGridFeatureTest : PhotopickerFeatureBaseTest() {
 
             assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSelectionIsNotAllowedWhenBatchSizeLimitExceeded() =
+        testScope.runTest {
+            val testDataService = dataService as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+
+            // Force the data service to return no data for all test sources during this test.
+            testDataService.albumMediaSetSize = 2
+            testDataService.albumsList =
+                listOf(
+                    Group.Album(
+                        id = ALBUM_ID_CAMERA,
+                        pickerId = 1234L,
+                        authority = "a",
+                        displayName = "Camera",
+                        coverUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority("a")
+                                    path("1234")
+                                }
+                                .build(),
+                        dateTakenMillisLong = 12345678L,
+                        coverMediaSource = MediaSource.LOCAL,
+                    )
+                )
+
+            val maxBatchSizeLimit = 2 * SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxSelectionBatchSizeInBytes(maxBatchSizeLimit)
+                    .build()
+
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 10)
+                }
+            configurationManager.get().setIntent(testIntent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            val item1 = createImage(mediaId = "1", pickerId = 1L, selectionParams = selectionParams)
+            val item2 =
+                createImage(
+                    mediaId = "2",
+                    pickerId = 2L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = SIZE_100KB + 1,
+                )
+
+            testDataService.albumMediaList = listOf(item1, item2)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.runOnUiThread({ navController.navigateToAlbumGrid() })
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            composeTestRule.onNode(hasText("Camera")).performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            val mediaItems =
+                composeTestRule.onAllNodes(
+                    hasContentDescription(
+                        MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+
+            mediaItems[0].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            assertWithMessage("Selection should contain 1 item")
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            mediaItems[1].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            assertWithMessage(
+                    "Selection should still contain 1 item as second item exceeds batch limit"
+                )
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxBatchSizeLimit / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
 }

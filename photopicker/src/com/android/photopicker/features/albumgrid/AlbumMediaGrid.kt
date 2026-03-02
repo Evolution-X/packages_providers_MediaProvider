@@ -63,6 +63,7 @@ import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Group
+import com.android.photopicker.data.model.SelectionDisabledReason
 import com.android.photopicker.features.preview.PreviewFeature
 import com.android.photopicker.util.LocalLocalizationHelper
 import kotlinx.coroutines.flow.Flow
@@ -114,15 +115,21 @@ private fun AlbumMediaGrid(
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
 
     val selectionLimit = configuration.selectionLimit
+    val resources = LocalContext.current.resources
     val localizationHelper = LocalLocalizationHelper.current
     val selectionLimitExceededMessage =
         stringResource(
             R.string.photopicker_selection_limit_exceeded_snackbar,
             localizationHelper.getLocalizedCount(selectionLimit),
         )
+    val selectionBatchSizeLimitExceededMessage =
+        SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+            LocalPhotopickerConfiguration.current,
+            localizationHelper,
+            resources,
+        )
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
-    val resources = LocalContext.current.resources
 
     // Use the expanded layout any time the Width is Medium or larger.
     val isExpandedScreen: Boolean =
@@ -187,6 +194,7 @@ private fun AlbumMediaGrid(
                                 selectionLimitExceededMessage,
                                 album,
                                 disabledReasonMessage,
+                                selectionBatchSizeLimitExceededMessage,
                             )
                         }
                     },

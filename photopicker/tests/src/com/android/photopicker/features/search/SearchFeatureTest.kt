@@ -1549,4 +1549,116 @@ class SearchFeatureTest : PhotopickerFeatureBaseTest() {
 
             assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testSearchGridItemCannotBeSelectedWhenBatchSizeLimitExceeded() =
+        testScope.runTest {
+            val testSearchDataService = searchDataService as? TestSearchDataServiceImpl
+            checkNotNull(testSearchDataService) { "Expected a TestSearchDataServiceImpl" }
+
+            val maxBatchSizeLimit = 2 * SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxSelectionBatchSizeInBytes(maxBatchSizeLimit)
+                    .build()
+            val item1 =
+                createImage(
+                    mediaId = "1",
+                    pickerId = 1L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = SIZE_100KB,
+                )
+            val item2 =
+                createImage(
+                    mediaId = "2",
+                    pickerId = 2L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = SIZE_100KB + 1,
+                )
+
+            testSearchDataService.mediaList = listOf(item1, item2)
+
+            val resources = getTestableContext().resources
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+            advanceUntilIdle()
+
+            // Click on the search bar to enter the search view
+            composeTestRule
+                .onNode(hasText(resources.getString(R.string.photopicker_search_placeholder_text)))
+                .performClick()
+            advanceUntilIdle()
+
+            // Enter a query and perform search
+            val searchQuery = "test"
+            composeTestRule
+                .onNode(
+                    hasText(
+                        resources.getString(R.string.photopicker_search_photos_placeholder_text)
+                    )
+                )
+                .performTextInput(searchQuery)
+            composeTestRule.onNodeWithText(searchQuery).performImeAction()
+
+            // Wait for results
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+            advanceUntilIdle()
+            composeTestRule.waitForIdle()
+
+            val mediaItems =
+                composeTestRule.onAllNodes(
+                    hasContentDescription(
+                        value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+
+            // Select first item
+            mediaItems[0].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            assertWithMessage("Selection should contain 1 item")
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            // Select second item (should fail)
+            mediaItems[1].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage(
+                    "Expected selection to still contain 1 item as second item exceeds batch limit."
+                )
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxBatchSizeLimit / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
 }

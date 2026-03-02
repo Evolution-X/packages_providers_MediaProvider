@@ -2103,6 +2103,261 @@ class HighlightMediaResultsFeatureTest : PhotopickerFeatureBaseTest() {
             assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
 
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testHighlightAlbumMediaGridItemCannotBeSelectedWhenBatchSizeLimitIsExceeded() =
+        testScope.runTest {
+            val testDataService = dataService as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.albumsList =
+                listOf(
+                    Group.Album(
+                        id = ALBUM_ID_FAVORITES,
+                        pickerId = 1234L,
+                        authority = "a",
+                        displayName = "Favorites",
+                        coverUri =
+                            Uri.EMPTY.buildUpon()
+                                .apply {
+                                    scheme("content")
+                                    authority("a")
+                                    path("1234")
+                                }
+                                .build(),
+                        dateTakenMillisLong = 12345678L,
+                        coverMediaSource = MediaSource.LOCAL,
+                    )
+                )
+
+            val maxBatchSizeLimit = 2 * SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxSelectionBatchSizeInBytes(maxBatchSizeLimit)
+                    .build()
+
+            val itemList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = SIZE_100KB,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = SIZE_100KB + 1,
+                    ),
+                )
+
+            testDataService.albumMediaList = itemList
+            testDataService._availableProviders.value =
+                listOf(
+                    Provider(
+                        authority = "local_authority",
+                        mediaSource = MediaSource.LOCAL,
+                        uid = 1,
+                        displayName = "Local Provider",
+                    )
+                )
+
+            val highlightBundle =
+                Bundle().apply {
+                    putInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                    )
+                    putString(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_ALBUM_ID,
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_ALBUM_FAVORITES,
+                    )
+                }
+
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_ALBUM, highlightBundle)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callHighlightGridWithSnackbar(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                    modifier = Modifier.testTag(HIGHLIGHT_GRID_TEST_TAG),
+                )
+            }
+
+            // Wait sufficiently for the album list to be available.
+            awaitHighlightItems(itemList.size)
+
+            val resources = getTestableContext().resources
+            // Click on the photo in the highlight grid
+            val mediaItems =
+                composeTestRule
+                    .onNodeWithContentDescription(
+                        resources.getString(R.string.photopicker_hsr_media_text)
+                    )
+                    .onChildren()
+                    .filter(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+
+            // Select first item
+            mediaItems[0].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            assertWithMessage("Selection should contain 1 item")
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            // Select second item (should fail)
+            mediaItems[1].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage(
+                    "Expected selection to still contain 1 item as second item exceeds batch limit."
+                )
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxBatchSizeLimit / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+        Flags.FLAG_ENABLE_PICKER_HIGHLIGHT_SEARCH_RESULTS_APIS,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testHighlightSearchMediaItemCannotBeSelectedWhenBatchSizeLimitIsExceeded() =
+        testScope.runTest {
+            val testSearchDataService = searchDataService as? TestSearchDataServiceImpl
+            checkNotNull(testSearchDataService) { "Expected a TestSearchDataServiceImpl" }
+
+            val maxBatchSizeLimit = 2 * SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxSelectionBatchSizeInBytes(maxBatchSizeLimit)
+                    .build()
+
+            val itemList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = SIZE_100KB,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = SIZE_100KB + 1,
+                    ),
+                )
+
+            testSearchDataService.mediaList = itemList
+            testSearchDataService.mediaSetSize = itemList.size
+
+            val testQuery = "Test"
+            val highlightBundle =
+                Bundle().apply {
+                    putInt(
+                        MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_TYPE,
+                        MediaStore.PICK_IMAGES_HIGHLIGHT_TYPE_COLLAPSED,
+                    )
+                    putString(MediaStore.KEY_PICK_IMAGES_HIGHLIGHT_SEARCH_TEXT_QUERY, testQuery)
+                }
+
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_HIGHLIGHT_SEARCH_RESULTS, highlightBundle)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callHighlightGridWithSnackbar(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                    modifier = Modifier.testTag(HIGHLIGHT_GRID_TEST_TAG),
+                )
+            }
+
+            // Wait sufficiently for the search result list to be available.
+            awaitHighlightItems(itemList.size)
+
+            val resources = getTestableContext().resources
+            val mediaItems =
+                composeTestRule
+                    .onNodeWithContentDescription(
+                        resources.getString(R.string.photopicker_hsr_media_text)
+                    )
+                    .onChildren()
+                    .filter(
+                        hasContentDescription(
+                            MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                            substring = true,
+                        )
+                    )
+
+            // Select first item
+            mediaItems[0].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            assertWithMessage("Selection should contain 1 item")
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            // Select second item (should fail)
+            mediaItems[1].performClick()
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            assertWithMessage(
+                    "Expected selection to still contain 1 item as second item exceeds batch limit."
+                )
+                .that(selection.snapshot().size)
+                .isEqualTo(1)
+
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxBatchSizeLimit / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+
     @Composable
     private fun HighlightGrid(modifier: Modifier = Modifier.testTag(HIGHLIGHT_GRID_TEST_TAG)) {
         HighlightMedia(modifier = modifier)
