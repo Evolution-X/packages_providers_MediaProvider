@@ -76,6 +76,7 @@ import com.android.providers.media.photopicker.sync.PickerSearchProviderClient;
 import com.android.providers.media.photopicker.sync.PickerSyncManager;
 import com.android.providers.media.photopicker.sync.SyncCompletionWaiter;
 import com.android.providers.media.photopicker.sync.SyncTrackerRegistry;
+import com.android.providers.media.photopicker.util.exceptions.InvalidProviderSyncParamsException;
 import com.android.providers.media.photopicker.util.exceptions.RequestObsoleteException;
 import com.android.providers.media.photopicker.util.exceptions.UnableToAcquireLockException;
 import com.android.providers.media.photopicker.v2.model.AlbumMediaQuery;
@@ -233,7 +234,8 @@ public class PickerDataLayerV2 {
         try {
             final PickerSyncController syncController = PickerSyncController.getInstanceOrThrow();
             syncController.maybeEnableCloudMediaQueries();
-        } catch (UnableToAcquireLockException | RequestObsoleteException exception) {
+        } catch (UnableToAcquireLockException | RequestObsoleteException
+                 | InvalidProviderSyncParamsException exception) {
             Log.e(TAG, "Could not ensure that the providers are set.");
         }
     }

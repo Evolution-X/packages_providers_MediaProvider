@@ -217,6 +217,9 @@ public abstract class CloudMediaProvider extends ContentProvider {
      * <p>
      * If the provider handled any filters in {@code extras}, it must add the key to the
      * {@link ContentResolver#EXTRA_HONORED_ARGS} as part of the returned {@link Bundle}.
+     * Consistent failures to return valid media collection info may result in changing the active
+     * cloud media provider serving the photopicker.
+     *
      *
      * @param extras containing keys to filter result:
      * <ul>
