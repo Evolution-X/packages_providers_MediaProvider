@@ -21,7 +21,8 @@
         android:name="com.android.signature.SignatureApp"
         android:allowBackup="false"
         android:label="@string/signature_application_label"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Signature">
 
         <activity
             android:name=".ui.picker.SignaturePickerActivity"
@@ -33,6 +34,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".ui.create.CreateSignatureActivity"
+            android:exported="false"
+            android:label="@string/title_activity_create_signature"
+            android:theme="@style/Theme.Signature.BottomSheet" />
 
         <!-- Declare the new SettingsActivity -->
         <activity
