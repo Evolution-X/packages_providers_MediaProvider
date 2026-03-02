@@ -33,6 +33,7 @@ import android.text.TextUtils;
 
 import com.android.providers.media.DatabaseHelper;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -237,6 +238,30 @@ public class MediaProcessingStatus {
             helper.runWithTransaction((db) -> {
                 db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection,
                         new String[]{String.valueOf(mediaId)});
+                return null;
+            });
+        }
+    }
+
+    /**
+     * Delete rows from media_processing_status table for the given list of mediaIds.
+     *
+     * @param helper   DatabaseHelper instance
+     * @param mediaIds List of file ids to be deleted
+     */
+    public static void deleteMediaIdsFromStatusTable(DatabaseHelper helper, List<Long> mediaIds) {
+        if (Flags.enableMediaProcessing() && !mediaIds.isEmpty()) {
+            helper.runWithTransaction((db) -> {
+                String placeholders = TextUtils.join(",",
+                        Collections.nCopies(mediaIds.size(), "?"));
+
+                String selection = FILE_ID_COLUMN + " IN (" + placeholders + ")";
+
+                String[] selectionArgs = mediaIds.stream()
+                        .map(String::valueOf)
+                        .toArray(String[]::new);
+
+                db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection, selectionArgs);
                 return null;
             });
         }

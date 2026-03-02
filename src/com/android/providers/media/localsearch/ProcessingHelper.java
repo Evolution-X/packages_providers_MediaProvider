@@ -64,6 +64,9 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
+import androidx.appsearch.app.SearchResult;
+import androidx.appsearch.app.SearchResults;
+import androidx.appsearch.app.SearchSpec;
 
 import com.android.providers.media.DatabaseHelper;
 import com.android.providers.media.MediaBackgroundThread;
@@ -128,6 +131,10 @@ public class ProcessingHelper implements AutoCloseable {
     public static final int DEFAULT_MEDIA_LABEL_PROCESSING_LIMIT = 10;
     private static final int DELETE_STALE_ROWS_FROM_APPSEARCH_LIMIT = 500;
     private static final int RETRY_LOCATION_BATCH_MULTIPLIER = 2;
+    /** The ranking expression to sort by date taken. */
+    public static final String EXPR_RANKING_DATE_TAKEN =
+            "maxOrDefault(getScorableProperty(\"" + MediaItem.SCHEMA_TYPE + "\", \""
+                    + MediaItem.PROPERTY_DATE_TAKEN + "\"), 0.0)";
 
 
     final Map<Integer, Integer> mProcessingRequestedPerMediaType;
@@ -343,6 +350,92 @@ public class ProcessingHelper implements AutoCloseable {
         } finally {
             Trace.endSection();
         }
+    }
+
+    /**
+     * Checks if the AppSearch index size exceeds the limit and deletes oldest documents if needed.
+     * <p>
+     * This ensures the index stays within the defined {@link
+     * AppSearchDbManager#MAX_DOCUMENT_COUNT}.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public void enforceAppSearchDocumentLimit(int limit) {
+        if (mCancellationSignal.isCanceled()) {
+            return;
+        }
+
+        try {
+            int totalDocuments = mAppSearchDbManager.getTotalDocumentsCount();
+            if (totalDocuments <= limit) {
+                return;
+            }
+            int numDocsToDelete = totalDocuments - limit;
+            Log.i(TAG, "Deleting " + numDocsToDelete + " oldest documents.");
+
+            List<Long> idsToDelete = getIdsOfOldDocumentsToDelete(numDocsToDelete);
+            List<Long> batch = new ArrayList<>();
+            int deletedCount = 0;
+            for (Long id : idsToDelete) {
+                batch.add(id);
+                if (batch.size() == AppSearchDbManager.MAX_BULK_OPERATIONS_SIZE) {
+                    if (mCancellationSignal.isCanceled()) {
+                        break;
+                    }
+                    deletedCount += deleteDocumentsByIds(batch);
+                }
+            }
+
+            if (!batch.isEmpty() && !mCancellationSignal.isCanceled()) {
+                deletedCount += deleteDocumentsByIds(batch);
+            }
+            Log.i(TAG, "Deleted " + deletedCount + " documents.");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to enforce AppSearch document limit", e);
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private int deleteDocumentsByIds(List<Long> batch) throws Exception {
+        mAppSearchDbManager.deleteDocumentsByFileIds(batch);
+        MediaProcessingStatus.deleteMediaIdsFromStatusTable(mExternalDatabase, batch);
+        int deletedCount = batch.size();
+        batch.clear();
+        return deletedCount;
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private List<Long> getIdsOfOldDocumentsToDelete(int numDocsToDelete) throws Exception {
+        List<Long> idsToDelete = new ArrayList<>();
+
+        SearchSpec searchSpec = new SearchSpec.Builder()
+                .addFilterNamespaces(AppSearchDbManager.NAMESPACE)
+                .addFilterSchemas(MediaItem.SCHEMA_TYPE)
+                .setRankingStrategy(EXPR_RANKING_DATE_TAKEN)
+                .setOrder(SearchSpec.ORDER_ASCENDING)
+                .addProjection(MediaItem.SCHEMA_TYPE, List.of(MediaItem.PROPERTY_FILE_ID))
+                .setResultCountPerPage(AppSearchDbManager.MAX_BULK_OPERATIONS_SIZE)
+                .setScorablePropertyRankingEnabled(true)
+                .build();
+
+        try (SearchResults searchResults = mAppSearchDbManager.searchDocuments(
+                /* query */ "", searchSpec)) {
+            while (idsToDelete.size() < numDocsToDelete) {
+                List<SearchResult> page = searchResults.getNextPageAsync().get();
+                if (page == null || page.isEmpty()) {
+                    break;
+                }
+
+                for (SearchResult result : page) {
+                    idsToDelete.add(result.getGenericDocument().getPropertyLong(
+                            MediaItem.PROPERTY_FILE_ID));
+                    if (idsToDelete.size() == numDocsToDelete) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return idsToDelete;
     }
 
     @VisibleForTesting
