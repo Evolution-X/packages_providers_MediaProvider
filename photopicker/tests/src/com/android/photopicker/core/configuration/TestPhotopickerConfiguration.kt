@@ -119,7 +119,7 @@ class TestPhotopickerConfiguration {
             this.startDestination = value
         }
 
-        fun selectionParams(value: PhotoPickerSelectionParams) = apply {
+        fun selectionParams(value: PhotoPickerSelectionParams?) = apply {
             this.selectionParams = value
         }
 

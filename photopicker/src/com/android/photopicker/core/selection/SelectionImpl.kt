@@ -17,8 +17,10 @@
 package com.android.photopicker.core.selection
 
 import android.util.Log
+import android.widget.photopicker.PhotoPickerSelectionParams
 import androidx.annotation.GuardedBy
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
+import com.android.photopicker.core.selection.SelectionModifiedResult.FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
 import com.android.photopicker.core.selection.SelectionModifiedResult.FAILURE_SELECTION_LIMIT_EXCEEDED
 import com.android.photopicker.core.selection.SelectionModifiedResult.SUCCESS
 import kotlinx.coroutines.CoroutineScope
@@ -55,25 +57,30 @@ import kotlinx.coroutines.sync.withLock
  * @property initialSelection A collection to include initial selection value.
  * @property configuration a collectable [StateFlow] of configuration changes.
  * @property preSelectedMedia: a collectable [StateFlow] of pre-selected media.
+ * @property getItemSizeInBytes: a lambda to extract the size of the item.
  */
 class SelectionImpl<T>(
     val scope: CoroutineScope,
     val initialSelection: Collection<T>? = null,
     private val configuration: StateFlow<PhotopickerConfiguration>,
     private val preSelectedMedia: StateFlow<List<T>?>,
+    private val getItemSizeInBytes: (T) -> Long = { 0L },
 ) : Selection<T> {
 
     private val TAG = "SelectionImpl"
     // An internal mutex is used to enforce thread-safe access of the selection set.
     private val mutex = Mutex()
     private val _selection: LinkedHashSet<T> = LinkedHashSet<T>()
+    private var _currentSelectionSizeInBytes: Long = 0L
     private val _flow: MutableStateFlow<Set<T>>
     override val flow: StateFlow<Set<T>>
 
     init {
         if (initialSelection != null) {
             _selection.addAll(initialSelection)
+            _currentSelectionSizeInBytes += initialSelection.sumOf { getItemSizeInBytes(it) }
         }
+
         scope.launch {
             // Observe the refresh of the stateFlow that holds the pre-selection media.
             // Note that this will always be null in case the intent action is anything other than
@@ -82,6 +89,8 @@ class SelectionImpl<T>(
                 if (it != null) {
                     Log.i(TAG, "Received notification for preGranted media count.")
                     _selection.addAll(it)
+                    _currentSelectionSizeInBytes +=
+                        it.sumOf { mediaItem -> getItemSizeInBytes(mediaItem) }
                     updateFlow()
                 }
             }
@@ -99,7 +108,9 @@ class SelectionImpl<T>(
      * selection into the exposed flow.
      *
      * @param item the item to add
-     * @return [SelectionModifiedResult] of the outcome of the addition.
+     * @return [SelectionModifiedResult] of the outcome of the addition. Expected results:
+     *   [SUCCESS], [FAILURE_SELECTION_LIMIT_EXCEEDED],
+     *   [FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED].
      */
     @GuardedBy("mutex")
     override suspend fun add(item: T): SelectionModifiedResult {
@@ -108,11 +119,18 @@ class SelectionImpl<T>(
             // This saves an unnecessary call to updateFlow for items that are already part of the
             // set.
             if (_selection.contains(item)) return SUCCESS
+
             val itemCanFit = ensureSelectionLimitLocked(/* size= */ 1)
             if (itemCanFit) {
-                _selection.add(item)
-                updateFlow()
-                return SUCCESS
+                val itemSizeInBytes = getItemSizeInBytes(item)
+                if (ensureSelectionBatchSizeBytesLimitLocked(itemSizeInBytes)) {
+                    _selection.add(item)
+                    _currentSelectionSizeInBytes += itemSizeInBytes
+                    updateFlow()
+                    return SUCCESS
+                } else {
+                    return FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
+                }
             } else {
                 return FAILURE_SELECTION_LIMIT_EXCEEDED
             }
@@ -127,16 +145,28 @@ class SelectionImpl<T>(
      * This method only succeeds if all of the items will fit in the current selection.
      *
      * @param items the item to add
-     * @return [SelectionModifiedResult] of the outcome of the addition.
+     * @return [SelectionModifiedResult] of the outcome of the addition. Expected results:
+     *   [SUCCESS], [FAILURE_SELECTION_LIMIT_EXCEEDED],
+     *   [FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED].
      */
     @GuardedBy("mutex")
     override suspend fun addAll(items: Collection<T>): SelectionModifiedResult {
         mutex.withLock {
-            val itemsCanFit = ensureSelectionLimitLocked(items.size)
+            // Filter out items already in the selection to calculate size and limits accurately
+            val newItems = items.filterNot { _selection.contains(it) }
+            if (newItems.isEmpty()) return SUCCESS
+
+            val itemsCanFit = ensureSelectionLimitLocked(newItems.size)
             if (itemsCanFit) {
-                _selection.addAll(items)
-                updateFlow()
-                return SUCCESS
+                val additionalSizeInBytes = newItems.sumOf { getItemSizeInBytes(it) }
+                if (ensureSelectionBatchSizeBytesLimitLocked(additionalSizeInBytes)) {
+                    _selection.addAll(newItems)
+                    _currentSelectionSizeInBytes += additionalSizeInBytes
+                    updateFlow()
+                    return SUCCESS
+                } else {
+                    return FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
+                }
             } else {
                 return FAILURE_SELECTION_LIMIT_EXCEEDED
             }
@@ -148,6 +178,7 @@ class SelectionImpl<T>(
     override suspend fun clear() {
         mutex.withLock {
             _selection.clear()
+            _currentSelectionSizeInBytes = 0L
             updateFlow()
         }
     }
@@ -184,8 +215,10 @@ class SelectionImpl<T>(
     @GuardedBy("mutex")
     override suspend fun remove(item: T): SelectionModifiedResult {
         mutex.withLock {
-            _selection.remove(item)
-            updateFlow()
+            if (_selection.remove(item)) {
+                _currentSelectionSizeInBytes -= getItemSizeInBytes(item)
+                updateFlow()
+            }
             return SUCCESS
         }
     }
@@ -201,8 +234,17 @@ class SelectionImpl<T>(
     @GuardedBy("mutex")
     override suspend fun removeAll(items: Collection<T>): SelectionModifiedResult {
         mutex.withLock {
-            _selection.removeAll(items)
-            updateFlow()
+            // Filter to only items that are actually currently selected
+            // This prevents us from subtracting the size of items that aren't in the set
+            val itemsToRemove = items.filter { _selection.contains(it) }
+
+            if (itemsToRemove.isNotEmpty()) {
+                val sizeToSubtract = itemsToRemove.sumOf { getItemSizeInBytes(it) }
+                _selection.removeAll(itemsToRemove.toSet())
+                _currentSelectionSizeInBytes -= sizeToSubtract
+                updateFlow()
+            }
+
             return SUCCESS
         }
     }
@@ -243,16 +285,32 @@ class SelectionImpl<T>(
     @GuardedBy("mutex")
     override suspend fun toggle(item: T): SelectionModifiedResult {
         mutex.withLock {
+            val itemSizeInBytes = getItemSizeInBytes(item)
             when {
-                _selection.contains(item) -> _selection.remove(item)
+                _selection.contains(item) -> {
+                    _selection.remove(item)
+                    _currentSelectionSizeInBytes -= itemSizeInBytes
+                }
                 configuration.value.selectionLimit == 1 -> {
-                    _selection.clear()
-                    _selection.add(item)
+                    if (ensureSelectionBatchSizeBytesLimitLocked(itemSizeInBytes)) {
+                        _selection.clear()
+                        _selection.add(item)
+                        // selection was cleared and then the item was added
+                        _currentSelectionSizeInBytes = itemSizeInBytes
+                    } else {
+                        return FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
+                    }
                 }
                 else -> {
                     val itemCanFit = ensureSelectionLimitLocked(/* size= */ 1)
                     if (itemCanFit) {
-                        _selection.add(item)
+                        if (ensureSelectionBatchSizeBytesLimitLocked(itemSizeInBytes)) {
+                            _selection.add(item)
+                            // item was added to existing selection set
+                            _currentSelectionSizeInBytes += itemSizeInBytes
+                        } else {
+                            return FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
+                        }
                     } else {
                         return FAILURE_SELECTION_LIMIT_EXCEEDED
                     }
@@ -280,12 +338,19 @@ class SelectionImpl<T>(
     override suspend fun toggleAll(items: Collection<T>): SelectionModifiedResult {
         mutex.withLock {
             for (item in items) {
+                val itemSizeInBytes = getItemSizeInBytes(item)
                 if (_selection.contains(item)) {
                     _selection.remove(item)
+                    _currentSelectionSizeInBytes -= itemSizeInBytes
                 } else {
                     val itemCanFit = ensureSelectionLimitLocked(/* size= */ 1)
                     if (itemCanFit) {
-                        _selection.add(item)
+                        if (ensureSelectionBatchSizeBytesLimitLocked(itemSizeInBytes)) {
+                            _selection.add(item)
+                            _currentSelectionSizeInBytes += itemSizeInBytes
+                        } else {
+                            return FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
+                        }
                     } else {
                         return FAILURE_SELECTION_LIMIT_EXCEEDED
                     }
@@ -319,5 +384,21 @@ class SelectionImpl<T>(
      */
     private suspend fun ensureSelectionLimitLocked(size: Int): Boolean {
         return _selection.size + size <= configuration.value.selectionLimit
+    }
+
+    /**
+     * Method for checking if the given [additionalSizeInBytes] will fit in the current selection,
+     * considering the [PhotoPickerSelectionParams.maxSelectionBatchSizeInBytes].
+     *
+     * IMPORTANT: This method should always be checked after acquiring the [Mutex] selection lock
+     * but prior adding any items to the selection.
+     *
+     * @return true if the item can fit in the selection. false otherwise.
+     */
+    private fun ensureSelectionBatchSizeBytesLimitLocked(additionalSizeInBytes: Long): Boolean {
+        val maxBatchSize = configuration.value.selectionParams?.maxSelectionBatchSizeInBytes ?: -1L
+        if (maxBatchSize == -1L) return true
+
+        return _currentSelectionSizeInBytes + additionalSizeInBytes <= maxBatchSize
     }
 }

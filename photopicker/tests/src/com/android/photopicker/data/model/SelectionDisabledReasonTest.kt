@@ -246,6 +246,104 @@ class SelectionDisabledReasonTest {
         }
     }
 
+    @Test
+    fun testSelectionBatchSizeLimitExceededKb() {
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder().setMaxSelectionBatchSizeInBytes(SIZE_512KB).build()
+        val config = createConfig(selectionParams, appName)
+
+        val expectedMessage =
+            resources.getString(
+                R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                appName,
+                localizationHelper.getLocalizedCount(512.0),
+            )
+
+        val message =
+            SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+                config,
+                localizationHelper,
+                resources,
+            )
+
+        assertThat(message).isEqualTo(expectedMessage)
+    }
+
+    @Test
+    fun testSelectionBatchSizeLimitExceededMb() {
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder().setMaxSelectionBatchSizeInBytes(SIZE_5MB).build()
+        val config = createConfig(selectionParams, appName)
+
+        val expectedMessage =
+            resources.getString(
+                R.string.photopicker_selection_max_selection_batch_size_error_mb,
+                appName,
+                localizationHelper.getLocalizedCount(5.0),
+            )
+
+        val message =
+            SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+                config,
+                localizationHelper,
+                resources,
+            )
+
+        assertThat(message).isEqualTo(expectedMessage)
+    }
+
+    @Test
+    fun testSelectionBatchSizeLimitExceededGb() {
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder().setMaxSelectionBatchSizeInBytes(SIZE_2GB).build()
+        val config = createConfig(selectionParams, appName)
+
+        val expectedMessage =
+            resources.getString(
+                R.string.photopicker_selection_max_selection_batch_size_error_gb,
+                appName,
+                localizationHelper.getLocalizedCount(2.0),
+            )
+
+        val message =
+            SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+                config,
+                localizationHelper,
+                resources,
+            )
+
+        assertThat(message).isEqualTo(expectedMessage)
+    }
+
+    @Test
+    fun testNoSelectionBatchSizeLimitReturnsNull() {
+        val selectionParams = PhotoPickerSelectionParams.Builder().build()
+        val config = createConfig(selectionParams, appName)
+
+        val message =
+            SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+                config,
+                localizationHelper,
+                resources,
+            )
+
+        assertThat(message).isNull()
+    }
+
+    @Test
+    fun testSelectionBatchSizeMessageReturnsNullForNullSelectionParams() {
+        val config = createConfig(null, appName)
+
+        val message =
+            SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+                config,
+                localizationHelper,
+                resources,
+            )
+
+        assertThat(message).isNull()
+    }
+
     private fun createConfig(
         selectionParams: PhotoPickerSelectionParams?,
         label: String?,

@@ -279,6 +279,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
                     scope = scope,
                     configuration = configurationManager.configuration,
                     preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
+                    getItemSizeInBytes = { it.sizeInBytes },
                 )
         }
     }
