@@ -34,6 +34,8 @@ import android.window.OnBackInvokedCallback
 import android.window.OnBackInvokedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.ComposeFoundationFlags
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
@@ -371,7 +373,11 @@ open class Session(
      * @param context The service context
      * @return A [ComposeView] that has the Photopicker compose UI running inside.
      */
+    @OptIn(ExperimentalFoundationApi::class)
     private fun createPhotopickerComposeView(context: Context): ComposeView {
+
+        // TODO(b/489370878): Remove disabling Compose Prefetch once it is stable
+        ComposeFoundationFlags.isPausableCompositionInPrefetchEnabled = false
 
         // Creates embedded photopicker view and wraps it in [ComposeView].
         // This view is then wrapped in SurfacePackage by the [Session] and sent to client.
