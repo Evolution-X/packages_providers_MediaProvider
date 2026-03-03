@@ -16,6 +16,7 @@
 
 package com.android.providers.media.localsearch;
 
+import static com.android.providers.media.localsearch.MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.STATUS_COMPLETED;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_LOCATION_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_METADATA_LABEL;
@@ -51,6 +52,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -61,6 +63,7 @@ public class ProcessingHelperTest {
     // Mountain View, CA coordinates
     private static final double TEST_LAT = 37.422;
     private static final double TEST_LONG = -122.084;
+    private static final int METADATA_INSERTION_BATCH_SIZE = 50;
 
     private IsolatedContext mIsolatedContext;
     private DatabaseHelper mDatabaseHelper;
@@ -102,7 +105,7 @@ public class ProcessingHelperTest {
 
         try {
             mDatabaseHelper.runWithTransaction((db) -> {
-                db.delete(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, null);
+                db.delete(MEDIA_PROCESSING_STATUS_TABLE, null, null);
                 db.delete(MediaStore.Files.TABLE, null, null);
                 return null;
             });
@@ -154,7 +157,7 @@ public class ProcessingHelperTest {
             statusRow.put(MediaProcessingStatus.GEN_MODIFIED, genModified);
             statusRow.put(MediaProcessingStatus.METADATA_LABEL_STATUS, 1); // 1 = Completed
             statusRow.put(MediaProcessingStatus.LOCATION_LABEL_STATUS, 0); // 0 = Pending
-            return db.insert(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
+            return db.insert(MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
         });
 
         assumeNotNull(mProcessingHelper.mLocationResolver);
@@ -209,7 +212,7 @@ public class ProcessingHelperTest {
             statusRow.put(MediaProcessingStatus.METADATA_LABEL_STATUS, STATUS_COMPLETED);
             // Status is 1 (Failed once), NOT 0 (Pending) and NOT 999 (Completed)
             statusRow.put(MediaProcessingStatus.LOCATION_LABEL_STATUS, 1);
-            return db.insert(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
+            return db.insert(MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
         });
 
         // 3. Set the last processed generation to be HIGHER than the file.
@@ -225,7 +228,7 @@ public class ProcessingHelperTest {
 
         // 5. Verify the SQLite Status Table was updated.
         mDatabaseHelper.runWithoutTransaction((db) -> {
-            try (Cursor c = db.query(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE,
+            try (Cursor c = db.query(MEDIA_PROCESSING_STATUS_TABLE,
                     new String[]{MediaProcessingStatus.LOCATION_LABEL_STATUS},
                     MediaProcessingStatus.FILE_ID_COLUMN + "=?",
                     new String[]{String.valueOf(fileId)}, /*groupBy*/ null,
@@ -258,7 +261,7 @@ public class ProcessingHelperTest {
             statusRow.put(MediaProcessingStatus.GEN_MODIFIED, fileGen);
             statusRow.put(MediaProcessingStatus.METADATA_LABEL_STATUS, STATUS_COMPLETED);
             statusRow.put(MediaProcessingStatus.LOCATION_LABEL_STATUS, 0); // Unprocessed
-            return db.insert(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
+            return db.insert(MEDIA_PROCESSING_STATUS_TABLE, null, statusRow);
         });
 
         // Set lastProcessedGenModified lower than file gen
@@ -270,7 +273,7 @@ public class ProcessingHelperTest {
 
         // 3. Status should STILL be 0 (Untouched)
         mDatabaseHelper.runWithoutTransaction((db) -> {
-            try (Cursor c = db.query(MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE,
+            try (Cursor c = db.query(MEDIA_PROCESSING_STATUS_TABLE,
                     new String[]{MediaProcessingStatus.LOCATION_LABEL_STATUS},
                     MediaProcessingStatus.FILE_ID_COLUMN + "=?",
                     new String[]{String.valueOf(fileId)}, null, null, null)) {
@@ -316,6 +319,59 @@ public class ProcessingHelperTest {
         assertThat(finalDocs).hasSize(1);
         assertThat(finalDocs.get(0).getId()).isEqualTo(String.valueOf(fileIdToKeep));
     }
+
+    @Test
+    public void testEnforceDocumentLimit_deletesOldestDocuments() throws Exception {
+        int totalDocs = 1500;
+        int limit = 500;
+        int expectedDocsToDelete = totalDocs - limit;
+
+        List<Long> expectedIds = new ArrayList<>();
+        for (int i = 1; i <= totalDocs; i++) {
+            long genModified = i;
+            long fileId = insertFile(FileColumns.MEDIA_TYPE_IMAGE, "img" + i + ".jpg",
+                    "/storage/emulated/0/DCIM/img" + i + ".jpg", genModified,
+                    /* lat */ null, /* lon */ null);
+            if (i > expectedDocsToDelete) {
+                expectedIds.add(fileId);
+            }
+
+            if (i % METADATA_INSERTION_BATCH_SIZE == 0) {
+                mProcessingHelper.processMetadataLabels();
+            }
+        }
+
+        // Verify initial state
+        List<Long> allIdsBefore = new ArrayList<>(mAppSearchDbManager.getAllFileIds());
+        assertThat(allIdsBefore).hasSize(totalDocs);
+
+        mProcessingHelper.enforceAppSearchDocumentLimit(limit);
+
+        List<Long> allRemainingIdsInAppsearchDb = new ArrayList<>(
+                mAppSearchDbManager.getAllFileIds());
+
+        int remainingCount = allRemainingIdsInAppsearchDb.size();
+
+        assertEquals(limit, remainingCount);
+        assertThat(allRemainingIdsInAppsearchDb).containsExactlyElementsIn(expectedIds);
+
+        List<Long> allRemainingIdsInProcessingTable = new ArrayList<>();
+        mDatabaseHelper.runWithoutTransaction((db) -> {
+            try (Cursor c = db.query(MEDIA_PROCESSING_STATUS_TABLE,
+                    new String[]{MediaProcessingStatus.FILE_ID_COLUMN},
+                    /* selection */ null, /* selectionArg */ null,
+                    /* groupBy */ null, /* having */ null, /* orderBy */ null)) {
+                while (c.moveToNext()) {
+                    allRemainingIdsInProcessingTable.add(c.getLong(0));
+                }
+            }
+            return null;
+        });
+
+        assertEquals(limit, remainingCount);
+        assertThat(allRemainingIdsInProcessingTable).containsExactlyElementsIn(expectedIds);
+    }
+
 
     /**
      * Helper to insert a file into the real (isolated) SQLute DV

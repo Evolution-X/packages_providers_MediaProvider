@@ -21,9 +21,6 @@ import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_DOCUMENT;
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE;
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_NONE;
 import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
-import static android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType.DEFAULT_LOCATION_PROCESSING;
-import static android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType.DEFAULT_MEDIA_LABELS_PROCESSING;
-import static android.provider.mediaprocessingservice.MediaProcessingService.ProcessingType.DEFAULT_METADATA_PROCESSING;
 
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -33,8 +30,8 @@ import android.text.TextUtils;
 
 import com.android.providers.media.DatabaseHelper;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Manages the processing status of media files in the {@code MEDIA_PROCESSING_STATUS} table.
@@ -187,43 +184,6 @@ public class MediaProcessingStatus {
                 null);
     }
 
-    private static String getSelectionWhereMediaProcessed(int requestedProcessing) {
-        String selection = MEDIA_TYPE + " = ?";
-        if ((requestedProcessing & DEFAULT_MEDIA_LABELS_PROCESSING) != 0) {
-            selection += " AND (" + MEDIA_LABEL_STATUS + " = " + STATUS_COMPLETED
-                    + " OR " + MEDIA_LABEL_STATUS + " >= " + RETRY_LIMIT + ")";
-        }
-        if ((requestedProcessing & DEFAULT_LOCATION_PROCESSING) != 0) {
-            selection += " AND (" + LOCATION_LABEL_STATUS + " = " + STATUS_COMPLETED
-                    + " OR " + LOCATION_LABEL_STATUS + " >= " + RETRY_LIMIT + ")";
-        }
-        if ((requestedProcessing & DEFAULT_METADATA_PROCESSING) != 0) {
-            // Metadata labels are never reprocessed.
-            selection += " AND " + METADATA_LABEL_STATUS + " = " + STATUS_COMPLETED;
-        }
-        return selection;
-    }
-
-    /**
-     * Deletes rows from the status table where all requested processing types have been completed.
-     * <p>
-     * A row is considered "stale" or "complete" if the status columns for all processing types
-     * required for that specific {@code mediaType} are marked as {@link #STATUS_COMPLETED} (10).
-     *
-     * @return The total number of rows deleted.
-     */
-    public static int deleteStaleRows(SQLiteDatabase db,
-            Map<Integer, Integer> processingRequestedPerMediaType) {
-        int totalDeleted = 0;
-        for (int mediaType : MEDIA_TYPES) {
-            int requestedProcessing = processingRequestedPerMediaType.getOrDefault(mediaType, 0);
-            String selection = getSelectionWhereMediaProcessed(requestedProcessing);
-            String[] selectionArgs = new String[]{String.valueOf(mediaType)};
-            totalDeleted += db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection, selectionArgs);
-        }
-        return totalDeleted;
-    }
-
     /**
      * Delete row from media_processing_status table for mediaId if file updated/deleted in the SQL
      * files table
@@ -237,6 +197,30 @@ public class MediaProcessingStatus {
             helper.runWithTransaction((db) -> {
                 db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection,
                         new String[]{String.valueOf(mediaId)});
+                return null;
+            });
+        }
+    }
+
+    /**
+     * Delete rows from media_processing_status table for the given list of mediaIds.
+     *
+     * @param helper   DatabaseHelper instance
+     * @param mediaIds List of file ids to be deleted
+     */
+    public static void deleteMediaIdsFromStatusTable(DatabaseHelper helper, List<Long> mediaIds) {
+        if (Flags.enableMediaProcessing() && !mediaIds.isEmpty()) {
+            helper.runWithTransaction((db) -> {
+                String placeholders = TextUtils.join(",",
+                        Collections.nCopies(mediaIds.size(), "?"));
+
+                String selection = FILE_ID_COLUMN + " IN (" + placeholders + ")";
+
+                String[] selectionArgs = mediaIds.stream()
+                        .map(String::valueOf)
+                        .toArray(String[]::new);
+
+                db.delete(MEDIA_PROCESSING_STATUS_TABLE, selection, selectionArgs);
                 return null;
             });
         }

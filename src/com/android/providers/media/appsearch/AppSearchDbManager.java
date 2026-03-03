@@ -75,7 +75,10 @@ public final class AppSearchDbManager {
     static final int LATEST_SCHEMA_VERSION = 1;
     static final String SHARED_PREFERENCE_NAME = "media_appsearch_schema_version";
     static final String CURRENT_SCHEMA_VERSION = "media_appsearch_current_schema_version";
-    static final int MAX_BULK_OPERATIONS_SIZE = 1000;
+    public static final int MAX_BULK_OPERATIONS_SIZE = 1000;
+
+    /** The maximum number of documents allowed in the AppSearch index. */
+    public static final int MAX_DOCUMENT_COUNT = 50000;
 
     private AppSearchSession mAppSearchSession;
     private final Context mContext;
@@ -482,6 +485,21 @@ public final class AppSearchDbManager {
                     - startTimeMillis) + " ms");
         }
     }
+
+    /**
+     * Returns the number of alive documents in the AppSearch index.
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    public int getTotalDocumentsCount() throws Exception {
+        ensureAppSearchDbConnected();
+        sReadWriteLock.readLock().lock();
+        try {
+            return mAppSearchSession.getStorageInfoAsync().get().getAliveDocumentsCount();
+        } finally {
+            sReadWriteLock.readLock().unlock();
+        }
+    }
+
 
     /**
      * Retrieves all file IDs currently indexed in the AppSearch database.
