@@ -33,6 +33,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
+import androidx.compose.foundation.ComposeFoundationFlags
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
@@ -170,6 +172,7 @@ class MainActivity : Hilt_MainActivity() {
         }
     }
 
+    @OptIn(ExperimentalFoundationApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -212,6 +215,9 @@ class MainActivity : Hilt_MainActivity() {
         // Picker event logger starts listening for events dispatched throughout the app
         photopickerEventLogger = PhotopickerEventLogger(dataService)
         photopickerEventLogger.start(lifecycleScope, background, events.get())
+
+        // TODO(b/489370878): Remove disabling Compose Prefetch once it is stable
+        ComposeFoundationFlags.isPausableCompositionInPrefetchEnabled = false
 
         setContent {
             val photopickerConfiguration by
