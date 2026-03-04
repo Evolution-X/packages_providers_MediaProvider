@@ -283,6 +283,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
                     configuration = configurationManager.configuration,
                     preSelectedMedia = TestDataServiceImpl().preSelectionMediaData,
                     getItemSizeInBytes = { it.sizeInBytes },
+                    isItemDisabled = { it.disabledReason != null },
                 )
         }
     }

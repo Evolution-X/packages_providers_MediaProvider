@@ -401,6 +401,7 @@ class ActivityModule {
                             configuration = configurationManager.configuration,
                             preSelectedMedia = dataService.preSelectionMediaData,
                             getItemSizeInBytes = { it.sizeInBytes },
+                            isItemDisabled = { it.disabledReason != null },
                         )
                 }
             return selection

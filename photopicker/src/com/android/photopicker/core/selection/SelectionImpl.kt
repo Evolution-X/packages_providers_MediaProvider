@@ -58,6 +58,7 @@ import kotlinx.coroutines.sync.withLock
  * @property configuration a collectable [StateFlow] of configuration changes.
  * @property preSelectedMedia: a collectable [StateFlow] of pre-selected media.
  * @property getItemSizeInBytes: a lambda to extract the size of the item.
+ * @property isItemDisabled: a lambda to evaluate if an item can be added to the selection.
  */
 class SelectionImpl<T>(
     val scope: CoroutineScope,
@@ -65,6 +66,7 @@ class SelectionImpl<T>(
     private val configuration: StateFlow<PhotopickerConfiguration>,
     private val preSelectedMedia: StateFlow<List<T>?>,
     private val getItemSizeInBytes: (T) -> Long = { 0L },
+    private val isItemDisabled: (T) -> Boolean = { false },
 ) : Selection<T> {
 
     private val TAG = "SelectionImpl"
@@ -76,27 +78,31 @@ class SelectionImpl<T>(
     override val flow: StateFlow<Set<T>>
 
     init {
-        if (initialSelection != null) {
-            _selection.addAll(initialSelection)
-            _currentSelectionSizeInBytes += initialSelection.sumOf { getItemSizeInBytes(it) }
-        }
+        _flow = MutableStateFlow(_selection.toSet())
 
         scope.launch {
+            if (initialSelection != null) {
+                mutex.withLock {
+                    if (addInitialBatchLocked(initialSelection)) {
+                        updateFlow()
+                    }
+                }
+            }
             // Observe the refresh of the stateFlow that holds the pre-selection media.
             // Note that this will always be null in case the intent action is anything other than
             // [MediaStore.ACTION_PICK_IMAGES].
-            preSelectedMedia.collect {
-                if (it != null) {
-                    Log.i(TAG, "Received notification for preGranted media count.")
-                    _selection.addAll(it)
-                    _currentSelectionSizeInBytes +=
-                        it.sumOf { mediaItem -> getItemSizeInBytes(mediaItem) }
-                    updateFlow()
+            preSelectedMedia.collect { preSelected ->
+                if (preSelected != null) {
+                    Log.i(TAG, "Received notification for preGranted media.")
+                    mutex.withLock {
+                        if (addInitialBatchLocked(preSelected)) {
+                            updateFlow()
+                        }
+                    }
                 }
             }
         }
 
-        _flow = MutableStateFlow(_selection.toSet())
         flow = _flow.stateIn(scope, SharingStarted.WhileSubscribed(), initialValue = _flow.value)
     }
 
@@ -368,6 +374,43 @@ class SelectionImpl<T>(
      */
     override suspend fun getDeselection(): Set<T> = emptySet()
 
+    /**
+     * Internal method to add a batch of items to the selection when [SelectionImpl] object is being
+     * initialized, enforcing all selection constraints.
+     *
+     * Items are filtered to remove disabled items, duplicates within the batch, and items already
+     * present in the selection. If the resulting set of items can all fit within the selection
+     * limits, they are added to the selection set, otherwise nothing will be added to the
+     * selection.
+     *
+     * @param items The batch of items to add.
+     */
+    @GuardedBy("mutex")
+    private suspend fun addInitialBatchLocked(items: Collection<T>): Boolean {
+        // Filter out disabled items and duplicates within the list.
+        val enabledUniqueItems = items.filterNot { isItemDisabled(it) }.toSet()
+
+        // Identify only items that are not already selected.
+        val newItems = enabledUniqueItems.filterNot { _selection.contains(it) }
+
+        var hasSelectionChanged = false
+
+        if (newItems.isNotEmpty()) {
+            val newItemsCount = newItems.size
+            val newItemsBytes = newItems.sumOf { getItemSizeInBytes(it) }
+
+            if (
+                ensureSelectionLimitLocked(newItemsCount) &&
+                    ensureSelectionBatchSizeBytesLimitLocked(newItemsBytes)
+            ) {
+                hasSelectionChanged = _selection.addAll(newItems)
+                _currentSelectionSizeInBytes += newItemsBytes
+            }
+        }
+
+        return hasSelectionChanged
+    }
+
     /** Internal method that snapshots the current selection and emits it to the exposed flow. */
     private suspend fun updateFlow() {
         _flow.update { _selection.toSet() }
@@ -395,7 +438,9 @@ class SelectionImpl<T>(
      *
      * @return true if the item can fit in the selection. false otherwise.
      */
-    private fun ensureSelectionBatchSizeBytesLimitLocked(additionalSizeInBytes: Long): Boolean {
+    private suspend fun ensureSelectionBatchSizeBytesLimitLocked(
+        additionalSizeInBytes: Long
+    ): Boolean {
         val maxBatchSize = configuration.value.selectionParams?.maxSelectionBatchSizeInBytes ?: -1L
         if (maxBatchSize == -1L) return true
 

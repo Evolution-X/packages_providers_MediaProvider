@@ -25,6 +25,8 @@ import com.android.photopicker.core.selection.SelectionImplTest.Companion.ITEM_S
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.update
@@ -64,21 +66,11 @@ class SelectionImplTest {
     /** Ensures the selection is initialized as empty when no items are provided. */
     @Test
     fun testSelectionIsEmptyByDefault() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(1)
-                            },
-                    ),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(selectionLimit = 1)
         val snapshot = selection.snapshot()
+
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
 
         assertWithMessage("Snapshot was expected to be empty.").that(snapshot).isEmpty()
         assertWithMessage("Emitted flow was expected to be empty.")
@@ -89,21 +81,10 @@ class SelectionImplTest {
     /** Ensures the selection is initialized with the provided items. */
     @Test
     fun testSelectionIsInitialized() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = INITIAL_SELECTION,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = INITIAL_SELECTION)
+
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
 
         val snapshot = selection.snapshot()
         val flow = selection.flow.first()
@@ -117,6 +98,34 @@ class SelectionImplTest {
             .that(flow)
             .isEqualTo(INITIAL_SELECTION)
         assertWithMessage("Emitted flow has an unexpected size").that(flow).hasSize(10)
+    }
+
+    @Test
+    fun testInitialSelectionExceedsCountLimit() = runTest {
+        val selection =
+            createSelection(
+                selectionLimit = 5,
+                initialSelection = INITIAL_SELECTION, // has 10 items
+            )
+
+        assertWithMessage("Selection should be empty if initial selection exceeds limit")
+            .that(selection.snapshot())
+            .isEmpty()
+    }
+
+    @Test
+    fun testInitialSelectionExceedsByteLimit() = runTest {
+        val selection =
+            createSelection(
+                maxBatchSize = BATCH_SIZE_LIMIT_25,
+                itemSize = ITEM_SIZE_10,
+                initialSelection =
+                    setOf(SelectionData(1), SelectionData(2), SelectionData(3)), // 30 bytes
+            )
+
+        assertWithMessage("Selection should be empty if initial selection exceeds byte limit")
+            .that(selection.snapshot())
+            .isEmpty()
     }
 
     @Test
@@ -136,9 +145,10 @@ class SelectionImplTest {
                     ),
                 preSelectedMedia = testPreSelectionMediaData2,
             )
-
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
+
+        advanceTimeBy(100)
 
         assertWithMessage("Initial snapshot state does not match expected size")
             .that(selection.snapshot())
@@ -165,20 +175,7 @@ class SelectionImplTest {
 
     @Test
     fun testSelectionReturnsSuccess() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection()
 
         assertWithMessage("Selection addition was expected to be successful: item 1")
             .that(selection.add(SelectionData(1)))
@@ -193,21 +190,8 @@ class SelectionImplTest {
 
     @Test
     fun testSelectionReturnsSelectionLimitExceededWhenFull() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(1)
-                            },
-                    ),
-                initialSelection = setOf(SelectionData(1)),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection =
+            createSelection(selectionLimit = 1, initialSelection = setOf(SelectionData(1)))
 
         assertWithMessage("Snapshot was expected to contain the initial selection")
             .that(selection.add(SelectionData(2)))
@@ -217,20 +201,7 @@ class SelectionImplTest {
     /** Ensures a single item can be added to the selection. */
     @Test
     fun testSelectionCanAddSingleItem() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection()
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -255,20 +226,7 @@ class SelectionImplTest {
     /** Ensures bulk additions. */
     @Test
     fun testSelectionCanAddMultipleItems() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection()
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -300,21 +258,7 @@ class SelectionImplTest {
     /** Ensures a selection can be reset. */
     @Test
     fun testSelectionCanBeCleared() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = INITIAL_SELECTION,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = INITIAL_SELECTION)
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -344,21 +288,7 @@ class SelectionImplTest {
     fun testSelectionCanRemoveSingleItem() = runTest {
         val testItem = SelectionData(id = 999)
         val anotherTestItem = SelectionData(id = 1000)
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = setOf(testItem, anotherTestItem),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = setOf(testItem, anotherTestItem))
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -400,21 +330,7 @@ class SelectionImplTest {
                 SelectionData(id = 6),
             )
 
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = values,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = values)
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -444,21 +360,7 @@ class SelectionImplTest {
     /** Ensures a single item can be toggled in and out of the selected set. */
     @Test
     fun testSelectionCanToggleSingleItem() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = INITIAL_SELECTION,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = INITIAL_SELECTION)
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -490,21 +392,7 @@ class SelectionImplTest {
     /** Ensures multiple items can be toggled in and out of the selected set. */
     @Test
     fun testSelectionCanToggleMultipleItems() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = INITIAL_SELECTION,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = INITIAL_SELECTION)
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -546,21 +434,7 @@ class SelectionImplTest {
                 SelectionData(id = 6),
             )
 
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = values,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = values)
 
         assertWithMessage("Received unexpected position for item.")
             .that(selection.getPosition(values.get(2)))
@@ -570,21 +444,7 @@ class SelectionImplTest {
     /** Ensures selection returns -1 for items not present in the selection. */
     @Test
     fun testSelectionGetPositionForMissingItem() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = INITIAL_SELECTION,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = INITIAL_SELECTION)
 
         val missingElement = SelectionData(id = 999)
 
@@ -595,21 +455,7 @@ class SelectionImplTest {
 
     @Test
     fun testSelectionGetSize() = runTest {
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(50)
-                            },
-                    ),
-                initialSelection = INITIAL_SELECTION,
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(initialSelection = INITIAL_SELECTION)
 
         assertWithMessage("Expected size did not match")
             .that(selection.size())
@@ -624,21 +470,7 @@ class SelectionImplTest {
     @Test
     fun testToggleWithSelectionLimitOneReplacesExistingItem() = runTest {
         val initialItem = SelectionData(id = 1)
-        val selection: Selection<SelectionData> =
-            SelectionImpl(
-                scope = backgroundScope,
-                configuration =
-                    provideTestConfigurationFlow(
-                        scope = backgroundScope,
-                        defaultConfiguration =
-                            TestPhotopickerConfiguration.build {
-                                action("")
-                                selectionLimit(1)
-                            },
-                    ),
-                initialSelection = setOf(initialItem),
-                preSelectedMedia = testPreSelectionMediaData,
-            )
+        val selection = createSelection(selectionLimit = 1, initialSelection = setOf(initialItem))
         val emissions = mutableListOf<Set<SelectionData>>()
         backgroundScope.launch { selection.flow.toList(emissions) }
 
@@ -822,17 +654,216 @@ class SelectionImplTest {
             .isEqualTo(SelectionModifiedResult.FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED)
     }
 
+    @Test
+    fun testPreselectionExceedsCountLimit() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        val selection = createSelection(selectionLimit = 1)
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        val preSelected = listOf(SelectionData(1), SelectionData(2))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state does not match expected size")
+            .that(emissions.first())
+            .hasSize(0)
+        assertWithMessage("Resulting flow state does not match expected size")
+            .that(emissions.last())
+            .hasSize(0)
+        // If limits are violated, no additional emissions should occur.
+        assertWithMessage("Emissions count mismatch").that(emissions).hasSize(1)
+    }
+
+    @Test
+    fun testPreselectionExceedsByteLimit() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        val selection = createSelection(maxBatchSize = BATCH_SIZE_LIMIT_15, itemSize = ITEM_SIZE_10)
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        val preSelected = listOf(SelectionData(1), SelectionData(2)) // 20 bytes total
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state does not match expected size")
+            .that(emissions.first())
+            .hasSize(0)
+        assertWithMessage("Resulting flow state does not match expected size")
+            .that(emissions.last())
+            .hasSize(0)
+        assertWithMessage("Emissions count mismatch").that(emissions).hasSize(1)
+    }
+
+    @Test
+    fun testPreselectionSkipsDisabledItems() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        // item with id = 2 will be disabled
+        val selection = createSelection(isItemDisabled = { it.id == 2 })
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        val preSelected = listOf(SelectionData(1), SelectionData(2), SelectionData(3))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state does not match expected size")
+            .that(emissions.first())
+            .hasSize(0)
+        assertWithMessage("Resulting flow state does not match expected size")
+            .that(emissions.last())
+            .hasSize(2)
+        assertWithMessage("Selection state mismatch")
+            .that(selection.snapshot())
+            .containsExactly(SelectionData(1), SelectionData(3))
+    }
+
+    @Test
+    fun testPreselectionWithinLimits() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        val selection =
+            createSelection(
+                selectionLimit = 2,
+                maxBatchSize = ITEM_SIZE_20,
+                itemSize = ITEM_SIZE_10,
+            )
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        val preSelected = listOf(SelectionData(1), SelectionData(2))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state does not match expected size")
+            .that(emissions.first())
+            .hasSize(0)
+        assertWithMessage("Resulting flow state does not match expected size")
+            .that(emissions.last())
+            .hasSize(2)
+        assertWithMessage("Selection state mismatch")
+            .that(selection.snapshot())
+            .containsExactlyElementsIn(preSelected)
+    }
+
+    @Test
+    fun testPreselectionWithInitialSelection() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        val initialItem = SelectionData(99)
+        val selection = createSelection(selectionLimit = 2, initialSelection = setOf(initialItem))
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        // Pre-selected batch of 1 item fits (Total 2/2)
+        val preSelected = listOf(SelectionData(1))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state does not match expected size")
+            .that(emissions.first())
+            .hasSize(1)
+        assertWithMessage("Resulting flow state does not match expected size")
+            .that(emissions.last())
+            .hasSize(2)
+        assertWithMessage("Selection state mismatch")
+            .that(selection.snapshot())
+            .containsExactly(initialItem, SelectionData(1))
+    }
+
+    @Test
+    fun testPreselectionWithInitialSelectionExceedsCountLimit() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        val initialItem = SelectionData(99)
+        val selection = createSelection(selectionLimit = 2, initialSelection = setOf(initialItem))
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        // Pre-selected batch has 2 items. (Total 1 + 2 = 3 > 2)
+        val preSelected = listOf(SelectionData(1), SelectionData(2))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        // Initial selection was 1 item.
+        assertWithMessage("Initial flow state mismatch").that(emissions.first()).hasSize(1)
+
+        // Pre-selection batch was ignored entirely.
+        assertWithMessage("Resulting flow state mismatch - should remain at 1 item")
+            .that(emissions.last())
+            .hasSize(1)
+
+        assertWithMessage("Emissions count mismatch - no new emissions should have occurred")
+            .that(emissions)
+            .hasSize(1)
+    }
+
+    @Test
+    fun testPreselectionWithInitialSelectionExceedsByteLimit() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        val initialItem = SelectionData(99)
+        val selection =
+            createSelection(
+                maxBatchSize = BATCH_SIZE_LIMIT_25, // 25 bytes limit
+                itemSize = ITEM_SIZE_10,
+                initialSelection = setOf(initialItem), // uses 10 bytes
+            )
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        // Pre-selected batch has 2 items (20 bytes). (Total 10 + 20 = 30 > 25)
+        val preSelected = listOf(SelectionData(1), SelectionData(2))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state mismatch").that(emissions.first()).hasSize(1)
+
+        // Pre-selection batch was ignored entirely.
+        assertWithMessage("Resulting flow state mismatch - should remain at 1 item")
+            .that(emissions.last())
+            .hasSize(1)
+
+        assertWithMessage("Emissions count mismatch - no new emissions should have occurred")
+            .that(emissions)
+            .hasSize(1)
+    }
+
+    @Test
+    fun testPreselectionEnabledSubsetFitsWithinLimits() = runTest {
+        testPreSelectionMediaData.update { ArrayList() }
+        // Selection limit is 1, but we pass 2 items where 1 is disabled.
+        val selection = createSelection(selectionLimit = 1, isItemDisabled = { it.id == 2 })
+        val emissions = mutableListOf<Set<SelectionData>>()
+        backgroundScope.launch { selection.flow.toList(emissions) }
+
+        val preSelected = listOf(SelectionData(1), SelectionData(2))
+        testPreSelectionMediaData.update { ArrayList(preSelected) }
+        advanceTimeBy(100)
+
+        assertWithMessage("Initial flow state does not match expected size")
+            .that(emissions.first())
+            .hasSize(0)
+        assertWithMessage("Resulting flow state does not match expected size")
+            .that(emissions.last())
+            .hasSize(1)
+        assertWithMessage("Selection state mismatch")
+            .that(selection.snapshot())
+            .containsExactly(SelectionData(1))
+    }
+
     /**
      * Helper method to create a [SelectionImpl] instance for testing.
      *
      * @param selectionLimit The maximum number of items that can be selected.
      * @param maxBatchSize The maximum total size of the selection in bytes.
      * @param itemSize The size that will be returned for every item in the selection.
+     * @param initialSelection A collection of items to include in the initial selection.
+     * @param isItemDisabled A lambda that returns true if the item is disabled.
      */
     private fun TestScope.createSelection(
         selectionLimit: Int = 50,
         maxBatchSize: Long = NO_BATCH_SIZE_LIMIT,
         itemSize: Long = ITEM_SIZE_10,
+        initialSelection: Collection<SelectionData>? = null,
+        preSelectedMedia: StateFlow<List<SelectionData>?> = testPreSelectionMediaData,
+        isItemDisabled: (SelectionData) -> Boolean = { false },
     ): Selection<SelectionData> {
         val selectionParamsBuilder = PhotoPickerSelectionParams.Builder()
         val selectionParams =
@@ -841,20 +872,30 @@ class SelectionImplTest {
                 else -> selectionParamsBuilder.setMaxSelectionBatchSizeInBytes(maxBatchSize).build()
             }
 
-        return SelectionImpl(
-            scope = backgroundScope,
-            configuration =
-                provideTestConfigurationFlow(
-                    scope = backgroundScope,
-                    defaultConfiguration =
-                        TestPhotopickerConfiguration.build {
-                            action("")
-                            selectionLimit(selectionLimit)
-                            selectionParams(selectionParams)
-                        },
-                ),
-            preSelectedMedia = testPreSelectionMediaData,
-            getItemSizeInBytes = { itemSize },
-        )
+        val selection =
+            SelectionImpl(
+                scope = backgroundScope,
+                initialSelection = initialSelection,
+                configuration =
+                    provideTestConfigurationFlow(
+                        scope = backgroundScope,
+                        defaultConfiguration =
+                            TestPhotopickerConfiguration.build {
+                                action("")
+                                selectionLimit(selectionLimit)
+                                selectionParams(selectionParams)
+                            },
+                    ),
+                preSelectedMedia = preSelectedMedia,
+                getItemSizeInBytes = { itemSize },
+                isItemDisabled = isItemDisabled,
+            )
+
+        // Start a collection to ensure the WhileSubscribed flow is active and receives
+        // the initial selection updates.
+        backgroundScope.launch { selection.flow.collect {} }
+
+        advanceTimeBy(100)
+        return selection
     }
 }

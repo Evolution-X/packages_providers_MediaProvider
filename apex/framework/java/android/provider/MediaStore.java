@@ -1108,6 +1108,10 @@ public final class MediaStore {
      * than 1 and less than or equal to
      * {@link MediaStore#getPickImagesMaxLimit}, otherwise
      * {@link Activity#RESULT_CANCELED} is returned.
+     * <p>
+     * If {@link MediaStore#EXTRA_PICKER_PRE_SELECTION_URIS} is also provided, the number of URIs in
+     * that list must not exceed this value, otherwise an {@code IllegalIntentExtraException} will
+     * be thrown.
      */
     public final static String EXTRA_PICK_IMAGES_MAX = "android.provider.extra.PICK_IMAGES_MAX";
 
@@ -1579,9 +1583,12 @@ public final class MediaStore {
      *
      * <p>The provided list will be checked for permissions and authority. Any URI that is
      * inaccessible, doesn't match the current authorities(local or cloud) or is invalid will be
-     * filtered out.</p>
+     * filtered out. Additionally, items that are disabled based on the provided
+     * {@link MediaStore#EXTRA_PICK_IMAGES_SELECTION_PARAMS} will also be filtered out.</p>
      *
-     * <p>The items corresponding to the URIs will appear selected when the photo picker is opened.
+     * <p>The remaining items will appear selected when the photo picker is opened, provided they
+     * satisfy the aggregate constraints such as {@link MediaStore#EXTRA_PICK_IMAGES_MAX} and
+     * {@code PhotoPickerSelectionParams.getMaxSelectionBatchSizeInBytes()}.
      * In the case of {@link MediaStore#EXTRA_PICK_IMAGES_IN_ORDER} the chronological order of the
      * input list will be used for ordered selection of the pre-selected items.</p>
      *
