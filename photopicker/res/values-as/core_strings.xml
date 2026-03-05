@@ -51,6 +51,7 @@
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"অগ্ৰাহ্য কৰক"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"মিডিয়া গ্ৰিড"</string>
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"<xliff:g id="APP_NAME">%1$s</xliff:g>ৰ পৰা ফট’ আৰু ভিডিঅ’ বাছনি কৰিবলৈ ৱাই-ফাই বা ম’বাইল ডেটাৰ সৈতে সংযোগ কৰক"</string>
+    <string name="photopicker_banner_internet_connection_required_message" msgid="2798498114410918856">"ৱাই-ফাই বা ম’বাইল নেটৱৰ্কৰ সৈতে সংযোগ কৰক যাতে <xliff:g id="MEDIA_PROVIDER">%1$s</xliff:g>ৰ পৰা ফট’ আৰু ভিডিঅ’সমূহো উপলব্ধ হয়"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"ইণ্টাৰনেট সংযোগৰ আৱশ্যক"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"ছেটিঙলৈ যাওক"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"এটা ক্লাউড মিডিয়া এপ্"</string>

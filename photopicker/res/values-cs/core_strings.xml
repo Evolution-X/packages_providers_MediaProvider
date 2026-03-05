@@ -51,6 +51,7 @@
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Zavřít"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Mřížka médií"</string>
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"Pokud chcete vybrat fotky a videa z aplikace <xliff:g id="APP_NAME">%1$s</xliff:g>, připojte se k Wi-Fi nebo mobilním datům"</string>
+    <string name="photopicker_banner_internet_connection_required_message" msgid="2798498114410918856">"Připojte se k Wi-Fi nebo mobilní síti, aby byly k dispozici i fotky a videa od poskytovatele <xliff:g id="MEDIA_PROVIDER">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"Je potřeba připojení k internetu"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"Přejít do Nastavení"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"aplikace pro média v cloudu"</string>

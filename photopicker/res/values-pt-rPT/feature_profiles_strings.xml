@@ -30,4 +30,7 @@
     <string name="photopicker_profile_contact_admin_dialog_message" msgid="683059170694643597">"Entre em contacto com o administrador de TI se tiver alguma dúvida"</string>
     <string name="photopicker_profile_banner_switch_button_label" msgid="1652041405540769126">"Mudar"</string>
     <string name="photopicker_profile_switch_banner_message" msgid="2969185213956642828">"Está no seu perfil <xliff:g id="CURRENT_PROFILE_NAME">%1$s</xliff:g>. Mudar para o seu perfil <xliff:g id="TARGET_PROFILE_NAME">%2$s</xliff:g>?"</string>
+    <string name="photopicker_work_profile_switch_banner_message" msgid="7484882792920946111">"Está a ver fotos e vídeos do seu perfil de <xliff:g id="CURRENT_PROFILE_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_private_profile_switch_banner_message" msgid="1859038896296301411">"Está a ver fotos e vídeos no seu espaço <xliff:g id="CURRENT_PROFILE_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_profile_switch_banner_title" msgid="8145202924732237751">"Mudar para o seu perfil de <xliff:g id="TARGET_PROFILE_NAME">%1$s</xliff:g>?"</string>
 </resources>
