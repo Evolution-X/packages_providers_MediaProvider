@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderCopy
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -2044,6 +2045,126 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    fun testMediaSetHasBadgeThenBadgeIsDisplayed() {
+        val mediaSetWithBadge =
+            Group.MediaSet(
+                id = "1",
+                pickerId = 1L,
+                authority = "a",
+                displayName = MEDIA_SET_NAME,
+                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
+                badge = GlideIcon(Uri.EMPTY, MediaSource.REMOTE),
+                parentCategoryType = CategoryType.APP_FOLDERS.key,
+            )
+        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithBadge)
+
+        composeTestRule.setContent {
+            mediaSetContentFactory(
+                item = gridItem,
+                onClick = {},
+                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
+            )
+        }
+
+        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
+        composeTestRule.onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun testMediaSetHasNullBadgeThenBadgeIsNotDisplayed() {
+        val mediaSetWithoutBadge =
+            Group.MediaSet(
+                id = "2",
+                pickerId = 2L,
+                authority = "a",
+                displayName = MEDIA_SET_NAME,
+                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
+                badge = null,
+                parentCategoryType = CategoryType.APP_FOLDERS.key,
+            )
+        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithoutBadge)
+
+        composeTestRule.setContent {
+            mediaSetContentFactory(
+                item = gridItem,
+                onClick = {},
+                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
+            )
+        }
+
+        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
+        composeTestRule
+            .onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun testMediaSetIsFromUserAlbumsCategoryThenBadgeIsNotDisplayed() {
+        val mediaSetWithoutBadge =
+            Group.MediaSet(
+                id = "2",
+                pickerId = 2L,
+                authority = "a",
+                displayName = MEDIA_SET_NAME,
+                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
+                badge = GlideIcon(Uri.EMPTY, MediaSource.REMOTE),
+                parentCategoryType = CategoryType.USER_ALBUMS.key,
+            )
+        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithoutBadge)
+
+        composeTestRule.setContent {
+            mediaSetContentFactory(
+                item = gridItem,
+                onClick = {},
+                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
+            )
+        }
+
+        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
+        composeTestRule
+            .onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testSwipeLeftToNavigateToPhotoGridInRtl() =
+        testScope.runTest {
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    callPhotopickerMain(
+                        featureManager = featureManager,
+                        selection = selection,
+                        events = events,
+                    )
+                }
+            }
+
+            advanceTimeBy(100)
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({ navController.navigateToCategoryGrid() })
+
+            assertWithMessage("Expected route to be category albumgrid")
+                .that(navController.currentBackStackEntry?.destination?.route)
+                .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            composeTestRule.onNode(hasText(TEST_ALBUM_NAME_PREFIX + "1")).performTouchInput {
+                swipeLeft()
+            }
+            composeTestRule.waitForIdle()
+
+            val route = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("Expected swipe to navigate to Photogrid")
+                .that(route)
+                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
+        }
+
+    @Test
     @EnableFlags(
         Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_API,
         Flags.FLAG_ENABLE_PHOTOPICKER_UI_CUSTOMIZATION_PARAMS_USAGE,
@@ -2226,126 +2347,6 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                 .that(ratio)
                 .isWithin(0.05f)
                 .of(1f)
-        }
-
-    @Test
-    fun testMediaSetHasBadgeThenBadgeIsDisplayed() {
-        val mediaSetWithBadge =
-            Group.MediaSet(
-                id = "1",
-                pickerId = 1L,
-                authority = "a",
-                displayName = MEDIA_SET_NAME,
-                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
-                badge = GlideIcon(Uri.EMPTY, MediaSource.REMOTE),
-                parentCategoryType = CategoryType.APP_FOLDERS.key,
-            )
-        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithBadge)
-
-        composeTestRule.setContent {
-            mediaSetContentFactory(
-                item = gridItem,
-                onClick = {},
-                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
-            )
-        }
-
-        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
-        composeTestRule.onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true).assertExists()
-    }
-
-    @Test
-    fun testMediaSetHasNullBadgeThenBadgeIsNotDisplayed() {
-        val mediaSetWithoutBadge =
-            Group.MediaSet(
-                id = "2",
-                pickerId = 2L,
-                authority = "a",
-                displayName = MEDIA_SET_NAME,
-                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
-                badge = null,
-                parentCategoryType = CategoryType.APP_FOLDERS.key,
-            )
-        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithoutBadge)
-
-        composeTestRule.setContent {
-            mediaSetContentFactory(
-                item = gridItem,
-                onClick = {},
-                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
-            )
-        }
-
-        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
-        composeTestRule
-            .onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true)
-            .assertDoesNotExist()
-    }
-
-    @Test
-    fun testMediaSetIsFromUserAlbumsCategoryThenBadgeIsNotDisplayed() {
-        val mediaSetWithoutBadge =
-            Group.MediaSet(
-                id = "2",
-                pickerId = 2L,
-                authority = "a",
-                displayName = MEDIA_SET_NAME,
-                icon = GlideIcon(Uri.EMPTY, MediaSource.LOCAL),
-                badge = GlideIcon(Uri.EMPTY, MediaSource.REMOTE),
-                parentCategoryType = CategoryType.USER_ALBUMS.key,
-            )
-        val gridItem = MediaGridItem.MediaSetItem(mediaSetWithoutBadge)
-
-        composeTestRule.setContent {
-            mediaSetContentFactory(
-                item = gridItem,
-                onClick = {},
-                badgeIconModifier = Modifier.testTag(BADGE_TEST_TAG),
-            )
-        }
-
-        composeTestRule.onNodeWithText(MEDIA_SET_NAME).assertIsDisplayed()
-        composeTestRule
-            .onNode(hasTestTag(BADGE_TEST_TAG), useUnmergedTree = true)
-            .assertDoesNotExist()
-    }
-
-    @Test
-    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    fun testSwipeLeftToNavigateToPhotoGridInRtl() =
-        testScope.runTest {
-            composeTestRule.setContent {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    callPhotopickerMain(
-                        featureManager = featureManager,
-                        selection = selection,
-                        events = events,
-                    )
-                }
-            }
-
-            advanceTimeBy(100)
-
-            // Navigate on the UI thread (similar to a click handler)
-            composeTestRule.runOnUiThread({ navController.navigateToCategoryGrid() })
-
-            assertWithMessage("Expected route to be category albumgrid")
-                .that(navController.currentBackStackEntry?.destination?.route)
-                .isEqualTo(PhotopickerDestinations.ALBUM_GRID.route)
-
-            advanceTimeBy(100)
-            composeTestRule.waitForIdle()
-            advanceTimeBy(100)
-
-            composeTestRule.onNode(hasText(TEST_ALBUM_NAME_PREFIX + "1")).performTouchInput {
-                swipeLeft()
-            }
-            composeTestRule.waitForIdle()
-
-            val route = navController.currentBackStackEntry?.destination?.route
-            assertWithMessage("Expected swipe to navigate to Photogrid")
-                .that(route)
-                .isEqualTo(PhotopickerDestinations.PHOTO_GRID.route)
         }
 
     @Test
@@ -2532,4 +2533,117 @@ class CategoryGridFeatureTest : PhotopickerFeatureBaseTest() {
                 .isWithin(0.05f)
                 .of(1f)
         }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH,
+    )
+    fun testMediaSetContentGridItemWithDisabledReasonCannotBeSelected() {
+        val testCategoryDataService = categoryDataService as? TestCategoryDataServiceImpl
+        checkNotNull(testCategoryDataService) { "Expected a TestCategoryDataServiceImpl" }
+
+        val testCategoryDisplayName = "People & Pets"
+        val testMediaSetName = "mediaset"
+        val maxFileSize = SIZE_100KB
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+        val mediaWithDisabledReason =
+            createImage(
+                mediaId = "1",
+                pickerId = 1L,
+                selectionParams = selectionParams,
+                sizeInBytes = 2 * maxFileSize,
+            )
+
+        testCategoryDataService.mediaSetContentList = listOf(mediaWithDisabledReason)
+        testCategoryDataService.mediaSetList =
+            listOf(
+                Group.MediaSet(
+                    id = testMediaSetName,
+                    pickerId = 1234L,
+                    authority = "a",
+                    displayName = testMediaSetName,
+                    icon = GlideIcon(Uri.parse(""), MediaSource.LOCAL),
+                    badge = null,
+                    parentCategoryType = CategoryType.PEOPLE_AND_PETS.key,
+                )
+            )
+
+        testCategoryDataService.categoryAlbumList =
+            listOf(
+                Group.Category(
+                    id = testCategoryDisplayName,
+                    pickerId = 1234L,
+                    authority = "a",
+                    displayName = testCategoryDisplayName,
+                    categoryType = CategoryType.PEOPLE_AND_PETS,
+                    icons = emptyList(),
+                    isLeafCategory = true,
+                    badge = null,
+                )
+            )
+
+        testScope.runTest {
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            advanceTimeBy(100)
+
+            // Navigate on the UI thread (similar to a click handler)
+            composeTestRule.runOnUiThread({ navController.navigateToCategoryGrid() })
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+
+            composeTestRule.onNode(hasText(testCategoryDisplayName)).performClick()
+
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasText(testMediaSetName)).performClick()
+
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule
+                .onAllNodes(hasContentDescription(value = "taken on", substring = true))
+                .onFirst()
+                .performClick()
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Ensure the click handler did NOT update the selection.
+            assertWithMessage("Expected selection to be empty as item has disabled reason.")
+                .that(selection.snapshot().size)
+                .isEqualTo(0)
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxFileSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+    }
 }
