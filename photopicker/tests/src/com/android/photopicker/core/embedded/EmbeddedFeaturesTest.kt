@@ -36,7 +36,6 @@ import android.view.SurfaceControlViewHost
 import android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo
 import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -53,6 +52,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pinch
@@ -60,7 +60,6 @@ import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
-import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.test.filters.SdkSuppress
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.R
@@ -70,7 +69,6 @@ import com.android.photopicker.core.ApplicationOwned
 import com.android.photopicker.core.Background
 import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
-import com.android.photopicker.core.PhotopickerApp
 import com.android.photopicker.core.ViewModelModule
 import com.android.photopicker.core.banners.BannerDefinitions
 import com.android.photopicker.core.banners.BannerLocation
@@ -82,7 +80,6 @@ import com.android.photopicker.core.configuration.DeviceConfigProxy
 import com.android.photopicker.core.configuration.FEATURE_CLOUD_ENFORCE_PROVIDER_ALLOWLIST
 import com.android.photopicker.core.configuration.FEATURE_CLOUD_MEDIA_FEATURE_ENABLED
 import com.android.photopicker.core.configuration.FEATURE_CLOUD_MEDIA_PROVIDER_ALLOWLIST
-import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.NAMESPACE_MEDIAPROVIDER
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
 import com.android.photopicker.core.configuration.TestDeviceConfigProxyImpl
@@ -90,15 +87,11 @@ import com.android.photopicker.core.configuration.TestPhotopickerConfiguration
 import com.android.photopicker.core.database.DatabaseManager
 import com.android.photopicker.core.events.Event
 import com.android.photopicker.core.events.Events
-import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.features.FeatureManager
 import com.android.photopicker.core.features.FeatureToken
-import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.glide.GlideTestRule
 import com.android.photopicker.core.navigation.PhotopickerDestinations
-import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.selection.Selection
-import com.android.photopicker.core.theme.PhotopickerTheme
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.model.CollectionInfo
@@ -128,14 +121,11 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -309,7 +299,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 resources.getString(R.string.photopicker_albums_nav_button_label)
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -339,7 +329,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 resources.getString(R.string.photopicker_albums_nav_button_label)
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -372,7 +362,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 resources.getString(R.string.photopicker_categories_nav_button_label)
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -399,7 +389,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         testScope.runTest {
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -432,7 +422,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         testScope.runTest {
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -465,7 +455,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         testScope.runTest {
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -497,7 +487,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         testScope.runTest {
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -532,7 +522,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                     CompositionLocalProvider(
                         LocalEmbeddedState provides testEmbeddedStateExpanded
                     ) {
-                        callEmbeddedPhotopickerMain(
+                        callEmbeddedPhotopickerApp(
                             embeddedLifecycle = embeddedLifecycle.get(),
                             featureManager = featureManager.get(),
                             selection = selection.get(),
@@ -572,31 +562,13 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     fun testSnackbarDisplaysOnEvent() =
         testScope.runTest {
             composeTestRule.setContent {
-                CompositionLocalProvider(
-                    LocalPhotopickerConfiguration provides
-                        TestPhotopickerConfiguration.build {
-                            runtimeEnv(PhotopickerRuntimeEnv.EMBEDDED)
-                        },
-                    LocalEmbeddedState provides testEmbeddedStateCollapsed,
-                    LocalFeatureManager provides featureManager.get(),
-                    LocalSelection provides selection.get(),
-                    LocalEvents provides events.get(),
-                    LocalEmbeddedLifecycle provides embeddedLifecycle.get(),
-                    LocalViewModelStoreOwner provides embeddedLifecycle.get(),
-                    LocalOnBackPressedDispatcherOwner provides embeddedLifecycle.get(),
-                ) {
-                    PhotopickerTheme(
-                        isDarkTheme = false,
-                        config =
-                            TestPhotopickerConfiguration.build {
-                                runtimeEnv(PhotopickerRuntimeEnv.EMBEDDED)
-                            },
-                    ) {
-                        PhotopickerApp(
-                            disruptiveDataNotification = flow { emit(0) },
-                            onMediaSelectionConfirmed = {},
-                        )
-                    }
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
+                    callEmbeddedPhotopickerApp(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
                 }
             }
             // Advance the UI clock manually to control for the fade animations on the snackbar.
@@ -653,7 +625,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             resources.getString(R.string.photopicker_privacy_explainer, "Test Package")
         composeTestRule.setContent {
             CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
-                callEmbeddedPhotopickerMain(
+                callEmbeddedPhotopickerApp(
                     embeddedLifecycle = embeddedLifecycle.get(),
                     featureManager = featureManager.get(),
                     selection = selection.get(),
@@ -685,7 +657,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
         advanceTimeBy(100)
         composeTestRule.setContent {
             CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                callEmbeddedPhotopickerMain(
+                callEmbeddedPhotopickerApp(
                     embeddedLifecycle = embeddedLifecycle.get(),
                     featureManager = featureManager.get(),
                     selection = selection.get(),
@@ -729,7 +701,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInCollapsedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -774,7 +746,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -819,7 +791,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -864,7 +836,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -905,7 +877,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -959,7 +931,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1013,7 +985,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1065,7 +1037,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 CompositionLocalProvider(
                     LocalEmbeddedState provides testEmbeddedStateWithHostInExpandedState
                 ) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1161,7 +1133,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1247,7 +1219,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1278,7 +1250,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1339,7 +1311,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1432,7 +1404,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1494,7 +1466,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1553,7 +1525,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1658,7 +1630,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1769,7 +1741,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1842,7 +1814,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1901,7 +1873,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             advanceTimeBy(100)
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1944,7 +1916,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -1994,7 +1966,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -2027,31 +1999,124 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
     @Test
     @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testPhotoGridDragSelect_skipsDisabledItems_embeddedMode() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            // 1st item: enabled
+            // 2nd item: disabled
+            // 3rd item: enabled
+            val mediaList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = 2 * maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "3",
+                        pickerId = 3L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                )
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.mediaList = mediaList
+
+            val info =
+                EmbeddedPhotoPickerFeatureInfo.Builder()
+                    .setMaxSelectionLimit(50)
+                    .setSelectionParams(selectionParams)
+                    .build()
+            configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+            advanceTimeBy(100)
+
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerApp(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val allPhotosMatcher =
+                hasContentDescription(
+                    value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                    substring = true,
+                )
+
+            val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+            val screenWidthPx =
+                with(composeTestRule.density) { (rootBounds.right - rootBounds.left).toPx() }
+
+            // Start drag on the first photo
+            composeTestRule.onAllNodes(allPhotosMatcher).onFirst().performTouchInput {
+                down(center)
+                advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                // Drag across the screen to select items in the first row.
+                dragInIncrements(totalOffset = screenWidthPx, vertical = false)
+                advanceEventTime(1000)
+                up()
+            }
+
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            // Verify that items 1 and 3 are selected, but 2 is not.
+            val selectedItems = selection.get().snapshot()
+            assertWithMessage("Expected 2 items in selection").that(selectedItems.size).isEqualTo(2)
+
+            assertWithMessage("Item 2 should not be selected")
+                .that(selectedItems.any { it.mediaId == "2" })
+                .isFalse()
+
+            assertWithMessage("Item 1 should be selected")
+                .that(selectedItems.any { it.mediaId == "1" })
+                .isTrue()
+
+            assertWithMessage("Item 3 should be selected")
+                .that(selectedItems.any { it.mediaId == "3" })
+                .isTrue()
+        }
+
+    @Test
+    @EnableFlags(
         Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
     )
-    fun testPhotoWithDisabledReasonCannotBeSelectedInEmbedded() =
+    fun testPhotoGridItemWithDisabledReasonCannotBeSelectedInEmbedded() =
         testScope.runTest {
-            val currentDateTime = LocalDateTime.now()
-            val maxFileSize = 100 * 1024L // 100 KB
+            val maxFileSize = SIZE_100KB
             val selectionParams =
                 PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
             val mediaWithDisabledReason =
-                Media.Image(
+                createImage(
                     mediaId = "1",
                     pickerId = 1L,
-                    authority = "a",
-                    mediaSource = MediaSource.LOCAL,
-                    mediaUri = Uri.parse("content://media/picker/a/1"),
-                    glideLoadableUri = Uri.parse("content://a/1"),
-                    dateTakenMillisLong = currentDateTime.toEpochSecond(ZoneOffset.UTC) * 1000,
-                    sizeInBytes = 2 * maxFileSize,
-                    mimeType = "image/png",
-                    standardMimeTypeExtension = 1,
-                    width = 512,
-                    height = 512,
                     selectionParams = selectionParams,
+                    sizeInBytes = 2 * maxFileSize,
                 )
 
             val testDataService = dataService.get() as? TestDataServiceImpl
@@ -2062,10 +2127,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             val info =
                 EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
             configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
 
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
-                    callEmbeddedPhotopickerMain(
+                    callEmbeddedPhotopickerApp(
                         embeddedLifecycle = embeddedLifecycle.get(),
                         featureManager = featureManager.get(),
                         selection = selection.get(),
@@ -2093,5 +2159,15 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             assertWithMessage("Expected selection to be empty as item has disabled reason.")
                 .that(selection.get().snapshot().size)
                 .isEqualTo(0)
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    SIZE_100KB / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
 }

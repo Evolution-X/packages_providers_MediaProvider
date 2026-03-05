@@ -22,7 +22,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
-import android.net.Uri
 import android.os.Build
 import android.os.UserManager
 import android.platform.test.annotations.DisableFlags
@@ -34,12 +33,7 @@ import android.provider.MediaStore
 import android.test.mock.MockContentResolver
 import android.widget.photopicker.PhotoPickerSelectionParams
 import android.widget.photopicker.PhotoPickerUiCustomizationParams
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assert
@@ -56,7 +50,6 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.test.filters.SdkSuppress
 import com.android.photopicker.R
 import com.android.photopicker.core.ActivityModule
@@ -66,33 +59,24 @@ import com.android.photopicker.core.Background
 import com.android.photopicker.core.ConcurrencyModule
 import com.android.photopicker.core.EmbeddedServiceModule
 import com.android.photopicker.core.Main
-import com.android.photopicker.core.PhotopickerMain
 import com.android.photopicker.core.ViewModelModule
 import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerManager
 import com.android.photopicker.core.banners.BannerStateDao
 import com.android.photopicker.core.configuration.ConfigurationManager
-import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.configuration.provideTestConfigurationFlow
 import com.android.photopicker.core.database.DatabaseManager
 import com.android.photopicker.core.events.Events
-import com.android.photopicker.core.events.LocalEvents
 import com.android.photopicker.core.events.generatePickerSessionId
 import com.android.photopicker.core.features.FeatureManager
-import com.android.photopicker.core.features.LocalFeatureManager
-import com.android.photopicker.core.features.Location
 import com.android.photopicker.core.glide.GlideTestRule
-import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations
-import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.selection.Selection
-import com.android.photopicker.core.theme.PhotopickerTheme
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.TestDataServiceImpl
 import com.android.photopicker.data.TestPrefetchDataService
 import com.android.photopicker.data.model.Media
-import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.features.PhotopickerFeatureBaseTest
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.tests.HiltTestActivity
@@ -110,14 +94,11 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import dagger.hilt.components.SingletonComponent
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import javax.inject.Inject
 import kotlin.math.absoluteValue
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -602,6 +583,106 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testPhotoGridDragSelect_skipsDisabledItems() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            // 1st item: enabled
+            // 2nd item: disabled
+            // 3rd item: enabled
+            val mediaList =
+                listOf(
+                    createImage(
+                        mediaId = "1",
+                        pickerId = 1L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "2",
+                        pickerId = 2L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = 2 * maxFileSize,
+                    ),
+                    createImage(
+                        mediaId = "3",
+                        pickerId = 3L,
+                        selectionParams = selectionParams,
+                        sizeInBytes = maxFileSize,
+                    ),
+                )
+
+            val testDataService = dataService.get() as? TestDataServiceImpl
+            checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+            testDataService.mediaList = mediaList
+
+            val testIntent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX, 50)
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(testIntent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+            advanceTimeBy(100)
+
+            composeTestRule.setContent {
+                callPhotopickerApp(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            val allPhotosMatcher =
+                hasContentDescription(
+                    value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                    substring = true,
+                )
+
+            val rootBounds = composeTestRule.onRoot().getBoundsInRoot()
+            val screenWidthPx =
+                with(composeTestRule.density) { (rootBounds.right - rootBounds.left).toPx() }
+
+            // Start drag on the first photo
+            composeTestRule.onAllNodes(allPhotosMatcher).onFirst().performTouchInput {
+                down(center)
+                advanceEventTime(viewConfiguration.longPressTimeoutMillis + 1)
+                // Drag across the screen to select items in the first row.
+                dragInIncrements(totalOffset = screenWidthPx, vertical = false)
+                advanceEventTime(1000)
+                up()
+            }
+
+            advanceTimeBy(1000)
+            composeTestRule.waitForIdle()
+
+            // Verify that items 1 and 3 are selected, but 2 is not.
+            val selectedItems = selection.get().snapshot()
+            assertWithMessage("Expected 2 items in selection").that(selectedItems.size).isEqualTo(2)
+
+            assertWithMessage("Item 2 should not be selected")
+                .that(selectedItems.any { it.mediaId == "2" })
+                .isFalse()
+
+            assertWithMessage("Item 1 should be selected")
+                .that(selectedItems.any { it.mediaId == "1" })
+                .isTrue()
+
+            assertWithMessage("Item 3 should be selected")
+                .that(selectedItems.any { it.mediaId == "3" })
+                .isTrue()
+        }
+
+    @Test
     @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
     fun testSwipeRightToNavigateToAlbumGridInRtl_searchFlagOff() {
         testScope.runTest {
@@ -817,25 +898,15 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
         Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
     )
     fun testPhotoWithDisabledReasonCannotBeSelected() {
-        val currentDateTime = LocalDateTime.now()
-        val maxFileSize = 100 * 1024L // 100 KB
+        val maxFileSize = SIZE_100KB
         val selectionParams =
             PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
         val mediaWithDisabledReason =
-            Media.Image(
+            createImage(
                 mediaId = "1",
                 pickerId = 1L,
-                authority = "a",
-                mediaSource = MediaSource.LOCAL,
-                mediaUri = Uri.parse("content://media/picker/a/1"),
-                glideLoadableUri = Uri.parse("content://a/1"),
-                dateTakenMillisLong = currentDateTime.toEpochSecond(ZoneOffset.UTC) * 1000,
-                sizeInBytes = 2 * maxFileSize,
-                mimeType = "image/png",
-                standardMimeTypeExtension = 1,
-                width = 512,
-                height = 512,
                 selectionParams = selectionParams,
+                sizeInBytes = 2 * maxFileSize,
             )
 
         val testDataService = dataService.get() as? TestDataServiceImpl
@@ -843,7 +914,7 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
         testDataService.mediaList = listOf(mediaWithDisabledReason)
 
         // Set the selection params in the configuration
-        configurationManager.get().setCaller("com.android.test", 123, "Test App")
+        configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
 
         testScope.runTest {
             val intent =
@@ -853,27 +924,11 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
             configurationManager.get().setIntent(intent)
 
             composeTestRule.setContent {
-                val photopickerConfiguration by
-                    configurationManager.get().configuration.collectAsStateWithLifecycle()
-
-                CompositionLocalProvider(
-                    LocalFeatureManager provides featureManager.get(),
-                    LocalSelection provides selection.get(),
-                    LocalPhotopickerConfiguration provides photopickerConfiguration,
-                    LocalNavController provides createNavController(),
-                    LocalEvents provides events.get(),
-                ) {
-                    PhotopickerTheme(config = photopickerConfiguration) {
-                        Box(Modifier.fillMaxSize()) {
-                            PhotopickerMain(disruptiveDataNotification = flow { emit(0) })
-                            LocalFeatureManager.current.composeLocation(
-                                Location.SNACK_BAR,
-                                maxSlots = 1,
-                                modifier = Modifier.align(Alignment.BottomCenter),
-                            )
-                        }
-                    }
-                }
+                callPhotopickerApp(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
             }
 
             // Wait for the PhotoGridViewModel to load data and for the UI to update.
@@ -900,16 +955,11 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
             val expectedMessage =
                 resources.getString(
                     R.string.photopicker_selection_max_media_item_size_error_kb,
-                    "Test App",
-                    "100",
+                    TEST_APP_LABEL,
+                    SIZE_100KB / 1024,
                 )
 
-            // Snackbar with the appropriate error message is displayed
-            composeTestRule.waitUntil(timeoutMillis = 5000) {
-                composeTestRule.onAllNodes(hasText(expectedMessage)).fetchSemanticsNodes().size == 1
-            }
-
-            composeTestRule.onNode(hasText(expectedMessage)).assertIsDisplayed()
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
     }
 }

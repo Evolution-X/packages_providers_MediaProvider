@@ -62,13 +62,13 @@ import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.semantics.expand
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
@@ -324,7 +324,7 @@ fun PhotopickerDesktop(
         }
     }
 
-    // Provide the NavController to the rest of the Compose stack.
+    // Provide the NavController and other dependencies to the rest of the Compose stack.
     CompositionLocalProvider(LocalNavController provides navController) {
         Column(
             modifier =
@@ -420,12 +420,13 @@ fun PhotopickerDesktop(
  *   the user has indicated the media selection is final.
  */
 @Composable
-fun PhotopickerApp(disruptiveDataNotification: Flow<Int>, onMediaSelectionConfirmed: () -> Unit) {
+fun PhotopickerApp(
+    disruptiveDataNotification: Flow<Int>,
+    onMediaSelectionConfirmed: () -> Unit,
     // Initialize and remember the NavController. This needs to be provided before the call to
     // the NavigationGraph, so this is done at the top.
-    val navController = rememberNavController()
-
-    // Provide the NavController to the rest of the Compose stack.
+    navController: NavHostController = rememberNavController(),
+) {
     CompositionLocalProvider(LocalNavController provides navController) {
         Surface(contentColor = MaterialTheme.colorScheme.onSurface, color = Color.Transparent) {
             Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {

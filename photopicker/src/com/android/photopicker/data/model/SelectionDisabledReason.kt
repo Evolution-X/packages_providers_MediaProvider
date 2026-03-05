@@ -124,6 +124,33 @@ enum class SelectionDisabledReason {
 
     companion object {
         /**
+         * Returns a localized error message if the total selection size exceeds the maximum allowed
+         * batch size.
+         *
+         * @param configuration The current photopicker configuration.
+         * @param localizationHelper The helper for localization.
+         * @param resources The resources used to fetch strings.
+         * @return A localized and formatted error message string, or null if no limit is set.
+         */
+        fun getSelectionBatchSizeLimitExceededMessage(
+            configuration: PhotopickerConfiguration,
+            localizationHelper: LocalizationHelper,
+            resources: Resources,
+        ): String? {
+            val selectionParams = configuration.selectionParams ?: return null
+            val maxBatchSize = selectionParams.maxSelectionBatchSizeInBytes
+            if (maxBatchSize == -1L) return null
+
+            val appName =
+                configuration.callingPackageLabel
+                    ?: resources.getString(R.string.photopicker_selection_param_generic_app_label)
+
+            val (sizeUnit, formattedValue) = localizationHelper.getFormattedSize(maxBatchSize)
+            val stringResourceId = batchSizeToResourceIdMap.getValue(sizeUnit)
+            return resources.getString(stringResourceId, appName, formattedValue)
+        }
+
+        /**
          * Returns the [SelectionDisabledReason] corresponding to the given name, or null if the
          * name is not recognized.
          */
@@ -140,6 +167,16 @@ enum class SelectionDisabledReason {
                 SizeUnit.KB to R.string.photopicker_selection_max_media_item_size_error_kb,
                 SizeUnit.MB to R.string.photopicker_selection_max_media_item_size_error_mb,
                 SizeUnit.GB to R.string.photopicker_selection_max_media_item_size_error_gb,
+            )
+
+        /**
+         * A mapping of [SizeUnit] to string resources specifically for selection batch size errors.
+         */
+        private val batchSizeToResourceIdMap =
+            mapOf<SizeUnit, Int>(
+                SizeUnit.KB to R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                SizeUnit.MB to R.string.photopicker_selection_max_selection_batch_size_error_mb,
+                SizeUnit.GB to R.string.photopicker_selection_max_selection_batch_size_error_gb,
             )
     }
 }
