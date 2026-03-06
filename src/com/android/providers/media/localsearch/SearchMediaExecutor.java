@@ -62,14 +62,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SearchMediaExecutor {
     private static final String TAG = SearchMediaExecutor.class.getSimpleName();
 
+    public static final int MAX_ALLOWED_SEARCH_TEXT_LENGTH = 100;
     private final Handler mHandler = SearchMediaServiceBackgroundThread.getHandler();
     private final Map<String, CancellationSignal> mCancellationSignalMap =
             new ConcurrentHashMap<>();
 
     private AppSearchDbManager mAppSearchDbManager;
+    private Optional<RestrictedQueryChecker> mRestrictedQueryChecker;
 
     public SearchMediaExecutor(Context context) {
         final long start = System.currentTimeMillis();
+        try {
+            mRestrictedQueryChecker = Optional.of(new RestrictedQueryChecker(context));
+        } catch (Exception e) {
+            Log.w(TAG, "Failed to initialize RestrictedQueryChecker", e);
+            mRestrictedQueryChecker = Optional.empty();
+        }
         try {
             mAppSearchDbManager = new AppSearchDbManager(context);
         } catch (Exception e) {
@@ -103,6 +111,30 @@ public class SearchMediaExecutor {
             final long start = System.currentTimeMillis();
             if (isCancelled(uniqueSearchId)) {
                 Log.i(TAG, "Search was cancelled for searchId: " + searchId);
+                Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
+                return;
+            }
+
+            if (searchText.length() > MAX_ALLOWED_SEARCH_TEXT_LENGTH) {
+                receiver.onError(new SearchMediaException(searchId, "Please limit search text to "
+                        + MAX_ALLOWED_SEARCH_TEXT_LENGTH + " characters or less.",
+                        SearchMediaException.ERROR_INVALID_ARGUMENTS, /* retryable */ false));
+                Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
+                return;
+            }
+
+            if (mRestrictedQueryChecker.isEmpty()) {
+                Log.d(TAG, "Query checker failed to load, returning empty results");
+                receiver.onResult(new SearchMediaResultPage(searchId,
+                        /* searchResults */ new ArrayList<>(), /* extras */ Bundle.EMPTY));
+                Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
+                return;
+            }
+
+            if (mRestrictedQueryChecker.get().isQueryRestricted(searchText)) {
+                Log.d(TAG, "Query is restricted, returning empty results");
+                receiver.onResult(new SearchMediaResultPage(searchId,
+                        /* searchResults */ new ArrayList<>(), /* extras */ Bundle.EMPTY));
                 Trace.endAsyncSection("SearchMediaExecutor.onSearchMedia", searchId.hashCode());
                 return;
             }
