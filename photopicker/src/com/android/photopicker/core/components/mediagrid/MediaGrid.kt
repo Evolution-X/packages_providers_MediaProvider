@@ -59,7 +59,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Gif
 import androidx.compose.material.icons.filled.MotionPhotosOn
 import androidx.compose.material.icons.filled.PlayCircle
-import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Videocam
@@ -118,6 +117,7 @@ import com.android.photopicker.extensions.itemIndexAtPosition
 import com.android.photopicker.extensions.transferScrollableTouchesToHostInEmbedded
 import com.android.photopicker.features.categorygrid.categoryIcon.IconGrid
 import com.android.photopicker.util.LocalLocalizationHelper
+import com.android.photopicker.util.SelectionDisabledOverlay
 import com.android.photopicker.util.applyChoice
 import com.android.photopicker.util.applyWhen
 import com.android.photopicker.util.calculateWindowRect
@@ -916,27 +916,6 @@ private fun SelectedIconOverlay(
                     )
             }
         } // Image + Icon Container
-    }
-}
-
-/**
- * Displays an overlay of an error icon with a scrim for media items that are disabled.
- *
- * @param modifier The [Modifier] to be applied to the overlay
- */
-@Composable
-fun SelectionDisabledOverlay(modifier: Modifier = Modifier) {
-    Box(modifier = modifier) {
-        Icon(
-            imageVector = Icons.Outlined.ErrorOutline,
-            // TODO: update the content description b/483703300
-            contentDescription = null,
-            tint = Color.White,
-            modifier =
-                Modifier.align(Alignment.BottomEnd)
-                    .padding(MEASUREMENT_DISABLED_ICON_PADDING)
-                    .size(MEASUREMENT_DISABLED_ICON_SIZE),
-        )
     }
 }
 

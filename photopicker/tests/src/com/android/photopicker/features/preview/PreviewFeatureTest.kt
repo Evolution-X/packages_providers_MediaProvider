@@ -41,6 +41,7 @@ import android.provider.ICloudMediaSurfaceStateChangedCallback
 import android.provider.MediaStore
 import android.test.mock.MockContentResolver
 import android.view.Surface
+import android.widget.photopicker.PhotoPickerSelectionParams
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.runtime.CompositionLocalProvider
@@ -57,6 +58,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.performClick
@@ -708,7 +710,7 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
 
             // Allow selection to update
             advanceTimeBy(100)
-            assertWithMessage("Expected route to be the initial route")
+            assertWithMessage("Selection did not contain the expected item")
                 .that(selection.snapshot())
                 .contains(TEST_MEDIA_VIDEO)
 
@@ -717,6 +719,84 @@ class PreviewFeatureTest : PhotopickerFeatureBaseTest() {
                 .contains(Event.MediaSelectionConfirmed(FeatureToken.PREVIEW.token))
 
             job.cancel()
+        }
+
+    @Test
+    fun testPreviewDisabledItemShowsSnackbarInSingleSelect() =
+        testScope.runTest {
+            val maxFileSize = SIZE_100KB
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder().setMaxMediaItemSizeInBytes(maxFileSize).build()
+
+            val mediaWithDisabledReason =
+                createImage(
+                    mediaId = "1",
+                    pickerId = 1L,
+                    selectionParams = selectionParams,
+                    sizeInBytes = maxFileSize * 2,
+                )
+
+            val intent =
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    putExtra(MediaStore.EXTRA_PICK_IMAGES_SELECTION_PARAMS, selectionParams)
+                }
+            configurationManager.get().setIntent(intent)
+            configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+            composeTestRule.setContent {
+                // Set an explicit size to prevent errors in glide being unable to measure
+                Column(modifier = Modifier.defaultMinSize(minHeight = 100.dp, minWidth = 100.dp)) {
+                    callPhotopickerMain(
+                        featureManager = featureManager,
+                        selection = selection,
+                        events = events,
+                    )
+                }
+            }
+
+            val initialRoute = navController.currentBackStackEntry?.destination?.route
+            assertWithMessage("initial route was null").that(initialRoute).isNotNull()
+
+            // Navigate on the UI thread
+            composeTestRule.runOnUiThread({
+                navController.navigateToPreviewMedia(mediaWithDisabledReason)
+            })
+
+            val resources = getTestableContext().resources
+            val buttonLabel = resources.getString(R.string.photopicker_select_current_button_label)
+
+            // Wait until the previewed media item is visible and in focus
+            composeTestRule.waitUntil(timeoutMillis = 5_000) {
+                advanceTimeBy(100)
+                composeTestRule
+                    .onAllNodes(hasContentDescription("taken on", substring = true) and isFocused())
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+
+            composeTestRule
+                .onNode(hasText(buttonLabel))
+                .assertIsDisplayed()
+                .assert(hasClickAction())
+                .performClick()
+
+            composeTestRule.waitForIdle()
+
+            // Assert selection is not updated
+            advanceTimeBy(100)
+            assertWithMessage("Expected selection snapshot to be empty")
+                .that(selection.snapshot())
+                .isEmpty()
+
+            // Verify snackbar message
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_media_item_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxFileSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
 
     @Test
