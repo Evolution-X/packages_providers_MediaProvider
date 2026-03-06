@@ -51,8 +51,7 @@
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Παράβλεψη"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Πλέγμα μέσων"</string>
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"Συνδεθείτε σε Wi-Fi ή χρησιμοποιήστε δεδομένα κινητής τηλεφωνίας για να επιλέξετε φωτογραφίες και βίντεο από την εφαρμογή <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
-    <!-- no translation found for photopicker_banner_internet_connection_required_message (2798498114410918856) -->
-    <skip />
+    <string name="photopicker_banner_internet_connection_required_message" msgid="2798498114410918856">"Συνδεθείτε σε Wi-Fi ή δίκτυο κινητής τηλεφωνίας, ώστε να είναι διαθέσιμες οι φωτογραφίες και τα βίντεο από τον πάροχο <xliff:g id="MEDIA_PROVIDER">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"Απαιτείται σύνδεση στο διαδίκτυο"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"Μετάβαση στις Ρυθμίσεις"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"μια εφαρμογή μέσων στο cloud"</string>
