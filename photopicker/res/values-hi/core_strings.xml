@@ -51,6 +51,7 @@
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"खारिज करें"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"मीडिया ग्रिड"</string>
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"<xliff:g id="APP_NAME">%1$s</xliff:g> से फ़ोटो और वीडियो चुनने के लिए, वाई-फ़ाई या मोबाइल डेटा से कनेक्ट करें"</string>
+    <string name="photopicker_banner_internet_connection_required_message" msgid="2798498114410918856">"वाई-फ़ाई या मोबाइल नेटवर्क से कनेक्ट करें, ताकि <xliff:g id="MEDIA_PROVIDER">%1$s</xliff:g> में मौजूद फ़ोटो और वीडियो भी दिखें"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"इंटरनेट कनेक्शन ज़रूरी है"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"सेटिंग पर जाएं"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"क्लाउड मीडिया ऐप्लिकेशन"</string>

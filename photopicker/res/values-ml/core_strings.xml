@@ -51,6 +51,7 @@
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"ഡിസ്‌മിസ് ചെയ്യുക"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"മീഡിയ ഗ്രിഡ്"</string>
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"<xliff:g id="APP_NAME">%1$s</xliff:g> എന്നതിൽ നിന്ന് ഫോട്ടോകളും വീഡിയോകളും തിരഞ്ഞെടുക്കാൻ വൈഫൈയിലേക്കോ മൊബൈൽ ഡാറ്റയിലേക്കോ കണക്റ്റ് ചെയ്യുക"</string>
+    <string name="photopicker_banner_internet_connection_required_message" msgid="2798498114410918856">"<xliff:g id="MEDIA_PROVIDER">%1$s</xliff:g> എന്നതിൽ നിന്നുള്ള ഫോട്ടോകളും വീഡിയോകളും ലഭ്യമാകാൻ വൈഫൈയിലേക്കോ മൊബൈൽ നെറ്റ്‌വർക്കിലേക്കോ കണക്റ്റ് ചെയ്യുക"</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"ഇന്റർനെറ്റ് കണക്ഷൻ ആവശ്യമാണ്"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"ക്രമീകരണത്തിലേക്ക് പോകുക"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"ക്ലൗഡ് മീഡിയ ആപ്പ്"</string>

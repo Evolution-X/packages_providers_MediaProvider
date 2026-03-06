@@ -91,6 +91,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -658,6 +659,10 @@ fun defaultBuildMediaItem(
                 // Apply semantics for the click handlers
                 Modifier.semantics(mergeDescendants = true) {
                         contentDescription = mediaDescription
+                        // Add the built-in disabled state if a reason exists
+                        if (item.media.disabledReason != null) {
+                            disabled()
+                        }
                         onClick(
                             action = {
                                 onClick?.invoke(item)
@@ -744,11 +749,7 @@ fun defaultBuildMediaItem(
                             MimeTypeOverlay(item)
                         }
 
-                        if (
-                            config.flags.PICKER_SELECTION_PARAMS_ENABLED &&
-                                item.media.disabledReason != null
-                        ) {
-
+                        item.media.disabledReason?.let {
                             // Scrim to separate the disabledFromSelection icon overlay from the
                             // image behind it.
                             val bottomScrimGradient = Brush.verticalGradient(scrimColors.reversed())

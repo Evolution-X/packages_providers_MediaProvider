@@ -277,7 +277,15 @@ constructor(
         }
     }
 
-    fun handleMediaSetItemSelection(item: Media, selectionLimitExceededMessage: String) {
+    fun handleMediaSetItemSelection(
+        item: Media,
+        selectionLimitExceededMessage: String,
+        disabledReasonMessage: String?,
+    ) {
+        disabledReasonMessage?.let {
+            scope.launch { events.dispatch(Event.ShowSnackbarMessage(CATEGORY_GRID.token, it)) }
+            return
+        }
         // Update the selectable values in the received media item.
         val updatedMediaItem =
             Media.withSelectable(item, /* selectionSource */ Telemetry.MediaLocation.CATEGORY, null)

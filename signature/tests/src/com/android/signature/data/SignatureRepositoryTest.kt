@@ -66,4 +66,14 @@ class SignatureRepositoryTest {
 
         verify(signatureDao).deleteSignature(signature)
     }
+
+    @Test
+    fun getSignatureCount_delegatesToDao() = runTest {
+        whenever(signatureDao.getSignatureCount()).thenReturn(5)
+
+        val count = repository.getSignatureCount()
+
+        assertEquals(5, count)
+        verify(signatureDao).getSignatureCount()
+    }
 }

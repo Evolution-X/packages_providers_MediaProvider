@@ -18,14 +18,17 @@ package com.android.signature.data
 
 import android.graphics.Typeface
 import androidx.compose.ui.text.font.FontFamily
+import com.android.signature.R
 
 /**
  * Data class to hold font information for the "Type" tab.
  */
-internal data class SignatureFont(
+data class SignatureFont(
     val name: String,
     val composeFontFamily: FontFamily,
-    val androidTypeface: Typeface
+    val androidTypeface: Typeface,
+    val fontSizeResId: Int = R.dimen.signature_font_size_default,
+    val lineHeightResId: Int = R.dimen.signature_line_height_default
 )
 
 /**
@@ -36,22 +39,27 @@ internal object SignatureFonts {
         SignatureFont(
             "Cursive",
             FontFamily.Cursive,
-            Typeface.create("cursive", Typeface.NORMAL)
-        ),
-        SignatureFont(
+            Typeface.create("cursive", Typeface.NORMAL),
+            fontSizeResId = R.dimen.signature_font_size_default,
+            lineHeightResId = R.dimen.signature_line_height_default
+        ), SignatureFont(
             "Sans Serif",
             FontFamily.SansSerif,
-            Typeface.SANS_SERIF
-        ),
-        SignatureFont(
+            Typeface.SANS_SERIF,
+            fontSizeResId = R.dimen.signature_font_size_medium,
+            lineHeightResId = R.dimen.signature_line_height_default
+        ), SignatureFont(
             "Serif",
             FontFamily.Serif,
-            Typeface.SERIF
-        ),
-        SignatureFont(
+            Typeface.SERIF,
+            fontSizeResId = R.dimen.signature_font_size_small,
+            lineHeightResId = R.dimen.signature_line_height_default
+        ), SignatureFont(
             "Monospace",
             FontFamily.Monospace,
-            Typeface.MONOSPACE
+            Typeface.MONOSPACE,
+            fontSizeResId = R.dimen.signature_font_size_small,
+            lineHeightResId = R.dimen.signature_line_height_default
         )
     )
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -66,6 +67,7 @@ import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.extensions.navigateToPreviewMedia
 import com.android.photopicker.features.preview.PreviewFeature
+import com.android.photopicker.util.LocalLocalizationHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -110,9 +112,15 @@ private fun MediasetContentGrid(
     val items = mediasetItems.collectAsLazyPagingItems()
     // Collect the selection to notify the mediaGrid of selection changes.
     val selection by LocalSelection.current.flow.collectAsStateWithLifecycle()
-    val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
+    val configuration = LocalPhotopickerConfiguration.current
+    val selectionLimit = configuration.selectionLimit
+    val localizationHelper = LocalLocalizationHelper.current
+    val resources = LocalContext.current.resources
     val selectionLimitExceededMessage =
-        stringResource(R.string.photopicker_selection_limit_exceeded_snackbar, selectionLimit)
+        stringResource(
+            R.string.photopicker_selection_limit_exceeded_snackbar,
+            localizationHelper.getLocalizedCount(selectionLimit),
+        )
     // Use the expanded layout any time the Width is Medium or larger.
     val isExpandedScreen: Boolean =
         when (LocalWindowSizeClass.current.widthSizeClass) {
@@ -120,12 +128,10 @@ private fun MediasetContentGrid(
             WindowWidthSizeClass.Expanded -> true
             else -> false
         }
-    val isEmbedded =
-        LocalPhotopickerConfiguration.current.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
+    val isEmbedded = configuration.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
     val host = LocalEmbeddedState.current?.host
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
-    val configuration = LocalPhotopickerConfiguration.current
 
     // Container encapsulating the mediaset title followed by its content in the form of a
     // grid, the content also includes date and month separators.
@@ -178,8 +184,7 @@ private fun MediasetContentGrid(
                 val localConfig = LocalConfiguration.current
                 val emptyStatePadding =
                     remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
-                val isVideoOnlyMimeType =
-                    LocalPhotopickerConfiguration.current.hasOnlyVideoMimeTypes()
+                val isVideoOnlyMimeType = configuration.hasOnlyVideoMimeTypes()
                 val (title, body, icon) = getEmptyStateContentForMediaset(isVideoOnlyMimeType)
                 EmptyState(
                     modifier =
@@ -262,9 +267,16 @@ private fun MediasetContentGrid(
                     onZoomAtMaxZoom = onItemPreview,
                     onItemClick = { item ->
                         if (item is MediaGridItem.MediaItem) {
+                            val disabledReasonMessage =
+                                item.media.disabledReason?.getDisabledMessage(
+                                    configuration,
+                                    localizationHelper,
+                                    resources,
+                                )
                             viewModel.handleMediaSetItemSelection(
                                 item.media,
                                 selectionLimitExceededMessage,
+                                disabledReasonMessage,
                             )
                         }
                     },
