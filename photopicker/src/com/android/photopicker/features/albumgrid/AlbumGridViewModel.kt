@@ -152,7 +152,12 @@ constructor(
         item: Media,
         selectionLimitExceededMessage: String,
         album: Group.Album,
+        disabledReasonMessage: String? = null,
     ) {
+        disabledReasonMessage?.let {
+            scope.launch { events.dispatch(Event.ShowSnackbarMessage(ALBUM_GRID.token, it)) }
+            return
+        }
         // Update the selectable values in the received media item.
         val updatedMediaItem =
             Media.withSelectable(item, /* selectionSource */ Telemetry.MediaLocation.ALBUM, album)

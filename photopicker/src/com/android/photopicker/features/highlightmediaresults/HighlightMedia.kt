@@ -150,23 +150,27 @@ fun HighlightMedia(
     modifier: Modifier = Modifier,
     highlightMediaViewModel: HighlightMediaViewModel = obtainViewModel(isActivityScoped = true),
 ) {
-    val highlightParams: HighlightQueryResultsParams =
-        LocalPhotopickerConfiguration.current.highlightQueryResultsParams
+    val configuration = LocalPhotopickerConfiguration.current
+    val highlightParams: HighlightQueryResultsParams = configuration.highlightQueryResultsParams
     val highlightQuery: HighlightQuery = highlightParams.queryResultsHighlightQuery
     val showHighlightSection by
         highlightMediaViewModel.showHighlightSection.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val events = LocalEvents.current
-    val configuration = LocalPhotopickerConfiguration.current
 
     if (!checkHighlightParamsValidity(highlightParams)) {
         return
     }
 
-    val selectionLimit = LocalPhotopickerConfiguration.current.selectionLimit
+    val selectionLimit = configuration.selectionLimit
+    val localizationHelper = LocalLocalizationHelper.current
+    val resources = LocalContext.current.resources
     val selectionLimitExceededMessage =
-        stringResource(R.string.photopicker_selection_limit_exceeded_snackbar, selectionLimit)
+        stringResource(
+            R.string.photopicker_selection_limit_exceeded_snackbar,
+            localizationHelper.getLocalizedCount(selectionLimit),
+        )
     AnimatedVisibility(
         visible = showHighlightSection,
         exit = fadeOut(animationSpec = tween(durationMillis = 300, easing = LinearEasing)),
@@ -202,9 +206,16 @@ fun HighlightMedia(
                             modifier = modifier,
                             dispatcher = viewModel.backgroundDispatcher,
                             onGridItemSelection = { highlightMediaItem ->
+                                val disabledReasonMessage =
+                                    highlightMediaItem.media.disabledReason?.getDisabledMessage(
+                                        configuration,
+                                        localizationHelper,
+                                        resources,
+                                    )
                                 viewModel.handleGridItemSelection(
                                     item = highlightMediaItem.media,
                                     selectionLimitExceededMessage = selectionLimitExceededMessage,
+                                    disabledReasonMessage = disabledReasonMessage,
                                     selectionSource = Telemetry.MediaLocation.HIGHLIGHT_MEDIA_GRID,
                                 )
                                 scope.launch {

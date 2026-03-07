@@ -42,6 +42,7 @@ import android.platform.test.flag.junit.CheckFlagsRule;
 import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.provider.ISearchMediaService;
 import android.provider.MediaStore;
+import android.provider.SearchMediaException;
 import android.provider.SearchMediaResult;
 import android.provider.SearchMediaService;
 import android.util.Log;
@@ -57,6 +58,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.providers.media.appsearch.AppSearchDbManager;
 import com.android.providers.media.appsearch.MediaItem;
+import com.android.providers.media.localsearch.SearchMediaExecutor;
 import com.android.providers.media.search.TestSearchMediaCallback;
 
 import org.junit.After;
@@ -197,6 +199,77 @@ public class DefaultSearchMediaServiceTest {
         }
     }
 
+    @Test
+    public void testDefaultSearchServiceWithRestrictedQuery() throws Exception {
+        // 1. Index 5 cats, 5 dogs, and 5 monkeys.
+        indexDocumentsForRestrictedQuerySearch();
+
+        // 2. Search for "cat" - Expecting 5 results as cat is not a restricted query.
+        List<SearchMediaResult> results;
+        results = performSearch(/* searchText */ "cat", /* searchId */ "123");
+        assertNotNull(results);
+        assertEquals(5, results.size());
+
+        // 3. Search for "dog" - Expecting 5 results as dog is not a restricted query.
+        results = performSearch(/* searchText */ "dog", /* searchId */ "456");
+        assertNotNull(results);
+        assertEquals(5, results.size());
+
+        // 4. Search for "monkey" - Expecting 0 results as monkey is a restricted query.
+        results = performSearch(/* searchText */ "monkey", /* searchId */ "789");
+        assertNotNull(results);
+        assertEquals(0, results.size());
+    }
+
+    @Test
+    public void testDefaultSearchServiceWithTextLengthLimit() throws Exception {
+        // 1. Verify search with a valid text length (under 100 characters)
+        String validSearchText = "sample search text";
+        TestSearchMediaCallback callback = new TestSearchMediaCallback();
+        mSearchMediaService.searchMedia(validSearchText, "valid_search_id", new Bundle(), callback);
+        callback.await(10, TimeUnit.SECONDS);
+
+        assertNotNull(callback.getSearchMediaResultPage());
+
+        // 2. Verify search with text exceeding MAX_ALLOWED_SEARCH_TEXT_LENGTH
+        StringBuilder longSearchText = new StringBuilder();
+        for (int i = 0; i < SearchMediaExecutor.MAX_ALLOWED_SEARCH_TEXT_LENGTH + 1; i++) {
+            longSearchText.append("a");
+        }
+
+        callback = new TestSearchMediaCallback();
+        mSearchMediaService.searchMedia(longSearchText.toString(), "error_search_id",
+                new Bundle(), callback);
+        callback.await(10, TimeUnit.SECONDS);
+
+        assertNotNull(callback.getSearchMediaException());
+        assertEquals(SearchMediaException.ERROR_INVALID_ARGUMENTS,
+                callback.getSearchMediaException().getErrorCode());
+    }
+
+    private List<SearchMediaResult> performSearch(String searchText, String searchId)
+            throws Exception {
+        TestSearchMediaCallback callback = new TestSearchMediaCallback();
+        mSearchMediaService.searchMedia(searchText, searchId, new Bundle(), callback);
+        callback.await(10, TimeUnit.SECONDS);
+        return callback.getSearchMediaResultPage().getSearchResults();
+    }
+
+    private void indexDocumentsForRestrictedQuerySearch() throws Exception {
+        List<MediaItem> documents = new ArrayList<>();
+        long fileId = 500;
+        for (int i = 0; i < 5; i++) {
+            documents.add(createMediaItem("cat", 1, fileId++));
+        }
+        for (int i = 0; i < 5; i++) {
+            documents.add(createMediaItem("dog", 1, fileId++));
+        }
+        for (int i = 0; i < 5; i++) {
+            documents.add(createMediaItem("monkey", 1, fileId++));
+        }
+        mAppSearchDbManager.insertDocuments(documents);
+    }
+
     private List<SearchMediaResult> makeSearchMediaCall(Bundle extras, int expectedSearchResults)
             throws Exception {
         TestSearchMediaCallback callback = new TestSearchMediaCallback();
@@ -321,21 +394,8 @@ public class DefaultSearchMediaServiceTest {
     private void deleteAllDocuments() throws Exception {
         SearchSpec searchSpec = new SearchSpec.Builder()
                 .addFilterNamespaces(AppSearchDbManager.NAMESPACE)
-                .setResultCountPerPage(1000)
                 .build();
-
-        List<Long> fileIdsToDelete = new ArrayList<>();
-        try (SearchResults searchResults = mAppSearchDbManager.searchDocuments("", searchSpec)) {
-            List<SearchResult> results = retrieveAllSearchResults(searchResults);
-            for (SearchResult result : results) {
-                fileIdsToDelete.add(result.getGenericDocument().getPropertyLong(
-                        MediaItem.PROPERTY_FILE_ID));
-            }
-        }
-
-        if (!fileIdsToDelete.isEmpty()) {
-            mAppSearchDbManager.deleteDocumentsByFileIds(fileIdsToDelete);
-        }
+        mAppSearchDbManager.deleteDocuments("", searchSpec);
     }
 
     private static @NonNull List<SearchResult> retrieveAllSearchResults(
