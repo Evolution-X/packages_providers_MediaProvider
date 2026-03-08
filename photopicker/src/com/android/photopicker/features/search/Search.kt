@@ -1310,6 +1310,7 @@ private fun ResultMediaGrid(
                 item = item.media,
                 selectionLimitExceededMessage = selectionLimitExceededMessage,
                 disabledReasonMessage = disabledReasonMessage,
+                selectionBatchSizeLimitExceededMessage = selectionBatchSizeLimitExceededMessage,
             )
             scope.launch {
                 events.dispatch(

@@ -28,6 +28,7 @@ import com.android.photopicker.core.events.Events
 import com.android.photopicker.core.events.Telemetry
 import com.android.photopicker.core.features.FeatureToken.ALBUM_GRID
 import com.android.photopicker.core.selection.Selection
+import com.android.photopicker.core.selection.SelectionModifiedResult.FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED
 import com.android.photopicker.core.selection.SelectionModifiedResult.FAILURE_SELECTION_LIMIT_EXCEEDED
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.Group
@@ -153,6 +154,7 @@ constructor(
         selectionLimitExceededMessage: String,
         album: Group.Album,
         disabledReasonMessage: String? = null,
+        selectionBatchSizeLimitExceededMessage: String? = null,
     ) {
         disabledReasonMessage?.let {
             scope.launch { events.dispatch(Event.ShowSnackbarMessage(ALBUM_GRID.token, it)) }
@@ -163,10 +165,18 @@ constructor(
             Media.withSelectable(item, /* selectionSource */ Telemetry.MediaLocation.ALBUM, album)
         scope.launch {
             val result = selection.toggle(updatedMediaItem)
-            if (result == FAILURE_SELECTION_LIMIT_EXCEEDED) {
-                events.dispatch(
-                    Event.ShowSnackbarMessage(ALBUM_GRID.token, selectionLimitExceededMessage)
-                )
+            when (result) {
+                FAILURE_SELECTION_LIMIT_EXCEEDED -> {
+                    events.dispatch(
+                        Event.ShowSnackbarMessage(ALBUM_GRID.token, selectionLimitExceededMessage)
+                    )
+                }
+                FAILURE_SELECTION_BATCH_SIZE_LIMIT_EXCEEDED -> {
+                    selectionBatchSizeLimitExceededMessage?.let {
+                        events.dispatch(Event.ShowSnackbarMessage(ALBUM_GRID.token, it))
+                    }
+                }
+                else -> {}
             }
         }
     }

@@ -39,6 +39,7 @@ import android.widget.photopicker.PhotoPickerUiCustomizationParams
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteractionCollection
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -99,9 +100,11 @@ import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.data.model.MediaSource
 import com.android.photopicker.data.model.Provider
+import com.android.photopicker.features.categorygrid.data.CategoryDataService
 import com.android.photopicker.features.highlightmediaresults.model.HighlightAlbum
 import com.android.photopicker.features.overflowmenu.OverflowMenuFeature
 import com.android.photopicker.features.preview.PreviewFeature
+import com.android.photopicker.features.search.data.SearchDataService
 import com.android.photopicker.features.snackbar.SnackbarFeature
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.inject.TestOptions
@@ -201,6 +204,8 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     @Inject lateinit var embeddedLifecycle: Lazy<EmbeddedLifecycle>
     @Inject lateinit var databaseManager: DatabaseManager
     @Inject lateinit var dataService: Lazy<DataService>
+    @Inject lateinit var categoryDataService: CategoryDataService
+    @Inject lateinit var searchDataService: Lazy<SearchDataService>
     @Inject override lateinit var configurationManager: Lazy<ConfigurationManager>
     // Needed for UserMonitor
     @Inject lateinit var mockContext: Context
@@ -2165,9 +2170,110 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
                 resources.getString(
                     R.string.photopicker_selection_max_media_item_size_error_kb,
                     TEST_APP_LABEL,
-                    SIZE_100KB / 1024,
+                    maxFileSize / 1024,
                 )
 
             assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
+
+    @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_EMBEDDED_PHOTOPICKER,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testPhotoGridItemCannotBeSelectedWhenBatchSizeLimitIsExceededInEmbedded() {
+        val maxBatchSize = 2 * SIZE_100KB
+        val selectionParams =
+            PhotoPickerSelectionParams.Builder()
+                .setMaxSelectionBatchSizeInBytes(maxBatchSize)
+                .build()
+
+        val item1 =
+            createImage(
+                mediaId = "1",
+                pickerId = 1L,
+                selectionParams = selectionParams,
+                sizeInBytes = SIZE_100KB,
+            )
+        val item2 =
+            createImage(
+                mediaId = "2",
+                pickerId = 2L,
+                selectionParams = selectionParams,
+                sizeInBytes = SIZE_100KB + 1,
+            )
+
+        val testDataService = dataService.get() as? TestDataServiceImpl
+        checkNotNull(testDataService) { "Expected a TestDataServiceImpl" }
+        testDataService.mediaList = listOf(item1, item2)
+
+        // Set the selection params in the feature info
+        val info =
+            EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
+        configurationManager.get().setEmbeddedPhotopickerFeatureInfo(info)
+        configurationManager.get().setCaller("com.android.test", 123, TEST_APP_LABEL)
+
+        testScope.runTest {
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerApp(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            assertMaxBatchSizeLimitEnforced()
+
+            val resources = getTestableContext().resources
+            val expectedMessage =
+                resources.getString(
+                    R.string.photopicker_selection_max_selection_batch_size_error_kb,
+                    TEST_APP_LABEL,
+                    maxBatchSize / 1024,
+                )
+
+            assertSnackbarIsShown(expectedMessage, composeTestRule)
+        }
+    }
+
+    private suspend fun TestScope.assertMaxBatchSizeLimitEnforced(
+        mediaItems: SemanticsNodeInteractionCollection =
+            composeTestRule.onAllNodes(
+                hasContentDescription(
+                    value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                    substring = true,
+                )
+            )
+    ) {
+
+        mediaItems.assertCountEquals(2)
+        // Select first item
+        mediaItems[0].performClick()
+        composeTestRule.waitForIdle()
+        advanceTimeBy(100)
+
+        assertWithMessage("Selection should contain 1 item")
+            .that(selection.get().snapshot().size)
+            .isEqualTo(1)
+
+        // Select second item (should fail)
+        mediaItems[1].performClick()
+        composeTestRule.waitForIdle()
+        advanceTimeBy(100)
+
+        // Ensure the click handler did NOT update the selection.
+        assertWithMessage(
+                "Expected selection to still contain 1 item as second item exceeds batch limit."
+            )
+            .that(selection.get().snapshot().size)
+            .isEqualTo(1)
+    }
 }

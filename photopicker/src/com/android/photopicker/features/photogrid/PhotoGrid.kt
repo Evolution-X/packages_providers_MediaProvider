@@ -89,6 +89,7 @@ import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.selection.LocalSelection
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.data.model.Media
+import com.android.photopicker.data.model.SelectionDisabledReason
 import com.android.photopicker.extensions.navigateToAlbumGrid
 import com.android.photopicker.extensions.navigateToCategoryGrid
 import com.android.photopicker.extensions.navigateToPhotoGrid
@@ -145,9 +146,15 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
             R.string.photopicker_selection_limit_exceeded_snackbar,
             localizationHelper.getLocalizedCount(selectionLimit),
         )
+    val resources = LocalContext.current.resources
+    val selectionBatchSizeLimitExceededMessage =
+        SelectionDisabledReason.getSelectionBatchSizeLimitExceededMessage(
+            configuration,
+            localizationHelper,
+            resources,
+        )
     val events = LocalEvents.current
     val scope = rememberCoroutineScope()
-    val resources = LocalContext.current.resources
 
     // Modifier applied when photo grid to album grid navigation is disabled
     val baseModifier = Modifier.fillMaxSize()
@@ -292,6 +299,8 @@ fun PhotoGrid(viewModel: PhotoGridViewModel = obtainViewModel()) {
                         viewModel.handleGridItemSelection(
                             item = item.media,
                             selectionLimitExceededMessage = selectionLimitExceededMessage,
+                            selectionBatchSizeLimitExceededMessage =
+                                selectionBatchSizeLimitExceededMessage,
                             disabledReasonMessage,
                         )
                         // Log user's interaction with picker's main grid(photo grid)
