@@ -16,6 +16,7 @@
 
 package com.android.providers.media.localsearch;
 
+import android.content.Context;
 import android.database.Cursor;
 import android.os.Build;
 import android.provider.MediaStore.Files.FileColumns;
@@ -29,6 +30,7 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 
+import com.android.providers.media.R;
 import com.android.providers.media.flags.Flags;
 
 import java.time.Instant;
@@ -51,6 +53,12 @@ public class MetadataLabelResolver {
 
     private static final String TAG = "MetadataLabelResolver";
 
+    private final Context mContext;
+
+    public MetadataLabelResolver(@NonNull Context context) {
+        mContext = context;
+    }
+
     // Helper method to add non-null/empty strings to the list
     // Returns true if the string was added.
     private static boolean addIfNotNull(Set<String> labels, @Nullable String label) {
@@ -71,19 +79,19 @@ public class MetadataLabelResolver {
      * present.
      */
     @VisibleForTesting
-    static String buildMetadataLabel(@NonNull MetadataInfo info) {
+    String buildMetadataLabel(@NonNull MetadataInfo info) {
         Set<String> labels = new ArraySet<>();
 
         addIfNotNull(labels, processDisplayName(info.displayName));
         addIfNotNull(labels, processRelativePath(info.relativePath));
-        addIfNotNull(labels, processMediaType(info.mediaType));
+        processMediaType(info.mediaType, labels);
         addIfNotNull(labels, processMimeType(info.mimeType));
-        addIfNotNull(labels, processSpecialFormat(info.specialFormat));
+        processSpecialFormat(info.specialFormat, labels);
         if (!addIfNotNull(labels, processTimestamp(info.dateTaken))) {
             addIfNotNull(labels, processTimestamp(info.dateAdded));
         }
-        addIfNotNull(labels, processBooleanColumn(info.isFavorite, "favorite favorites"));
-        addIfNotNull(labels, processBooleanColumn(info.isDownload, "download downloads"));
+        processIsFavorite(info.isFavorite, labels);
+        processIsDownload(info.isDownload, labels);
         addIfNotNull(labels, info.artist);
         addIfNotNull(labels, info.album);
         addIfNotNull(labels, info.genre);
@@ -98,7 +106,7 @@ public class MetadataLabelResolver {
      * @return A map where keys are the media item IDs and values are the generated
      *         metadata labels.
      */
-    public static Map<Long, String> generateMetadataLabels(@NonNull List<MetadataInfo> mediaInfos) {
+    public Map<Long, String> generateMetadataLabels(@NonNull List<MetadataInfo> mediaInfos) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
                 || !Flags.enableMediaProcessing()) {
             return null;
@@ -146,24 +154,41 @@ public class MetadataLabelResolver {
     }
 
     // Converts media_type int to a string
-    private static String processMediaType(int mediaType) {
-        return switch (mediaType) {
-            case FileColumns.MEDIA_TYPE_IMAGE -> "image images";
-            case FileColumns.MEDIA_TYPE_VIDEO -> "video videos";
-            case FileColumns.MEDIA_TYPE_AUDIO -> "audio audios";
-            case FileColumns.MEDIA_TYPE_DOCUMENT -> "document documents";
-            default -> "";
-        };
+    private void processMediaType(int mediaType, Set<String> labels) {
+        switch (mediaType) {
+            case FileColumns.MEDIA_TYPE_IMAGE -> {
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_image));
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_images));
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_photo));
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_photos));
+            }
+            case FileColumns.MEDIA_TYPE_VIDEO -> {
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_video));
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_videos));
+            }
+            case FileColumns.MEDIA_TYPE_AUDIO -> {
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_audio));
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_audios));
+            }
+            case FileColumns.MEDIA_TYPE_DOCUMENT -> {
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_document));
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_documents));
+            }
+        }
     }
 
     // Converts special_format int to a string
-    private static String processSpecialFormat(int specialFormat) {
-        return switch (specialFormat) {
-            case FileColumns.SPECIAL_FORMAT_ANIMATED_WEBP -> "animated";
-            case FileColumns.SPECIAL_FORMAT_MOTION_PHOTO -> "motion photo";
-            case FileColumns.SPECIAL_FORMAT_GIF -> "gif gifs";
-            default -> "";
-        };
+    private void processSpecialFormat(int specialFormat,
+            Set<String> labels) {
+        switch (specialFormat) {
+            case FileColumns.SPECIAL_FORMAT_ANIMATED_WEBP ->
+                    addIfNotNull(labels, mContext.getString(R.string.metadata_label_animated));
+            case FileColumns.SPECIAL_FORMAT_MOTION_PHOTO ->
+                addIfNotNull(labels, mContext.getString(R.string.metadata_label_motion_photo));
+            case FileColumns.SPECIAL_FORMAT_GIF -> {
+                addIfNotNull(labels, "gif gifs");
+            }
+        }
     }
 
     // Converts 1634048606830L to "October 2021"
@@ -184,9 +209,18 @@ public class MetadataLabelResolver {
     }
 
     // Returns the label if value is non-zero (true)
-    private static String processBooleanColumn(int value, String column) {
-        // Remove is_ from column name
-        return value != 0 ? column : "";
+    private void processIsFavorite(int value, Set<String> labels) {
+        if (value != 0) {
+            addIfNotNull(labels, mContext.getString(R.string.metadata_label_favorite));
+            addIfNotNull(labels, mContext.getString(R.string.metadata_label_favorites));
+        }
+    }
+
+    private void processIsDownload(int value, Set<String> labels) {
+        if (value != 0) {
+            addIfNotNull(labels, mContext.getString(R.string.metadata_label_download));
+            addIfNotNull(labels, mContext.getString(R.string.metadata_label_downloads));
+        }
     }
 
     /**
