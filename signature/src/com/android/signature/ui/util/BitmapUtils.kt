@@ -21,6 +21,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
+import androidx.annotation.VisibleForTesting
 
 private const val ERROR_EMPTY_TEXT = "Text cannot be empty"
 
@@ -33,7 +34,8 @@ private const val ERROR_EMPTY_TEXT = "Text cannot be empty"
  * @return A [Bitmap] containing the drawn text.
  * @throws IllegalArgumentException if the text is empty.
  */
-internal fun createBitmapFromText(
+@VisibleForTesting
+fun createBitmapFromText(
     text: String,
     typeface: Typeface,
     textSize: Float,

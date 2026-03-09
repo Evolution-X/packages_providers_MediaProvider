@@ -15,6 +15,7 @@
  */
 package com.android.signature.ui.create
 
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -63,9 +64,10 @@ import kotlinx.coroutines.launch
  * @param onSignatureCreated Callback invoked when a new signature is successfully created.
  * @param onCancel Callback invoked when the user cancels the creation process.
  */
+@VisibleForTesting
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun CreateSignatureScreen(
+fun CreateSignatureScreen(
     viewModel: SignatureViewModel,
     onSignatureCreated: (Signature) -> Unit,
     onCancel: () -> Unit,

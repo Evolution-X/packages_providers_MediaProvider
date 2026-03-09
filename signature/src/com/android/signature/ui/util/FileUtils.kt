@@ -19,6 +19,7 @@ package com.android.signature.ui.util
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.annotation.VisibleForTesting
 
 /**
  * Helper function to get the size of a file from a URI.
@@ -27,7 +28,8 @@ import android.provider.OpenableColumns
  * @param uri The URI of the file.
  * @return The size of the file in bytes, or 0 if it cannot be determined.
  */
-internal fun getFileSize(context: Context, uri: Uri): Long {
+@VisibleForTesting
+fun getFileSize(context: Context, uri: Uri): Long {
     val cursor = context.contentResolver.query(uri, null, null, null, null)
     return cursor?.use {
         val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)

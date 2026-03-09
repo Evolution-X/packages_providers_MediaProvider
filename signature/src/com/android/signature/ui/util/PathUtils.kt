@@ -17,6 +17,7 @@
 package com.android.signature.ui.util
 
 import android.graphics.Bitmap
+import androidx.annotation.VisibleForTesting
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -39,7 +40,8 @@ import android.graphics.Canvas as AndroidCanvas
  * @param points The list of points to create the path from.
  * @return A [Path] connecting the points, or an empty path if the list is empty.
  */
-internal fun createPathFromPoints(points: List<Offset>): Path =
+@VisibleForTesting
+fun createPathFromPoints(points: List<Offset>): Path =
     Path().apply {
         if (points.isNotEmpty()) {
             moveTo(points.first().x, points.first().y)
@@ -52,7 +54,8 @@ internal fun createPathFromPoints(points: List<Offset>): Path =
 /**
  * Data class to hold transformation parameters.
  */
-internal data class TransformParams(
+@VisibleForTesting
+data class TransformParams(
     val scale: Float = 1f,
     val translateX: Float = 0f,
     val translateY: Float = 0f,
@@ -66,7 +69,8 @@ internal data class TransformParams(
  * @param padding The padding to apply around the content.
  * @return [TransformParams] containing scale and translation.
  */
-internal fun calculateTransform(
+@VisibleForTesting
+fun calculateTransform(
     bounds: Rect,
     canvasSize: Size,
     padding: Float,
@@ -105,7 +109,8 @@ internal fun calculateTransform(
  * @param layoutDirection The layout direction.
  * @return A [Bitmap] containing the drawn paths.
  */
-internal fun createBitmapFromPaths(
+@VisibleForTesting
+fun createBitmapFromPaths(
     paths: List<PathState>,
     size: IntSize,
     density: Density,

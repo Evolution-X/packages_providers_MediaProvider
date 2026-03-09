@@ -474,7 +474,7 @@ class UploadTabTest {
     }
 }
 
-class FakeActivityResultRegistry(private val result: Uri) : ActivityResultRegistry() {
+class FakeActivityResultRegistry(private val result: Uri?) : ActivityResultRegistry() {
     override fun <I, O> onLaunch(
         requestCode: Int,
         contract: ActivityResultContract<I, O>,
