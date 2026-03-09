@@ -17,8 +17,11 @@
 package com.android.providers.media.localsearch;
 
 import android.content.Context;
+import android.icu.text.BreakIterator;
 import android.os.Trace;
 import android.util.Log;
+
+import androidx.annotation.VisibleForTesting;
 
 import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.R;
@@ -54,7 +57,8 @@ public final class RestrictedQueryChecker {
      * @param searchQuery The raw user-provided search text.
      * @return {@code true} if the query contains a restricted term; {@code false} otherwise.
      */
-    boolean isQueryRestricted(String searchQuery) {
+    @VisibleForTesting
+    public boolean isQueryRestricted(String searchQuery) {
         try {
             Trace.beginSection("RestrictedQueryChecker.isQueryRestricted");
             if (searchQuery == null || searchQuery.trim().isEmpty()) {
@@ -66,11 +70,17 @@ public final class RestrictedQueryChecker {
                 return true;
             }
 
-            String[] tokens = normalizedQuery.split("\\s+");
-            for (String token : tokens) {
+            BreakIterator wordIterator = BreakIterator.getWordInstance(Locale.getDefault());
+            wordIterator.setText(normalizedQuery);
+            int startIndex = wordIterator.first();
+            int endIndex = wordIterator.next();
+            while (endIndex != BreakIterator.DONE) {
+                String token = normalizedQuery.substring(startIndex, endIndex);
                 if (!token.isEmpty() && mRestrictedTokens.contains(token)) {
                     return true;
                 }
+                startIndex = endIndex;
+                endIndex = wordIterator.next();
             }
 
             return false;

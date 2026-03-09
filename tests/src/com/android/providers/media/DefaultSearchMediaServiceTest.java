@@ -58,6 +58,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.android.providers.media.appsearch.AppSearchDbManager;
 import com.android.providers.media.appsearch.MediaItem;
+import com.android.providers.media.localsearch.RestrictedQueryChecker;
 import com.android.providers.media.localsearch.SearchMediaExecutor;
 import com.android.providers.media.search.TestSearchMediaCallback;
 
@@ -69,6 +70,7 @@ import org.junit.runner.RunWith;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -219,6 +221,27 @@ public class DefaultSearchMediaServiceTest {
         results = performSearch(/* searchText */ "monkey", /* searchId */ "789");
         assertNotNull(results);
         assertEquals(0, results.size());
+    }
+
+    @Test
+    public void testIsQueryRestricted_JapaneseTokenization() throws Exception {
+        RestrictedQueryChecker checker = new RestrictedQueryChecker(mContext);
+
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.JAPANESE);
+
+            // "monkey" is a restricted token.
+            // In Japanese, there are typically no spaces between words.
+            // BreakIterator should correctly identify "monkey" as a separate token.
+            String query = "これはmonkeyです";
+            boolean isRestricted = checker.isQueryRestricted(query);
+
+            assertTrue("Query '" + query + "' should be restricted because it contains 'monkey'",
+                    isRestricted);
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
     }
 
     @Test
