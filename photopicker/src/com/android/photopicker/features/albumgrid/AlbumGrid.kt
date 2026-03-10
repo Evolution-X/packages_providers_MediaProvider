@@ -31,9 +31,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CollectionItemInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.android.photopicker.R
 import com.android.photopicker.core.components.MediaGridItem
@@ -46,6 +55,7 @@ import com.android.photopicker.core.features.FeatureToken
 import com.android.photopicker.core.features.LocalFeatureManager
 import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.navigation.PhotopickerDestinations
+import com.android.photopicker.core.navigation.PhotopickerDestinations.PHOTO_GRID
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.theme.LocalWindowSizeClass
 import com.android.photopicker.extensions.navigateToAlbumGrid
@@ -187,24 +197,49 @@ fun AlbumGridNavButton(modifier: Modifier) {
     val sessionId = LocalPhotopickerConfiguration.current.sessionId
     val packageUid = LocalPhotopickerConfiguration.current.callingPackageUid ?: -1
 
-    NavigationBarButton(
-        onClick = {
-            // Dispatch UI event to denote switching to albums tab
-            scope.launch {
-                events.dispatch(
-                    Event.LogPhotopickerUIEvent(
-                        FeatureToken.ALBUM_GRID.token,
-                        sessionId,
-                        packageUid,
-                        Telemetry.UiEvent.SWITCH_PICKER_TAB,
-                    )
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val isCurrentRouteSelected = currentRoute == PhotopickerDestinations.ALBUM_GRID.route
+    val buttonText = stringResource(R.string.photopicker_albums_nav_button_label)
+    val selectActionLabel = stringResource(R.string.photopicker_select_action_description)
+
+    val onTabClick: () -> Unit = {
+        // Dispatch UI event to denote switching to albums tab
+        scope.launch {
+            events.dispatch(
+                Event.LogPhotopickerUIEvent(
+                    FeatureToken.ALBUM_GRID.token,
+                    sessionId,
+                    packageUid,
+                    Telemetry.UiEvent.SWITCH_PICKER_TAB,
                 )
-            }
-            navController.navigateToAlbumGrid()
-        },
-        modifier = modifier,
-        isCurrentRoute = { route -> route == PhotopickerDestinations.ALBUM_GRID.route },
+            )
+        }
+        navController.navigateToAlbumGrid()
+    }
+
+    NavigationBarButton(
+        onClick = onTabClick,
+        modifier =
+            modifier.clearAndSetSemantics {
+                role = Role.Tab
+                selected = isCurrentRouteSelected
+                collectionItemInfo =
+                    CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = 1, columnSpan = 1)
+                contentDescription = buttonText
+                onClick(
+                    // Providing a custom label here changes the TalkBack usage hint.
+                    // This makes TalkBack announce "Double tap to Select" instead of the default
+                    // "Double tap to Activate".
+                    label = selectActionLabel,
+                    action = {
+                        onTabClick()
+                        true
+                    },
+                )
+            },
+        isCurrentRouteSelected = isCurrentRouteSelected,
     ) {
-        Text(stringResource(R.string.photopicker_albums_nav_button_label))
+        Text(buttonText)
     }
 }

@@ -54,6 +54,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.text.TextLayoutResult
@@ -876,7 +877,7 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             // This is the label for the "Photos" tab in the picker.
             val photosTabLabel = resources.getString(R.string.photopicker_photos_nav_button_label)
 
-            val node = composeTestRule.onNodeWithText(photosTabLabel)
+            val node = composeTestRule.onNodeWithText(photosTabLabel, useUnmergedTree = true)
             node.assertIsDisplayed()
             val initialColor = node.extractTextColor()
 
@@ -919,12 +920,15 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
             // This is the label for the "Photos" tab in the picker.
             val photosTabLabel = resources.getString(R.string.photopicker_photos_nav_button_label)
 
-            composeTestRule.onNodeWithText(photosTabLabel).assertDoesNotExist()
+            composeTestRule.onNodeWithContentDescription(photosTabLabel).assertDoesNotExist()
 
             session.notifyPhotopickerExpanded(true)
             advanceTimeBy(100)
 
-            composeTestRule.onNodeWithText(photosTabLabel).assertExists().assertIsDisplayed()
+            composeTestRule
+                .onNodeWithContentDescription(photosTabLabel)
+                .assertExists()
+                .assertIsDisplayed()
         }
 
     @Test
