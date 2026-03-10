@@ -24,19 +24,11 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.dimensionResource
-import com.android.signature.R
-import com.android.signature.ui.util.calculateTransform
 import com.android.signature.ui.util.createPathFromPoints
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * A composable that provides a drawing canvas for the user to draw their signature.
@@ -56,11 +48,6 @@ internal fun DrawingCanvas(
     color: Color = Color.Black,
 ) {
     val currentPoints = remember { mutableStateListOf<Offset>() }
-    val density = LocalDensity.current
-    val padding =
-        with(density) {
-            dimensionResource(R.dimen.signature_canvas_padding).toPx()
-        }
 
     Canvas(
         modifier =
@@ -89,48 +76,21 @@ internal fun DrawingCanvas(
                 })
             },
     ) {
-        // Calculate bounds of all paths
-        val bounds =
-            paths.fold(Rect.Zero) { acc, pathState ->
-                val pathBounds = pathState.path.getBounds()
-                if (acc == Rect.Zero) {
-                    pathBounds
-                } else {
-                    Rect(
-                        left = min(acc.left, pathBounds.left),
-                        top = min(acc.top, pathBounds.top),
-                        right = max(acc.right, pathBounds.right),
-                        bottom = max(acc.bottom, pathBounds.bottom),
-                    )
-                }
-            }
-
-        // Calculate scale and translation to fit/center
-        val transform = calculateTransform(bounds, size, padding)
-
-        withTransform({
-            translate(transform.translateX, transform.translateY)
-            scale(
-                scaleX = transform.scale,
-                scaleY = transform.scale,
-                pivot = Offset.Zero,
+        // Draw existing paths directly without transforming bounds
+        paths.forEach { pathState ->
+            drawPath(
+                path = pathState.path,
+                color = pathState.color,
+                style =
+                    Stroke(
+                        width = pathState.strokeWidth,
+                        cap = SignatureStrokeStyle.cap,
+                        join = SignatureStrokeStyle.join,
+                    ),
             )
-        }) {
-            paths.forEach { pathState ->
-                drawPath(
-                    path = pathState.path,
-                    color = pathState.color,
-                    style =
-                        Stroke(
-                            width = pathState.strokeWidth,
-                            cap = SignatureStrokeStyle.cap,
-                            join = SignatureStrokeStyle.join,
-                        ),
-                )
-            }
         }
 
-        // Draw current points without transform (they are in screen coordinates)
+        // Draw current points (the active stroke being drawn)
         if (currentPoints.isNotEmpty()) {
             drawPoints(
                 points = currentPoints,
