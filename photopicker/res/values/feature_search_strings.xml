@@ -67,4 +67,7 @@
 
     <!-- History Suggestion delete tooltip text  [CHAR LIMIT=20] -->
     <string name="photopicker_history_suggestion_delete_text" translation_description="Text message to delete shown on the tooltip when long pressed on a history suggestion">Delete</string>
+
+    <!-- Search disabled hint message when no network connection [CHAR LIMIT=50]-->
+    <string name="photopicker_no_network_search_disabled_hint" translation_description="Hint message shown on search bar click when there is no network connection and search state is disabled">Can\'t search. No internet connection.</string>
 </resources>
