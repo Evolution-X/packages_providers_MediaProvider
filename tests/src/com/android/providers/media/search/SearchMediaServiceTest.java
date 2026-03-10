@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeNotNull;
 import static org.junit.Assume.assumeTrue;
 
@@ -149,6 +150,10 @@ public class SearchMediaServiceTest {
 
         String packageNameFromApi = MediaStore.getPackageForSearchMediaService(
                 mContext.getContentResolver());
+
+        // Empty package name means that default search service is not enabled. This may be because
+        // appsearch is not available on the device or does not support required functionalities.
+        assumeFalse(TextUtils.isEmpty(packageNameFromApi));
 
         assertEquals(getMediaProviderPackageName(), packageNameFromApi);
     }

@@ -149,10 +149,11 @@ import static com.android.providers.media.flags.Flags.indexMediaLatitudeLongitud
 import static com.android.providers.media.flags.Flags.versionLockdown;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.FILE_ID_COLUMN;
 import static com.android.providers.media.localsearch.MediaProcessingStatus.MEDIA_PROCESSING_STATUS_TABLE;
+import static com.android.providers.media.localsearch.ProcessingUtils.isDefaultSearchMediaServiceSupported;
+import static com.android.providers.media.localsearch.ProcessingUtils.isMediaProcessingRequired;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_LOCATION_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_MEDIA_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_METADATA_LABEL;
-import static com.android.providers.media.localsearch.ProcessingHelper.isMediaProcessingRequired;
 import static com.android.providers.media.photopicker.data.ItemsProvider.EXTRA_MIME_TYPE_SELECTION;
 import static com.android.providers.media.scan.MediaScanner.REASON_DEMAND;
 import static com.android.providers.media.scan.MediaScanner.REASON_IDLE;
@@ -8352,9 +8353,18 @@ public class MediaProvider extends ContentProvider {
 
     @NonNull
     private Bundle getPackageForSearchMediaService() {
+        Bundle result = new Bundle();
+
         if (!Flags.enableMediaSearch()) {
             Log.d(TAG, "Enable media search flag not enabled");
-            return Bundle.EMPTY;
+            result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
+            return result;
+        }
+
+        if (!SdkLevel.isAtLeastT()) {
+            Log.d(TAG, "Local search is only supported for T+ devices");
+            result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
+            return result;
         }
 
         try {
@@ -8362,20 +8372,23 @@ public class MediaProvider extends ContentProvider {
             String packageName =
                     resources.getString(R.string.config_default_search_media_service_package);
 
-            if (TextUtils.isEmpty(packageName)) {
-                // If no search service is implemented by OEMs, we use default search service
-                // provided by MediaProvider.
-                packageName = getContext().getPackageName();
+            if (!TextUtils.isEmpty(packageName)) {
+                // OEM has implemented a SearchMediaService
+                result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, packageName);
+            } else if (isDefaultSearchMediaServiceSupported(getContext())) {
+                // Falling back to MediaProvider provided DefaultSearchMediaService
+                result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE,
+                        getContext().getPackageName());
+            } else {
+                // We do not have any valid implementation of SearchMediaService
+                result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
             }
-
-            Bundle result = new Bundle();
-            result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, packageName);
-            return result;
         } catch (Exception e) {
-            Log.e(TAG,
-                    "Could not get the default package name for search media service package", e);
-            return Bundle.EMPTY;
+            Log.e(TAG, "Could not get the package name for search media service package", e);
+            result.putString(MediaStore.PACKAGE_FOR_SEARCH_MEDIA_SERVICE, "");
         }
+
+        return result;
     }
 
     @NotNull
