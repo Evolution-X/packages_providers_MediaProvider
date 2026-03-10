@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -104,7 +105,19 @@ fun PreviewDeleteSignatureDialog() {
 }
 
 /**
- * Reusable content composable that renders a signature's content based on its type.
+ * Reusable composable that renders a signature's content based on its type.
+ *
+ * It gracefully handles rendering drawn, uploaded, and typed signatures.
+ * Additionally, it automatically adapts the signature's color to the current
+ * system theme (light/dark mode) so that black signatures remain visible
+ * on dark backgrounds.
+ *
+ * @param signature The [Signature] object containing the data to display.
+ * @param modifier Modifier to be applied to the outermost container.
+ * @param imageModifier Modifier to be applied specifically to the rendered image
+ *                      (used for drawn or uploaded signatures).
+ * @param textStyle The [TextStyle] to be applied to the rendered text
+ *                  (used for typed signatures).
  */
 @Composable
 fun SignatureContent(
@@ -128,12 +141,21 @@ fun SignatureContent(
                     }
 
                     bitmapState.value?.let { bitmap ->
+                        // Only apply the dynamic tint if the signature was drawn by the user.
+                        // Uploaded signatures might be colored photos, so they should not be tinted.
+                        val colorFilter = if (signature.type == Signature.TYPE_DRAWN) {
+                            ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+                        } else {
+                            null
+                        }
+
                         Image(
                             bitmap = bitmap,
                             contentDescription = stringResource(R.string.drawn_signature_content_description),
                             contentScale = ContentScale.Fit,
                             alignment = Alignment.CenterStart,
-                            modifier = imageModifier
+                            modifier = imageModifier,
+                            colorFilter = colorFilter
                         )
                     }
                 }
@@ -144,7 +166,9 @@ fun SignatureContent(
                     Text(
                         text = text,
                         style = textStyle,
-                        fontFamily = signature.composeFontFamily
+                        fontFamily = signature.composeFontFamily,
+                        // Ensure text color also adapts to light/dark themes
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
