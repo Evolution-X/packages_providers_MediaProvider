@@ -58,6 +58,7 @@
     <string name="signature_draw_hint">Draw your signature in this area</string>
     <string name="signature_x_mark">X</string>
     <string name="error_save_signature">Failed to save signature</string>
+    <string name="error_max_signatures_reached">Maximum number of signatures (%1$d) reached.</string>
     <string name="signature_preview_default">Signature</string>
 
 </resources>

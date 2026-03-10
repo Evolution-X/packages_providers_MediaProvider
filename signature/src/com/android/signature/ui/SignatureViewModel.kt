@@ -282,7 +282,9 @@ class SignatureViewModel
         private suspend fun checkSignatureLimit() {
             val count = repository.getSignatureCount()
             if (count >= MAX_SIGNATURES) {
-                throw IllegalStateException("Maximum number of signatures ($MAX_SIGNATURES) reached.")
+                throw SignatureLimitException()
             }
         }
     }
+
+class SignatureLimitException : Exception()

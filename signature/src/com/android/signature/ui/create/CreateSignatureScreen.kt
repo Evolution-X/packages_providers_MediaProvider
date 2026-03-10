@@ -50,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.android.signature.R
 import com.android.signature.data.Signature
+import com.android.signature.ui.SignatureLimitException
 import com.android.signature.ui.SignatureViewModel
 import com.android.signature.ui.util.createBitmapFromText
 import kotlinx.coroutines.launch
@@ -87,6 +88,22 @@ fun CreateSignatureScreen(
             dimensionResource(R.dimen.signature_bitmap_text_size).toPx()
         }
     val errorSavingMessage = stringResource(R.string.error_save_signature)
+    val errorLimitReachedMessage = stringResource(
+        R.string.error_max_signatures_reached,
+        SignatureViewModel.MAX_SIGNATURES
+    )
+    val launchSaveOperation = { saveAction: suspend () -> Signature ->
+        scope.launch {
+            try {
+                val newSignature = saveAction()
+                onSignatureCreated(newSignature)
+            } catch (e: SignatureLimitException) {
+                snackbarHostState.showSnackbar(errorLimitReachedMessage)
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar(errorSavingMessage)
+            }
+        }
+    }
     // The root is a Column, suitable for a bottom sheet.
     Box(
         modifier =
@@ -171,14 +188,7 @@ fun CreateSignatureScreen(
                         DrawTab(
                             viewModel = viewModel,
                             onSave = { bitmap ->
-                                scope.launch {
-                                    try {
-                                        val newSignature = viewModel.saveDrawnSignature(bitmap)
-                                        onSignatureCreated(newSignature)
-                                    } catch (e: Exception) {
-                                        snackbarHostState.showSnackbar(errorSavingMessage)
-                                    }
-                                }
+                                launchSaveOperation { viewModel.saveDrawnSignature(bitmap) }
                             },
                             onCancel = onCancel,
                         )
@@ -186,39 +196,29 @@ fun CreateSignatureScreen(
 
                     1 -> {
                         TypeTab(viewModel = viewModel, onSave = { text, font ->
-                            scope.launch {
-                                try {
-                                    val bitmap =
-                                        createBitmapFromText(
-                                            text,
-                                            font.androidTypeface,
-                                            bitmapTextSize,
-                                        )
-                                    val newSignature =
-                                        viewModel.saveTypedSignature(text, font.name, bitmap)
-                                    onSignatureCreated(newSignature)
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar(errorSavingMessage)
-                                }
+                            val bitmap = createBitmapFromText(
+                                text,
+                                font.androidTypeface,
+                                bitmapTextSize,
+                            )
+                            launchSaveOperation {
+                                viewModel.saveTypedSignature(text, font.name, bitmap)
                             }
                         })
                     }
 
                     2 -> {
-                        UploadTab(onSave = { bitmap ->
-                            scope.launch {
-                                try {
-                                    val newSignature = viewModel.saveUploadedSignature(bitmap)
-                                    onSignatureCreated(newSignature)
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar(errorSavingMessage)
+                        UploadTab(
+                            onSave = { bitmap ->
+                                launchSaveOperation { viewModel.saveUploadedSignature(bitmap) }
+                            },
+                            onCancel = onCancel,
+                            onShowError = { message ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(message)
                                 }
                             }
-                        }, onCancel = onCancel, onShowError = { message ->
-                            scope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
-                        })
+                        )
                     }
                 }
             }

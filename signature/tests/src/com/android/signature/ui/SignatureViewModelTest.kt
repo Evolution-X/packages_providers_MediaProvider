@@ -333,8 +333,8 @@ class SignatureViewModelTest {
 
             try {
                 viewModel.saveUploadedSignature(bitmap)
-                fail("Expected IllegalStateException")
-            } catch (e: IllegalStateException) {
+                fail("Expected SignatureLimitException")
+            } catch (e: SignatureLimitException) {
                 // Expected
             }
         }
