@@ -24,11 +24,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -114,7 +115,9 @@ fun CreateSignatureScreen(
                 .imePadding(),
         // Handle keyboard
     ) {
-        Column {
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState())
+        ) {
             // A custom header to replace the TopAppBar
             Text(
                 text = stringResource(R.string.create_signature_title),
@@ -175,12 +178,12 @@ fun CreateSignatureScreen(
                     }
                 }
             }
-            // The content of the tabs is placed in a Box with a maximum height
+            // The content of the tabs is placed in a Box with a fixed height
             // to ensure it fits well within a bottom sheet and becomes scrollable if needed.
             Box(
                 modifier =
-                    Modifier.heightIn(
-                        max = dimensionResource(R.dimen.bottom_sheet_max_height),
+                    Modifier.height(
+                        dimensionResource(R.dimen.bottom_sheet_max_height),
                     ),
             ) {
                 when (selectedTabIndex) {
