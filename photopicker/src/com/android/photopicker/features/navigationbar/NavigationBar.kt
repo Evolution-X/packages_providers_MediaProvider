@@ -49,6 +49,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CollectionInfo
+import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.text.style.TextOverflow
@@ -85,6 +87,7 @@ import com.android.photopicker.features.categorygrid.CategoryGridFeature
 import com.android.photopicker.features.overflowmenu.OverflowMenuFeature
 import com.android.photopicker.features.profileselector.ProfileSelectorFeature
 import com.android.photopicker.features.search.SearchFeature
+import com.android.photopicker.util.applyWhen
 
 /* Navigation bar button measurements */
 private val MEASUREMENT_ICON_BUTTON_WIDTH = 48.dp
@@ -191,8 +194,7 @@ fun NavigationBar(
  * @param onClick the handler to run when the button is clicked.
  * @param modifier A modifier which is applied directly to the button. This should be the modifier
  *   that is passed via the Location compose call.
- * @param isCurrentRoute a function which receives the current
- *   [NavController.currentDestination.route] and returns true if that route matches the route this
+ * @param isCurrentRouteSelected a boolean indicating if the current route matches the route this
  *   button represents.
  * @param buttonContent A composable to render as the button's content. Should most likely be a
  *   string label.
@@ -201,23 +203,16 @@ fun NavigationBar(
 fun NavigationBarButton(
     onClick: () -> Unit,
     modifier: Modifier,
-    isCurrentRoute: (String) -> Boolean,
+    isCurrentRouteSelected: Boolean,
     buttonContent: @Composable () -> Unit,
 ) {
-    val navController = LocalNavController.current
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-    val featureManager = LocalFeatureManager.current
-    val categoryGridFeatureEnabled =
-        featureManager.isFeatureEnabled(CategoryGridFeature::class.java)
-
     FilledTonalButton(
         onClick = onClick,
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         contentPadding = BUTTON_CONTENT_PADDING,
         colors =
-            if (isCurrentRoute(currentRoute ?: "")) {
+            if (isCurrentRouteSelected) {
                 ButtonDefaults.filledTonalButtonColors(
                     containerColor =
                         CustomAccentColorScheme.current.getAccentColorIfDefinedOrElse(
@@ -258,11 +253,9 @@ private fun NavigationBarButtons(modifier: Modifier) {
     Row(
         // Consume the incoming modifier to get the correct positioning.
         modifier =
-            if (categoryGridFeatureEnabled) {
-                modifier.padding(start = 8.dp, end = 8.dp)
-            } else {
-                modifier
-            },
+            modifier
+                .applyWhen(categoryGridFeatureEnabled) { padding(start = 8.dp, end = 8.dp) }
+                .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = 2) },
         horizontalArrangement = Arrangement.Center,
     ) {
         Row(

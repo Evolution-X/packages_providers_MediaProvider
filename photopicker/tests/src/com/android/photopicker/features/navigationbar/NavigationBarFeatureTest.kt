@@ -30,16 +30,20 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,7 +75,9 @@ import com.android.photopicker.data.model.GlideIcon
 import com.android.photopicker.data.model.Group
 import com.android.photopicker.data.model.Icon
 import com.android.photopicker.data.model.MediaSource
+import com.android.photopicker.features.categorygrid.CategoryButton
 import com.android.photopicker.features.categorygrid.CategoryGridFeature
+import com.android.photopicker.features.photogrid.PhotoGridNavButton
 import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.providers.media.flags.Flags
 import com.google.common.truth.Truth.assertWithMessage
@@ -257,12 +263,12 @@ class NavigationBarFeatureTest : NavigationBarTestBase() {
 
             // Photos Grid Nav Button and Category Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNodeWithContentDescription(photosGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
 
             composeTestRule
-                .onNode(hasText(categoryGridNavButtonLabel))
+                .onNodeWithContentDescription(categoryGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
@@ -306,6 +312,63 @@ class NavigationBarFeatureTest : NavigationBarTestBase() {
         }
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testNavigationBar_withSearchFlagDisabled_verifySelectedSemantics() {
+        val photosGridNavButtonLabel =
+            getTestableContext().resources.getString(R.string.photopicker_photos_nav_button_label)
+        val albumsGridNavButtonLabel =
+            getTestableContext().resources.getString(R.string.photopicker_albums_nav_button_label)
+
+        testScope.runTest {
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            composeTestRule.waitForIdle()
+
+            val isSelected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)
+            val isNotSelected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, false)
+
+            // Initially, the "Photos" tab should be selected
+            composeTestRule
+                .onNode(
+                    isSelected and hasContentDescription(photosGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+            composeTestRule
+                .onNode(
+                    isNotSelected and hasContentDescription(albumsGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+
+            // Click on the "Albums" tab
+            composeTestRule.onNodeWithContentDescription(albumsGridNavButtonLabel).performClick()
+            composeTestRule.waitForIdle()
+
+            // Now, the "Albums" tab should be selected
+            composeTestRule
+                .onNode(
+                    isNotSelected and hasContentDescription(photosGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+            composeTestRule
+                .onNode(
+                    isSelected and hasContentDescription(albumsGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+        }
+    }
+
     /* Verify Navigation Bar when search flag enabled contains tabs for both photos and category grid.*/
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
@@ -333,14 +396,73 @@ class NavigationBarFeatureTest : NavigationBarTestBase() {
 
             // Photos Grid Nav Button and Albums Grid Nav Button
             composeTestRule
-                .onNode(hasText(photosGridNavButtonLabel))
+                .onNodeWithContentDescription(photosGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
 
             composeTestRule
-                .onNode(hasText(categoryGridNavButtonLabel))
+                .onNodeWithContentDescription(categoryGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
+        }
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
+    fun testNavigationBar_withSearchFlagEnabled_verifySelectedSemantics() {
+        val photosGridNavButtonLabel =
+            getTestableContext().resources.getString(R.string.photopicker_photos_nav_button_label)
+        val categoryGridNavButtonLabel =
+            getTestableContext()
+                .resources
+                .getString(R.string.photopicker_categories_nav_button_label)
+
+        testScope.runTest {
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager,
+                    selection = selection,
+                    events = events,
+                )
+            }
+
+            composeTestRule.waitForIdle()
+
+            val isSelected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, true)
+            val isNotSelected = SemanticsMatcher.expectValue(SemanticsProperties.Selected, false)
+
+            // Initially, the "Photos" tab should be selected
+            composeTestRule
+                .onNode(
+                    isSelected and hasContentDescription(photosGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+            composeTestRule
+                .onNode(
+                    isNotSelected and hasContentDescription(categoryGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+
+            // Click on the "Collections" tab
+            composeTestRule.onNodeWithContentDescription(categoryGridNavButtonLabel).performClick()
+            composeTestRule.waitForIdle()
+
+            // Now, the "Collections" tab should be selected
+            composeTestRule
+                .onNode(
+                    isNotSelected and hasContentDescription(photosGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
+            composeTestRule
+                .onNode(
+                    isSelected and hasContentDescription(categoryGridNavButtonLabel),
+                    useUnmergedTree = true,
+                )
+                .assertExists()
         }
     }
 
@@ -370,85 +492,160 @@ class NavigationBarFeatureTest : NavigationBarTestBase() {
 
             // Photos Grid Nav Button with Videos title
             composeTestRule
-                .onNode(hasText(videosGridNavButtonLabel))
+                .onNodeWithContentDescription(videosGridNavButtonLabel)
                 .assertIsDisplayed()
                 .assert(hasClickAction())
         }
     }
 
-    /* Verify Navigation Bar when search flag enabled contains icon in button.*/
+    /* Verify Navigation Bar when search flag enabled contains icon in category tab button.*/
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
-    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    fun testNavigationBar_withSearchFlagEnabled_displaysButtonIcon() {
-        val photosGridNavButtonLabel =
-            getTestableContext()
-                .getResources()
-                .getString(R.string.photopicker_photos_nav_button_label)
-        val categoryGridNavButtonLabel =
-            getTestableContext()
-                .getResources()
-                .getString(R.string.photopicker_categories_nav_button_label)
+    fun testNavigationBar_withParamShowButtonTrue_displaysCategoryButtonIcon() {
+        val categoryGridNavButtonIconLabel = "CategoryIcon"
 
-        testScope.runTest {
-            val testIntent = Intent(MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP)
+        composeTestRule.setContent {
+            val params =
+                object : LocationParams.WithNavButtonIcon {
+                    override fun showButtonIcon(): Boolean {
+                        return true
+                    }
+                }
 
-            configurationManager.get().setIntent(testIntent)
-
-            composeTestRule.setContent {
-                callPhotopickerMain(
-                    featureManager = featureManager,
-                    selection = selection,
-                    events = events,
+            navController = createNavController()
+            val photopickerConfiguration by
+                configurationManager.get().configuration.collectAsStateWithLifecycle()
+            CompositionLocalProvider(
+                LocalNavController provides navController,
+                LocalFeatureManager provides featureManager,
+                LocalPhotopickerConfiguration provides photopickerConfiguration,
+                LocalEvents provides events,
+                LocalSelection provides selection,
+            ) {
+                CategoryButton(
+                    modifier = Modifier,
+                    params = params,
+                    iconModifier = Modifier.testTag(categoryGridNavButtonIconLabel),
                 )
             }
-
-            composeTestRule.waitForIdle()
-
-            composeTestRule
-                .onNodeWithContentDescription(photosGridNavButtonLabel)
-                .assertIsDisplayed()
-            composeTestRule
-                .onNodeWithContentDescription(categoryGridNavButtonLabel)
-                .assertIsDisplayed()
         }
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(categoryGridNavButtonIconLabel, useUnmergedTree = true)
+            .assertIsDisplayed()
+    }
+
+    /* Verify Navigation Bar when search flag enabled contains icon in photos tab button.*/
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    fun testNavigationBar_withParamShowButtonTrue_displaysPhotosButtonIcon() {
+        val photosGridNavButtonIconLabel = "PhotosIcon"
+
+        composeTestRule.setContent {
+            val params =
+                object : LocationParams.WithNavButtonIcon {
+                    override fun showButtonIcon(): Boolean {
+                        return true
+                    }
+                }
+
+            navController = createNavController()
+            val photopickerConfiguration by
+                configurationManager.get().configuration.collectAsStateWithLifecycle()
+            CompositionLocalProvider(
+                LocalNavController provides navController,
+                LocalFeatureManager provides featureManager,
+                LocalPhotopickerConfiguration provides photopickerConfiguration,
+                LocalEvents provides events,
+                LocalSelection provides selection,
+            ) {
+                PhotoGridNavButton(
+                    modifier = Modifier,
+                    params = params,
+                    iconModifier = Modifier.testTag(photosGridNavButtonIconLabel),
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(photosGridNavButtonIconLabel, useUnmergedTree = true)
+            .assertIsDisplayed()
     }
 
     @Test
     @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
-    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_SEARCH)
-    fun testNavigationBar_withSearchFlagDisabled_displaysNoButtonIcon() {
-        val photosGridNavButtonLabel =
-            getTestableContext()
-                .getResources()
-                .getString(R.string.photopicker_photos_nav_button_label)
-        val categoryGridNavButtonLabel =
-            getTestableContext()
-                .getResources()
-                .getString(R.string.photopicker_categories_nav_button_label)
+    fun testNavigationBar_withParamShowButtonFalse_displaysNoCategoryButtonIcon() {
+        val categoryGridNavButtonIconLabel = "CategoryIcon"
 
-        testScope.runTest {
-            val testIntent = Intent(MediaStore.ACTION_USER_SELECT_IMAGES_FOR_APP)
+        composeTestRule.setContent {
+            val params =
+                object : LocationParams.WithNavButtonIcon {
+                    override fun showButtonIcon(): Boolean {
+                        return false
+                    }
+                }
 
-            configurationManager.get().setIntent(testIntent)
-
-            composeTestRule.setContent {
-                callPhotopickerMain(
-                    featureManager = featureManager,
-                    selection = selection,
-                    events = events,
+            navController = createNavController()
+            val photopickerConfiguration by
+                configurationManager.get().configuration.collectAsStateWithLifecycle()
+            CompositionLocalProvider(
+                LocalNavController provides navController,
+                LocalFeatureManager provides featureManager,
+                LocalPhotopickerConfiguration provides photopickerConfiguration,
+                LocalEvents provides events,
+                LocalSelection provides selection,
+            ) {
+                CategoryButton(
+                    modifier = Modifier,
+                    params = params,
+                    iconModifier = Modifier.testTag(categoryGridNavButtonIconLabel),
                 )
             }
-
-            composeTestRule.waitForIdle()
-
-            composeTestRule
-                .onNodeWithContentDescription(photosGridNavButtonLabel)
-                .assertDoesNotExist()
-            composeTestRule
-                .onNodeWithContentDescription(categoryGridNavButtonLabel)
-                .assertDoesNotExist()
         }
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(categoryGridNavButtonIconLabel, useUnmergedTree = true)
+            .assertDoesNotExist()
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
+    fun testNavigationBar_withParamShowButtonFalse_displaysNoPhotosButtonIcon() {
+        val photosGridNavButtonIconLabel = "PhotosIcon"
+
+        composeTestRule.setContent {
+            val params =
+                object : LocationParams.WithNavButtonIcon {
+                    override fun showButtonIcon(): Boolean {
+                        return false
+                    }
+                }
+
+            navController = createNavController()
+            val photopickerConfiguration by
+                configurationManager.get().configuration.collectAsStateWithLifecycle()
+            CompositionLocalProvider(
+                LocalNavController provides navController,
+                LocalFeatureManager provides featureManager,
+                LocalPhotopickerConfiguration provides photopickerConfiguration,
+                LocalEvents provides events,
+                LocalSelection provides selection,
+            ) {
+                PhotoGridNavButton(
+                    modifier = Modifier,
+                    params = params,
+                    iconModifier = Modifier.testTag(photosGridNavButtonIconLabel),
+                )
+            }
+        }
+        composeTestRule.waitForIdle()
+
+        composeTestRule
+            .onNodeWithTag(photosGridNavButtonIconLabel, useUnmergedTree = true)
+            .assertDoesNotExist()
     }
 
     @Test

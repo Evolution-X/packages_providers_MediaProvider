@@ -107,7 +107,7 @@ public class FileUtils {
     // Even though vfat allows 255 UCS-2 chars, we might eventually write to
     // ext4 through a FUSE layer, so use that limit.
     @VisibleForTesting
-    static final int MAX_FILENAME_BYTES = 255;
+    public static final int MAX_FILENAME_BYTES = 255;
 
     // Case-insensitive regex pattern to identify common album art filenames
     private static final Pattern PATTERN_ALBUM_ART = Pattern.compile(

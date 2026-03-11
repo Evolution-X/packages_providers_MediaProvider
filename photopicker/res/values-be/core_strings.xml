@@ -51,8 +51,7 @@
     <string name="photopicker_dismiss_banner_button_label" msgid="2309894998787905178">"Закрыць"</string>
     <string name="photopicker_media_grid_content_description" msgid="3684287976405167891">"Табліца файлаў мультымедыя"</string>
     <string name="photopicker_banner_no_network_connection_message" msgid="4797953604806666542">"Каб выбраць фота і відэа з праграмы \"<xliff:g id="APP_NAME">%1$s</xliff:g>\", падключыцеся да Wi-Fi або мабільнага інтэрнэту"</string>
-    <!-- no translation found for photopicker_banner_internet_connection_required_message (2798498114410918856) -->
-    <skip />
+    <string name="photopicker_banner_internet_connection_required_message" msgid="2798498114410918856">"Падключыцеся да Wi-Fi ці мабільнай сеткі, каб таксама мець доступ да фота і відэа з сэрвісу \"<xliff:g id="MEDIA_PROVIDER">%1$s</xliff:g>\""</string>
     <string name="photopicker_banner_no_network_connection_title" msgid="2353038014035707061">"Патрабуецца падключэнне да інтэрнэту"</string>
     <string name="photopicker_offline_banner_go_to_settings_button_label" msgid="6642836558571072401">"Перайсці ў налады"</string>
     <string name="photopicker_offline_banner_cloud_app_placeholder" msgid="7653739406837936359">"воблачная мультымедыйная праграма"</string>

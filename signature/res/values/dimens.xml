@@ -37,6 +37,7 @@
     <!-- Draw Tab specific dimensions -->
     <dimen name="signature_draw_text_padding_top">76dp</dimen>
     <dimen name="signature_draw_divider_padding_bottom">58dp</dimen>
+    <dimen name="signature_canvas_padding">32dp</dimen>
 
     <!-- Signature Font Sizes -->
     <dimen name="signature_font_size_default">40sp</dimen>

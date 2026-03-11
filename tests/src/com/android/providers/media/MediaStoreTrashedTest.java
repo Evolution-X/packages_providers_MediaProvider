@@ -64,6 +64,8 @@ import java.util.Locale;
 @RunWith(AndroidJUnit4.class)
 public class MediaStoreTrashedTest {
 
+    private static final int MAX_FILENAME_BYTES = FileUtils.MAX_FILENAME_BYTES;
+
     private static IsolatedContext sIsolatedContext;
     private static ContentResolver sIsolatedResolver;
     @Rule
@@ -701,6 +703,67 @@ public class MediaStoreTrashedTest {
         } finally {
             deleteTopLevelDir(topLevelFolder);
         }
+    }
+
+    /**
+     * Verifies that when a file with an extremely long name is trashed, the resulting
+     * trashed file path is trimmed to stay within the filesystem's limits
+     * (MAX_FILENAME_BYTES bytes).
+     */
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_TRASH_AND_RESTORE_BY_FILE_PATH_API)
+    public void testTrashFile_trimsLongFileName() throws Exception {
+        // Create a filename that is already at the MAX_FILENAME_BYTES-byte limit
+        final String longName = createExtremeFileName("extremely-long-name-", ".jpg");
+        File file = stage(R.raw.lg_g4_iso_800_jpg, new File(mTestDir, longName));
+        final Uri uri = insertToMediaStore(file);
+
+        // Trash the file. The trashing process adds a ".trashed-timestamp-" prefix (~20 bytes).
+        // The resulting name would exceed MAX_FILENAME_BYTE bytes and would fail
+        // without trimming logic.
+        String trashedPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            trashedPath = MediaStore.trashFile(sIsolatedResolver, file.getPath());
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+
+        // Verify the trashed filename is within the MAX_FILENAME_BYTES-byte limit
+        String trashedFileName = new File(trashedPath).getName();
+        assertTrue("Trashed filename length (" + trashedFileName.getBytes().length
+                        + " bytes) should be within MAX_FILENAME_BYTES bytes",
+                trashedFileName.getBytes().length <= MAX_FILENAME_BYTES);
+
+        // Verify the file system reflects the move to the trimmed path
+        File trashedFile = new File(trashedPath);
+        assertTrue("Trashed file should exist on disk at trimmed path", trashedFile.exists());
+        assertFalse("Original file should no longer exist", file.exists());
+
+        // Verify we can still restore it
+        String restoredPath;
+        try {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(true);
+            restoredPath = MediaStore.restoreFileFromTrash(sIsolatedResolver, trashedPath, null);
+        } finally {
+            sIsolatedContext.setByPassTargetSdkCheckForTrash(false);
+        }
+
+        // Verify the restored file exists (Note: the name may remain trimmed if it was
+        // lossily shortened during the trash operation)
+        assertTrue("Restored file should exist on disk", new File(restoredPath).exists());
+    }
+
+    /**
+     * Helper to create a string of exactly MAX_FILENAME_BYTES bytes.
+     */
+    private static String createExtremeFileName(String prefix, String extension) {
+        StringBuilder str = new StringBuilder(prefix);
+        // MAX_FILENAME_BYTES is the limit defined in FileUtils
+        for (int i = 0; i < (MAX_FILENAME_BYTES - prefix.length() - extension.length()); i++) {
+            str.append(i % 10);
+        }
+        return str.append(extension).toString();
     }
 
     /**

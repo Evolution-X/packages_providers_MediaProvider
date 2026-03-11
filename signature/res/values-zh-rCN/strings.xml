@@ -29,7 +29,25 @@
     <string name="back_content_description" msgid="3424363456229458016">"返回"</string>
     <string name="drawn_signature_content_description" msgid="441057598353735826">"绘制的签名"</string>
     <string name="delete_signature_content_description" msgid="3012748259309806715">"删除签名"</string>
-    <string name="picker_title" msgid="4461848688877096453">"选择签名"</string>
-    <string name="picker_add_new" msgid="100188209321837181">"新增"</string>
+    <string name="settings_description" msgid="8169934363160354887">"管理在设备内使用时保存的签名"</string>
+    <string name="settings_subheader" msgid="5101352403141361475">"已保存的签名"</string>
+    <string name="settings_item_title_format" msgid="264810772050965877">"已保存签名 %1$d"</string>
+    <string name="picker_title" msgid="5513714008007561495">"签名"</string>
+    <string name="picker_add_new" msgid="2590444102822678954">"添加签名"</string>
     <string name="picker_no_signatures" msgid="7560452872095947936">"未找到签名。\n添加新签名即可开始。"</string>
+    <string name="create_signature_title" msgid="7616494023737147010">"添加签名"</string>
+    <string name="tab_draw" msgid="4258715769815399593">"绘制"</string>
+    <string name="tab_type" msgid="3264705813758141873">"类型"</string>
+    <string name="tab_upload" msgid="8692266580214096192">"上传"</string>
+    <string name="add_action" msgid="7182335431525262385">"添加"</string>
+    <string name="back_action" msgid="6367965969403409704">"返回"</string>
+    <string name="enter_name_hint" msgid="2568780632950983745">"输入名称"</string>
+    <string name="type_preview_hint" msgid="5659910204541849319">"在上方输入您的姓名以查看字体预览"</string>
+    <string name="select_image" msgid="2081090471909417669">"选择图片"</string>
+    <string name="no_image_selected" msgid="5939052790341353005">"未选择任何图片"</string>
+    <string name="uploaded_signature_content_description" msgid="2850671857073378289">"已上传的签名"</string>
+    <string name="error_image_size_limit" msgid="3837718354299508167">"图片大小超过了 %1$dMB 的上限"</string>
+    <string name="error_image_load" msgid="6747174825121177117">"未能加载图片"</string>
+    <string name="signature_draw_hint" msgid="1312226853855388293">"请在此区域内签名"</string>
+    <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
 </resources>

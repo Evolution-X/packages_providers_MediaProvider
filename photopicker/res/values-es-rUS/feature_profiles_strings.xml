@@ -30,10 +30,7 @@
     <string name="photopicker_profile_contact_admin_dialog_message" msgid="683059170694643597">"Comunícate con él si tienes alguna pregunta"</string>
     <string name="photopicker_profile_banner_switch_button_label" msgid="1652041405540769126">"Cambiar"</string>
     <string name="photopicker_profile_switch_banner_message" msgid="2969185213956642828">"Perfil actual: <xliff:g id="CURRENT_PROFILE_NAME">%1$s</xliff:g>. ¿Quieres cambiar al perfil <xliff:g id="TARGET_PROFILE_NAME">%2$s</xliff:g>?"</string>
-    <!-- no translation found for photopicker_work_profile_switch_banner_message (7484882792920946111) -->
-    <skip />
-    <!-- no translation found for photopicker_private_profile_switch_banner_message (1859038896296301411) -->
-    <skip />
-    <!-- no translation found for photopicker_profile_switch_banner_title (8145202924732237751) -->
-    <skip />
+    <string name="photopicker_work_profile_switch_banner_message" msgid="7484882792920946111">"Estás viendo fotos y videos de tu perfil <xliff:g id="CURRENT_PROFILE_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_private_profile_switch_banner_message" msgid="1859038896296301411">"Estás viendo fotos y videos en tu espacio <xliff:g id="CURRENT_PROFILE_NAME">%1$s</xliff:g>"</string>
+    <string name="photopicker_profile_switch_banner_title" msgid="8145202924732237751">"¿Quieres cambiar al perfil <xliff:g id="TARGET_PROFILE_NAME">%1$s</xliff:g>?"</string>
 </resources>
