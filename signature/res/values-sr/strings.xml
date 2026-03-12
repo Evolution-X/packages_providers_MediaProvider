@@ -33,15 +33,15 @@
     <string name="settings_subheader" msgid="5101352403141361475">"Сачувани потписи"</string>
     <string name="settings_item_title_format" msgid="264810772050965877">"Сачуван је потпис %1$d"</string>
     <string name="picker_title" msgid="5513714008007561495">"Потписи"</string>
-    <string name="picker_add_new" msgid="2590444102822678954">"Додај потпис"</string>
+    <string name="picker_add_new" msgid="2590444102822678954">"Додајте потпис"</string>
     <string name="picker_no_signatures" msgid="7560452872095947936">"Није пронађен ниједан потпис.\nДодајте нови да бисте започели."</string>
-    <string name="create_signature_title" msgid="7616494023737147010">"Додај потпис"</string>
-    <string name="tab_draw" msgid="4258715769815399593">"Цртај"</string>
-    <string name="tab_type" msgid="3264705813758141873">"Тип"</string>
+    <string name="create_signature_title" msgid="7616494023737147010">"Додајте потпис"</string>
+    <string name="tab_draw" msgid="4258715769815399593">"Цртајте"</string>
+    <string name="tab_type" msgid="3264705813758141873">"Унесите текст"</string>
     <string name="tab_upload" msgid="8692266580214096192">"Отпреми"</string>
     <string name="add_action" msgid="7182335431525262385">"Додај"</string>
     <string name="back_action" msgid="6367965969403409704">"Назад"</string>
-    <string name="enter_name_hint" msgid="2568780632950983745">"Унесите назив"</string>
+    <string name="enter_name_hint" msgid="2568780632950983745">"Унесите име"</string>
     <string name="type_preview_hint" msgid="5659910204541849319">"Унесите име изнад да бисте видели прегледе фонтова"</string>
     <string name="select_image" msgid="2081090471909417669">"Изаберите слику"</string>
     <string name="no_image_selected" msgid="5939052790341353005">"Није изабрана ниједна слика"</string>
@@ -50,4 +50,6 @@
     <string name="error_image_load" msgid="6747174825121177117">"Учитавање слике није успело"</string>
     <string name="signature_draw_hint" msgid="1312226853855388293">"Нацртајте потпис у овој области"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
+    <string name="error_save_signature" msgid="1348842158559996845">"Чување потписа није успело"</string>
+    <string name="signature_preview_default" msgid="1502538040023384495">"Потпис"</string>
 </resources>
