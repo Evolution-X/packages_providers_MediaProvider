@@ -836,15 +836,32 @@ private fun SearchBarPlaceHolder(focused: Boolean, viewModel: SearchViewModel = 
  * @param modifier Modifier used to adjust the layout or styling of the composable.
  */
 @Composable
-fun EmptySearchResult(modifier: Modifier = Modifier) {
+fun EmptySearchResult(
+    modifier: Modifier = Modifier,
+    viewModel: SearchViewModel = obtainViewModel(),
+) {
     val localConfig = LocalConfiguration.current
     val emptyStatePadding = remember(localConfig) { (localConfig.screenHeightDp * .20).dp }
+
+    val searchableProviders by viewModel.searchableProviders.collectAsStateWithLifecycle()
+    val isCloudOnly =
+        searchableProviders.size == 1 && searchableProviders[0].mediaSource == MediaSource.REMOTE
+    val bodyText =
+        if (isCloudOnly) {
+            stringResource(
+                R.string.photopicker_search_result_empty_state_message_when_local_search_disabled
+            )
+        } else {
+            stringResource(
+                R.string.photopicker_search_result_empty_state_message_when_local_search_enabled
+            )
+        }
 
     EmptyState(
         modifier = modifier.fillMaxWidth().padding(top = emptyStatePadding),
         icon = Icons.Outlined.HideImage,
         title = stringResource(R.string.photopicker_search_result_empty_state_title),
-        body = stringResource(R.string.photopicker_search_result_empty_state_message),
+        body = bodyText,
     )
 }
 

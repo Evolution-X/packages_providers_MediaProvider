@@ -459,10 +459,7 @@ public class PickerDataLayerV2Test {
                 .thenReturn(CLOUD_PROVIDER);
         when(mUserPrefs.edit()).thenReturn(mEditor);
         // The cloud provider is capable of search
-        when(mSearchState.doesPickerSupportSearch(any(), anyString()))
-                .thenReturn(true);
-        when(mSearchState.doesCloudProviderSupportSearch(any(), anyString()))
-                .thenReturn(true);
+        doReturn(true).when(mSearchState).isCloudSearchEnabled(any());
 
         Bundle result = PickerDataLayerV2.getSearchProviders(
                 mContext,
