@@ -25,12 +25,14 @@ import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.toSize
 import com.android.signature.ui.create.PathState
 import com.android.signature.ui.create.SignatureStrokeStyle
+import kotlin.math.max
 import kotlin.math.min
 import android.graphics.Canvas as AndroidCanvas
 
@@ -48,6 +50,28 @@ fun createPathFromPoints(points: List<Offset>): Path =
             for (i in 1 until points.size) {
                 lineTo(points[i].x, points[i].y)
             }
+        }
+    }
+
+/**
+ * Calculates the total bounding box for a list of paths.
+ *
+ * @param paths The list of paths to calculate the bounds for.
+ * @return A [Rect] representing the combined bounds, or Rect.Zero if empty.
+ */
+@VisibleForTesting
+fun calculateBounds(paths: List<PathState>): Rect =
+    paths.fold(Rect.Zero) { acc, pathState ->
+        val pathBounds = pathState.path.getBounds()
+        if (acc == Rect.Zero) {
+            pathBounds
+        } else {
+            Rect(
+                left = min(acc.left, pathBounds.left),
+                top = min(acc.top, pathBounds.top),
+                right = max(acc.right, pathBounds.right),
+                bottom = max(acc.bottom, pathBounds.bottom),
+            )
         }
     }
 
@@ -107,6 +131,7 @@ fun calculateTransform(
  * @param size The size of the bitmap.
  * @param density The screen density.
  * @param layoutDirection The layout direction.
+ * @param padding for drawn signature.
  * @return A [Bitmap] containing the drawn paths.
  */
 @VisibleForTesting
@@ -115,23 +140,33 @@ fun createBitmapFromPaths(
     size: IntSize,
     density: Density,
     layoutDirection: LayoutDirection,
+    padding: Float,
 ): Bitmap {
     val bitmap = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888)
     val androidCanvas = AndroidCanvas(bitmap)
     val composeCanvas = Canvas(androidCanvas)
 
+    // Apply the same orientation bounds transform
+    val bounds = calculateBounds(paths)
+    val transform = calculateTransform(bounds, size.toSize(), padding)
+
     CanvasDrawScope().draw(density, layoutDirection, composeCanvas, size.toSize()) {
-        paths.forEach { pathState ->
-            drawPath(
-                path = pathState.path,
-                color = pathState.color,
-                style =
-                    Stroke(
-                        width = pathState.strokeWidth,
-                        cap = SignatureStrokeStyle.cap,
-                        join = SignatureStrokeStyle.join,
-                    ),
-            )
+        withTransform({
+            translate(transform.translateX, transform.translateY)
+            scale(scaleX = transform.scale, scaleY = transform.scale, pivot = Offset.Zero)
+        }) {
+            paths.forEach { pathState ->
+                drawPath(
+                    path = pathState.path,
+                    color = pathState.color,
+                    style =
+                        Stroke(
+                            width = pathState.strokeWidth,
+                            cap = SignatureStrokeStyle.cap,
+                            join = SignatureStrokeStyle.join,
+                        ),
+                )
+            }
         }
     }
     return bitmap

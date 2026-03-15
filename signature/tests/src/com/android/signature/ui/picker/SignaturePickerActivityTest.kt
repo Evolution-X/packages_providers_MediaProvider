@@ -37,6 +37,7 @@ import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
 import com.android.signature.di.DatabaseModule
 import com.android.signature.flags.Flags
+import com.android.signature.test.TestUtils
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -82,13 +83,7 @@ class SignaturePickerActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
-        val uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        try {
-            uiDevice.wakeUp()
-            uiDevice.executeShellCommand("wm dismiss-keyguard")
-        } catch (e: Exception) {
-            // Ignore
-        }
+        TestUtils.wakeUpDevice()
         try {
             composeTestRule.activityRule.scenario.onActivity {
                 it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -173,5 +168,24 @@ class SignaturePickerActivityTest {
                 .build()
 
         assertEquals(expectedUri, result.data?.data)
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_SIGNATURE)
+    fun signaturePickerActivity_dismiss_finishesWithCanceled() {
+        launchPickerActivity()
+        composeTestRule.waitForIdle()
+
+        // Simulate back press to dismiss bottom sheet
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+
+        // Wait for result
+        var lastResult: androidx.activity.result.ActivityResult? = null
+        composeTestRule.waitUntil(timeoutMillis = 5000) {
+            lastResult = composeTestRule.activity.lastResult
+            lastResult != null
+        }
+
+        assertEquals(Activity.RESULT_CANCELED, lastResult?.resultCode)
     }
 }

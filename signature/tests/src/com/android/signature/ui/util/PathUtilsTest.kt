@@ -51,6 +51,43 @@ class PathUtilsTest {
     }
 
     @Test
+    fun calculateBounds_emptyList_returnsRectZero() {
+        val bounds = calculateBounds(emptyList())
+        assertEquals(Rect.Zero, bounds)
+    }
+
+    @Test
+    fun calculateBounds_multiplePaths_returnsCombinedBounds() {
+        // Path 1 bounds should be Rect(0, 0, 10, 10)
+        val path1 =
+            Path().apply {
+                moveTo(0f, 0f)
+                lineTo(10f, 10f)
+            }
+
+        // Path 2 bounds should be Rect(20, 20, 30, 40)
+        val path2 =
+            Path().apply {
+                moveTo(20f, 20f)
+                lineTo(30f, 40f)
+            }
+
+        val paths =
+            listOf(
+                PathState(path1, Color.Black, 5f),
+                PathState(path2, Color.Black, 5f),
+            )
+
+        val combinedBounds = calculateBounds(paths)
+
+        // Combined bounds should be Rect(0, 0, 30, 40)
+        assertEquals(0f, combinedBounds.left, 0.001f)
+        assertEquals(0f, combinedBounds.top, 0.001f)
+        assertEquals(30f, combinedBounds.right, 0.001f)
+        assertEquals(40f, combinedBounds.bottom, 0.001f)
+    }
+
+    @Test
     fun calculateTransform_emptyBounds_returnsIdentity() {
         val transform = calculateTransform(Rect.Zero, Size(100f, 100f), 10f)
         assertEquals(1f, transform.scale, 0.001f)
@@ -118,10 +155,50 @@ class PathUtilsTest {
         val density = Density(1f)
         val layoutDirection = LayoutDirection.Ltr
 
-        val bitmap = createBitmapFromPaths(paths, size, density, layoutDirection)
+        val bitmap = createBitmapFromPaths(paths, size, density, layoutDirection, 0f)
 
         assertNotNull(bitmap)
         assertEquals(100, bitmap.width)
         assertEquals(100, bitmap.height)
+    }
+
+    @Test
+    fun calculateTransform_landscapeBoundsToPortraitCanvas_scalesAndCenters() {
+        // Wide bounds (e.g., drawn in landscape)
+        val bounds = Rect(0f, 0f, 400f, 100f)
+
+        // Tall canvas (e.g., rotated to portrait)
+        val canvasSize = Size(200f, 600f)
+        val padding = 0f
+
+        val transform = calculateTransform(bounds, canvasSize, padding)
+
+        // Scale must be based on the width to fit 400 into 200: Scale = 0.5
+        assertEquals(0.5f, transform.scale, 0.001f)
+
+        // Scaled height is 100 * 0.5 = 50.
+        // It should be vertically centered: (600 - 50) / 2 = 275
+        assertEquals(0f, transform.translateX, 0.001f)
+        assertEquals(275f, transform.translateY, 0.001f)
+    }
+
+    @Test
+    fun calculateTransform_portraitBoundsToLandscapeCanvas_scalesAndCenters() {
+        // Tall bounds (e.g., drawn in portrait)
+        val bounds = Rect(0f, 0f, 100f, 400f)
+
+        // Wide canvas (e.g., rotated to landscape)
+        val canvasSize = Size(600f, 200f)
+        val padding = 0f
+
+        val transform = calculateTransform(bounds, canvasSize, padding)
+
+        // Scale must be based on the height to fit 400 into 200: Scale = 0.5
+        assertEquals(0.5f, transform.scale, 0.001f)
+
+        // Scaled width is 100 * 0.5 = 50.
+        // It should be horizontally centered: (600 - 50) / 2 = 275
+        assertEquals(275f, transform.translateX, 0.001f)
+        assertEquals(0f, transform.translateY, 0.001f)
     }
 }

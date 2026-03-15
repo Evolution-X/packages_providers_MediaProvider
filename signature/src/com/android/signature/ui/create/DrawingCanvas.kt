@@ -20,23 +20,29 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PointMode
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.toSize
 import com.android.signature.R
+import com.android.signature.ui.util.TransformParams
+import com.android.signature.ui.util.calculateBounds
 import com.android.signature.ui.util.calculateTransform
 import com.android.signature.ui.util.createPathFromPoints
-import kotlin.math.max
-import kotlin.math.min
 
 /**
  * A composable that provides a drawing canvas for the user to draw their signature.
@@ -56,66 +62,76 @@ internal fun DrawingCanvas(
     color: Color = Color.Black,
 ) {
     val currentPoints = remember { mutableStateListOf<Offset>() }
+    var currentSize by remember { mutableStateOf(IntSize.Zero) }
+    var currentTransform by remember { mutableStateOf(TransformParams()) }
+
     val density = LocalDensity.current
     val padding =
         with(density) {
             dimensionResource(R.dimen.signature_canvas_padding).toPx()
         }
 
+    // Recalculate transform ONLY when the canvas resizes (rotation)
+    LaunchedEffect(currentSize) {
+        if (currentSize != IntSize.Zero && paths.isNotEmpty()) {
+            val bounds = calculateBounds(paths)
+            currentTransform = calculateTransform(bounds, currentSize.toSize(), padding)
+        }
+    }
+
+    // Reset transform when the canvas is cleared (e.g. clicking Cancel or saving)
+    LaunchedEffect(paths.isEmpty()) {
+        if (paths.isEmpty()) {
+            currentTransform = TransformParams()
+        }
+    }
+
     Canvas(
         modifier =
-            Modifier.fillMaxSize().pointerInput(Unit) {
-                detectDragGestures(onDragStart = { offset ->
-                    onDragStart()
-                    currentPoints.clear()
-                    currentPoints.add(offset)
-                }, onDrag = { change, _ ->
-                    currentPoints.add(change.position)
-                }, onDragEnd = {
-                    val pathState =
-                        if (currentPoints.isNotEmpty()) {
-                            val path = createPathFromPoints(currentPoints)
-                            PathState(
-                                path = path,
-                                color = color,
-                                strokeWidth = strokeWidth,
-                                points = currentPoints.toList(),
-                            )
-                        } else {
-                            null
-                        }
-                    currentPoints.clear()
-                    onDragEnd(pathState)
-                })
-            },
+            Modifier
+                .fillMaxSize()
+                .onSizeChanged { currentSize = it }
+                .pointerInput(currentTransform) {
+                    detectDragGestures(onDragStart = { offset ->
+                        onDragStart()
+                        currentPoints.clear()
+                        // Inverse map the touch coordinate to the original scale
+                        val mappedX = (offset.x - currentTransform.translateX) / currentTransform.scale
+                        val mappedY = (offset.y - currentTransform.translateY) / currentTransform.scale
+                        currentPoints.add(Offset(mappedX, mappedY))
+                    }, onDrag = { change, _ ->
+                        val mappedX =
+                            (change.position.x - currentTransform.translateX) / currentTransform.scale
+                        val mappedY =
+                            (change.position.y - currentTransform.translateY) / currentTransform.scale
+                        currentPoints.add(Offset(mappedX, mappedY))
+                    }, onDragEnd = {
+                        val pathState =
+                            if (currentPoints.isNotEmpty()) {
+                                val path = createPathFromPoints(currentPoints)
+                                PathState(
+                                    path = path,
+                                    color = color,
+                                    strokeWidth = strokeWidth,
+                                    points = currentPoints.toList(),
+                                )
+                            } else {
+                                null
+                            }
+                        currentPoints.clear()
+                        onDragEnd(pathState)
+                    })
+                },
     ) {
-        // Calculate bounds of all paths
-        val bounds =
-            paths.fold(Rect.Zero) { acc, pathState ->
-                val pathBounds = pathState.path.getBounds()
-                if (acc == Rect.Zero) {
-                    pathBounds
-                } else {
-                    Rect(
-                        left = min(acc.left, pathBounds.left),
-                        top = min(acc.top, pathBounds.top),
-                        right = max(acc.right, pathBounds.right),
-                        bottom = max(acc.bottom, pathBounds.bottom),
-                    )
-                }
-            }
-
-        // Calculate scale and translation to fit/center
-        val transform = calculateTransform(bounds, size, padding)
-
         withTransform({
-            translate(transform.translateX, transform.translateY)
+            translate(currentTransform.translateX, currentTransform.translateY)
             scale(
-                scaleX = transform.scale,
-                scaleY = transform.scale,
+                scaleX = currentTransform.scale,
+                scaleY = currentTransform.scale,
                 pivot = Offset.Zero,
             )
         }) {
+            // Draw existing paths
             paths.forEach { pathState ->
                 drawPath(
                     path = pathState.path,
@@ -128,17 +144,17 @@ internal fun DrawingCanvas(
                         ),
                 )
             }
-        }
 
-        // Draw current points without transform (they are in screen coordinates)
-        if (currentPoints.isNotEmpty()) {
-            drawPoints(
-                points = currentPoints,
-                pointMode = PointMode.Polygon,
-                color = color,
-                strokeWidth = strokeWidth,
-                cap = SignatureStrokeStyle.cap,
-            )
+            // Draw current active points
+            if (currentPoints.isNotEmpty()) {
+                drawPoints(
+                    points = currentPoints,
+                    pointMode = PointMode.Polygon,
+                    color = color,
+                    strokeWidth = strokeWidth,
+                    cap = SignatureStrokeStyle.cap,
+                )
+            }
         }
     }
 }

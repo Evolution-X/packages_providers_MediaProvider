@@ -31,6 +31,7 @@ import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
 import com.android.signature.di.DatabaseModule
 import com.android.signature.flags.Flags
+import com.android.signature.test.TestUtils
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -48,7 +49,6 @@ import org.mockito.kotlin.whenever
 @UninstallModules(DatabaseModule::class)
 @RunWith(AndroidJUnit4::class)
 class SettingsActivityTest {
-
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
@@ -59,9 +59,10 @@ class SettingsActivityTest {
     val composeTestRule = createAndroidComposeRule<SettingsActivity>()
 
     // Stub the mock immediately to avoid NPE during Activity launch
-    private val signatureDao: SignatureDao = Mockito.mock(SignatureDao::class.java).apply {
-        whenever(getAllSignatures()).thenReturn(flowOf(emptyList()))
-    }
+    private val signatureDao: SignatureDao =
+        Mockito.mock(SignatureDao::class.java).apply {
+            whenever(getAllSignatures()).thenReturn(flowOf(emptyList()))
+        }
 
     @BindValue
     @JvmField
@@ -70,6 +71,7 @@ class SettingsActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
+        TestUtils.wakeUpDevice()
         try {
             composeTestRule.activityRule.scenario.onActivity {
                 it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -95,7 +97,7 @@ class SettingsActivityTest {
         val scenario = composeTestRule.activityRule.scenario
         // State might become DESTROYED very quickly
         assertTrue(
-            scenario.state == Lifecycle.State.DESTROYED || composeTestRule.activity.isFinishing
+            scenario.state == Lifecycle.State.DESTROYED || composeTestRule.activity.isFinishing,
         )
     }
 

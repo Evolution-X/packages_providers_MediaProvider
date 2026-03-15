@@ -31,12 +31,12 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.android.signature.HiltTestActivity
 import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
 import com.android.signature.di.DatabaseModule
 import com.android.signature.flags.Flags
+import com.android.signature.test.TestUtils
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -58,7 +58,6 @@ import org.mockito.kotlin.whenever
 @UninstallModules(DatabaseModule::class)
 @RunWith(AndroidJUnit4::class)
 class CreateSignatureActivityTest {
-
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
@@ -70,13 +69,14 @@ class CreateSignatureActivityTest {
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
-    private val signatureDao: SignatureDao = Mockito.mock(SignatureDao::class.java).apply {
-        whenever(getAllSignatures()).thenReturn(flowOf(emptyList()))
-        runBlocking {
-            whenever(getSignatureCount()).thenReturn(0)
-            whenever(insertSignature(any())).thenReturn(Unit)
+    private val signatureDao: SignatureDao =
+        Mockito.mock(SignatureDao::class.java).apply {
+            whenever(getAllSignatures()).thenReturn(flowOf(emptyList()))
+            runBlocking {
+                whenever(getSignatureCount()).thenReturn(0)
+                whenever(insertSignature(any())).thenReturn(Unit)
+            }
         }
-    }
 
     @BindValue
     @JvmField
@@ -85,13 +85,7 @@ class CreateSignatureActivityTest {
     @Before
     fun setup() {
         hiltRule.inject()
-        val uiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        try {
-            uiDevice.wakeUp()
-            uiDevice.executeShellCommand("wm dismiss-keyguard")
-        } catch (e: Exception) {
-            // Ignore
-        }
+        TestUtils.wakeUpDevice()
         disableAnimations()
     }
 
@@ -135,7 +129,9 @@ class CreateSignatureActivityTest {
     fun createSignatureActivity_flagDisabled_finishesActivity() {
         ActivityScenario.launch(CreateSignatureActivity::class.java).use { scenario ->
             // Activity should have finished itself in onCreate
-            assertTrue(scenario.state == androidx.lifecycle.Lifecycle.State.DESTROYED || scenario.result.resultCode == Activity.RESULT_CANCELED)
+            assertTrue(
+                scenario.state == androidx.lifecycle.Lifecycle.State.DESTROYED || scenario.result.resultCode == Activity.RESULT_CANCELED,
+            )
         }
     }
 

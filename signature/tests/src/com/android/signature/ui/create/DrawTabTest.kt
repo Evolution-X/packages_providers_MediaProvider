@@ -17,6 +17,10 @@
 package com.android.signature.ui.create
 
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
@@ -27,6 +31,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.android.signature.HiltTestActivity
 import com.android.signature.data.Signature
@@ -51,7 +56,6 @@ import org.mockito.kotlin.whenever
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class DrawTabTest {
-
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
@@ -82,10 +86,7 @@ class DrawTabTest {
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
-                CreateSignatureScreen(
-                    viewModel = viewModel,
-                    onSignatureCreated = {},
-                    onCancel = {})
+                CreateSignatureScreen(viewModel = viewModel, onSignatureCreated = {}, onCancel = {})
             }
         }
 
@@ -107,10 +108,7 @@ class DrawTabTest {
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
-                CreateSignatureScreen(
-                    viewModel = viewModel,
-                    onSignatureCreated = {},
-                    onCancel = {})
+                CreateSignatureScreen(viewModel = viewModel, onSignatureCreated = {}, onCancel = {})
             }
         }
 
@@ -144,10 +142,7 @@ class DrawTabTest {
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
-                CreateSignatureScreen(
-                    viewModel = viewModel,
-                    onSignatureCreated = {},
-                    onCancel = {})
+                CreateSignatureScreen(viewModel = viewModel, onSignatureCreated = {}, onCancel = {})
             }
         }
 
@@ -188,11 +183,49 @@ class DrawTabTest {
                 CreateSignatureScreen(
                     viewModel = viewModel,
                     onSignatureCreated = {},
-                    onCancel = { cancelClicked = true })
+                    onCancel = { cancelClicked = true },
+                )
             }
         }
 
         composeTestRule.onNodeWithText("Cancel").performClick()
         Assert.assertTrue(cancelClicked)
+    }
+
+    @Test
+    fun drawTab_canvasResize_handlesTransformRecalculationWithoutCrashing() {
+        val signatureDao = Mockito.mock(SignatureDao::class.java)
+        whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
+        val repository = SignatureRepository(signatureDao)
+        val viewModel = SignatureViewModel(repository)
+
+        // Use a mutable state to simulate screen rotation/resizing
+        val canvasSizeModifier = mutableStateOf(Modifier.size(200.dp, 400.dp))
+
+        composeTestRule.setContent {
+            Box(modifier = canvasSizeModifier.value) {
+                CreateSignatureScreen(viewModel = viewModel, onSignatureCreated = {}, onCancel = {})
+            }
+        }
+
+        // Draw a line while in "Portrait" (200x400)
+        composeTestRule.onNodeWithTag("DrawingCanvas").performTouchInput {
+            swipeRight()
+        }
+        composeTestRule.waitForIdle()
+
+        // Verify the stroke is registered and "Add" is enabled
+        composeTestRule.onNodeWithText("Add").assertIsEnabled()
+
+        // Simulate device rotation to "Landscape" (400x200)
+        // This will trigger the `onSizeChanged` and `LaunchedEffect(currentSize)`
+        // inside `DrawingCanvas` to scale/translate the existing path.
+        canvasSizeModifier.value = Modifier.size(400.dp, 200.dp)
+
+        composeTestRule.waitForIdle()
+
+        // Verify the app didn't crash and the state remains valid (Add button still enabled)
+        // The transformation logic will have recalculated without wiping the drawing.
+        composeTestRule.onNodeWithText("Add").assertIsEnabled()
     }
 }
