@@ -77,6 +77,8 @@ internal fun DrawTab(
         with(density) {
             dimensionResource(R.dimen.signature_stroke_width).toPx()
         }
+    val canvasPaddingPx =
+        with(density) { dimensionResource(R.dimen.signature_canvas_padding).toPx() }
 
     Column(Modifier.fillMaxSize()) {
         Box(
@@ -169,6 +171,7 @@ internal fun DrawTab(
                                 size = canvasSize,
                                 density = density,
                                 layoutDirection = layoutDirection,
+                                padding = canvasPaddingPx,
                             )
                         onSave(bitmap)
                     }

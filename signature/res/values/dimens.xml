@@ -23,7 +23,6 @@
     <dimen name="signature_image_height">100dp</dimen>
     <dimen name="signature_text_size">28sp</dimen>
     <dimen name="signature_bitmap_text_size">100sp</dimen>
-    <dimen name="signature_item_height">150dp</dimen>
     <dimen name="bottom_sheet_max_height">400dp</dimen>
     <dimen name="border_width">1dp</dimen>
     <dimen name="corner_radius">8dp</dimen>
@@ -33,6 +32,7 @@
     <dimen name="picker_item_height">81dp</dimen>
     <dimen name="picker_image_height">63dp</dimen>
     <dimen name="picker_image_width">163dp</dimen>
+    <dimen name="picker_icon_size">24dp</dimen>
 
     <!-- Draw Tab specific dimensions -->
     <dimen name="signature_draw_text_padding_top">76dp</dimen>

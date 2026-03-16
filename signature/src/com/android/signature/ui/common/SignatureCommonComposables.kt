@@ -17,21 +17,10 @@
 package com.android.signature.ui.common
 
 import android.graphics.BitmapFactory
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,11 +28,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.signature.R
@@ -98,90 +88,6 @@ fun DeleteSignatureDialog(
         })
 }
 
-/**
- * A card displaying a signature (image or text) with a delete button.
- *
- * @param signature The signature to display.
- * @param onDelete Callback invoked when the delete button is clicked.
- * @param modifier Modifier to be applied to the card.
- * @param onClick Optional callback invoked when the card is clicked.
- * @param isHighlighted Whether to show a highlight border around the card.
- */
-@Composable
-fun SignatureCard(
-    signature: Signature,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier,
-    onClick: (() -> Unit)? = null,
-    isHighlighted: Boolean = false
-) {
-    Card(
-        modifier = modifier.fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = dimensionResource(R.dimen.card_elevation)
-        ),
-        border = if (isHighlighted) BorderStroke(
-            dimensionResource(R.dimen.card_elevation), MaterialTheme.colorScheme.primary
-        ) else null
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-                    .padding(dimensionResource(R.dimen.padding_medium)),
-                contentAlignment = Alignment.Center
-            ) {
-                when (signature.type) {
-                    Signature.TYPE_DRAWN, Signature.TYPE_UPLOADED -> {
-                        signature.imageData?.let { imageData ->
-                            val bitmapState =
-                                produceState<ImageBitmap?>(initialValue = null, imageData) {
-                                    value = withContext(Dispatchers.IO) {
-                                        BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
-                                            ?.asImageBitmap()
-                                    }
-                                }
-
-                            bitmapState.value?.let { bitmap ->
-                                Image(
-                                    bitmap = bitmap, contentDescription = stringResource(
-                                        R.string.drawn_signature_content_description
-                                    ), modifier = Modifier.height(
-                                        dimensionResource(R.dimen.signature_image_height)
-                                    ), contentScale = ContentScale.Fit
-                                )
-                            }
-                        }
-                    }
-
-                    Signature.TYPE_TYPED -> {
-                        signature.textData?.let { text ->
-                            Text(
-                                text = text,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontFamily = signature.composeFontFamily
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Delete button aligned to the top end
-            IconButton(
-                onClick = onDelete, modifier = Modifier.align(Alignment.TopEnd)
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete_signature_content_description),
-                    tint = MaterialTheme.colorScheme.error
-                )
-            }
-        }
-    }
-}
-
 @Preview
 @Composable
 fun PreviewEmptyState() {
@@ -195,5 +101,77 @@ fun PreviewEmptyState() {
 fun PreviewDeleteSignatureDialog() {
     SignatureTheme {
         DeleteSignatureDialog(onConfirm = {}, onDismiss = {})
+    }
+}
+
+/**
+ * Reusable composable that renders a signature's content based on its type.
+ *
+ * It gracefully handles rendering drawn, uploaded, and typed signatures.
+ * Additionally, it automatically adapts the signature's color to the current
+ * system theme (light/dark mode) so that black signatures remain visible
+ * on dark backgrounds.
+ *
+ * @param signature The [Signature] object containing the data to display.
+ * @param modifier Modifier to be applied to the outermost container.
+ * @param imageModifier Modifier to be applied specifically to the rendered image
+ *                      (used for drawn or uploaded signatures).
+ * @param textStyle The [TextStyle] to be applied to the rendered text
+ *                  (used for typed signatures).
+ */
+@Composable
+fun SignatureContent(
+    signature: Signature,
+    modifier: Modifier = Modifier,
+    imageModifier: Modifier = Modifier,
+    textStyle: TextStyle
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.CenterStart
+    ) {
+        when (signature.type) {
+            Signature.TYPE_DRAWN, Signature.TYPE_UPLOADED -> {
+                signature.imageData?.let { imageData ->
+                    val bitmapState = produceState<ImageBitmap?>(initialValue = null, imageData) {
+                        value = withContext(Dispatchers.IO) {
+                            BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+                                ?.asImageBitmap()
+                        }
+                    }
+
+                    bitmapState.value?.let { bitmap ->
+                        // Only apply the dynamic tint if the signature was drawn by the user.
+                        // Uploaded signatures might be colored photos, so they should not be tinted.
+                        val colorFilter = if (signature.type == Signature.TYPE_DRAWN) {
+                            ColorFilter.tint(MaterialTheme.colorScheme.onSurface)
+                        } else {
+                            null
+                        }
+
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = stringResource(R.string.drawn_signature_content_description),
+                            contentScale = ContentScale.Fit,
+                            alignment = Alignment.CenterStart,
+                            modifier = imageModifier,
+                            colorFilter = colorFilter
+                        )
+                    }
+                }
+            }
+
+            Signature.TYPE_TYPED -> {
+                signature.textData?.let { text ->
+                    Text(
+                        text = text,
+                        style = textStyle,
+                        fontFamily = signature.composeFontFamily,
+                        // Ensure text color also adapts to light/dark themes
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }

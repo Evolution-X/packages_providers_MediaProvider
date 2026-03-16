@@ -20,6 +20,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -28,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import com.android.signature.flags.Flags
 import com.android.signature.ui.SignatureViewModel
+import com.android.signature.ui.create.CreateSignatureActivity
 import com.android.signature.ui.theme.SignatureTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -45,6 +47,19 @@ import kotlinx.coroutines.launch
 class SignaturePickerActivity : Hilt_SignaturePickerActivity() {
 
     private val viewModel: SignatureViewModel by viewModels()
+
+    // The launcher now extracts the new signature's ID from the result intent.
+    private val createSignatureLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                // Get the ID from the result and update the state.
+                // This will trigger recomposition and scroll to the newly created signature.
+                val id = result.data?.getStringExtra(CreateSignatureActivity.EXTRA_SIGNATURE_ID)
+                if (id != null) {
+                    viewModel.setNewSignatureId(id)
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,7 +93,12 @@ class SignaturePickerActivity : Hilt_SignaturePickerActivity() {
                     SignaturePickerScreen(
                         viewModel = viewModel,
                         onAddSignature = {
-                            // TODO: Launch CreateSignatureActivity when implemented
+                            val intent =
+                                Intent(
+                                    this@SignaturePickerActivity,
+                                    CreateSignatureActivity::class.java
+                                )
+                            createSignatureLauncher.launch(intent)
                         },
                         onSignatureSelected = { _, uri ->
                             val resultIntent = Intent().setData(uri)
