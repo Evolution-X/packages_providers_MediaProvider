@@ -60,6 +60,7 @@ import com.android.signature.data.Signature
 import com.android.signature.ui.common.DeleteSignatureDialog
 import com.android.signature.ui.common.EmptyState
 import com.android.signature.ui.common.SignatureContent
+import com.android.signature.logging.SignatureEventLogger
 
 /**
  * Composable function that displays the Settings screen.
@@ -83,7 +84,7 @@ fun SettingsScreen(
     // Show confirmation dialog when a signature is selected for deletion
     signatureToDelete?.let { signature ->
         DeleteSignatureDialog(onConfirm = {
-            viewModel.deleteSignature(signature)
+            viewModel.deleteSignature(signature, SignatureEventLogger.Screen.SETTINGS)
             signatureToDelete = null
         }, onDismiss = { signatureToDelete = null })
     }

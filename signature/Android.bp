@@ -40,6 +40,34 @@ java_aconfig_library {
     defaults: ["framework-minus-apex-aconfig-java-defaults"],
 }
 
+// To generate the Stats log classes for the Signature.
+genrule {
+    name: "statslog-signature-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module mediaprovider" +
+        " --javaPackage com.android.signature --javaClass SignatureStatsLog" +
+        " --minApiLevel 31",
+    out: ["com/android/signature/SignatureStatsLog.java"],
+}
+
+// To disable NewApi checks on the generated SignatureStatsLog.
+java_library {
+    name: "signature-statsd",
+    sdk_version: "module_current",
+    min_sdk_version: "31",
+    srcs: [
+        ":statslog-signature-java-gen",
+    ],
+    libs: [
+        // To add StatsLog as a dependency of the generated file.
+        "framework-statsd.stubs.module_lib",
+        "androidx.annotation_annotation",
+    ],
+    apex_available: [
+        "com.android.mediaprovider",
+    ],
+}
+
 // Rename the plugin to be unique to this project.
 java_plugin {
     name: "signature-room-compiler-plugin",
@@ -73,6 +101,7 @@ android_library {
         "kotlinx-coroutines-android",
         "kotlinx_coroutines",
         "signature_flags_java_lib",
+        "signature-statsd",
     ],
     plugins: [
         // Use the new, unique plugin names.

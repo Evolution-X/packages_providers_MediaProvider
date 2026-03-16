@@ -115,11 +115,12 @@ data class Signature(
     }
 
     companion object {
+        const val TYPE_UNKNOWN = 0
         const val TYPE_DRAWN = 1
         const val TYPE_TYPED = 2
         const val TYPE_UPLOADED = 3
 
-        @IntDef(TYPE_DRAWN, TYPE_TYPED, TYPE_UPLOADED)
+        @IntDef(TYPE_UNKNOWN, TYPE_DRAWN, TYPE_TYPED, TYPE_UPLOADED)
         @Retention(AnnotationRetention.SOURCE)
         annotation class SignatureType
 

@@ -23,6 +23,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.signature.data.Signature
 import com.android.signature.data.SignatureFont
 import com.android.signature.data.SignatureRepository
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.create.PathState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.ByteArrayOutputStream
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -45,6 +47,7 @@ class SignatureViewModel
     @Inject
     constructor(
         private val repository: SignatureRepository,
+        val eventLogger: SignatureEventLogger
     ) : ViewModel() {
         companion object {
             const val MAX_SIGNATURES = 5
@@ -55,17 +58,27 @@ class SignatureViewModel
             private const val COMPRESSION_QUALITY = 100
         }
 
+        private val creationTime = System.currentTimeMillis()
+
         /**
          * A stateful flow that holds the current list of all saved signatures.
          * It is collected by the UI to display the signatures.
          */
         val signatures: StateFlow<List<Signature>> =
-            repository.getAllSignatures().stateIn(
-                scope = viewModelScope,
-                // Keep the flow active for 5 seconds after the last collector disappears.
-                started = SharingStarted.WhileSubscribed(5000L),
-                initialValue = emptyList(),
-            )
+            repository.getAllSignatures()
+                .onEach {
+                    // Log the duration to load the signatures for the first time
+                    if (it.isNotEmpty() && _signatureToDelete.value == null) {
+                        val duration = System.currentTimeMillis() - creationTime
+                        eventLogger.logSignaturesLoadDuration(duration, it.size, SignatureEventLogger.Screen.PICKER)
+                    }
+                }
+                .stateIn(
+                    scope = viewModelScope,
+                    // Keep the flow active for 5 seconds after the last collector disappears.
+                    started = SharingStarted.WhileSubscribed(5000L),
+                    initialValue = emptyList(),
+                )
 
         // UI State for CreateSignatureScreen
         private val _selectedTabIndex = MutableStateFlow(0)
@@ -190,11 +203,15 @@ class SignatureViewModel
         /**
          * Deletes a signature from the repository.
          */
-        fun deleteSignature(signature: Signature) {
+        fun deleteSignature(signature: Signature, screen: SignatureEventLogger.Screen) {
             viewModelScope.launch {
+                val start = System.currentTimeMillis()
                 repository.deleteSignature(signature)
                 // Clear the delete state internally so the UI dialog dismisses
                 _signatureToDelete.value = null
+                val duration = System.currentTimeMillis() - start
+                eventLogger.logSignatureDeleteDuration(duration, screen)
+                eventLogger.logSignatureDeleted(signature.type, screen)
             }
         }
 
@@ -218,6 +235,7 @@ class SignatureViewModel
         }
 
         suspend fun saveDrawnSignature(bitmap: Bitmap): Signature {
+            val start = System.currentTimeMillis()
             checkSignatureLimit()
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, COMPRESSION_QUALITY, stream)
@@ -239,6 +257,8 @@ class SignatureViewModel
                     drawingPaths = serializedPaths,
                 )
             repository.saveSignature(signature)
+            val duration = System.currentTimeMillis() - start
+            eventLogger.logSignatureSaveDuration(duration, Signature.TYPE_DRAWN)
             return signature
         }
 
@@ -247,6 +267,7 @@ class SignatureViewModel
             fontName: String,
             bitmap: Bitmap? = null,
         ): Signature {
+            val start = System.currentTimeMillis()
             checkSignatureLimit()
             val imageData =
                 bitmap?.let {
@@ -263,10 +284,13 @@ class SignatureViewModel
                     imageData = imageData,
                 )
             repository.saveSignature(signature)
+            val duration = System.currentTimeMillis() - start
+            eventLogger.logSignatureSaveDuration(duration, Signature.TYPE_TYPED)
             return signature
         }
 
         suspend fun saveUploadedSignature(bitmap: Bitmap): Signature {
+            val start = System.currentTimeMillis()
             checkSignatureLimit()
             val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, COMPRESSION_QUALITY, stream)
@@ -276,6 +300,8 @@ class SignatureViewModel
                     imageData = stream.toByteArray(),
                 )
             repository.saveSignature(signature)
+            val duration = System.currentTimeMillis() - start
+            eventLogger.logSignatureSaveDuration(duration, Signature.TYPE_UPLOADED)
             return signature
         }
 

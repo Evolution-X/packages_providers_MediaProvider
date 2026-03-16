@@ -82,7 +82,8 @@ class DrawTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -104,7 +105,8 @@ class DrawTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -138,7 +140,8 @@ class DrawTabTest {
             whenever(signatureDao.getSignatureCount()).thenReturn(0)
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -175,7 +178,8 @@ class DrawTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
         var cancelClicked = false
 
         composeTestRule.runOnUiThread {
@@ -197,7 +201,8 @@ class DrawTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Use a mutable state to simulate screen rotation/resizing
         val canvasSizeModifier = mutableStateOf(Modifier.size(200.dp, 400.dp))

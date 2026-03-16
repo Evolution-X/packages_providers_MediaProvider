@@ -21,8 +21,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.signature.flags.Flags
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.theme.SignatureTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Activity that hosts the Settings screen.
@@ -33,8 +35,13 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint(ComponentActivity::class)
 class SettingsActivity : Hilt_SettingsActivity() {
+    @Inject
+    lateinit var eventLogger: SignatureEventLogger
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        eventLogger.logSignatureSettingsLaunched()
 
         // Runtime check for the feature flag
         if (!Flags.enableSignature()) {
@@ -48,8 +55,7 @@ class SettingsActivity : Hilt_SettingsActivity() {
                 val viewModel: SettingsViewModel = viewModel()
 
                 // Pass the onNavigateUp parameter, which calls finish() on the activity.
-                SettingsScreen(
-                    viewModel = viewModel, onNavigateUp = { finish() })
+                SettingsScreen(viewModel = viewModel, onNavigateUp = { finish() })
             }
         }
     }

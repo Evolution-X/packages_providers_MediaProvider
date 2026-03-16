@@ -19,6 +19,7 @@ package com.android.signature.provider
 import android.content.Context
 import android.content.pm.ProviderInfo
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import android.platform.test.annotations.DisableFlags
 import android.platform.test.annotations.EnableFlags
 import android.platform.test.flag.junit.SetFlagsRule
@@ -29,12 +30,14 @@ import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
 import com.android.signature.di.DatabaseModule
 import com.android.signature.flags.Flags
+import com.android.signature.logging.SignatureEventLogger
 import dagger.hilt.android.testing.BindValue
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import dagger.hilt.android.testing.UninstallModules
 import java.io.FileNotFoundException
+import java.io.IOException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -54,7 +57,6 @@ import org.mockito.kotlin.verifyNoInteractions
 @UninstallModules(DatabaseModule::class)
 @RunWith(AndroidJUnit4::class)
 class SignatureProviderTest {
-
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
@@ -69,16 +71,26 @@ class SignatureProviderTest {
     @JvmField
     val repository: SignatureRepository = SignatureRepository(signatureDao)
 
+    @BindValue
+    @JvmField
+    val eventLogger: SignatureEventLogger = Mockito.mock(SignatureEventLogger::class.java)
+
     @Before
     fun setup() {
         hiltRule.inject()
         context = ApplicationProvider.getApplicationContext<HiltTestApplication>()
         provider = SignatureProvider()
-        val info = ProviderInfo().apply {
-            authority = "com.android.signature.provider"
-        }
+
+        // Inject mocks directly to prevent the lazy block from evaluating
+        // and crashing via EntryPointAccessors.
+        provider.signatureDao = signatureDao
+        provider.eventLogger = eventLogger
+
+        val info =
+            ProviderInfo().apply {
+                authority = "com.android.signature.provider"
+            }
         provider.attachInfo(context, info)
-        // Delay calling provider.onCreate() until each test method
     }
 
     @Test
@@ -139,6 +151,12 @@ class SignatureProviderTest {
         val uri = Uri.parse("content://com.android.signature.provider/signatures/1")
         val pfd = provider.openFile(uri, "r")
         assertNotNull(pfd)
+
+        // Read fully to ensure the background coroutine finishes writing before the test ends
+        java.io.FileInputStream(pfd?.fileDescriptor).use { inputStream ->
+            val resultData = inputStream.readBytes()
+            assertEquals(data.size, resultData.size)
+        }
         pfd?.close()
     }
 
@@ -180,6 +198,54 @@ class SignatureProviderTest {
             assertEquals("Provider not available", e.message)
         }
         verifyNoInteractions(signatureDao)
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_SIGNATURE)
+    fun openFile_signatureNotFound_closesPipeWithError() {
+        assertTrue(provider.onCreate())
+        signatureDao.stub {
+            onBlocking { getSignatureById("999") }.doReturn(null)
+        }
+
+        val uri = Uri.parse("content://com.android.signature.provider/signatures/999")
+        val pfd = provider.openFile(uri, "r")
+        assertNotNull(pfd)
+
+        // Read from the stream using AutoCloseInputStream to detect closeWithError
+        try {
+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use { inputStream ->
+                inputStream.readBytes()
+            }
+            fail("Expected IOException due to pipe closed with error")
+        } catch (e: IOException) {
+            // Expected
+            assertNotNull(e)
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_SIGNATURE)
+    fun openFile_daoThrowsException_closesPipeWithError() {
+        assertTrue(provider.onCreate())
+        signatureDao.stub {
+            onBlocking { getSignatureById("1") }.thenThrow(RuntimeException("Database error"))
+        }
+
+        val uri = Uri.parse("content://com.android.signature.provider/signatures/1")
+        val pfd = provider.openFile(uri, "r")
+        assertNotNull(pfd)
+
+        // Read from the stream using AutoCloseInputStream to detect closeWithError
+        try {
+            ParcelFileDescriptor.AutoCloseInputStream(pfd).use { inputStream ->
+                inputStream.readBytes()
+            }
+            fail("Expected IOException due to pipe closed with error")
+        } catch (e: IOException) {
+            // Expected
+            assertNotNull(e)
+        }
     }
 
     @Test

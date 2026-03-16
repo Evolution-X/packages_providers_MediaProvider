@@ -28,10 +28,12 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import com.android.signature.flags.Flags
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.SignatureViewModel
 import com.android.signature.ui.create.CreateSignatureActivity
 import com.android.signature.ui.theme.SignatureTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 
 /**
@@ -45,6 +47,8 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint(ComponentActivity::class)
 @OptIn(ExperimentalMaterial3Api::class)
 class SignaturePickerActivity : Hilt_SignaturePickerActivity() {
+    @Inject
+    lateinit var eventLogger: SignatureEventLogger
 
     private val viewModel: SignatureViewModel by viewModels()
 
@@ -64,6 +68,8 @@ class SignaturePickerActivity : Hilt_SignaturePickerActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        eventLogger.logSignaturePickerLaunched()
+
         // Runtime check for the feature flag
         if (!Flags.enableSignature()) {
             setResult(RESULT_CANCELED)
@@ -77,48 +83,45 @@ class SignaturePickerActivity : Hilt_SignaturePickerActivity() {
                 val scope = rememberCoroutineScope()
 
                 val onDismiss = {
-                    scope.launch {
-                        sheetState.hide()
-                    }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            finish()
+                    scope
+                        .launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                finish()
+                            }
                         }
-                    }
                 }
 
                 ModalBottomSheet(
                     onDismissRequest = { onDismiss() },
                     sheetState = sheetState,
                 ) {
-                    SignaturePickerScreen(
-                        viewModel = viewModel,
-                        onAddSignature = {
-                            val intent =
-                                Intent(
-                                    this@SignaturePickerActivity,
-                                    CreateSignatureActivity::class.java
-                                )
-                            createSignatureLauncher.launch(intent)
-                        },
-                        onSignatureSelected = { _, uri ->
-                            val resultIntent = Intent().setData(uri)
-                            // Only grant permission if there is a calling package
-                            callingPackage?.let { pkg ->
-                                grantUriPermission(
-                                    pkg,
-                                    uri,
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                )
-                            }
-                            resultIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            setResult(RESULT_OK, resultIntent)
-                            onDismiss()
-                        },
-                        onCancel = {
-                            setResult(RESULT_CANCELED)
-                            onDismiss()
+                    SignaturePickerScreen(viewModel = viewModel, onAddSignature = {
+                        val intent =
+                            Intent(
+                                this@SignaturePickerActivity,
+                                CreateSignatureActivity::class.java,
+                            )
+                        createSignatureLauncher.launch(intent)
+                    }, onSignatureSelected = { signature, uri ->
+                        eventLogger.logSignatureSelected(signature.type)
+                        val resultIntent = Intent().setData(uri)
+                        // Only grant permission if there is a calling package
+                        callingPackage?.let { pkg ->
+                            grantUriPermission(
+                                pkg,
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                            )
                         }
-                    )
+                        resultIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        setResult(RESULT_OK, resultIntent)
+                        onDismiss()
+                    }, onCancel = {
+                        setResult(RESULT_CANCELED)
+                        onDismiss()
+                    })
                 }
 
                 LaunchedEffect(Unit) {
