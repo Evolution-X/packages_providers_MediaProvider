@@ -50,4 +50,6 @@
     <string name="error_image_load" msgid="6747174825121177117">"画像を読み込めませんでした"</string>
     <string name="signature_draw_hint" msgid="1312226853855388293">"この領域に署名を書いてください"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
+    <string name="error_save_signature" msgid="1348842158559996845">"署名を保存できませんでした"</string>
+    <string name="signature_preview_default" msgid="1502538040023384495">"署名"</string>
 </resources>

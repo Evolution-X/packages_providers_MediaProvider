@@ -29,45 +29,29 @@
     <string name="back_content_description" msgid="3424363456229458016">"Atpakaļ"</string>
     <string name="drawn_signature_content_description" msgid="441057598353735826">"Zīmēts paraksts"</string>
     <string name="delete_signature_content_description" msgid="3012748259309806715">"Dzēst parakstu"</string>
-    <!-- no translation found for settings_description (8169934363160354887) -->
-    <skip />
-    <!-- no translation found for settings_subheader (5101352403141361475) -->
-    <skip />
-    <!-- no translation found for settings_item_title_format (264810772050965877) -->
-    <skip />
-    <!-- no translation found for picker_title (5513714008007561495) -->
-    <skip />
-    <!-- no translation found for picker_add_new (2590444102822678954) -->
-    <skip />
+    <string name="settings_description" msgid="8169934363160354887">"Pārvaldiet saglabātos parakstus, kad tie tiek izmantoti ierīcē."</string>
+    <string name="settings_subheader" msgid="5101352403141361475">"Saglabātie paraksti"</string>
+    <string name="settings_item_title_format" msgid="264810772050965877">"Saglabātais paraksts (%1$d)"</string>
+    <string name="picker_title" msgid="5513714008007561495">"Paraksti"</string>
+    <string name="picker_add_new" msgid="2590444102822678954">"Pievienot parakstu"</string>
     <string name="picker_no_signatures" msgid="7560452872095947936">"Nav atrasts neviens paraksts.\nLai sāktu darbu, pievienojiet jaunu parakstu."</string>
-    <!-- no translation found for create_signature_title (7616494023737147010) -->
+    <string name="create_signature_title" msgid="7616494023737147010">"Pievienot parakstu"</string>
+    <string name="tab_draw" msgid="4258715769815399593">"Zīmēt"</string>
+    <string name="tab_type" msgid="3264705813758141873">"Rakstīt"</string>
+    <string name="tab_upload" msgid="8692266580214096192">"Augšupielādēt"</string>
+    <string name="add_action" msgid="7182335431525262385">"Pievienot"</string>
+    <string name="back_action" msgid="6367965969403409704">"Atpakaļ"</string>
+    <string name="enter_name_hint" msgid="2568780632950983745">"Ievadiet nosaukumu"</string>
+    <string name="type_preview_hint" msgid="5659910204541849319">"Ievadiet savu vārdu, lai skatītu fontu priekšskatījumus"</string>
+    <string name="select_image" msgid="2081090471909417669">"Atlasīt attēlu"</string>
+    <string name="no_image_selected" msgid="5939052790341353005">"Nav atlasīts neviens attēls."</string>
+    <string name="uploaded_signature_content_description" msgid="2850671857073378289">"Augšupielādētais paraksts"</string>
+    <string name="error_image_size_limit" msgid="3837718354299508167">"Attēla lielums pārsniedz %1$d MB ierobežojumu."</string>
+    <string name="error_image_load" msgid="6747174825121177117">"Neizdevās ielādēt attēlu."</string>
+    <string name="signature_draw_hint" msgid="1312226853855388293">"Zīmējiet savu parakstu šajā apgabalā"</string>
+    <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
+    <!-- no translation found for error_save_signature (1348842158559996845) -->
     <skip />
-    <!-- no translation found for tab_draw (4258715769815399593) -->
-    <skip />
-    <!-- no translation found for tab_type (3264705813758141873) -->
-    <skip />
-    <!-- no translation found for tab_upload (8692266580214096192) -->
-    <skip />
-    <!-- no translation found for add_action (7182335431525262385) -->
-    <skip />
-    <!-- no translation found for back_action (6367965969403409704) -->
-    <skip />
-    <!-- no translation found for enter_name_hint (2568780632950983745) -->
-    <skip />
-    <!-- no translation found for type_preview_hint (5659910204541849319) -->
-    <skip />
-    <!-- no translation found for select_image (2081090471909417669) -->
-    <skip />
-    <!-- no translation found for no_image_selected (5939052790341353005) -->
-    <skip />
-    <!-- no translation found for uploaded_signature_content_description (2850671857073378289) -->
-    <skip />
-    <!-- no translation found for error_image_size_limit (3837718354299508167) -->
-    <skip />
-    <!-- no translation found for error_image_load (6747174825121177117) -->
-    <skip />
-    <!-- no translation found for signature_draw_hint (1312226853855388293) -->
-    <skip />
-    <!-- no translation found for signature_x_mark (6929806098731463202) -->
+    <!-- no translation found for signature_preview_default (1502538040023384495) -->
     <skip />
 </resources>
