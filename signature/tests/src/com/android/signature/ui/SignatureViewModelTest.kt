@@ -24,6 +24,7 @@ import com.android.signature.data.Signature
 import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureFont
 import com.android.signature.data.SignatureRepository
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.create.PathState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +57,9 @@ class SignatureViewModelTest {
     @Mock
     private lateinit var signatureDao: SignatureDao
 
+    @Mock
+    private lateinit var eventLogger: SignatureEventLogger
+
     private lateinit var bitmap: Bitmap
 
     private lateinit var repository: SignatureRepository
@@ -67,7 +71,7 @@ class SignatureViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         whenever(signatureDao.getAllSignatures()).thenReturn(signaturesFlow)
         repository = SignatureRepository(signatureDao)
-        viewModel = SignatureViewModel(repository)
+        viewModel = SignatureViewModel(repository, eventLogger)
         // Create a real bitmap (1x1 pixel)
         bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
     }
@@ -99,9 +103,10 @@ class SignatureViewModelTest {
         runTest {
             val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
 
-            viewModel.deleteSignature(signature)
+            viewModel.deleteSignature(signature, SignatureEventLogger.Screen.PICKER)
 
             verify(signatureDao).deleteSignature(signature)
+            verify(eventLogger).logSignatureDeleted(signature.type, SignatureEventLogger.Screen.PICKER)
         }
 
     @Test
@@ -268,6 +273,8 @@ class SignatureViewModelTest {
             assertEquals(Signature.TYPE_TYPED, savedSignature.type)
             assertEquals("Test", savedSignature.textData)
             assertEquals("Font", savedSignature.fontName)
+
+            verify(eventLogger).logSignatureSaveDuration(any(), org.mockito.kotlin.eq(Signature.TYPE_TYPED))
         }
 
     @Test
@@ -284,6 +291,8 @@ class SignatureViewModelTest {
             verify(signatureDao).insertSignature(captor.capture())
             val savedSignature = captor.firstValue
             assertEquals(Signature.TYPE_DRAWN, savedSignature.type)
+
+            verify(eventLogger).logSignatureSaveDuration(any(), org.mockito.kotlin.eq(Signature.TYPE_DRAWN))
         }
 
     @Test
@@ -322,6 +331,8 @@ class SignatureViewModelTest {
                 "Compressed size should be smaller than raw size",
                 savedSignature.imageData!!.size < rawSize,
             )
+
+            verify(eventLogger).logSignatureSaveDuration(any(), org.mockito.kotlin.eq(Signature.TYPE_UPLOADED))
         }
 
     @Test

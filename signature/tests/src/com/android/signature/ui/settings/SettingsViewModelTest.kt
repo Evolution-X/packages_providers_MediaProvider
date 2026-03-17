@@ -19,6 +19,7 @@ package com.android.signature.ui.settings
 import com.android.signature.data.Signature
 import com.android.signature.data.SignatureDao
 import com.android.signature.data.SignatureRepository
+import com.android.signature.logging.SignatureEventLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ import org.mockito.kotlin.whenever
 class SettingsViewModelTest {
 
     private lateinit var signatureDao: SignatureDao
+    private lateinit var eventLogger: SignatureEventLogger
     private lateinit var repository: SignatureRepository
     private lateinit var viewModel: SettingsViewModel
     private val signaturesFlow = MutableStateFlow<List<Signature>>(emptyList())
@@ -47,9 +49,10 @@ class SettingsViewModelTest {
     fun setup() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         signatureDao = Mockito.mock(SignatureDao::class.java)
+        eventLogger = Mockito.mock(SignatureEventLogger::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(signaturesFlow)
         repository = SignatureRepository(signatureDao)
-        viewModel = SettingsViewModel(repository)
+        viewModel = SettingsViewModel(repository, eventLogger)
     }
 
     @After
@@ -76,8 +79,9 @@ class SettingsViewModelTest {
     fun deleteSignature_delegatesToRepository() = runTest {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
 
-        viewModel.deleteSignature(signature)
+        viewModel.deleteSignature(signature, SignatureEventLogger.Screen.SETTINGS)
 
         verify(signatureDao).deleteSignature(signature)
+        verify(eventLogger).logSignatureDeleted(signature.type, SignatureEventLogger.Screen.SETTINGS)
     }
 }

@@ -88,7 +88,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -112,7 +113,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
         var cancelClicked = false
 
         composeTestRule.runOnUiThread {
@@ -136,7 +138,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create dummy image
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -180,7 +183,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create dummy image
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -241,7 +245,8 @@ class UploadTabTest {
             whenever(signatureDao.getSignatureCount()).thenReturn(0)
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create a dummy image file
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -297,7 +302,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create a dummy large image file (> 2MB)
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -344,7 +350,8 @@ class UploadTabTest {
             whenever(signatureDao.getSignatureCount()).thenReturn(5)
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create a dummy image file
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -396,7 +403,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create a corrupted image file (random bytes)
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -440,7 +448,8 @@ class UploadTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Registry returns null
         val testRegistry = FakeActivityResultRegistry(null)

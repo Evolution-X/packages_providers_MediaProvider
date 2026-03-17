@@ -74,7 +74,8 @@ class TypeTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -98,7 +99,8 @@ class TypeTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -132,7 +134,8 @@ class TypeTabTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -166,7 +169,8 @@ class TypeTabTest {
             whenever(signatureDao.getSignatureCount()).thenReturn(0)
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
