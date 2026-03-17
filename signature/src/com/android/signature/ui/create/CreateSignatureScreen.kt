@@ -27,8 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import com.android.signature.R
 import com.android.signature.data.Signature
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.SignatureLimitException
 import com.android.signature.ui.SignatureViewModel
 import com.android.signature.ui.util.createBitmapFromText
@@ -89,19 +90,38 @@ fun CreateSignatureScreen(
             dimensionResource(R.dimen.signature_bitmap_text_size).toPx()
         }
     val errorSavingMessage = stringResource(R.string.error_save_signature)
-    val errorLimitReachedMessage = stringResource(
-        R.string.error_max_signatures_reached,
-        SignatureViewModel.MAX_SIGNATURES
-    )
+    val errorLimitReachedMessage =
+        stringResource(
+            R.string.error_max_signatures_reached,
+            SignatureViewModel.MAX_SIGNATURES,
+        )
     val launchSaveOperation = { saveAction: suspend () -> Signature ->
         scope.launch {
             try {
                 val newSignature = saveAction()
                 onSignatureCreated(newSignature)
-            } catch (e: SignatureLimitException) {
-                snackbarHostState.showSnackbar(errorLimitReachedMessage)
             } catch (e: Exception) {
-                snackbarHostState.showSnackbar(errorSavingMessage)
+                // Safely type-check the exception
+                val errorType = when (e) {
+                    is SignatureLimitException -> {
+                        snackbarHostState.showSnackbar(errorLimitReachedMessage)
+                        SignatureEventLogger.AppErrorType.DB_WRITE_FAILED
+                    }
+                    else -> {
+                        snackbarHostState.showSnackbar(errorSavingMessage)
+                        SignatureEventLogger.AppErrorType.DB_WRITE_FAILED
+                    }
+                }
+
+                // We'll log the specific tab index as the "type" since the signature failed to save
+                val failedType =
+                    when (selectedTabIndex) {
+                        0 -> Signature.TYPE_DRAWN
+                        1 -> Signature.TYPE_TYPED
+                        2 -> Signature.TYPE_UPLOADED
+                        else -> 0
+                    }
+                viewModel.eventLogger.logSignatureAppError(errorType, failedType)
             }
         }
     }
@@ -116,7 +136,7 @@ fun CreateSignatureScreen(
         // Handle keyboard
     ) {
         Column(
-            modifier = Modifier.verticalScroll(rememberScrollState())
+            modifier = Modifier.verticalScroll(rememberScrollState()),
         ) {
             // A custom header to replace the TopAppBar
             Text(
@@ -199,11 +219,12 @@ fun CreateSignatureScreen(
 
                     1 -> {
                         TypeTab(viewModel = viewModel, onSave = { text, font ->
-                            val bitmap = createBitmapFromText(
-                                text,
-                                font.androidTypeface,
-                                bitmapTextSize,
-                            )
+                            val bitmap =
+                                createBitmapFromText(
+                                    text,
+                                    font.androidTypeface,
+                                    bitmapTextSize,
+                                )
                             launchSaveOperation {
                                 viewModel.saveTypedSignature(text, font.name, bitmap)
                             }
@@ -211,17 +232,13 @@ fun CreateSignatureScreen(
                     }
 
                     2 -> {
-                        UploadTab(
-                            onSave = { bitmap ->
-                                launchSaveOperation { viewModel.saveUploadedSignature(bitmap) }
-                            },
-                            onCancel = onCancel,
-                            onShowError = { message ->
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(message)
-                                }
+                        UploadTab(onSave = { bitmap ->
+                            launchSaveOperation { viewModel.saveUploadedSignature(bitmap) }
+                        }, onCancel = onCancel, onShowError = { message ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message)
                             }
-                        )
+                        })
                     }
                 }
             }

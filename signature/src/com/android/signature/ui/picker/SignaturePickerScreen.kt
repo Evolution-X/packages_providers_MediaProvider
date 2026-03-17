@@ -60,6 +60,7 @@ import com.android.signature.data.Signature
 import com.android.signature.ui.SignatureViewModel
 import com.android.signature.ui.common.DeleteSignatureDialog
 import com.android.signature.ui.common.SignatureContent
+import com.android.signature.logging.SignatureEventLogger
 import kotlinx.coroutines.flow.first
 
 /**
@@ -107,7 +108,7 @@ fun SignaturePickerScreen(
     // Confirmation dialog for deletion.
     signatureToDelete?.let { signature ->
         DeleteSignatureDialog(onConfirm = {
-            viewModel.deleteSignature(signature)
+            viewModel.deleteSignature(signature, SignatureEventLogger.Screen.PICKER)
         }, onDismiss = { viewModel.setSignatureToDelete(null) })
     }
 

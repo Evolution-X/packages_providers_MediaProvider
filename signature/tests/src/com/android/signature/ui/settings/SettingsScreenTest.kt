@@ -86,7 +86,8 @@ class SettingsScreenTest {
     @Test
     fun settingsScreen_emptyList_displaysPlaceholder() {
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})
@@ -104,7 +105,8 @@ class SettingsScreenTest {
         whenever(signatureDao.getAllSignatures()).thenReturn(
             flowOf(listOf(signature1, signature2)),
         )
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})
@@ -124,7 +126,8 @@ class SettingsScreenTest {
 
         val signature = Signature(id = "1", type = Signature.TYPE_DRAWN, imageData = imageData)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})
@@ -141,7 +144,8 @@ class SettingsScreenTest {
     fun settingsScreen_deleteSignature_showsDialog() {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})
@@ -166,7 +170,8 @@ class SettingsScreenTest {
     fun settingsScreen_confirmDelete_deletesSignature() {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})
@@ -196,7 +201,8 @@ class SettingsScreenTest {
     fun settingsScreen_dismissDelete_hidesDialog() {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})
@@ -225,7 +231,8 @@ class SettingsScreenTest {
     @Test
     fun settingsScreen_backNavigation_triggersCallback() {
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
         var backClicked = false
 
         launchActivityAndSetContent {
@@ -247,7 +254,8 @@ class SettingsScreenTest {
                 Signature(id = "$i", type = Signature.TYPE_TYPED, textData = "Signature $i")
             }
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(signatures))
-        val viewModel = SettingsViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SettingsViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SettingsScreen(viewModel = viewModel, onNavigateUp = {})

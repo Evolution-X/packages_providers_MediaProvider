@@ -29,10 +29,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.android.signature.flags.Flags
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.SignatureViewModel
 import com.android.signature.ui.create.CreateSignatureActivity.Companion.EXTRA_SIGNATURE_ID
 import com.android.signature.ui.theme.SignatureTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 
 /**
@@ -45,6 +47,9 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint(ComponentActivity::class)
 @OptIn(ExperimentalMaterial3Api::class)
 class CreateSignatureActivity : Hilt_CreateSignatureActivity() {
+    @Inject
+    lateinit var eventLogger: SignatureEventLogger
+
     // Define a companion object for the intent extra key.
     companion object {
         /**
@@ -56,6 +61,8 @@ class CreateSignatureActivity : Hilt_CreateSignatureActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        eventLogger.logSignatureCreateLaunched()
 
         // Runtime check for the feature flag
         if (!Flags.enableSignature()) {
@@ -72,13 +79,14 @@ class CreateSignatureActivity : Hilt_CreateSignatureActivity() {
                 val scope = rememberCoroutineScope()
 
                 val onDismiss = {
-                    scope.launch {
-                        sheetState.hide()
-                    }.invokeOnCompletion {
-                        if (!sheetState.isVisible) {
-                            finish()
+                    scope
+                        .launch {
+                            sheetState.hide()
+                        }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                finish()
+                            }
                         }
-                    }
                 }
 
                 ModalBottomSheet(
@@ -89,15 +97,23 @@ class CreateSignatureActivity : Hilt_CreateSignatureActivity() {
                         viewModel = viewModel,
                         // The callback now receives the newly created signature.
                         onSignatureCreated = { newSignature ->
-                            // Put the new ID in the result intent.
-                            val resultIntent = Intent().putExtra(
-                                EXTRA_SIGNATURE_ID, newSignature.id
+                            eventLogger.logSignatureCreated(
+                                newSignature.type,
+                                newSignature.imageData?.size ?: 0,
                             )
+                            // Put the new ID in the result intent.
+                            val resultIntent =
+                                Intent().putExtra(
+                                    EXTRA_SIGNATURE_ID,
+                                    newSignature.id,
+                                )
                             setResult(RESULT_OK, resultIntent)
                             onDismiss()
-                        }, onCancel = {
+                        },
+                        onCancel = {
                             onDismiss()
-                        })
+                        },
+                    )
                 }
 
                 LaunchedEffect(Unit) {

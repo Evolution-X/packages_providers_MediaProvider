@@ -92,7 +92,8 @@ class SignaturePickerScreenTest {
         whenever(signatureDao.getAllSignatures()).thenReturn(
             flowOf(listOf(signature1, signature2)),
         )
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(
@@ -109,7 +110,8 @@ class SignaturePickerScreenTest {
 
     @Test
     fun signaturePickerScreen_addNew_triggersCallback() {
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
         var addClicked = false
 
         launchActivityAndSetContent {
@@ -130,7 +132,8 @@ class SignaturePickerScreenTest {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
 
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
         var selectedSignature: Signature? = null
 
         launchActivityAndSetContent {
@@ -150,7 +153,8 @@ class SignaturePickerScreenTest {
     fun signaturePickerScreen_deleteSignature_showsDialog() {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(
@@ -180,7 +184,8 @@ class SignaturePickerScreenTest {
     fun signaturePickerScreen_confirmDelete_deletesSignature() {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(
@@ -215,7 +220,8 @@ class SignaturePickerScreenTest {
     fun signaturePickerScreen_dismissDelete_hidesDialog() {
         val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Sig 1")
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(
@@ -256,7 +262,8 @@ class SignaturePickerScreenTest {
 
         val signature = Signature(id = "1", type = Signature.TYPE_DRAWN, imageData = imageData)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(listOf(signature)))
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(
@@ -282,7 +289,8 @@ class SignaturePickerScreenTest {
                 Signature(id = "$i", type = Signature.TYPE_TYPED, textData = "Signature $i")
             }
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(signatures))
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(
@@ -312,7 +320,8 @@ class SignaturePickerScreenTest {
                 Signature(id = "$i", type = Signature.TYPE_TYPED, textData = "Signature $i")
             }
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(signatures))
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         launchActivityAndSetContent {
             SignaturePickerScreen(

@@ -83,7 +83,8 @@ class CreateSignatureScreenTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -101,7 +102,8 @@ class CreateSignatureScreenTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -128,7 +130,8 @@ class CreateSignatureScreenTest {
         val signatureDao = Mockito.mock(SignatureDao::class.java)
         whenever(signatureDao.getAllSignatures()).thenReturn(flowOf(emptyList()))
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
         var cancelClicked = false
 
         composeTestRule.runOnUiThread {
@@ -155,7 +158,8 @@ class CreateSignatureScreenTest {
             whenever(signatureDao.insertSignature(any())).thenThrow(RuntimeException("Save failed"))
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -183,7 +187,8 @@ class CreateSignatureScreenTest {
             whenever(signatureDao.insertSignature(any())).thenThrow(RuntimeException("Save failed"))
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         composeTestRule.runOnUiThread {
             composeTestRule.activity.setContent {
@@ -216,7 +221,8 @@ class CreateSignatureScreenTest {
             whenever(signatureDao.insertSignature(any())).thenThrow(RuntimeException("Save failed"))
         }
         val repository = SignatureRepository(signatureDao)
-        val viewModel = SignatureViewModel(repository)
+        val eventLogger = Mockito.mock(com.android.signature.logging.SignatureEventLogger::class.java)
+        val viewModel = SignatureViewModel(repository, eventLogger)
 
         // Create dummy image
         val context = ApplicationProvider.getApplicationContext<Context>()

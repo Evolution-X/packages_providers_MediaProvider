@@ -20,10 +20,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.signature.data.Signature
 import com.android.signature.data.SignatureRepository
+import com.android.signature.logging.SignatureEventLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -33,30 +35,56 @@ import kotlinx.coroutines.launch
  * This ViewModel retrieves and manages the list of saved signatures.
  */
 @HiltViewModel
-class SettingsViewModel @Inject constructor(
-    private val repository: SignatureRepository
-) : ViewModel() {
+class SettingsViewModel
+    @Inject
+    constructor(
+        private val repository: SignatureRepository,
+        private val eventLogger: SignatureEventLogger,
+    ) : ViewModel() {
+        private val creationTime = System.currentTimeMillis()
+        private var hasLoggedInitialLoad = false // Track the first emission
 
-    /**
-     * A stream of all signatures observed from the database.
-     * Starts as empty until the data loads.
-     * Kept active for 5 seconds after the UI disconnects
-     * to avoid re-querying the database during screen rotations.
-     */
-    val signatures: StateFlow<List<Signature>> = repository.getAllSignatures().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000L),
-        initialValue = emptyList()
-    )
+        /**
+         * A stream of all signatures observed from the database.
+         * Starts as empty until the data loads.
+         * Kept active for 5 seconds after the UI disconnects
+         * to avoid re-querying the database during screen rotations.
+         */
+        val signatures: StateFlow<List<Signature>> =
+            repository
+                .getAllSignatures()
+                .onEach { list ->
+                    // Only log if it's the first non-empty emission
+                    if (list.isNotEmpty() && !hasLoggedInitialLoad) {
+                        hasLoggedInitialLoad = true
+                        val duration = System.currentTimeMillis() - creationTime
+                        eventLogger.logSignaturesLoadDuration(
+                            duration,
+                            list.size,
+                            SignatureEventLogger.Screen.SETTINGS,
+                        )
+                    }
+                }.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000L),
+                    initialValue = emptyList(),
+                )
 
-    /**
-     * Deletes a given signature from the data source.
-     *
-     * @param signature The signature to be deleted.
-     */
-    fun deleteSignature(signature: Signature) {
-        viewModelScope.launch {
-            repository.deleteSignature(signature)
+        /**
+         * Deletes a given signature from the data source.
+         *
+         * @param signature The signature to be deleted.
+         */
+        fun deleteSignature(
+            signature: Signature,
+            screen: SignatureEventLogger.Screen,
+        ) {
+            viewModelScope.launch {
+                val start = System.currentTimeMillis()
+                repository.deleteSignature(signature)
+                val duration = System.currentTimeMillis() - start
+                eventLogger.logSignatureDeleteDuration(duration, screen)
+                eventLogger.logSignatureDeleted(signature.type, screen)
+            }
         }
     }
-}
