@@ -17,6 +17,7 @@
 package com.android.photopicker.features.camera
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,8 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.android.photopicker.R
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
+import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.obtainViewModel
 import com.android.photopicker.core.theme.CustomAccentColorScheme
+import com.android.photopicker.extensions.navigateToCamera
 
 /**
  * A stateful composable that handles the logic for displaying the camera entry point.
@@ -49,7 +52,7 @@ import com.android.photopicker.core.theme.CustomAccentColorScheme
  */
 @Composable
 fun CameraEntryPoint(
-    viewModel: CameraViewModel = obtainViewModel(),
+    viewModel: CameraViewModel = obtainViewModel(isActivityScoped = true),
     modifier: Modifier = Modifier,
 ) {
     val isCameraAvailable by viewModel.isCameraAvailable.collectAsStateWithLifecycle()
@@ -70,6 +73,7 @@ fun CameraEntryPointButton(isCameraAvailable: Boolean, modifier: Modifier = Modi
         val isVideoOnly = configuration.hasOnlyVideoMimeTypes()
         val cameraContentDescription = stringResource(R.string.photopicker_open_camera_option)
         val aspectRatio = configuration.getAspectRatioForMediaItemGrids().ratio
+        val navController = LocalNavController.current
 
         Box(
             modifier =
@@ -84,8 +88,8 @@ fun CameraEntryPointButton(isCameraAvailable: Boolean, modifier: Modifier = Modi
                     )
                     .semantics(mergeDescendants = true) {
                         contentDescription = cameraContentDescription
-                        // Add onClick action
-                    },
+                    }
+                    .clickable { navController.navigateToCamera() },
             contentAlignment = Alignment.Center,
         ) {
             Icon(
