@@ -15,6 +15,7 @@
  */
 package com.android.photopicker.core.embedded
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.android.photopicker.core.Background
@@ -28,6 +29,7 @@ import com.android.photopicker.core.user.UserMonitor
 import com.android.photopicker.data.DataService
 import com.android.photopicker.data.model.Media
 import com.android.photopicker.features.albumgrid.AlbumGridViewModel
+import com.android.photopicker.features.camera.CameraViewModel
 import com.android.photopicker.features.categorygrid.CategoryGridViewModel
 import com.android.photopicker.features.categorygrid.data.CategoryDataService
 import com.android.photopicker.features.datescrubber.DateScrubberViewModel
@@ -40,6 +42,7 @@ import com.android.photopicker.features.profileselector.ProfileSelectorViewModel
 import com.android.photopicker.features.search.SearchViewModel
 import com.android.photopicker.features.search.data.SearchDataService
 import dagger.Lazy
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 
 /**
@@ -60,6 +63,7 @@ import kotlinx.coroutines.CoroutineDispatcher
  * This has the side-effect of having to manually wire up some dependencies for view models in the
  * embedded picker, but allows the Compose based UI to be unaware of how view models get resolved.
  *
+ * @property appContext
  * @property backgroundDispatcher
  * @property configurationManager
  * @property dataService
@@ -70,6 +74,7 @@ import kotlinx.coroutines.CoroutineDispatcher
  */
 @Suppress("UNCHECKED_CAST")
 class EmbeddedViewModelFactory(
+    @ApplicationContext private val appContext: Context,
     @Background val backgroundDispatcher: CoroutineDispatcher,
     val configurationManager: Lazy<ConfigurationManager>,
     val bannerManager: Lazy<BannerManager>,
@@ -153,6 +158,8 @@ class EmbeddedViewModelFactory(
                     HighlightMediaViewModel(null, backgroundDispatcher, dataService.get()) as T
                 isAssignableFrom(DateScrubberViewModel::class.java) ->
                     DateScrubberViewModel(null, dateScrubberDataService.get()) as T
+                isAssignableFrom(CameraViewModel::class.java) ->
+                    CameraViewModel(null, appContext, userMonitor.get()) as T
                 else ->
                     throw IllegalArgumentException(
                         "Unknown ViewModel class: ${modelClass.simpleName}"
