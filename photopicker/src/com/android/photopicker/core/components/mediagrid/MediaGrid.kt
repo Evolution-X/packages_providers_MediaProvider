@@ -253,6 +253,8 @@ private val MEASUREMENT_DISABLED_ICON_PADDING = 8.dp
  * @param bannerContent Optional composable banner content.
  * @param highlightMediaContent Optional custom implementation for highlight media content to be
  *   displayed at the top of the photogrid
+ * @param cameraEntryPointContent Optional custom implementation for camera entry point content to
+ *   be displayed as the first item of the photogrid.
  * @Param arePlaceholdersEnabled Whether placeholders are enabled in the grid.
  */
 @Composable
@@ -307,6 +309,7 @@ fun mediaGrid(
     },
     bannerContent: (@Composable () -> Unit)? = null,
     highlightMediaContent: (@Composable () -> Unit)? = null,
+    cameraEntryPointContent: (@Composable () -> Unit)? = null,
 ) {
     // To know whether the request in coming from Embedded or PhotoPicker
     val isEmbedded =
@@ -460,6 +463,8 @@ fun mediaGrid(
             // If highlight content was passed, add it to the grid as a full span item
             // so that it appears inside the scroll container.
             highlightMediaContent?.let { item(span = { GridItemSpan(currentColumns) }) { it() } }
+            // If camera entry point content was passed, add it to the grid as the first item
+            cameraEntryPointContent?.let { item(span = { GridItemSpan(1) }) { it() } }
 
             // Add the media items from the LazyPagingItems
             items(

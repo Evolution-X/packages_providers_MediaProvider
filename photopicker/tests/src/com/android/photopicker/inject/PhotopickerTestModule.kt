@@ -51,6 +51,7 @@ import com.android.photopicker.features.search.data.SearchDataService
 import dagger.Lazy
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.migration.DisableInstallInCheck
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -100,6 +101,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
     @Singleton
     @Provides
     fun provideViewModelFactory(
+        @ApplicationContext appContext: Context,
         @Background backgroundDispatcher: CoroutineDispatcher,
         featureManager: Lazy<FeatureManager>,
         configurationManager: Lazy<ConfigurationManager>,
@@ -115,6 +117,7 @@ abstract class PhotopickerTestModule(val options: TestOptions = TestOptions.Buil
     ): EmbeddedViewModelFactory {
         val embeddedViewModelFactory =
             EmbeddedViewModelFactory(
+                appContext,
                 backgroundDispatcher,
                 configurationManager,
                 bannerManager,
