@@ -51,5 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"या भागात तुमची स्वाक्षरी करा"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"स्वाक्षरी सेव्ह करता आली नाही"</string>
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"स्वाक्षऱ्यांची कमाल संख्या (%1$d) गाठली आहे."</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"स्वाक्षरी"</string>
 </resources>
