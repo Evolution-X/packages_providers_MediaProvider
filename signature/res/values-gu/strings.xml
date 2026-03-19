@@ -51,5 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"આ વિસ્તારમાં તમારી સહી દોરો"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"સહી સાચવવામાં નિષ્ફળ રહ્યાં"</string>
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"સહીની મહત્તમ સંખ્યા (%1$d) પર પહોંચી ગયા."</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"સહી"</string>
 </resources>
