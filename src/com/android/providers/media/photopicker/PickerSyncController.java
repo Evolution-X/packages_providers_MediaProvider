@@ -49,6 +49,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.pm.ProviderInfo;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.net.Uri;
@@ -75,6 +76,7 @@ import com.android.modules.utils.BackgroundThread;
 import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.ConfigStore;
 import com.android.providers.media.R;
+import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.data.CloudProviderInfo;
 import com.android.providers.media.photopicker.data.PickerDbFacade;
 import com.android.providers.media.photopicker.metrics.NonUiEventLogger;
@@ -779,9 +781,25 @@ public class PickerSyncController {
                 .tryLock(PickerSyncLockManager.CLOUD_PROVIDER_LOCK)) {
             if (mCloudProviderInfo.isEmpty()) {
                 return mContext.getResources().getString(R.string.picker_settings_no_provider);
+            } else {
+                // Verify if the package is still enabled before returning its label.
+                // Otherwise, the android settings menu item will display the label of the disabled
+                // package which we should not show since it can confuse the user.
+                PackageManager packageManager = mContext.getPackageManager();
+                if (Flags.enableCmpImprovements()) {
+                    ProviderInfo providerInfo = packageManager.resolveContentProvider(
+                            mCloudProviderInfo.authority, 0
+                    );
+                    if (providerInfo == null || !providerInfo.applicationInfo.enabled) {
+                        // Cloud provider package is disabled but the picker cache isn't updated to
+                        // reflect the same. So we return 'None'.
+                        return mContext.getResources().getString(
+                                R.string.picker_settings_no_provider);
+                    }
+                }
+                return CloudProviderUtils.getProviderLabel(
+                        packageManager, mCloudProviderInfo.authority);
             }
-            return CloudProviderUtils.getProviderLabel(
-                    mContext.getPackageManager(), mCloudProviderInfo.authority);
         }
     }
 
