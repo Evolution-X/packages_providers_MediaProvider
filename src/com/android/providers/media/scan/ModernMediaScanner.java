@@ -135,6 +135,8 @@ import com.android.providers.media.util.SpecialFormatDetector;
 import com.android.providers.media.util.XmpDataParser;
 import com.android.providers.media.util.XmpInterface;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -1106,7 +1108,8 @@ public class ModernMediaScanner implements MediaScanner {
                     } else {
                         oemMetadata = mOemMetadataServiceWrapper.getOemCustomData(pfd);
                     }
-                    op.withValue(FileColumns.OEM_METADATA, oemMetadata.toString().getBytes());
+                    op.withValue(FileColumns.OEM_METADATA,
+                        new JSONObject(oemMetadata).toString().getBytes());
                     Log.v(TAG, "Fetched OEM metadata successfully");
                 } catch (Exception e) {
                     Log.w(TAG, "Failure in fetching OEM metadata", e);
