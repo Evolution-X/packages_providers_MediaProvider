@@ -50,8 +50,8 @@
     <string name="error_image_load" msgid="6747174825121177117">"Ngarkimi i imazhit dështoi"</string>
     <string name="signature_draw_hint" msgid="1312226853855388293">"Vizato nënshkrimin tënd në këtë zonë"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
-    <!-- no translation found for error_save_signature (1348842158559996845) -->
+    <string name="error_save_signature" msgid="1348842158559996845">"Ruajtja e nënshkrimit dështoi"</string>
+    <!-- no translation found for error_max_signatures_reached (8996308394883219616) -->
     <skip />
-    <!-- no translation found for signature_preview_default (1502538040023384495) -->
-    <skip />
+    <string name="signature_preview_default" msgid="1502538040023384495">"Nënshkrimi"</string>
 </resources>

@@ -51,5 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"ఈ ప్రదేశంలో మీ సంతకం చేయండి"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"సిగ్నేచర్‌ను సేవ్ చేయడం విఫలమైంది"</string>
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"సిగ్నేచర్‌ల గరిష్ఠ సంఖ్య (%1$d)ను చేరుకున్నారు."</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"సిగ్నేచర్"</string>
 </resources>
