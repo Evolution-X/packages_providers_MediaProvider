@@ -572,3 +572,20 @@ flag {
     description: "This flag enables updating the mime type when renaming a file."
     bug: "481516249"
 }
+
+flag {
+    name: "enable_embedded_picker_v2_apis"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag exposes the apis for embedded picker v2."
+    bug: "492382057"
+}
+
+flag {
+    name: "enable_embedded_picker_v2"
+    is_exported: false
+    namespace: "mediaprovider"
+    description: "This flag enables the usage of apis added for embedded picker v2."
+    bug: "492382057"
+}
+
