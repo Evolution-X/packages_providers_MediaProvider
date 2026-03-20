@@ -345,12 +345,17 @@ constructor(
                     /*extras=*/ extras,
                 )
         if (controllerBundle == null) {
-            Log.w(TAG, "No bundle returned for $mediaSourceAuthority")
+            Log.w(TAG, "Null bundle returned for $mediaSourceAuthority")
             remoteClient.close()
             return null
         }
 
         val binder = controllerBundle.getBinder(EXTRA_SURFACE_CONTROLLER)
+        if (binder == null) {
+            Log.w(TAG, "Null binder retrieved for $mediaSourceAuthority")
+            remoteClient.close()
+            return null
+        }
 
         val configuration = configManager.configuration.value
         // UI event to mark the start of surface controller creation
