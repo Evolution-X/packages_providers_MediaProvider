@@ -51,7 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"මෙම ප්‍රදේශයේ ඔබේ අත්සන අඳින්න"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"අත්සන සුරැකීමට අසමත් විය"</string>
-    <!-- no translation found for error_max_signatures_reached (8996308394883219616) -->
-    <skip />
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"උපරිම අත්සන් සංඛ්‍යාව (%1$d) ළඟා විය."</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"අත්සන"</string>
 </resources>
