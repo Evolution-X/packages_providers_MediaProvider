@@ -43,12 +43,7 @@ public final class RestrictedQueryChecker {
     private final Set<String> mRestrictedTokens;
 
     public RestrictedQueryChecker(Context context) throws Exception {
-        Set<String> words = loadBlocklist(context);
-        Set<String> normalizedSet = new HashSet<>(words.size());
-        for (String word : words) {
-            normalizedSet.add(normalize(word));
-        }
-        this.mRestrictedTokens = Collections.unmodifiableSet(normalizedSet);
+        this.mRestrictedTokens = Collections.unmodifiableSet(loadBlocklist(context));
     }
 
     /**

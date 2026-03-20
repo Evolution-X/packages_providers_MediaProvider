@@ -62,7 +62,7 @@ public class PhotoPickerLocalSearchManager {
     private static final String TAG = "LocalSearchManager";
     private static final String DISCONNECT_SEARCH_SERVICE_WORK_NAME = "DisconnectSearchService";
     private static final Duration TIMEOUT_FOR_SEARCH = Duration.ofSeconds(3);
-    private static final Duration TIMEOUT_FOR_SEMANTIC_SEARCH_CHECK = Duration.ofMillis(100);
+    private static final Duration TIMEOUT_FOR_SEMANTIC_SEARCH_CHECK = Duration.ofMillis(125);
     private static final Duration TIMEOUT_FOR_SEARCH_CANCELLATION = Duration.ofSeconds(1);
     private static final Duration TIMEOUT_TO_CONNECT_TO_SERVICE = Duration.ofSeconds(1);
     private static final Duration DISCONNECT_SEARCH_SERVICE_DELAY = Duration.ofMinutes(15);
