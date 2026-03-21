@@ -1,6 +1,5 @@
 // Signature format: 6.0
 // - style=java
-// - overloaded-method-order=source
 // - strip-java-lang-prefix=legacy
 // - type-argument-spacing=legacy
 package android.graphics.pdf {
@@ -177,8 +176,8 @@ package android.graphics.pdf.component {
   }
 
   @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_text_objects") public class PdfPageTextObjectFont {
-    ctor public PdfPageTextObjectFont(int, boolean, boolean);
     ctor public PdfPageTextObjectFont(@NonNull android.graphics.pdf.component.PdfPageTextObjectFont);
+    ctor public PdfPageTextObjectFont(int, boolean, boolean);
     method public int getFontFamily();
     method public boolean isBold();
     method public boolean isItalic();
@@ -350,8 +349,8 @@ package android.graphics.pdf.models.selection {
   }
 
   @FlaggedApi("android.graphics.pdf.flags.enable_pdf_viewer") public final class SelectionBoundary implements android.os.Parcelable {
-    ctor public SelectionBoundary(int);
     ctor public SelectionBoundary(@NonNull android.graphics.Point);
+    ctor public SelectionBoundary(int);
     method public int describeContents();
     method public int getIndex();
     method public boolean getIsRtl();
