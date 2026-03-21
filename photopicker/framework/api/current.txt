@@ -1,6 +1,5 @@
 // Signature format: 6.0
 // - style=java
-// - flagged-api-inheritance=none
 // - strip-java-lang-prefix=legacy
 package android.widget.photopicker {
 
@@ -31,7 +30,7 @@ package android.widget.photopicker {
     field @NonNull public static final android.os.Parcelable.Creator<android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo> CREATOR;
   }
 
-  public static final class EmbeddedPhotoPickerFeatureInfo.Builder {
+  @FlaggedApi("com.android.providers.media.flags.enable_embedded_photopicker") public static final class EmbeddedPhotoPickerFeatureInfo.Builder {
     ctor public EmbeddedPhotoPickerFeatureInfo.Builder();
     ctor @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") public EmbeddedPhotoPickerFeatureInfo.Builder(@NonNull android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo build();
@@ -81,7 +80,7 @@ package android.widget.photopicker {
     field @NonNull public static final android.os.Parcelable.Creator<android.widget.photopicker.PhotoPickerSelectionParams> CREATOR;
   }
 
-  public static final class PhotoPickerSelectionParams.Builder {
+  @FlaggedApi("com.android.providers.media.flags.enable_photopicker_selection_params_api") public static final class PhotoPickerSelectionParams.Builder {
     ctor public PhotoPickerSelectionParams.Builder();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams build();
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder clearMaxMediaItemResolution();
@@ -110,7 +109,7 @@ package android.widget.photopicker {
     field @NonNull public static final android.os.Parcelable.Creator<android.widget.photopicker.PhotoPickerUiCustomizationParams> CREATOR;
   }
 
-  public static final class PhotoPickerUiCustomizationParams.Builder {
+  @FlaggedApi("com.android.providers.media.flags.enable_photopicker_ui_customization_params_api") public static final class PhotoPickerUiCustomizationParams.Builder {
     ctor public PhotoPickerUiCustomizationParams.Builder();
     method @NonNull public android.widget.photopicker.PhotoPickerUiCustomizationParams build();
     method @NonNull public android.widget.photopicker.PhotoPickerUiCustomizationParams.Builder setAspectRatio(int);

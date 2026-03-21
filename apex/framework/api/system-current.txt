@@ -1,6 +1,5 @@
 // Signature format: 6.0
 // - style=java
-// - flagged-api-inheritance=none
 // - strip-java-lang-prefix=legacy
 // - type-argument-spacing=legacy
 package android.provider {
@@ -24,7 +23,7 @@ package android.provider {
     field @NonNull public static final android.os.Parcelable.Creator<android.provider.MediaCognitionProcessingRequest> CREATOR;
   }
 
-  public static final class MediaCognitionProcessingRequest.Builder {
+  @FlaggedApi("com.android.providers.media.flags.media_cognition_service") public static final class MediaCognitionProcessingRequest.Builder {
     ctor public MediaCognitionProcessingRequest.Builder(@NonNull android.net.Uri);
     method @NonNull public android.provider.MediaCognitionProcessingRequest.Builder addProcessingRequest(int);
     method @NonNull public android.provider.MediaCognitionProcessingRequest build();
@@ -37,7 +36,7 @@ package android.provider {
     method @NonNull public android.provider.MediaCognitionProcessingRequest getRequest();
   }
 
-  public static final class MediaCognitionProcessingResponse.Builder {
+  @FlaggedApi("com.android.providers.media.flags.media_cognition_service") public static final class MediaCognitionProcessingResponse.Builder {
     ctor public MediaCognitionProcessingResponse.Builder(@NonNull android.provider.MediaCognitionProcessingRequest);
     method @NonNull public android.provider.MediaCognitionProcessingResponse build();
     method @NonNull public android.provider.MediaCognitionProcessingResponse.Builder setImageLabels(@Nullable java.util.List<java.lang.String>);
@@ -62,7 +61,7 @@ package android.provider {
     field public static final String SERVICE_INTERFACE = "android.provider.MediaCognitionService";
   }
 
-  public static interface MediaCognitionService.ProcessingTypes {
+  @FlaggedApi("com.android.providers.media.flags.media_cognition_service") public static interface MediaCognitionService.ProcessingTypes {
     field public static final int IMAGE_LABEL = 2; // 0x2
     field public static final int IMAGE_OCR_LATIN = 1; // 0x1
   }
@@ -192,7 +191,7 @@ package android.provider.mediaprocessingservice {
     field @NonNull public static final android.os.Parcelable.Creator<android.provider.mediaprocessingservice.MediaProcessingResponse> CREATOR;
   }
 
-  public static final class MediaProcessingResponse.Builder {
+  @FlaggedApi("com.android.providers.media.flags.enable_media_processing_service") public static final class MediaProcessingResponse.Builder {
     ctor public MediaProcessingResponse.Builder(@NonNull android.net.Uri, long);
     method @NonNull public android.provider.mediaprocessingservice.MediaProcessingResponse build();
     method @NonNull public android.provider.mediaprocessingservice.MediaProcessingResponse.Builder setEmbeddingVectorList(@NonNull java.util.List<android.provider.mediaprocessingservice.EmbeddingVector>);
