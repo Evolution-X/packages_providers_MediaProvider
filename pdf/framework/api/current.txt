@@ -1,6 +1,5 @@
 // Signature format: 6.0
 // - style=java
-// - strip-java-lang-prefix=legacy
 // - type-argument-spacing=legacy
 package android.graphics.pdf {
 
@@ -14,7 +13,7 @@ package android.graphics.pdf {
     method @NonNull public android.graphics.pdf.LoadParams.Builder setPassword(@Nullable String);
   }
 
-  @FlaggedApi("android.graphics.pdf.flags.enable_pdf_viewer") public final class PdfRendererPreV implements java.lang.AutoCloseable {
+  @FlaggedApi("android.graphics.pdf.flags.enable_pdf_viewer") public final class PdfRendererPreV implements AutoCloseable {
     ctor public PdfRendererPreV(@NonNull android.os.ParcelFileDescriptor) throws java.io.IOException;
     ctor public PdfRendererPreV(@NonNull android.os.ParcelFileDescriptor, @NonNull android.graphics.pdf.LoadParams) throws java.io.IOException;
     method public void close();
@@ -31,7 +30,7 @@ package android.graphics.pdf {
     field @FlaggedApi("android.graphics.pdf.flags.enable_form_filling") public static final int PDF_FORM_TYPE_XFA_FULL = 2; // 0x2
   }
 
-  @FlaggedApi("android.graphics.pdf.flags.enable_pdf_viewer") public final class PdfRendererPreV.Page implements java.lang.AutoCloseable {
+  @FlaggedApi("android.graphics.pdf.flags.enable_pdf_viewer") public final class PdfRendererPreV.Page implements AutoCloseable {
     method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") @IntRange(from=0xffffffff) public int addPageAnnotation(@NonNull android.graphics.pdf.component.PdfAnnotation);
     method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public int addPageObject(@NonNull android.graphics.pdf.component.PdfPageObject);
     method @FlaggedApi("android.graphics.pdf.flags.enable_form_filling") @NonNull public java.util.List<android.graphics.Rect> applyEdit(@NonNull android.graphics.pdf.models.FormEditRecord);
@@ -45,10 +44,10 @@ package android.graphics.pdf {
     method @NonNull public java.util.List<android.graphics.pdf.content.PdfPageImageContent> getImageContents();
     method @IntRange(from=0) public int getIndex();
     method @NonNull public java.util.List<android.graphics.pdf.content.PdfPageLinkContent> getLinkContents();
-    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") @NonNull public java.util.List<android.util.Pair<java.lang.Integer,android.graphics.pdf.component.PdfAnnotation>> getPageAnnotations();
-    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") @NonNull public java.util.List<android.util.Pair<java.lang.Integer,android.graphics.pdf.component.PdfPageObject>> getPageObjects();
+    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") @NonNull public java.util.List<android.util.Pair<Integer,android.graphics.pdf.component.PdfAnnotation>> getPageAnnotations();
+    method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") @NonNull public java.util.List<android.util.Pair<Integer,android.graphics.pdf.component.PdfPageObject>> getPageObjects();
     method @NonNull public java.util.List<android.graphics.pdf.content.PdfPageTextContent> getTextContents();
-    method @FlaggedApi("android.graphics.pdf.flags.enable_get_top_pdf_page_object_at_position") @Nullable public android.util.Pair<java.lang.Integer,android.graphics.pdf.component.PdfPageObject> getTopPageObjectAtPosition(@NonNull android.graphics.PointF, @NonNull int[]);
+    method @FlaggedApi("android.graphics.pdf.flags.enable_get_top_pdf_page_object_at_position") @Nullable public android.util.Pair<Integer,android.graphics.pdf.component.PdfPageObject> getTopPageObjectAtPosition(@NonNull android.graphics.PointF, @NonNull int[]);
     method @IntRange(from=0) public int getWidth();
     method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_annotations") public void removePageAnnotation(@IntRange(from=0) int);
     method @FlaggedApi("android.graphics.pdf.flags.enable_edit_pdf_page_objects") public void removePageObject(@IntRange(from=0) int);

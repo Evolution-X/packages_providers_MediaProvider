@@ -1,6 +1,5 @@
 // Signature format: 6.0
 // - style=java
-// - strip-java-lang-prefix=legacy
 package android.widget.photopicker {
 
   @FlaggedApi("com.android.providers.media.flags.enable_embedded_photopicker") public interface EmbeddedPhotoPickerClient {
@@ -18,7 +17,7 @@ package android.widget.photopicker {
     method @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") @NonNull public String getHighlightSearchMediaTextQuery();
     method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") public int getHighlightType();
     method public int getMaxSelectionLimit();
-    method @NonNull public java.util.List<java.lang.String> getMimeTypes();
+    method @NonNull public java.util.List<String> getMimeTypes();
     method @NonNull public java.util.List<android.net.Uri> getPreSelectedUris();
     method @FlaggedApi("com.android.providers.media.flags.enable_photopicker_selection_params_api") @Nullable public android.widget.photopicker.PhotoPickerSelectionParams getSelectionParams();
     method public int getThemeNightMode();
@@ -39,7 +38,7 @@ package android.widget.photopicker {
     method @FlaggedApi("com.android.providers.media.flags.enable_picker_highlight_search_results_apis") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightSearchMediaTextQuery(@NonNull String);
     method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setHighlightType(int);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setMaxSelectionLimit(@IntRange(from=1) int);
-    method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setMimeTypes(@NonNull java.util.List<java.lang.String>);
+    method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setMimeTypes(@NonNull java.util.List<String>);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setOrderedSelection(boolean);
     method @FlaggedApi("com.android.providers.media.flags.enable_embedded_picker_expanded_highlight_type_api") @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setPickerLaunchedInExpandedState(boolean);
     method @NonNull public android.widget.photopicker.EmbeddedPhotoPickerFeatureInfo.Builder setPreSelectedUris(@NonNull java.util.List<android.net.Uri>);
@@ -73,7 +72,7 @@ package android.widget.photopicker {
     method public long getMaxMediaItemSizeInBytes();
     method public long getMaxSelectionBatchSizeInBytes();
     method @Nullable public java.time.Duration getMaxVideoDuration();
-    method @NonNull public java.util.List<java.lang.String> getMimeTypes();
+    method @NonNull public java.util.List<String> getMimeTypes();
     method public long getMinMediaItemResolutionInPixels();
     method @Nullable public java.time.Duration getMinVideoDuration();
     method public void writeToParcel(@NonNull android.os.Parcel, int);
@@ -94,7 +93,7 @@ package android.widget.photopicker {
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxMediaItemSizeInBytes(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxSelectionBatchSizeInBytes(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMaxVideoDuration(@NonNull java.time.Duration);
-    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMimeTypes(@NonNull java.util.List<java.lang.String>);
+    method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMimeTypes(@NonNull java.util.List<String>);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinMediaItemResolutionInPixels(long);
     method @NonNull public android.widget.photopicker.PhotoPickerSelectionParams.Builder setMinVideoDuration(@NonNull java.time.Duration);
   }
