@@ -1,6 +1,5 @@
 // Signature format: 6.0
 // - style=java
-// - type-argument-spacing=legacy
 package android.provider {
 
   @FlaggedApi("com.android.providers.media.flags.media_cognition_service") public interface MediaCognitionGetVersionsCallback {
@@ -81,8 +80,8 @@ package android.provider {
   @FlaggedApi("com.android.providers.media.flags.enable_oem_metadata") public abstract class OemMetadataService extends android.app.Service {
     ctor public OemMetadataService();
     method @NonNull public final android.os.IBinder onBind(@Nullable android.content.Intent);
-    method @NonNull public abstract java.util.Map<String,String> onGetOemCustomData(@NonNull android.os.ParcelFileDescriptor);
-    method @FlaggedApi("com.android.providers.media.flags.enable_oem_metadata_using_mimetype") @NonNull public java.util.Map<String,String> onGetOemCustomDataUsingMimeType(@NonNull android.os.ParcelFileDescriptor, @NonNull String);
+    method @NonNull public abstract java.util.Map<String, String> onGetOemCustomData(@NonNull android.os.ParcelFileDescriptor);
+    method @FlaggedApi("com.android.providers.media.flags.enable_oem_metadata_using_mimetype") @NonNull public java.util.Map<String, String> onGetOemCustomDataUsingMimeType(@NonNull android.os.ParcelFileDescriptor, @NonNull String);
     method @NonNull public abstract java.util.Set<String> onGetSupportedMimeTypes();
     field public static final String BIND_OEM_METADATA_SERVICE_PERMISSION = "com.android.providers.media.permission.BIND_OEM_METADATA_SERVICE";
     field public static final String SERVICE_INTERFACE = "android.provider.OemMetadataService";
@@ -131,7 +130,7 @@ package android.provider {
     method @Nullable public android.os.IBinder onBind(@Nullable android.content.Intent);
     method @AnyThread public abstract void onCancelSearch(@NonNull String);
     method public abstract boolean onCheckSemanticSearchSupport();
-    method @AnyThread public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.os.OutcomeReceiver<android.provider.SearchMediaResultPage,android.provider.SearchMediaException>);
+    method @AnyThread public abstract void onSearchMedia(@NonNull String, @NonNull String, @NonNull android.os.Bundle, @NonNull android.os.OutcomeReceiver<android.provider.SearchMediaResultPage, android.provider.SearchMediaException>);
     field public static final String BIND_SEARCH_MEDIA_SERVICE_PERMISSION = "com.android.providers.media.permission.BIND_SEARCH_MEDIA_SERVICE";
     field public static final String EXTRA_MEDIA_TYPE_FILTER = "android.provider.extra.MEDIA_TYPE_FILTER";
     field public static final String EXTRA_NEXT_PAGE_TOKEN = "android.provider.extra.NEXT_PAGE_TOKEN";
@@ -200,10 +199,10 @@ package android.provider.mediaprocessingservice {
   @FlaggedApi("com.android.providers.media.flags.enable_media_processing_service") public abstract class MediaProcessingService extends android.app.Service {
     ctor public MediaProcessingService();
     method @Nullable public final android.os.IBinder onBind(@Nullable android.content.Intent);
-    method public abstract void onGetEmbeddingVectorForSearchText(@NonNull String, @NonNull android.os.OutcomeReceiver<android.provider.mediaprocessingservice.QueryProcessingResponse,android.provider.mediaprocessingservice.ErrorMessage>);
+    method public abstract void onGetEmbeddingVectorForSearchText(@NonNull String, @NonNull android.os.OutcomeReceiver<android.provider.mediaprocessingservice.QueryProcessingResponse, android.provider.mediaprocessingservice.ErrorMessage>);
     method public int onGetProcessingLimit();
-    method public abstract void onProcessMedia(@NonNull java.util.List<android.provider.mediaprocessingservice.MediaProcessingRequest>, @NonNull android.os.OutcomeReceiver<java.util.List<android.provider.mediaprocessingservice.MediaProcessingResponse>,android.provider.mediaprocessingservice.ErrorMessage>);
-    method @NonNull public abstract java.util.Map<Integer,Integer> onProcessingRequestedPerMediaType();
+    method public abstract void onProcessMedia(@NonNull java.util.List<android.provider.mediaprocessingservice.MediaProcessingRequest>, @NonNull android.os.OutcomeReceiver<java.util.List<android.provider.mediaprocessingservice.MediaProcessingResponse>, android.provider.mediaprocessingservice.ErrorMessage>);
+    method @NonNull public abstract java.util.Map<Integer, Integer> onProcessingRequestedPerMediaType();
     field public static final String BIND_MEDIA_PROCESSING_SERVICE_PERMISSION = "com.android.providers.media.permission.BIND_MEDIA_PROCESSING_SERVICE";
     field public static final String SERVICE_INTERFACE = "android.provider.mediaprocessingservice.MediaProcessingService";
   }
