@@ -25,7 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.android.photopicker.R
 import com.android.photopicker.core.banners.Banner
+import com.android.photopicker.core.banners.BannerDefinition
 import com.android.photopicker.core.banners.BannerDefinitions
+import com.android.photopicker.core.banners.BannerInteractionState
 import com.android.photopicker.core.banners.BannerLocation
 import com.android.photopicker.core.banners.BannerState
 import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
@@ -102,6 +104,91 @@ class CloudMediaFeature : PhotopickerUiFeature {
 
     override val ownedBanners: Set<BannerDefinitions> =
         ownedBannersByLocation.values.flatten().toSet()
+
+    private val ownedBannersDefinitionByLocation: Map<BannerLocation, Set<BannerDefinition>> =
+        mapOf(
+            BannerLocation.PHOTO_GRID_BANNER to
+                setOf(
+                    BannerDefinition.CLOUD_CHOOSE_ACCOUNT,
+                    BannerDefinition.CLOUD_CHOOSE_PROVIDER,
+                    BannerDefinition.CLOUD_MEDIA_AVAILABLE,
+                )
+        )
+
+    override val ownedBannersDefinitions: Set<BannerDefinition> =
+        ownedBannersDefinitionByLocation.values.flatten().toSet()
+
+    override suspend fun getBannerPriority(
+        bannerDefinition: BannerDefinition,
+        bannerInteractionState: BannerInteractionState?,
+        config: PhotopickerConfiguration,
+        dataService: DataService,
+        userMonitor: UserMonitor,
+        bannerLocation: BannerLocation,
+    ): Int {
+        val isEmbedded = config.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
+        val isValidForLocation =
+            ownedBannersDefinitionByLocation[bannerLocation]?.contains(bannerDefinition) ?: false
+        if (bannerInteractionState?.isDismissed == true || !isValidForLocation) {
+            return Priority.DISABLED.priority
+        }
+        // Attempt to find a [REMOTE] provider in the available list of providers.
+        val currentCloudProvider: Provider? =
+            dataService.availableProviders.value.firstOrNull {
+                it.mediaSource == MediaSource.REMOTE
+            }
+
+        // If one is found, fetch the collectionInfo for that provider.
+        val collectionInfo: CollectionInfo? =
+            currentCloudProvider?.let { dataService.getCollectionInfo(it) }
+
+        return when (bannerDefinition) {
+            BannerDefinition.CLOUD_CHOOSE_PROVIDER -> {
+                return when {
+                    // Don't show in Embedded, as it is not supported.
+                    // TODO(b/489945007): To be enabled in Embedded picker.
+                    isEmbedded -> Priority.DISABLED.priority
+
+                    // If there is no current provider, but a list of allowed providers exists
+                    currentCloudProvider == null &&
+                        dataService.getAllAllowedProviders().isNotEmpty() ->
+                        bannerDefinition.priority.priority
+
+                    // There's a cloud provider set, so don't show
+                    else -> Priority.DISABLED.priority
+                }
+            }
+            BannerDefinition.CLOUD_CHOOSE_ACCOUNT -> {
+                collectionInfo?.let {
+                    when {
+                        // Don't show in Embedded, as the banner starts an activity which can cause
+                        // a crash.
+                        // TODO(b/489945007): To be enabled in Embedded.
+                        isEmbedded -> Priority.DISABLED.priority
+
+                        // If there is no current cloud provider account
+                        it.accountName == null -> bannerDefinition.priority.priority
+
+                        // There's a cloud provider account set, so don't show
+                        else -> Priority.DISABLED.priority
+                    }
+                } ?: Priority.DISABLED.priority
+            }
+            BannerDefinition.CLOUD_MEDIA_AVAILABLE -> {
+                collectionInfo?.let {
+                    if (it.accountName != null && it.collectionId != null) {
+                        bannerDefinition.priority.priority
+                    } else {
+                        Priority.DISABLED.priority
+                    }
+                } ?: Priority.DISABLED.priority
+            }
+            else ->
+                throw IllegalArgumentException(
+                    "$TAG cannot build the requested banner: $bannerDefinition"
+                )
+        }
+    }
 
     override suspend fun getBannerPriority(
         banner: BannerDefinitions,
@@ -198,7 +285,7 @@ class CloudMediaFeature : PhotopickerUiFeature {
         banner: BannerDefinitions,
         dataService: DataService,
         userMonitor: UserMonitor,
-        isEmbedded: Boolean,
+        configuration: PhotopickerConfiguration,
     ): Banner {
 
         val cloudProvider: Provider? =
@@ -243,7 +330,7 @@ class CloudMediaFeature : PhotopickerUiFeature {
                 buildNoNetworkAvailableBanner(
                     cloudProvider =
                         checkNotNull(cloudProvider) { "cloudProvider was null during buildBanner" },
-                    isEmbedded = isEmbedded,
+                    isEmbedded = configuration.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED,
                 )
             else ->
                 throw IllegalArgumentException("$TAG cannot build the requested banner: $banner")
@@ -302,6 +389,52 @@ class CloudMediaFeature : PhotopickerUiFeature {
                 )
             }
             else -> {}
+        }
+    }
+
+    override suspend fun buildBanner(
+        bannerDefinition: BannerDefinition,
+        dataService: DataService,
+        userMonitor: UserMonitor,
+    ): Banner {
+
+        val cloudProvider: Provider? =
+            dataService.availableProviders.value.firstOrNull {
+                it.mediaSource == MediaSource.REMOTE
+            }
+
+        val collectionInfo: CollectionInfo? =
+            cloudProvider?.let { dataService.getCollectionInfo(it) }
+
+        val providerIcon: Icon? =
+            cloudProvider?.let { dataService.providerToIconMap.value.getOrDefault(it, null) }
+
+        return when (bannerDefinition) {
+            BannerDefinition.CLOUD_CHOOSE_PROVIDER -> cloudChooseProviderBanner
+            BannerDefinition.CLOUD_CHOOSE_ACCOUNT ->
+                buildCloudChooseAccountBanner(
+                    cloudProvider =
+                        checkNotNull(cloudProvider) { "cloudProvider was null during buildBanner" },
+                    collectionInfo =
+                        checkNotNull(collectionInfo) {
+                            "collectionInfo was null during buildBanner"
+                        },
+                    providerIcon = providerIcon,
+                )
+            BannerDefinition.CLOUD_MEDIA_AVAILABLE ->
+                buildCloudMediaAvailableBanner(
+                    cloudProvider =
+                        checkNotNull(cloudProvider) { "cloudProvider was null during buildBanner" },
+                    collectionInfo =
+                        checkNotNull(collectionInfo) {
+                            "collectionInfo was null during buildBanner"
+                        },
+                    providerIcon = providerIcon,
+                )
+            else ->
+                throw IllegalArgumentException(
+                    "$TAG cannot build the requested banner: $bannerDefinition"
+                )
         }
     }
 }

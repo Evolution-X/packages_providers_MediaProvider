@@ -22,6 +22,8 @@ import static android.provider.SearchMediaService.EXTRA_SEARCH_RESULTS_SORT_ORDE
 import static android.provider.SearchMediaService.EXTRA_SORT_BY_RELEVANCE;
 import static android.provider.SearchMediaService.EXTRA_SORT_BY_TIME;
 
+import static com.android.providers.media.localsearch.ProcessingUtils.isDefaultSearchMediaServiceSupported;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -101,6 +103,8 @@ public class DefaultSearchMediaServiceTest {
     public void setUp() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         mContext = new IsolatedContext(context, TAG, /* asFuseThread */ false);
+
+        assumeTrue(isDefaultSearchMediaServiceSupported(mContext));
 
         try {
             mAppSearchDbManager = new AppSearchDbManager(mContext);
@@ -224,7 +228,7 @@ public class DefaultSearchMediaServiceTest {
     }
 
     @Test
-    public void testIsQueryRestricted_JapaneseTokenization() throws Exception {
+    public void testIsQueryRestricted_japaneseTokenization() throws Exception {
         RestrictedQueryChecker checker = new RestrictedQueryChecker(mContext);
 
         Locale originalLocale = Locale.getDefault();
@@ -238,6 +242,45 @@ public class DefaultSearchMediaServiceTest {
             boolean isRestricted = checker.isQueryRestricted(query);
 
             assertTrue("Query '" + query + "' should be restricted because it contains 'monkey'",
+                    isRestricted);
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+    @Test
+    public void testIsQueryRestricted_frenchTokenization() throws Exception {
+        RestrictedQueryChecker checker = new RestrictedQueryChecker(mContext);
+
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.FRENCH);
+
+            // "stupide" is a restricted token.
+            String query = "stupide";
+            boolean isRestricted = checker.isQueryRestricted(query);
+
+            assertTrue("Query '" + query + "' should be restricted because it contains 'stupide'",
+                    isRestricted);
+        } finally {
+            Locale.setDefault(originalLocale);
+        }
+    }
+
+
+    @Test
+    public void testIsQueryRestricted_chineseTokenization() throws Exception {
+        RestrictedQueryChecker checker = new RestrictedQueryChecker(mContext);
+
+        Locale originalLocale = Locale.getDefault();
+        try {
+            Locale.setDefault(Locale.CHINESE);
+
+            // "白癡" is a restricted token.
+            String query = "白癡";
+            boolean isRestricted = checker.isQueryRestricted(query);
+
+            assertTrue("Query '" + query + "' should be restricted because it contains '白癡'",
                     isRestricted);
         } finally {
             Locale.setDefault(originalLocale);

@@ -133,6 +133,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assume.assumeTrue
@@ -648,6 +649,7 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testBannerShown_embeddedMode_expandedState() = runTest {
         configurationManager
             .get()
@@ -2243,6 +2245,41 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
 
             assertSnackbarIsShown(expectedMessage, composeTestRule)
         }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testBannerShown_embeddedMode_expandedState_withBannerRedesignEnabled() = runTest {
+        configurationManager
+            .get()
+            .setCaller(
+                callingPackage = "com.android.test.package",
+                callingPackageUid = 12345,
+                callingPackageLabel = "Test Package",
+            )
+        val resources = getTestableContext().getResources()
+        val expectedPrivacyMessage =
+            resources.getString(R.string.photopicker_privacy_explainer_message, "Test Package")
+        bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+        advanceTimeBy(100)
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                callEmbeddedPhotopickerApp(
+                    embeddedLifecycle = embeddedLifecycle.get(),
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+        }
+
+        advanceUntilIdle()
+
+        bannerManager
+            .get()
+            .showBanner(BannerDefinitions.PRIVACY_EXPLAINER, BannerLocation.PHOTO_GRID_BANNER)
+        advanceUntilIdle()
+        composeTestRule.onNodeWithText(expectedPrivacyMessage).assertIsDisplayed()
     }
 
     private suspend fun TestScope.assertMaxBatchSizeLimitEnforced(

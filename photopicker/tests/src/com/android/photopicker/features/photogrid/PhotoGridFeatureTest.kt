@@ -458,6 +458,7 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
     }
 
     @Test
+    @DisableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
     fun testShowsBannersInGrid() {
 
         testScope.runTest {
@@ -485,6 +486,46 @@ class PhotoGridFeatureTest : PhotopickerFeatureBaseTest() {
             val resources = getTestableContext().getResources()
             val expectedPrivacyMessage =
                 resources.getString(R.string.photopicker_privacy_explainer, "Test Package")
+
+            // Wait for the PhotoGridViewModel to load data and for the UI to update.
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            composeTestRule.onNode(hasText(expectedPrivacyMessage)).assertIsDisplayed()
+        }
+    }
+
+    @Test
+    @EnableFlags(Flags.FLAG_ENABLE_PHOTOPICKER_BANNER_REDESIGN)
+    fun testShowsBannersInGrid_withBannerRedesignEnabled() {
+
+        testScope.runTest {
+            val bannerStateDao = databaseManager.get().acquireDao(BannerStateDao::class.java)
+            whenever(bannerStateDao.getBannerState(anyString(), anyInt())) { null }
+
+            configurationManager
+                .get()
+                .setCaller(
+                    callingPackage = "com.android.test.package",
+                    callingPackageUid = 12345,
+                    callingPackageLabel = "Test Package",
+                )
+
+            bannerManager.get().refreshBanner(BannerLocation.PHOTO_GRID_BANNER)
+            advanceTimeBy(100)
+            composeTestRule.setContent {
+                callPhotopickerMain(
+                    featureManager = featureManager.get(),
+                    selection = selection.get(),
+                    events = events.get(),
+                )
+            }
+
+            val resources = getTestableContext().getResources()
+            val expectedPrivacyMessage =
+                resources.getString(R.string.photopicker_privacy_explainer_message, "Test Package")
 
             // Wait for the PhotoGridViewModel to load data and for the UI to update.
             advanceTimeBy(100)

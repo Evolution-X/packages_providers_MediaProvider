@@ -110,3 +110,16 @@ android_app {
     updatable: true,
 
 }
+
+android_library {
+    name: "PhotopickerSchemas",
+    // Maps the 'schemas' folder to the APK assets
+    asset_dirs: ["schemas"],
+    // Keep sources and resources empty to avoid conflicts
+    srcs: [],
+    resource_dirs: [],
+    // Use the existing manifest or ensure one exists
+    manifest: "AndroidManifest.xml",
+    sdk_version: "module_current",
+    min_sdk_version: "30",
+}

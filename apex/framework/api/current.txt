@@ -1,4 +1,5 @@
-// Signature format: 2.0
+// Signature format: 6.0
+// - style=java
 package android.provider {
 
   public abstract class CloudMediaProvider extends android.content.ContentProvider {
@@ -21,8 +22,8 @@ package android.provider {
     method @FlaggedApi("com.android.providers.media.flags.cloud_media_provider_search") @NonNull public android.database.Cursor onQueryMediaInMediaSet(@NonNull String, @NonNull android.os.Bundle, @Nullable android.os.CancellationSignal);
     method @FlaggedApi("com.android.providers.media.flags.cloud_media_provider_search") @NonNull public android.database.Cursor onQueryMediaSets(@NonNull String, @NonNull android.os.Bundle, @Nullable android.os.CancellationSignal);
     method @FlaggedApi("com.android.providers.media.flags.cloud_media_provider_search") @NonNull public android.database.Cursor onQuerySearchSuggestions(@NonNull String, @NonNull android.os.Bundle, @Nullable android.os.CancellationSignal);
-    method @FlaggedApi("com.android.providers.media.flags.cloud_media_provider_search") @NonNull public android.database.Cursor onSearchMedia(@NonNull String, @Nullable String, @NonNull android.os.Bundle, @Nullable android.os.CancellationSignal);
     method @FlaggedApi("com.android.providers.media.flags.cloud_media_provider_search") @NonNull public android.database.Cursor onSearchMedia(@NonNull String, @NonNull android.os.Bundle, @Nullable android.os.CancellationSignal);
+    method @FlaggedApi("com.android.providers.media.flags.cloud_media_provider_search") @NonNull public android.database.Cursor onSearchMedia(@NonNull String, @Nullable String, @NonNull android.os.Bundle, @Nullable android.os.CancellationSignal);
     method @NonNull public final android.os.ParcelFileDescriptor openFile(@NonNull android.net.Uri, @NonNull String) throws java.io.FileNotFoundException;
     method @NonNull public final android.os.ParcelFileDescriptor openFile(@NonNull android.net.Uri, @NonNull String, @Nullable android.os.CancellationSignal) throws java.io.FileNotFoundException;
     method @NonNull public final android.content.res.AssetFileDescriptor openTypedAssetFile(@NonNull android.net.Uri, @NonNull String, @Nullable android.os.Bundle) throws java.io.FileNotFoundException;
@@ -164,14 +165,14 @@ package android.provider {
     method @NonNull public static android.app.PendingIntent createTrashRequest(@NonNull android.content.ContentResolver, @NonNull java.util.Collection<android.net.Uri>, boolean);
     method @NonNull public static android.app.PendingIntent createWriteRequest(@NonNull android.content.ContentResolver, @NonNull java.util.Collection<android.net.Uri>);
     method @Nullable public static android.net.Uri getDocumentUri(@NonNull android.content.Context, @NonNull android.net.Uri);
-    method @NonNull public static java.util.Set<java.lang.String> getExternalVolumeNames(@NonNull android.content.Context);
+    method @NonNull public static java.util.Set<String> getExternalVolumeNames(@NonNull android.content.Context);
     method public static long getGeneration(@NonNull android.content.Context, @NonNull String);
     method public static android.net.Uri getMediaScannerUri();
     method @Nullable public static android.net.Uri getMediaUri(@NonNull android.content.Context, @NonNull android.net.Uri);
     method @NonNull public static android.os.ParcelFileDescriptor getOriginalMediaFormatFileDescriptor(@NonNull android.content.Context, @NonNull android.os.ParcelFileDescriptor) throws java.io.IOException;
     method @FlaggedApi("com.android.providers.media.flags.enable_media_search") @NonNull public static String getPackageForSearchMediaService(@NonNull android.content.ContentResolver);
     method public static int getPickImagesMaxLimit();
-    method @NonNull public static java.util.Set<java.lang.String> getRecentExternalVolumeNames(@NonNull android.content.Context);
+    method @NonNull public static java.util.Set<String> getRecentExternalVolumeNames(@NonNull android.content.Context);
     method @Nullable public static android.net.Uri getRedactedUri(@NonNull android.content.ContentResolver, @NonNull android.net.Uri);
     method @NonNull public static java.util.List<android.net.Uri> getRedactedUri(@NonNull android.content.ContentResolver, @NonNull java.util.List<android.net.Uri>);
     method public static boolean getRequireOriginal(@NonNull android.net.Uri);
@@ -182,7 +183,7 @@ package android.provider {
     method public static boolean isCurrentSystemGallery(@NonNull android.content.ContentResolver, int, @NonNull String);
     method public static boolean isSupportedCloudMediaProviderAuthority(@NonNull android.content.ContentResolver, @NonNull String);
     method @FlaggedApi("com.android.providers.media.flags.enable_mark_is_favorite_status_api") public static void markIsFavoriteStatus(@NonNull android.content.ContentResolver, @NonNull java.util.Collection<android.net.Uri>, boolean);
-    method public static void notifyCloudMediaChangedEvent(@NonNull android.content.ContentResolver, @NonNull String, @NonNull String) throws java.lang.SecurityException;
+    method public static void notifyCloudMediaChangedEvent(@NonNull android.content.ContentResolver, @NonNull String, @NonNull String) throws SecurityException;
     method @FlaggedApi("com.android.providers.media.flags.media_store_open_file") @Nullable public static android.content.res.AssetFileDescriptor openAssetFileDescriptor(@NonNull android.content.ContentResolver, @NonNull android.net.Uri, @NonNull String, @Nullable android.os.CancellationSignal) throws java.io.FileNotFoundException;
     method @FlaggedApi("com.android.providers.media.flags.media_store_open_file") @Nullable public static android.os.ParcelFileDescriptor openFileDescriptor(@NonNull android.content.ContentResolver, @NonNull android.net.Uri, @NonNull String, @Nullable android.os.CancellationSignal) throws java.io.FileNotFoundException;
     method @FlaggedApi("com.android.providers.media.flags.media_store_open_file") @Nullable public static android.content.res.AssetFileDescriptor openTypedAssetFileDescriptor(@NonNull android.content.ContentResolver, @NonNull android.net.Uri, @NonNull String, @Nullable android.os.Bundle, @Nullable android.os.CancellationSignal) throws java.io.FileNotFoundException;
@@ -478,8 +479,8 @@ package android.provider {
     method @Deprecated public static android.graphics.Bitmap getBitmap(android.content.ContentResolver, android.net.Uri) throws java.io.FileNotFoundException, java.io.IOException;
     method public static android.net.Uri getContentUri(String);
     method @NonNull public static android.net.Uri getContentUri(@NonNull String, long);
-    method @Deprecated public static String insertImage(android.content.ContentResolver, String, String, String) throws java.io.FileNotFoundException;
     method @Deprecated public static String insertImage(android.content.ContentResolver, android.graphics.Bitmap, String, String);
+    method @Deprecated public static String insertImage(android.content.ContentResolver, String, String, String) throws java.io.FileNotFoundException;
     method @Deprecated public static android.database.Cursor query(android.content.ContentResolver, android.net.Uri, String[]);
     method @Deprecated public static android.database.Cursor query(android.content.ContentResolver, android.net.Uri, String[], String, String);
     method @Deprecated public static android.database.Cursor query(android.content.ContentResolver, android.net.Uri, String[], String, String[], String);

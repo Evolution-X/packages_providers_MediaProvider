@@ -48,6 +48,7 @@ import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.MediaStore;
+import android.provider.MediaStore.MediaColumns;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -60,6 +61,7 @@ import com.android.providers.media.dao.FileRow;
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.fuse.FuseDaemon;
 import com.android.providers.media.stableuris.dao.BackupIdRow;
+import com.android.providers.media.util.FileUtils;
 import com.android.providers.media.util.Logging;
 import com.android.providers.media.util.StringUtils;
 
@@ -112,7 +114,12 @@ public class DatabaseBackupAndRecovery {
      */
     private static final String LEVEL_DB_PREFIX = "leveldb-";
 
-    private static final String OWNERSHIP_TABLE_NAME = LEVEL_DB_PREFIX + "ownership";
+    private static final String LEVELDB_OWNERSHIP_DIRECTORY_NAME = LEVEL_DB_PREFIX + "ownership";
+
+    private static final String LEVELDB_EXTERNAL_PRIMARY_DIRECTORY_NAME =
+            LEVEL_DB_PREFIX + VOLUME_EXTERNAL_PRIMARY;
+
+    private static final String LEVELDB_INTERNAL_DIRECTORY_NAME = LEVEL_DB_PREFIX + VOLUME_INTERNAL;
 
     /**
      * Frequency at which next value of owner id is backed up in the external storage.
@@ -521,7 +528,7 @@ public class DatabaseBackupAndRecovery {
             Log.d(TAG, "Started to back up " + volumeName
                     + ", maxGeneration:" + maxGeneration);
             try (Cursor c = db.query(true, "files", QUERY_COLUMNS, selectionClause, null, null,
-                    null, MediaStore.MediaColumns.GENERATION_MODIFIED + " ASC", null, signal)) {
+                    null, MediaColumns.GENERATION_MODIFIED + " ASC", null, signal)) {
                 while (c.moveToNext()) {
                     if (signal != null && signal.isCanceled()) {
                         Log.i(TAG, "Received a cancellation signal during the DB "
@@ -581,11 +588,12 @@ public class DatabaseBackupAndRecovery {
     }
 
     void deleteBackupForVolume(String volumeName) {
-        File dbFilePath = new File(
-                String.format(Locale.ROOT, "%s/%s.db", LOWER_FS_RECOVERY_DIRECTORY_PATH,
+        File levelDbPath = new File(
+                String.format(Locale.ROOT, "%s/%s", LOWER_FS_RECOVERY_DIRECTORY_PATH,
                         LEVEL_DB_PREFIX + volumeName));
-        if (dbFilePath.exists()) {
-            dbFilePath.delete();
+        if (levelDbPath.exists() && levelDbPath.isDirectory()) {
+            FileUtils.deleteContents(levelDbPath);
+            levelDbPath.delete();
         }
     }
 
@@ -1293,11 +1301,11 @@ public class DatabaseBackupAndRecovery {
         try {
             File recoveryDir = new File(LOWER_FS_RECOVERY_DIRECTORY_PATH);
             for (File levelDbFile : recoveryDir.listFiles()) {
-                if (!(LEVEL_DB_PREFIX + VOLUME_EXTERNAL_PRIMARY)
+                if (!LEVELDB_EXTERNAL_PRIMARY_DIRECTORY_NAME
                         .equalsIgnoreCase(levelDbFile.getName())
-                        && !(LEVEL_DB_PREFIX + MediaStore.VOLUME_INTERNAL)
+                        && !LEVELDB_INTERNAL_DIRECTORY_NAME
                         .equalsIgnoreCase(levelDbFile.getName())
-                        && !(OWNERSHIP_TABLE_NAME
+                        && !(LEVELDB_OWNERSHIP_DIRECTORY_NAME
                         .equalsIgnoreCase(levelDbFile.getName()))) {
                     setXattr(levelDbFile.getAbsolutePath(), PUBLIC_VOLUME_RECOVERY_FLAG_XATTR_KEY,
                             String.valueOf(true));
@@ -1450,10 +1458,10 @@ public class DatabaseBackupAndRecovery {
         Map<Long, Long> resultMap = new HashMap<>();
 
         long lastId = -1;
-        String selection = MediaStore.MediaColumns._ID +  " > ?";
-        String[] projection = new String[]{MediaStore.MediaColumns._ID,
-                MediaStore.MediaColumns.GENERATION_MODIFIED};
-        String sortOrder = MediaStore.MediaColumns._ID + " ASC";
+        String selection = MediaColumns._ID +  " > ?";
+        String[] projection = new String[]{MediaColumns._ID,
+                MediaColumns.GENERATION_MODIFIED};
+        String sortOrder = MediaColumns._ID + " ASC";
 
         boolean hasMoreResults = true;
         while (hasMoreResults) {
@@ -1727,6 +1735,46 @@ public class DatabaseBackupAndRecovery {
             Log.v(TAG,
                     "Removed leveldb connections from in memory setup cache for volume:"
                             + volumeName);
+        }
+    }
+
+    public void deleteLevelDbBackupForStaleVolumes(DatabaseHelper databaseHelper,
+            CancellationSignal signal) {
+        Set<String> publicLevelDbVolumes = new HashSet<>();
+        File recoveryDir = new File(LOWER_FS_RECOVERY_DIRECTORY_PATH);
+        File[] files = recoveryDir.listFiles();
+        if (files == null) {
+            return ;
+        }
+
+        for (File file : files) {
+            String fileName = file.getName();
+            // Check if the directory follows the leveldb-<volumename> pattern
+            // and exclude the internal, external primary and ownership db.
+            if (fileName.startsWith(LEVEL_DB_PREFIX) && !fileName.equalsIgnoreCase(
+                    LEVELDB_INTERNAL_DIRECTORY_NAME) && !fileName.equalsIgnoreCase(
+                    LEVELDB_EXTERNAL_PRIMARY_DIRECTORY_NAME) && !fileName.equalsIgnoreCase(
+                    LEVELDB_OWNERSHIP_DIRECTORY_NAME)) {
+                // Extract the volume name by removing the "leveldb-" prefix
+                publicLevelDbVolumes.add(fileName.substring(LEVEL_DB_PREFIX.length()));
+            }
+        }
+
+        databaseHelper.runWithTransaction((db) -> {
+            try (Cursor c = db.query(/* distinct */true, /* table */"files",
+                    new String[]{MediaColumns.VOLUME_NAME},
+                    null, null, null, null, null, null, signal)) {
+                while (c.moveToNext()) {
+                    publicLevelDbVolumes.remove(c.getString(0));
+                }
+            }
+            return null;
+        });
+
+        if (!publicLevelDbVolumes.isEmpty()) {
+            for (String volume : publicLevelDbVolumes) {
+                deleteBackupForVolume(volume);
+            }
         }
     }
 }

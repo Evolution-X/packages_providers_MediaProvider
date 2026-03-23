@@ -61,6 +61,18 @@ interface BannerManager {
     suspend fun showBanner(banner: BannerDeclaration, bannerLocation: BannerLocation)
 
     /**
+     * Displays the banner corresponding to the provided [BannerDefinition] at the specified
+     * [BannerLocation].
+     *
+     * This method identifies the UI feature that owns this banner among all currently enabled
+     * [PhotopickerUiFeature]s and requests it to build the [Banner] implementation to be shown.
+     *
+     * @param bannerDefinition The definition of the banner to be displayed.
+     * @param bannerLocation The screen location where the banner should be shown.
+     */
+    suspend fun showBanner(bannerDefinition: BannerDefinition, bannerLocation: BannerLocation)
+
+    /**
      * Immediately hides any shown banners for all locations.
      *
      * Calling this while no banner is active will have no effect.
@@ -77,6 +89,17 @@ interface BannerManager {
      * @param banner The BannerDeclaration to mark as dismissed.
      */
     suspend fun markBannerAsDismissed(banner: BannerDeclaration)
+
+    /**
+     * Mark the provided [BannerDefinition] as dismissed in the current runtime context.
+     *
+     * This will be handled differently based on the [BannerDefinition.dismissiblePer] of the
+     * provided BannerDefinition. If the [BannerDefinition.manualDismissible] is FALSE, this has no
+     * effect on internal [BannerInteractionState].
+     *
+     * @param bannerDefinition The BannerDefinition to mark as dismissed.
+     */
+    suspend fun markBannerAsManuallyDismissed(bannerDefinition: BannerDefinition)
 
     /**
      * Refreshes the banners for all possible [BannerLocation]s. For each location, this method
