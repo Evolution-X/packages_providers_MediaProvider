@@ -85,7 +85,8 @@ public class ProcessingUtils {
 
     private static boolean isMediaProcessingEnabled(Context context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) {
-            Log.v(TAG, "Media processing is not supported only on C+ devices.");
+            Log.v(TAG, "Media processing is not supported on this device. "
+                    + "Supported only on C+ devices.");
             return false;
         }
 
