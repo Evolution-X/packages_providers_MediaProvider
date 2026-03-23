@@ -1965,6 +1965,8 @@ public class MediaProvider extends ContentProvider {
         // Forget any stale volumes
         deleteStaleVolumes(signal);
 
+        mDatabaseBackupAndRecovery.deleteLevelDbBackupForStaleVolumes(mExternalDatabase, signal);
+
         final long itemCount = mExternalDatabase.runWithTransaction(DatabaseHelper::getItemCount);
 
         // Clean picker transcoded media cache.
