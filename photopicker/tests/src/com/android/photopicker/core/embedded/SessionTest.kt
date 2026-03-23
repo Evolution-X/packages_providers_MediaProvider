@@ -932,6 +932,63 @@ class SessionTest : EmbeddedPhotopickerFeatureBaseTest() {
         }
 
     @Test
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testSelectionRespectsBatchSizeLimit() =
+        testScope.runTest {
+            val component = embeddedServiceComponentBuilder.build()
+            val entryPoint = EntryPoints.get(component, Session.EmbeddedEntryPoint::class.java)
+
+            // 2048 bytes limit. Each stub media item is 1000 bytes.
+            val selectionParams =
+                PhotoPickerSelectionParams.Builder()
+                    .setMaxSelectionBatchSizeInBytes(MAX_SELECTION_BATCH_SIZE_BYTES)
+                    .build()
+            val featureInfo =
+                EmbeddedPhotoPickerFeatureInfo.Builder().setSelectionParams(selectionParams).build()
+
+            val session = getSessionUnderTest(component)
+            advanceTimeBy(100)
+
+            entryPoint.configurationManager().get().setEmbeddedPhotopickerFeatureInfo(featureInfo)
+            advanceTimeBy(100)
+
+            setUpTestDataWithStubProvider(mediaCount = 10)
+
+            composeTestRule.setContent {
+                AndroidView(
+                    factory = {
+                        SurfaceView(getTestableContext()).apply {
+                            setChildSurfacePackage(session.surfacePackage)
+                        }
+                    }
+                )
+            }
+            composeTestRule.waitForIdle()
+
+            val allImageNodes =
+                composeTestRule.onAllNodes(
+                    hasContentDescription(
+                        value = MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING,
+                        substring = true,
+                    )
+                )
+
+            // Select 3 items. Each is 1000 bytes. Total 3000 bytes > 2048 bytes limit.
+            performClickForIndices(allImageNodes, setOf(0, 1, 2))
+
+            advanceTimeBy(100)
+            composeTestRule.waitForIdle()
+
+            // Only the first item should be selected.
+            assertWithMessage("Expected selection to respect batch size limit")
+                .that(selection.get().snapshot().size)
+                .isEqualTo(2)
+        }
+
+    @Test
     fun testApiCallOnClosedSession_callsOnSessionError() =
         testScope.runTest {
             val component = embeddedServiceComponentBuilder.build()
