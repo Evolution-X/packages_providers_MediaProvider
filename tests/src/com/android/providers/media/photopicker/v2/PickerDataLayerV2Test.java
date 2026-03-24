@@ -76,6 +76,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -102,6 +103,9 @@ import android.os.Process;
 import android.os.UserHandle;
 import android.platform.test.annotations.DisableFlags;
 import android.platform.test.annotations.EnableFlags;
+import android.platform.test.annotations.RequiresFlagsEnabled;
+import android.platform.test.flag.junit.CheckFlagsRule;
+import android.platform.test.flag.junit.DeviceFlagsValueProvider;
 import android.platform.test.flag.junit.SetFlagsRule;
 import android.provider.CloudMediaProviderContract;
 import android.provider.MediaStore;
@@ -177,6 +181,10 @@ import java.util.concurrent.Executor;
 
 @RunWith(AndroidJUnit4.class)
 public class PickerDataLayerV2Test {
+
+    @Rule
+    public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+
     @Mock
     private PickerSyncController mMockSyncController;
     @Mock
@@ -449,6 +457,81 @@ public class PickerDataLayerV2Test {
                                             .DISPLAY_NAME.getColumnName()))
             );
         }
+    }
+
+    @Test
+    @RequiresFlagsEnabled(Flags.FLAG_ENABLE_CMP_IMPROVEMENTS)
+    public void testAvailableProvidersWithDisabledCloudProvider() throws
+            PackageManager.NameNotFoundException {
+        final ProviderInfo providerInfo = new ProviderInfo();
+        providerInfo.packageName = LOCAL_PROVIDER;
+        providerInfo.name = "LOCAL_PROVIDER";
+        final ApplicationInfo applicationInfo = new ApplicationInfo();
+        applicationInfo.nonLocalizedLabel = providerInfo.name;
+        providerInfo.applicationInfo = applicationInfo;
+
+
+        doReturn(mMockPackageManager)
+                .when(mMockContext).getPackageManager();
+
+        doReturn(providerInfo)
+                .when(mMockPackageManager)
+                .resolveContentProvider(eq(LOCAL_PROVIDER), anyInt());
+
+        doReturn(null)
+                .when(mMockPackageManager)
+                .resolveContentProvider(eq(CLOUD_PROVIDER), anyInt());
+
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any());
+        doReturn(true).when(mMockSyncController).shouldQueryCloudMedia(any(), any());
+
+        try (Cursor availableProviders = PickerDataLayerV2.queryAvailableProviders(mMockContext)) {
+            availableProviders.moveToFirst();
+
+            assertEquals(
+                    "Only local provider should be available.",
+                    /* expected */ 1,
+                    availableProviders.getCount()
+            );
+
+            assertEquals(
+                    "Available provider should serve local media",
+                    /* expected */ MediaSource.LOCAL,
+                    MediaSource.valueOf(availableProviders.getString(
+                            availableProviders.getColumnIndexOrThrow(
+                                    PickerSQLConstants.AvailableProviderResponse
+                                            .MEDIA_SOURCE.getColumnName())))
+            );
+
+            assertEquals(
+                    "Local provider authority is not correct",
+                    /* expected */ LOCAL_PROVIDER,
+                    availableProviders.getString(
+                            availableProviders.getColumnIndexOrThrow(
+                                    PickerSQLConstants.AvailableProviderResponse
+                                            .AUTHORITY.getColumnName()))
+            );
+
+            assertEquals(
+                    "Local provider UID is not correct",
+                    /* expected */ Process.myUid(),
+                    availableProviders.getInt(
+                            availableProviders.getColumnIndexOrThrow(
+                                    PickerSQLConstants.AvailableProviderResponse
+                                            .UID.getColumnName()))
+            );
+
+            assertEquals(
+                    "Local provider's label is not correct",
+                    /* expected */ "LOCAL_PROVIDER",
+                    availableProviders.getString(
+                            availableProviders.getColumnIndexOrThrow(
+                                    PickerSQLConstants.AvailableProviderResponse
+                                            .DISPLAY_NAME.getColumnName()))
+            );
+        }
+        // Verify that the cloud authority was reset to null
+        verify(mMockSyncController, times(1)).setCloudProvider(null);
     }
 
     @Test

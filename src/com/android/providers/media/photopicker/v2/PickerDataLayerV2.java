@@ -1531,8 +1531,20 @@ public class PickerDataLayerV2 {
             final String cloudAuthority =
                     syncController.getCloudProviderOrDefault(/* defaultValue */ null);
             if (syncController.shouldQueryCloudMedia(cloudAuthority)) {
-                final ProviderInfo cloudProviderInfo = requireNonNull(
-                        packageManager.resolveContentProvider(cloudAuthority, /* flags */ 0));
+                final ProviderInfo cloudProviderInfo =
+                        packageManager.resolveContentProvider(cloudAuthority, /* flags */ 0);
+                // ProviderInfo retrieved from the PackageManager could be null if the
+                // cloud provider package has been disabled by the user or programmatically by
+                // the cloud provider package owner. In this case, we reset the current cloud
+                // provider to null to prevent any subsequent photopicker crashes.
+                if (Flags.enableCmpImprovements()
+                        && (cloudProviderInfo == null
+                        || !cloudProviderInfo.applicationInfo.enabled)) {
+                    Log.w(TAG, "ProviderInfo retrieved from the PackageManager was null."
+                            + "Resetting active CMP to null");
+                    syncController.setCloudProvider(/*authority*/ null);
+                    return matrixCursor;
+                }
                 final int uid = packageManager.getPackageUid(
                         cloudProviderInfo.packageName,
                         /* flags */ 0
@@ -1547,7 +1559,6 @@ public class PickerDataLayerV2 {
                         cloudProviderLabel
                 );
             }
-
             return matrixCursor;
         } catch (IllegalStateException | NameNotFoundException e) {
             throw new RuntimeException("Unexpected internal error occurred", e);
