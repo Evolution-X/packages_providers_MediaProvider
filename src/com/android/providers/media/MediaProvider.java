@@ -398,7 +398,6 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
@@ -9369,25 +9368,11 @@ public class MediaProvider extends ContentProvider {
             // doesn't exist we fall through to create it below
             final File thumbFile = getThumbnailFile(uri);
             try {
-                return FileUtils.openSafely(thumbFile, ParcelFileDescriptor.MODE_READ_ONLY);
+                return FileUtils.openSafely(thumbFile,
+                        ParcelFileDescriptor.MODE_READ_ONLY);
             } catch (FileNotFoundException ignored) {
-                // Cache miss
             }
 
-            if (Flags.enableAsyncThumbnailGeneration()) {
-                return executeAsyncThumbnail(uri, signal);
-            }
-
-            return ensureThumbnailSync(uri, signal);
-        }
-
-        /**
-         * Original synchronous implementation of thumbnail generation.
-         * This is used as a fallback  when the async thumbnail flag is off.
-         */
-        private ParcelFileDescriptor ensureThumbnailSync(Uri uri, CancellationSignal signal)
-                throws IOException {
-            final File thumbFile = getThumbnailFile(uri);
             final File thumbDir = thumbFile.getParentFile();
             thumbDir.mkdirs();
 
@@ -9432,72 +9417,6 @@ public class MediaProvider extends ContentProvider {
                 FileUtils.closeQuietly(thumbWrite);
                 FileUtils.closeQuietly(thumbRead);
                 deleteAndInvalidate(thumbTempFile);
-            }
-        }
-
-        /**
-         * Asynchronous implementation of thumbnail generation.
-         */
-        private ParcelFileDescriptor executeAsyncThumbnail(Uri uri, CancellationSignal signal)
-                throws IOException {
-            final ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createReliablePipe();
-            final ParcelFileDescriptor readFd = pipe[0];
-            final ParcelFileDescriptor writeFd = pipe[1];
-            final LocalCallingIdentity callerIdentity = mCallingIdentity.get();
-
-            try {
-                ThumbnailBackgroundThread.getExecutor().execute(() ->
-                        backgroundThumbnailWorker(uri, signal, writeFd, callerIdentity));
-                return readFd;
-            } catch (RejectedExecutionException e) {
-                // Terminate the pipe and fail the request.
-                FileUtils.closeQuietly(readFd);
-                FileUtils.closeQuietly(writeFd);
-                Log.e(TAG, "Thumbnail queue saturated. Request rejected for " + uri);
-                throw new IOException("Thumbnail generation pool saturated", e);
-            }
-        }
-
-        /**
-         * Worker running on the background thread.
-         */
-        private void backgroundThumbnailWorker(Uri uri, CancellationSignal signal,
-                ParcelFileDescriptor writeFd, LocalCallingIdentity callerIdentity) {
-            final LocalCallingIdentity token = clearLocalCallingIdentity(callerIdentity);
-            File tempFile = null;
-
-            try (OutputStream pipeOut = new ParcelFileDescriptor.AutoCloseOutputStream(writeFd)) {
-                final Bitmap bitmap = getThumbnailBitmap(uri, signal);
-                if (bitmap == null) {
-                    throw new IOException("Bitmap generation failed");
-                }
-
-                final File thumbFile = getThumbnailFile(uri);
-                final File thumbDir = thumbFile.getParentFile();
-                thumbDir.mkdirs();
-
-                tempFile = File.createTempFile("thumb", null, thumbDir);
-                try (FileOutputStream fos = new FileOutputStream(tempFile)) {
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos);
-                }
-
-                Os.rename(tempFile.getAbsolutePath(), thumbFile.getAbsolutePath());
-                tempFile = null;
-
-                try (FileInputStream fis = new FileInputStream(thumbFile)) {
-                    FileUtils.copy(fis, pipeOut);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Async thumbnail failed for " + uri, e);
-                try {
-                    writeFd.closeWithError(e.getMessage());
-                } catch (IOException ignored) {
-                }
-            } finally {
-                if (tempFile != null) {
-                    deleteAndInvalidate(tempFile);
-                }
-                restoreLocalCallingIdentity(token);
             }
         }
 

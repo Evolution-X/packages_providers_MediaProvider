@@ -589,10 +589,3 @@ flag {
     bug: "492382057"
 }
 
-flag {
-    name: "enable_async_thumbnail_generation"
-    is_exported: false
-    namespace: "mediaprovider"
-    description: "This flag enables async thumbnail generation."
-    bug: "484046262"
-}
