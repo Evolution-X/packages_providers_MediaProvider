@@ -112,6 +112,7 @@ private val MEASUREMENT_DESKTOP_MAX_WIDTH = 640.dp
 private val MEASUREMENT_DESKTOP_SHADOW_ELEVATION = 3.dp
 private val MEASUREMENT_DESKTOP_TONAL_ELEVATION = 2.dp
 private val MEASUREMENT_DESKTOP_CORNER_RADIUS = 12.dp
+private val MEASUREMENT_SNACKBAR_TOP_PADDING = 16.dp
 
 /**
  * This is an entrypoint of the Photopicker Compose UI. This is called from the MainActivity and is
@@ -229,6 +230,7 @@ fun PhotopickerAppWithBottomSheet(
                                 scope.launch { state.bottomSheetState.expand() }
                             },
                         )
+
                         Column(
                             modifier =
                                 // Some elements needs to be drawn over the UI inside of the
@@ -427,12 +429,39 @@ fun PhotopickerApp(
     // the NavigationGraph, so this is done at the top.
     navController: NavHostController = rememberNavController(),
 ) {
+    val configuration = LocalPhotopickerConfiguration.current
+    val isEmbedded = configuration.runtimeEnv == PhotopickerRuntimeEnv.EMBEDDED
+    val isExpanded = LocalEmbeddedState.current?.isExpanded ?: false
+    val shouldShowSnackbarAtTop =
+        configuration.flags.PICKER_SELECTION_PARAMS_ENABLED && isEmbedded && !isExpanded
+
     CompositionLocalProvider(LocalNavController provides navController) {
         Surface(contentColor = MaterialTheme.colorScheme.onSurface, color = Color.Transparent) {
             Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
                 PhotopickerMain(disruptiveDataNotification)
+
+                if (shouldShowSnackbarAtTop) {
+                    // Render the snackbar at the top of the picker.
+                    Box(
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .align(Alignment.TopCenter)
+                                .padding(top = MEASUREMENT_SNACKBAR_TOP_PADDING)
+                    ) {
+                        LocalFeatureManager.current.composeLocation(
+                            Location.SNACK_BAR,
+                            maxSlots = 1,
+                        )
+                    }
+                }
+
                 Column {
-                    LocalFeatureManager.current.composeLocation(Location.SNACK_BAR, maxSlots = 1)
+                    if (!shouldShowSnackbarAtTop) {
+                        LocalFeatureManager.current.composeLocation(
+                            Location.SNACK_BAR,
+                            maxSlots = 1,
+                        )
+                    }
                     hideWhenState(StateSelector.EmbeddedAndCollapsed) {
                         LocalFeatureManager.current.composeLocation(
                             Location.SELECTION_BAR,
