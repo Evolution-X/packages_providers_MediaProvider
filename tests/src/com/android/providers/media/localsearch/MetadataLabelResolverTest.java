@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import android.content.Context;
 import android.os.Build;
 import android.platform.test.annotations.RequiresFlagsEnabled;
 import android.platform.test.flag.junit.CheckFlagsRule;
@@ -29,10 +30,13 @@ import android.provider.MediaStore.Files.FileColumns;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SdkSuppress;
+import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.android.providers.media.IsolatedContext;
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.localsearch.MetadataLabelResolver.MetadataInfo;
 
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,6 +56,15 @@ import java.util.Set;
 public class MetadataLabelResolverTest {
     @Rule
     public final CheckFlagsRule mCheckFlagsRule = DeviceFlagsValueProvider.createCheckFlagsRule();
+    private IsolatedContext mIsolatedContext;
+    private MetadataLabelResolver mMetadataLabelResolver;
+
+    @Before
+    public void setUp() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        mIsolatedContext = new IsolatedContext(context, "test", /*asFuseThread*/ false);
+        mMetadataLabelResolver = new MetadataLabelResolver(mIsolatedContext);
+    }
 
     /**
      * Helper to compare label strings ignoring order and duplicates.
@@ -88,9 +101,9 @@ public class MetadataLabelResolverTest {
                 .setGenre("Travel")
                 .build();
 
-        String label = MetadataLabelResolver.buildMetadataLabel(info);
+        String label = mMetadataLabelResolver.buildMetadataLabel(info);
 
-        String expected = "vacation jpg dcim camera image images jpeg october 2021 "
+        String expected = "vacation jpg dcim camera image images photo photos jpeg october 2021 "
                 + "favorite favorites me holidays travel";
         assertLabelsMatch(expected, label);
     }
@@ -102,7 +115,7 @@ public class MetadataLabelResolverTest {
                 .setId(100)
                 .build();
 
-        String label = MetadataLabelResolver.buildMetadataLabel(info);
+        String label = mMetadataLabelResolver.buildMetadataLabel(info);
 
         // Should be empty string as no valid metadata was added
         assertEquals("", label);
@@ -119,7 +132,7 @@ public class MetadataLabelResolverTest {
                 .setIsDownload(1)                     // -> "download"
                 .build();
 
-        String label = MetadataLabelResolver.buildMetadataLabel(info);
+        String label = mMetadataLabelResolver.buildMetadataLabel(info);
         String expected = "video_clip mp4 movies scifi video videos download downloads";
 
         assertLabelsMatch(expected, label);
@@ -133,26 +146,26 @@ public class MetadataLabelResolverTest {
                 .setSpecialFormat(FileColumns.SPECIAL_FORMAT_ANIMATED_WEBP) // -> "animated"
                 .build();
 
-        String label = MetadataLabelResolver.buildMetadataLabel(info);
+        String label = mMetadataLabelResolver.buildMetadataLabel(info);
         assertTrue(label.contains("animated"));
 
         MetadataInfo info2 = new MetadataInfo.Builder()
                 .setId(4)
                 .setSpecialFormat(FileColumns.SPECIAL_FORMAT_MOTION_PHOTO) // -> "motion photo"
                 .build();
-        assertTrue(MetadataLabelResolver.buildMetadataLabel(info2).contains("motion photo"));
+        assertTrue(mMetadataLabelResolver.buildMetadataLabel(info2).contains("motion photo"));
 
         MetadataInfo info3 = new MetadataInfo.Builder()
                 .setId(5)
                 .setSpecialFormat(FileColumns.SPECIAL_FORMAT_GIF) // -> "gif"
                 .build();
-        assertTrue(MetadataLabelResolver.buildMetadataLabel(info3).contains("gif"));
+        assertTrue(mMetadataLabelResolver.buildMetadataLabel(info3).contains("gif"));
     }
 
     @Test
     public void testBuildMetadataLabel_audioAndTimestamps() {
         // Timestamp: January 2025
-        long dateTaken = 1735689600000L; // Jan 1 2025 UTC
+        long dateTaken = 1736899200000L; // Jan 15 2025 UTC
 
         MetadataInfo info = new MetadataInfo.Builder()
                 .setId(5)
@@ -161,7 +174,7 @@ public class MetadataLabelResolverTest {
                 .setArtist("Beethoven")
                 .build();
 
-        String label = MetadataLabelResolver.buildMetadataLabel(info);
+        String label = mMetadataLabelResolver.buildMetadataLabel(info);
         String expected = "audio audios january 2025 beethoven";
         assertLabelsMatch(expected, label);
     }
@@ -179,7 +192,7 @@ public class MetadataLabelResolverTest {
                 .setId(6)
                 .setDateAdded(dateAdded)
                 .build();
-        assertLabelsMatch(MetadataLabelResolver.buildMetadataLabel(info1), "january 2025");
+        assertLabelsMatch(mMetadataLabelResolver.buildMetadataLabel(info1), "january 2025");
 
         // Invalid Date Taken, should use Date Added
         MetadataInfo info2 = new MetadataInfo.Builder()
@@ -187,7 +200,7 @@ public class MetadataLabelResolverTest {
                 .setDateTaken(0)
                 .setDateAdded(dateAdded)
                 .build();
-        assertLabelsMatch(MetadataLabelResolver.buildMetadataLabel(info2), "january 2025");
+        assertLabelsMatch(mMetadataLabelResolver.buildMetadataLabel(info2), "january 2025");
 
         // Both valid, should use Date Taken (December 2024 vs January 2025)
         long dateTaken = LocalDate.of(2024, 12, 1)
@@ -200,8 +213,8 @@ public class MetadataLabelResolverTest {
                 .setDateTaken(dateTaken)
                 .setDateAdded(dateAdded)
                 .build();
-        assertLabelsMatch(MetadataLabelResolver.buildMetadataLabel(info3), "december 2024");
-        assertFalse(MetadataLabelResolver.buildMetadataLabel(info3).contains("january 2025"));
+        assertLabelsMatch(mMetadataLabelResolver.buildMetadataLabel(info3), "december 2024");
+        assertFalse(mMetadataLabelResolver.buildMetadataLabel(info3).contains("january 2025"));
     }
 
     @Test
@@ -220,17 +233,17 @@ public class MetadataLabelResolverTest {
 
         List<MetadataInfo> batch = Arrays.asList(item1, item2);
 
-        Map<Long, String> result = MetadataLabelResolver.generateMetadataLabels(batch);
+        Map<Long, String> result = mMetadataLabelResolver.generateMetadataLabels(batch);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        assertLabelsMatch("a jpg image images", result.get(10L));
+        assertLabelsMatch("a jpg image images photo photos", result.get(10L));
         assertLabelsMatch("b mp4 video videos", result.get(20L));
     }
 
     @Test
     public void testGenerateMetadataLabels_emptyList() {
-        Map<Long, String> result = MetadataLabelResolver.generateMetadataLabels(
+        Map<Long, String> result = mMetadataLabelResolver.generateMetadataLabels(
                 Collections.emptyList());
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -242,25 +255,25 @@ public class MetadataLabelResolverTest {
 
         // 1. No extension
         MetadataInfo infoNoExt = new MetadataInfo.Builder().setDisplayName("README").build();
-        assertEquals("readme", MetadataLabelResolver.buildMetadataLabel(infoNoExt));
+        assertEquals("readme", mMetadataLabelResolver.buildMetadataLabel(infoNoExt));
 
-        // 2. Dot at start
+        // Dot at start
         MetadataInfo infoDotStart = new MetadataInfo.Builder().setDisplayName(".hidden").build();
-        assertEquals(".hidden", MetadataLabelResolver.buildMetadataLabel(infoDotStart));
+        assertEquals(".hidden", mMetadataLabelResolver.buildMetadataLabel(infoDotStart));
 
         // 3. Null (handled in minimal fields test, but explicitly here)
         MetadataInfo infoNull = new MetadataInfo.Builder().setDisplayName(null).build();
-        assertEquals("", MetadataLabelResolver.buildMetadataLabel(infoNull));
+        assertEquals("", mMetadataLabelResolver.buildMetadataLabel(infoNull));
     }
 
     @Test
     public void testProcessTimestamp_invalid() {
         // 0 is invalid
         MetadataInfo infoZero = new MetadataInfo.Builder().setDateTaken(0).build();
-        assertEquals("", MetadataLabelResolver.buildMetadataLabel(infoZero));
+        assertEquals("", mMetadataLabelResolver.buildMetadataLabel(infoZero));
 
         // Negative is invalid
         MetadataInfo infoNeg = new MetadataInfo.Builder().setDateTaken(-1000L).build();
-        assertEquals("", MetadataLabelResolver.buildMetadataLabel(infoNeg));
+        assertEquals("", mMetadataLabelResolver.buildMetadataLabel(infoNeg));
     }
 }

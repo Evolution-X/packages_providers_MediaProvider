@@ -566,4 +566,31 @@
     <!-- SD card album display name -->
     <string name="sd_card_album_display_name" translation_description="Display name for the album containing media stored in sd card's root directory. [CHAR_LIMIT=50]">SD card</string>
 
+    <!-- ========================= METADATA LABEL STRINGS ========================= -->
+
+    <!-- Metadata labels for images [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_image">image</string>
+    <string name="metadata_label_images">images</string>
+    <string name="metadata_label_photo">photo</string>
+    <string name="metadata_label_photos">photos</string>
+    <!-- Metadata labels for videos [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_video">video</string>
+    <string name="metadata_label_videos">videos</string>
+    <!-- Metadata labels for audio files [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_audio">audio</string>
+    <string name="metadata_label_audios">audios</string>
+    <!-- Metadata labels for documents [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_document">document</string>
+    <string name="metadata_label_documents">documents</string>
+    <!-- Metadata labels for animated files [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_animated">animated</string>
+    <!-- Metadata labels for motion photos [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_motion_photo">motion photo</string>
+    <!-- Metadata labels for favorite items [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_favorite">favorite</string>
+    <string name="metadata_label_favorites">favorites</string>
+    <!-- Metadata labels for downloaded items [CHAR LIMIT=NONE] -->
+    <string name="metadata_label_download">download</string>
+    <string name="metadata_label_downloads">downloads</string>
+
 </resources>
