@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g>માંથી તમારા ફોટા અને વીડિયો પસંદ કરવા માટે કનેક્ટ કરો"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"ઇન્ટરનેટ કનેક્શન આવશ્યક છે"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"ડિલીટ કરો"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"શોધી શકતા નથી. કોઈ ઇન્ટરનેટ કનેક્શન નથી."</string>
 </resources>

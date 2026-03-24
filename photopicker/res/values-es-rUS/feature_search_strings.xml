@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"Conéctate para seleccionar tus fotos y videos de <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"Se requiere conexión a Internet"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"Borrar"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"No se pudo buscar porque no hay conexión."</string>
 </resources>

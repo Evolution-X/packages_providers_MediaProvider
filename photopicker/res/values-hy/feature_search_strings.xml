@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"Միացեք համացանցին՝ <xliff:g id="APP_NAME">%1$s</xliff:g> հավելվածից լուսանկարներ և տեսանյութեր ընտրելու համար"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"Պահանջվում է ինտերնետ կապ"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"Ջնջել"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"Չհաջողվեց որոնել։ Ինտերնետ կապ չկա։"</string>
 </resources>

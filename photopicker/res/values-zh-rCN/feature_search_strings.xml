@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"关联后即可从“<xliff:g id="APP_NAME">%1$s</xliff:g>”中选择照片和视频"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"需联网"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"删除"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"无法搜索，未连接到网络。"</string>
 </resources>
