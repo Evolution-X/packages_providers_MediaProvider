@@ -51,7 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"ଏହି ଏରିଆରେ ଆପଣଙ୍କ ଦସ୍ତଖତ ଡ୍ର କରନ୍ତୁ"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"ଦସ୍ତଖତ ସେଭ କରିବାରେ ବିଫଳ ହୋଇଛି"</string>
-    <!-- no translation found for error_max_signatures_reached (8996308394883219616) -->
-    <skip />
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"ସର୍ବାଧିକ ସଂଖ୍ୟକ ଦସ୍ତଖତ (%1$d)ରେ ପହଞ୍ଚିଯାଇଛି।"</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"ଦସ୍ତଖତ"</string>
 </resources>

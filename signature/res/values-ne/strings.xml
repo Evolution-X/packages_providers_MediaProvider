@@ -51,7 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"यो क्षेत्रमा आफ्नो हस्ताक्षर कोर्नुहोस्"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"हस्ताक्षर सेभ गर्न सकिएन"</string>
-    <!-- no translation found for error_max_signatures_reached (8996308394883219616) -->
-    <skip />
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"योभन्दा (%1$d) बढी हस्ताक्षर गर्न मिल्दैन।"</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"हस्ताक्षर"</string>
 </resources>
