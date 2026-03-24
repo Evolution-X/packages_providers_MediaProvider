@@ -454,6 +454,7 @@ class EmbeddedServiceModule {
                             scope = scope,
                             configuration = configurationManager.configuration,
                             preSelectedMedia = dataService.preSelectionMediaData,
+                            getItemSizeInBytes = { it.sizeInBytes },
                         )
                 }
             return selection
