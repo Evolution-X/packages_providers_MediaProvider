@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"برای انتخاب کردن عکس‌ها و ویدیوهایتان از «<xliff:g id="APP_NAME">%1$s</xliff:g>»، به شبکه متصل شوید"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"اتصال اینترنت لازم است"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"حذف"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"جستجو ممکن نیست. اتصال اینترنت ندارید."</string>
 </resources>

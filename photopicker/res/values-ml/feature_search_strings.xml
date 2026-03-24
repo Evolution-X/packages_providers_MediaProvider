@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> എന്നതിൽ നിന്ന് നിങ്ങളുടെ ഫോട്ടോകളും വീഡിയോകളും തിരഞ്ഞെടുക്കാൻ കണക്റ്റ് ചെയ്യുക"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"ഇന്റർനെറ്റ് കണക്ഷൻ ആവശ്യമാണ്"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"ഇല്ലാതാക്കുക"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"തിരയാനാകുന്നില്ല. ഇന്റർനെറ്റ് കണക്ഷനില്ല."</string>
 </resources>

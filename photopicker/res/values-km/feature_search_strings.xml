@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"ភ្ជាប់ ដើម្បីជ្រើសរើសរូបថត និងវីដេអូរបស់អ្នកពី <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"តម្រូវឱ្យមាន​ការតភ្ជាប់អ៊ីនធឺណិត"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"លុប"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"មិន​អាច​ស្វែងរក​បានទេ។ គ្មានការតភ្ជាប់អ៊ីនធឺណិត។"</string>
 </resources>

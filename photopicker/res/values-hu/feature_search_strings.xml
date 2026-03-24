@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"A(z) <xliff:g id="APP_NAME">%1$s</xliff:g> szolgáltatásban lévő fotók és videók kiválasztásához csatlakozzon az internethez"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"Internetkapcsolatra van szükség"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"Törlés"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"Nem lehet keresni. Nincs internetkapcsolat."</string>
 </resources>
