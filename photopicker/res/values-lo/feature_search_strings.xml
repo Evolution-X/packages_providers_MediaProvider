@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"ເຊື່ອມຕໍ່ເພື່ອເລືອກຮູບພາບ ແລະ ວິດີໂອຂອງທ່ານຈາກ <xliff:g id="APP_NAME">%1$s</xliff:g>"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"ຈຳເປັນຕ້ອງເຊື່ອມຕໍ່ອິນເຕີເນັດ"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"ລຶບ"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"ບໍ່ສາມາດຊອກຫາໄດ້. ບໍ່ມີການເຊື່ອມຕໍ່ອິນເຕີເນັດ."</string>
 </resources>

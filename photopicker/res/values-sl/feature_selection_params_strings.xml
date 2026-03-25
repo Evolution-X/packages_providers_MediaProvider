@@ -25,8 +25,8 @@
     <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da imajo fotografije in videoposnetki nižjo ločljivost"</string>
     <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da imajo fotografije in videoposnetki višjo ločljivost"</string>
     <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> ne podpira te vrste datoteke"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da je skupna velikost datoteke manjša od <xliff:g id="SIZE">%2$s</xliff:g> KB"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da je skupna velikost datoteke manjša od <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da je skupna velikost datotek manjša od <xliff:g id="SIZE">%2$s</xliff:g> KB"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da je skupna velikost datotek manjša od <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahteva, da je skupna velikost datotek manjša od <xliff:g id="SIZE">%2$s</xliff:g> GB"</string>
     <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"Ta aplikacija"</string>
 </resources>

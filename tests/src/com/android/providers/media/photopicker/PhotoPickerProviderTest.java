@@ -18,6 +18,7 @@ package com.android.providers.media.photopicker;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeTrue;
 
 import android.content.Context;
@@ -160,6 +161,11 @@ public class PhotoPickerProviderTest {
 
     @Test
     public void testSearchServiceDisconnectsAfterDelay() {
+        // Skip the test if there are no valid implementation of SearchMediaService
+        String packageForSearchMediaService =
+                MediaStore.getPackageForSearchMediaService(mIsolatedContext.getContentResolver());
+        assumeFalse(packageForSearchMediaService.isEmpty());
+
         Bundle extras = new Bundle();
         extras.putInt(CloudMediaProviderContract.EXTRA_PAGE_SIZE, 10);
         mPhotoPickerProvider.onSearchMedia("test", extras, null);

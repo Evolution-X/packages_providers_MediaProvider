@@ -34,5 +34,4 @@
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"Koppel om jou foto’s en video’s van <xliff:g id="APP_NAME">%1$s</xliff:g> af te kies"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"Internetverbinding word vereis"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"Vee uit"</string>
-    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"Kan nie soek nie. Geen internetverbinding nie."</string>
 </resources>
