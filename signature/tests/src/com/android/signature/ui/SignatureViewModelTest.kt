@@ -220,6 +220,45 @@ class SignatureViewModelTest {
         }
 
     @Test
+    fun setUploadedImage_updatesState() =
+        runTest {
+            assertNull(viewModel.uploadedImage.value)
+
+            viewModel.setUploadedImage(bitmap)
+            assertEquals(bitmap, viewModel.uploadedImage.value)
+
+            viewModel.setUploadedImage(null)
+            assertNull(viewModel.uploadedImage.value)
+        }
+
+    @Test
+    fun clearCreateSignatureState_clearsAllState() =
+        runTest {
+            viewModel.setSelectedTabIndex(2)
+            viewModel.setTypedText("Hello")
+            viewModel.setDrawingPaths(
+                listOf(
+                    PathState(
+                        androidx.compose.ui.graphics
+                            .Path(),
+                        androidx.compose.ui.graphics.Color.Black,
+                        5f,
+                    ),
+                ),
+            )
+            viewModel.setSelectedFont(SignatureFont("Font", FontFamily.Default, Typeface.DEFAULT))
+            viewModel.setUploadedImage(bitmap)
+
+            viewModel.clearCreateSignatureState()
+
+            assertEquals(0, viewModel.selectedTabIndex.value)
+            assertEquals("", viewModel.typedText.value)
+            assertEquals(emptyList<PathState>(), viewModel.drawingPaths.value)
+            assertNull(viewModel.selectedFont.value)
+            assertNull(viewModel.uploadedImage.value)
+        }
+
+    @Test
     fun getSignatureUri_typedSignature_returnsCorrectUri() {
         val signature =
             Signature(
