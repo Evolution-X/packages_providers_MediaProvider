@@ -51,7 +51,6 @@
     <string name="signature_draw_hint" msgid="1312226853855388293">"Draw your signature in this area"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
     <string name="error_save_signature" msgid="1348842158559996845">"Failed to save signature"</string>
-    <!-- no translation found for error_max_signatures_reached (8996308394883219616) -->
-    <skip />
+    <string name="error_max_signatures_reached" msgid="8996308394883219616">"Maximum number of signatures (%1$d) reached."</string>
     <string name="signature_preview_default" msgid="1502538040023384495">"Signature"</string>
 </resources>

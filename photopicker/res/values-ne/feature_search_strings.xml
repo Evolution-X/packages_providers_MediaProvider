@@ -26,16 +26,13 @@
     <string name="photopicker_search_result_empty_state_body" msgid="1732249539645056618">"उस्तै शब्दहरू खोजी हेर्नुहोस्"</string>
     <string name="photopicker_search_suggestions_text" msgid="1758802235973720586">"सुझावहरू"</string>
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"खोज गर्ने सुविधा अफ गरिएको छ।"</string>
-    <!-- no translation found for photopicker_search_result_empty_state_message_when_local_search_disabled (6417755971601455474) -->
-    <skip />
-    <!-- no translation found for photopicker_search_result_empty_state_message_when_local_search_enabled (5992947606525069374) -->
-    <skip />
+    <string name="photopicker_search_result_empty_state_message_when_local_search_disabled" msgid="6417755971601455474">"उस्तै शब्दहरू खोजी हेर्नुहोस्।\n\nब्याकअप गरिएका फोटो तथा भिडियोहरू मात्र तपाईंका खोज परिणाममा देखिने छन्।"</string>
+    <string name="photopicker_search_result_empty_state_message_when_local_search_enabled" msgid="5992947606525069374">"उस्तै शब्दहरू खोजी हेर्नुहोस्"</string>
     <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> खोज्नुहोस्"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"<xliff:g id="PROVIDER_NAME">%1$s</xliff:g> मार्फत खोज्नुहोस्"</string>
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"खोजका परिणामहरूको ग्रिड"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"<xliff:g id="APP_NAME">%1$s</xliff:g> मा भएका आफ्ना फोटो तथा भिडियोहरू चयन गर्न कनेक्ट गर्नुहोस्"</string>
     <string name="photopicker_banner_search_result_no_network_title" msgid="5432357373862633740">"इन्टरनेट कनेक्सन चाहिन्छ"</string>
     <string name="photopicker_history_suggestion_delete_text" msgid="3014988744228807747">"मेटाउनुहोस्"</string>
-    <!-- no translation found for photopicker_no_network_search_disabled_hint (2712043017740938788) -->
-    <skip />
+    <string name="photopicker_no_network_search_disabled_hint" msgid="2712043017740938788">"खोज्न सकिएन। इन्टरनेट छैन।"</string>
 </resources>

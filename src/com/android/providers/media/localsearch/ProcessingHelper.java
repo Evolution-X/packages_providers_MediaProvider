@@ -138,6 +138,7 @@ public class ProcessingHelper implements AutoCloseable {
     final Map<Integer, Integer> mProcessingRequestedPerMediaType;
     final DatabaseHelper mExternalDatabase;
     final MediaLocationResolver mLocationResolver;
+    final MetadataLabelResolver mMetadataLabelResolver;
     final AppSearchDbManager mAppSearchDbManager;
     SharedPreferences mPrefs;
     private final Context mContext;
@@ -171,6 +172,7 @@ public class ProcessingHelper implements AutoCloseable {
         mExternalDatabase = helper;
         mLocationResolver = MediaLocationResolver.getMediaLocationResolver(context, executor)
                 .orElse(null);
+        mMetadataLabelResolver = new MetadataLabelResolver(context);
         mAppSearchDbManager = new AppSearchDbManager(context);
         mPrefs = context.getSharedPreferences(MEDIAPROVIDER_PREFS, Context.MODE_PRIVATE);
     }
@@ -574,7 +576,7 @@ public class ProcessingHelper implements AutoCloseable {
 
                         // 3. Generate metadata labels for all files
                         Map<Long, String> fileIdToMetadataLabelMap =
-                                MetadataLabelResolver.generateMetadataLabels(mediaInfos);
+                                mMetadataLabelResolver.generateMetadataLabels(mediaInfos);
 
                         List<MediaItem> mediaItemsToInsert = new ArrayList<>();
                         long updatedGenModified = lastProcessedGenModifiedForMetadata;
