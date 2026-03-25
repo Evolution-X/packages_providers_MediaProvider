@@ -20,6 +20,7 @@ import static com.android.providers.media.localsearch.MediaProcessingStatus.MEDI
 import static com.android.providers.media.localsearch.MediaProcessingStatus.STATUS_COMPLETED;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_LOCATION_LABEL;
 import static com.android.providers.media.localsearch.ProcessingHelper.LAST_GEN_MODIFIED_WITH_METADATA_LABEL;
+import static com.android.providers.media.localsearch.ProcessingUtils.isDefaultSearchMediaServiceSupported;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -78,6 +79,11 @@ public class ProcessingHelperTest {
         Context context = InstrumentationRegistry.getTargetContext();
         mIsolatedContext = new IsolatedContext(context, "test", /*asFuseThread*/ false);
 
+        // Media processing is only required if we are using default search service.
+        // Devices on which default search service is disabled or some other service
+        // is used should not run these tests
+        assumeTrue(isDefaultSearchMediaServiceSupported(mIsolatedContext));
+
         mDatabaseHelper = mIsolatedContext.getExternalDatabase();
 
         try {
@@ -98,6 +104,10 @@ public class ProcessingHelperTest {
 
     @After
     public void tearDown() throws Exception {
+        if (!isDefaultSearchMediaServiceSupported(mIsolatedContext)) {
+            return;
+        }
+
         if (mAppSearchDbManager != null) {
             deleteAllAppSearchDocuments();
             mAppSearchDbManager.disconnect();
