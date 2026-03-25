@@ -44,8 +44,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,10 +55,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import com.android.signature.R
 import com.android.signature.data.Signature
+import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.common.DeleteSignatureDialog
 import com.android.signature.ui.common.EmptyState
 import com.android.signature.ui.common.SignatureContent
-import com.android.signature.logging.SignatureEventLogger
 
 /**
  * Composable function that displays the Settings screen.
@@ -78,15 +76,14 @@ fun SettingsScreen(
     onNavigateUp: () -> Unit,
 ) {
     val signatures by viewModel.signatures.collectAsState()
-    var signatureToDelete by remember { mutableStateOf<Signature?>(null) }
+    val signatureToDelete by viewModel.signatureToDelete.collectAsState()
     val density = LocalDensity.current
 
     // Show confirmation dialog when a signature is selected for deletion
     signatureToDelete?.let { signature ->
         DeleteSignatureDialog(onConfirm = {
             viewModel.deleteSignature(signature, SignatureEventLogger.Screen.SETTINGS)
-            signatureToDelete = null
-        }, onDismiss = { signatureToDelete = null })
+        }, onDismiss = { viewModel.setSignatureToDelete(null) })
     }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.surfaceContainerLow, topBar = {
@@ -193,7 +190,7 @@ fun SettingsScreen(
                                 bottomStart = bottomRadius,
                                 bottomEnd = bottomRadius,
                             ),
-                        onDelete = { signatureToDelete = signature },
+                        onDelete = { viewModel.setSignatureToDelete(signature) },
                     )
                 }
             }

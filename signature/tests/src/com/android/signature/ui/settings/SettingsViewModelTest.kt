@@ -30,6 +30,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito
@@ -38,7 +39,6 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
-
     private lateinit var signatureDao: SignatureDao
     private lateinit var eventLogger: SignatureEventLogger
     private lateinit var repository: SignatureRepository
@@ -61,27 +61,48 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun signatures_initiallyEmpty() = runTest {
-        val signatures = viewModel.signatures.first()
-        assertEquals(emptyList<Signature>(), signatures)
-    }
+    fun signatures_initiallyEmpty() =
+        runTest {
+            val signatures = viewModel.signatures.first()
+            assertEquals(emptyList<Signature>(), signatures)
+        }
 
     @Test
-    fun signatures_updatesFromRepository() = runTest {
-        val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
-        signaturesFlow.emit(listOf(signature))
+    fun signatures_updatesFromRepository() =
+        runTest {
+            val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
+            signaturesFlow.emit(listOf(signature))
 
-        val signatures = viewModel.signatures.first()
-        assertEquals(listOf(signature), signatures)
-    }
+            val signatures = viewModel.signatures.first()
+            assertEquals(listOf(signature), signatures)
+        }
 
     @Test
-    fun deleteSignature_delegatesToRepository() = runTest {
-        val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
+    fun deleteSignature_delegatesToRepository() =
+        runTest {
+            val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
 
-        viewModel.deleteSignature(signature, SignatureEventLogger.Screen.SETTINGS)
+            viewModel.setSignatureToDelete(signature)
+            viewModel.deleteSignature(signature, SignatureEventLogger.Screen.SETTINGS)
 
-        verify(signatureDao).deleteSignature(signature)
-        verify(eventLogger).logSignatureDeleted(signature.type, SignatureEventLogger.Screen.SETTINGS)
-    }
+            verify(signatureDao).deleteSignature(signature)
+            verify(eventLogger).logSignatureDeleted(
+                signature.type,
+                SignatureEventLogger.Screen.SETTINGS,
+            )
+            assertNull(viewModel.signatureToDelete.value)
+        }
+
+    @Test
+    fun setSignatureToDelete_updatesState() =
+        runTest {
+            assertNull(viewModel.signatureToDelete.value)
+
+            val signature = Signature(id = "1", type = Signature.TYPE_TYPED, textData = "Test")
+            viewModel.setSignatureToDelete(signature)
+            assertEquals(signature, viewModel.signatureToDelete.value)
+
+            viewModel.setSignatureToDelete(null)
+            assertNull(viewModel.signatureToDelete.value)
+        }
 }
