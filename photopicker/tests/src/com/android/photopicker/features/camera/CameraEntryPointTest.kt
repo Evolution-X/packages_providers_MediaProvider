@@ -21,6 +21,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.navigation.testing.TestNavHostController
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.android.photopicker.R
@@ -28,6 +29,7 @@ import com.android.photopicker.core.configuration.LocalPhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerConfiguration
 import com.android.photopicker.core.configuration.PhotopickerFlags
 import com.android.photopicker.core.configuration.PhotopickerRuntimeEnv
+import com.android.photopicker.core.navigation.LocalNavController
 import com.android.photopicker.core.theme.PhotopickerTheme
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -38,6 +40,8 @@ import org.junit.runner.RunWith
 class CameraEntryPointTest {
 
     @get:Rule val composeTestRule = createComposeRule()
+    private val navController: TestNavHostController =
+        TestNavHostController(InstrumentationRegistry.getInstrumentation().context)
 
     private val testConfig =
         PhotopickerConfiguration(
@@ -52,7 +56,10 @@ class CameraEntryPointTest {
         val resources = InstrumentationRegistry.getInstrumentation().context.resources
         val contentDescription = resources.getString(R.string.photopicker_open_camera_option)
         composeTestRule.setContent {
-            CompositionLocalProvider(LocalPhotopickerConfiguration provides testConfig) {
+            CompositionLocalProvider(
+                LocalPhotopickerConfiguration provides testConfig,
+                LocalNavController provides navController,
+            ) {
                 PhotopickerTheme(config = testConfig) {
                     CameraEntryPointButton(isCameraAvailable = true)
                 }
@@ -68,7 +75,10 @@ class CameraEntryPointTest {
         val resources = InstrumentationRegistry.getInstrumentation().context.resources
         val contentDescription = resources.getString(R.string.photopicker_open_camera_option)
         composeTestRule.setContent {
-            CompositionLocalProvider(LocalPhotopickerConfiguration provides testConfig) {
+            CompositionLocalProvider(
+                LocalPhotopickerConfiguration provides testConfig,
+                LocalNavController provides navController,
+            ) {
                 PhotopickerTheme(config = testConfig) {
                     CameraEntryPointButton(isCameraAvailable = false)
                 }
