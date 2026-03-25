@@ -101,6 +101,7 @@ android_app {
     certificate: "media",
     privileged: true,
     privapp_allowlist: ":privapp_allowlist_com.android.photopicker.xml",
+    preinstall_allowlist: ":preinstalled-packages-com.android.photopicker.xml",
     sdk_version: "module_current",
     min_sdk_version: "30",
     apex_available: [
@@ -122,4 +123,9 @@ android_library {
     manifest: "AndroidManifest.xml",
     sdk_version: "module_current",
     min_sdk_version: "30",
+}
+
+filegroup {
+    name: "preinstalled-packages-com.android.photopicker.xml",
+    srcs: ["sysconfig/preinstalled-packages-com.android.photopicker.xml"],
 }
