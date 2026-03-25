@@ -274,7 +274,10 @@ class SignatureViewModelTest {
             assertEquals("Test", savedSignature.textData)
             assertEquals("Font", savedSignature.fontName)
 
-            verify(eventLogger).logSignatureSaveDuration(any(), org.mockito.kotlin.eq(Signature.TYPE_TYPED))
+            verify(eventLogger).logSignatureSaveDuration(
+                any(),
+                org.mockito.kotlin.eq(Signature.TYPE_TYPED),
+            )
         }
 
     @Test
@@ -292,7 +295,10 @@ class SignatureViewModelTest {
             val savedSignature = captor.firstValue
             assertEquals(Signature.TYPE_DRAWN, savedSignature.type)
 
-            verify(eventLogger).logSignatureSaveDuration(any(), org.mockito.kotlin.eq(Signature.TYPE_DRAWN))
+            verify(eventLogger).logSignatureSaveDuration(
+                any(),
+                org.mockito.kotlin.eq(Signature.TYPE_DRAWN),
+            )
         }
 
     @Test
@@ -303,8 +309,8 @@ class SignatureViewModelTest {
                 whenever(signatureDao.insertSignature(any())).thenReturn(Unit)
             }
 
-            // Use a larger bitmap to better test compression
-            val largeBitmap = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+            // Use a bitmap larger than MAX_IMAGE_DIMENSION (512) to test downscaling
+            val largeBitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888)
 
             viewModel.saveUploadedSignature(largeBitmap)
 
@@ -322,8 +328,10 @@ class SignatureViewModelTest {
                     savedSignature.imageData!!.size,
                 )
             assertNotNull(decodedBitmap)
-            assertEquals(largeBitmap.width, decodedBitmap.width)
-            assertEquals(largeBitmap.height, decodedBitmap.height)
+
+            // The image should be scaled down to the MAX_IMAGE_DIMENSION (512)
+            assertEquals(512, decodedBitmap.width)
+            assertEquals(512, decodedBitmap.height)
 
             // For a simple bitmap, PNG compression should be effective
             val rawSize = largeBitmap.byteCount
@@ -332,7 +340,10 @@ class SignatureViewModelTest {
                 savedSignature.imageData!!.size < rawSize,
             )
 
-            verify(eventLogger).logSignatureSaveDuration(any(), org.mockito.kotlin.eq(Signature.TYPE_UPLOADED))
+            verify(eventLogger).logSignatureSaveDuration(
+                any(),
+                org.mockito.kotlin.eq(Signature.TYPE_UPLOADED),
+            )
         }
 
     @Test

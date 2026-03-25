@@ -56,3 +56,25 @@ fun createBitmapFromText(
     canvas.drawText(text, 0f, baseline, paint)
     return image
 }
+
+/**
+ * Scales down a bitmap if its width or height exceeds the maximum dimension.
+ *
+ * @param bitmap The bitmap to scale down.
+ * @param maxDimension The maximum allowed dimension (width or height).
+ * @return A new scaled [Bitmap] or the original [Bitmap] if it's already within the limits.
+ */
+@VisibleForTesting
+fun scaleDownBitmap(
+    bitmap: Bitmap,
+    maxDimension: Float,
+): Bitmap {
+    val maxDim = maxOf(bitmap.width, bitmap.height)
+    if (maxDim <= maxDimension) {
+        return bitmap
+    }
+    val scale = maxDimension / maxDim
+    val newWidth = (bitmap.width * scale).toInt().coerceAtLeast(1)
+    val newHeight = (bitmap.height * scale).toInt().coerceAtLeast(1)
+    return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+}

@@ -16,9 +16,12 @@
 
 package com.android.signature.ui.util
 
+import android.graphics.Bitmap
 import android.graphics.Typeface
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,7 +29,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class BitmapUtilsTest {
-
     @Test
     fun createBitmapFromText_createsValidBitmap() {
         val text = "Test Signature"
@@ -49,5 +51,26 @@ class BitmapUtilsTest {
         assertThrows(IllegalArgumentException::class.java) {
             createBitmapFromText(text, typeface, textSize)
         }
+    }
+
+    @Test
+    fun scaleDownBitmap_exceedsMaxDimension_scalesDown() {
+        val originalBitmap = Bitmap.createBitmap(1000, 500, Bitmap.Config.ARGB_8888)
+        val maxDimension = 500f
+
+        val scaledBitmap = scaleDownBitmap(originalBitmap, maxDimension)
+
+        assertEquals(500, scaledBitmap.width)
+        assertEquals(250, scaledBitmap.height)
+    }
+
+    @Test
+    fun scaleDownBitmap_withinMaxDimension_returnsOriginal() {
+        val originalBitmap = Bitmap.createBitmap(400, 300, Bitmap.Config.ARGB_8888)
+        val maxDimension = 500f
+
+        val scaledBitmap = scaleDownBitmap(originalBitmap, maxDimension)
+
+        assertSame(originalBitmap, scaledBitmap)
     }
 }
