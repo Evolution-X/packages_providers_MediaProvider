@@ -102,16 +102,18 @@ fun CreateSignatureScreen(
                 onSignatureCreated(newSignature)
             } catch (e: Exception) {
                 // Safely type-check the exception
-                val errorType = when (e) {
-                    is SignatureLimitException -> {
-                        snackbarHostState.showSnackbar(errorLimitReachedMessage)
-                        SignatureEventLogger.AppErrorType.DB_WRITE_FAILED
+                val errorType =
+                    when (e) {
+                        is SignatureLimitException -> {
+                            snackbarHostState.showSnackbar(errorLimitReachedMessage)
+                            SignatureEventLogger.AppErrorType.DB_WRITE_FAILED
+                        }
+
+                        else -> {
+                            snackbarHostState.showSnackbar(errorSavingMessage)
+                            SignatureEventLogger.AppErrorType.DB_WRITE_FAILED
+                        }
                     }
-                    else -> {
-                        snackbarHostState.showSnackbar(errorSavingMessage)
-                        SignatureEventLogger.AppErrorType.DB_WRITE_FAILED
-                    }
-                }
 
                 // We'll log the specific tab index as the "type" since the signature failed to save
                 val failedType =
@@ -232,13 +234,20 @@ fun CreateSignatureScreen(
                     }
 
                     2 -> {
-                        UploadTab(onSave = { bitmap ->
-                            launchSaveOperation { viewModel.saveUploadedSignature(bitmap) }
-                        }, onCancel = onCancel, onShowError = { message ->
-                            scope.launch {
-                                snackbarHostState.showSnackbar(message)
-                            }
-                        })
+                        val uploadedImage by viewModel.uploadedImage.collectAsState()
+                        UploadTab(
+                            bitmap = uploadedImage,
+                            onBitmapChanged = { viewModel.setUploadedImage(it) },
+                            onSave = { bitmap ->
+                                launchSaveOperation { viewModel.saveUploadedSignature(bitmap) }
+                            },
+                            onCancel = onCancel,
+                            onShowError = { message ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(message)
+                                }
+                            },
+                        )
                     }
                 }
             }

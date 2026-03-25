@@ -115,6 +115,13 @@ class SignatureViewModel
          */
         val selectedFont: StateFlow<SignatureFont?> = _selectedFont.asStateFlow()
 
+        private val _uploadedImage = MutableStateFlow<Bitmap?>(null)
+
+        /**
+         * The currently uploaded image in the Upload tab.
+         */
+        val uploadedImage: StateFlow<Bitmap?> = _uploadedImage.asStateFlow()
+
         // UI State for SignaturePickerScreen
         private val _newSignatureId = MutableStateFlow<String?>(null)
 
@@ -183,6 +190,13 @@ class SignatureViewModel
         }
 
         /**
+         * Sets the uploaded image.
+         */
+        fun setUploadedImage(bitmap: Bitmap?) {
+            _uploadedImage.value = bitmap
+        }
+
+        /**
          * Clears the state related to signature creation.
          */
         fun clearCreateSignatureState() {
@@ -190,6 +204,7 @@ class SignatureViewModel
             _drawingPaths.value = emptyList()
             _typedText.value = ""
             _selectedFont.value = null
+            _uploadedImage.value = null
         }
 
         /**
