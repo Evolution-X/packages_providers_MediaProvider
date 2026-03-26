@@ -23,8 +23,10 @@ import com.android.signature.data.SignatureRepository
 import com.android.signature.logging.SignatureEventLogger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -43,6 +45,13 @@ class SettingsViewModel
     ) : ViewModel() {
         private val creationTime = System.currentTimeMillis()
         private var hasLoggedInitialLoad = false // Track the first emission
+
+        private val _signatureToDelete = MutableStateFlow<Signature?>(null)
+
+        /**
+         * The signature currently selected for deletion, triggering the confirmation dialog.
+         */
+        val signatureToDelete: StateFlow<Signature?> = _signatureToDelete.asStateFlow()
 
         /**
          * A stream of all signatures observed from the database.
@@ -71,6 +80,13 @@ class SettingsViewModel
                 )
 
         /**
+         * Sets the signature to be deleted.
+         */
+        fun setSignatureToDelete(signature: Signature?) {
+            _signatureToDelete.value = signature
+        }
+
+        /**
          * Deletes a given signature from the data source.
          *
          * @param signature The signature to be deleted.
@@ -82,6 +98,7 @@ class SettingsViewModel
             viewModelScope.launch {
                 val start = System.currentTimeMillis()
                 repository.deleteSignature(signature)
+                _signatureToDelete.value = null
                 val duration = System.currentTimeMillis() - start
                 eventLogger.logSignatureDeleteDuration(duration, screen)
                 eventLogger.logSignatureDeleted(signature.type, screen)
