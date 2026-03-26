@@ -41,11 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,64 +66,67 @@ private const val IMAGE_MIME_TYPE = "image/*"
  * Composable for the "Upload" tab in the Create Signature screen.
  * Allows the user to select an image from the gallery to use as a signature.
  *
+ * @param bitmap The current bitmap selected by the user.
+ * @param onBitmapChanged Callback invoked when a new bitmap is selected or cleared.
  * @param onSave Callback invoked when the user saves the uploaded image.
  * @param onCancel Callback invoked when the user cancels.
  * @param onShowError Callback invoked when an error occurs (e.g. image loading failed).
  */
 @Composable
 internal fun UploadTab(
+    bitmap: Bitmap?,
+    onBitmapChanged: (Bitmap?) -> Unit,
     onSave: (Bitmap) -> Unit,
     onCancel: () -> Unit,
-    onShowError: (String) -> Unit
+    onShowError: (String) -> Unit,
 ) {
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val errorSizeLimit = stringResource(R.string.error_image_size_limit, MAX_IMAGE_SIZE_MB)
     val errorLoad = stringResource(R.string.error_image_load)
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            scope.launch {
-                // Check file size (limit to 2MB)
-                val size = withContext(Dispatchers.IO) { getFileSize(context, it) }
-                if (size > MAX_IMAGE_SIZE_BYTES) {
-                    onShowError(errorSizeLimit)
-                    return@launch
-                }
-
-                try {
-                    val loadedBitmap = withContext(Dispatchers.IO) {
-                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-                            context.contentResolver.openInputStream(it)?.use { stream ->
-                                BitmapFactory.decodeStream(stream)
-                            }
-                        } else {
-                            val source = ImageDecoder.createSource(context.contentResolver, it)
-                            ImageDecoder.decodeBitmap(source)
-                        }
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri ->
+            uri?.let {
+                scope.launch {
+                    // Check file size (limit to 2MB)
+                    val size = withContext(Dispatchers.IO) { getFileSize(context, it) }
+                    if (size > MAX_IMAGE_SIZE_BYTES) {
+                        onShowError(errorSizeLimit)
+                        return@launch
                     }
-                    bitmap = loadedBitmap
-                } catch (e: IOException) {
-                    onShowError(errorLoad)
-                } catch (e: SecurityException) {
-                    onShowError(errorLoad)
+
+                    try {
+                        val loadedBitmap =
+                            withContext(Dispatchers.IO) {
+                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                                    context.contentResolver.openInputStream(it)?.use { stream ->
+                                        BitmapFactory.decodeStream(stream)
+                                    }
+                                } else {
+                                    val source = ImageDecoder.createSource(context.contentResolver, it)
+                                    ImageDecoder.decodeBitmap(source)
+                                }
+                            }
+                        onBitmapChanged(loadedBitmap)
+                    } catch (e: IOException) {
+                        onShowError(errorLoad)
+                    } catch (e: SecurityException) {
+                        onShowError(errorLoad)
+                    }
                 }
             }
         }
-    }
 
     Column(
         Modifier.fillMaxSize().padding(dimensionResource(R.dimen.padding_medium)),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         UploadPreview(
             bitmap = bitmap,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+            modifier = Modifier.fillMaxWidth().weight(1f),
         )
 
         Spacer(modifier = Modifier.height(dimensionResource(R.dimen.padding_medium)))
@@ -136,34 +135,39 @@ internal fun UploadTab(
             hasImage = bitmap != null,
             onSelectImage = { launcher.launch(IMAGE_MIME_TYPE) },
             onCancel = onCancel,
-            onSave = { bitmap?.let { onSave(it) } }
+            onSave = { bitmap?.let { onSave(it) } },
         )
     }
 }
 
 @Composable
-private fun UploadPreview(bitmap: Bitmap?, modifier: Modifier = Modifier) {
+private fun UploadPreview(
+    bitmap: Bitmap?,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = modifier
-            .padding(dimensionResource(R.dimen.padding_medium))
-            .background(
-                Color.White, RoundedCornerShape(dimensionResource(R.dimen.corner_radius))
-            )
-            .clip(RoundedCornerShape(dimensionResource(R.dimen.corner_radius))),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .padding(dimensionResource(R.dimen.padding_medium))
+                .background(
+                    Color.White,
+                    RoundedCornerShape(dimensionResource(R.dimen.corner_radius)),
+                ).clip(RoundedCornerShape(dimensionResource(R.dimen.corner_radius))),
+        contentAlignment = Alignment.Center,
     ) {
         bitmap?.let {
             Image(
                 bitmap = it.asImageBitmap(),
-                contentDescription = stringResource(
-                    R.string.uploaded_signature_content_description
-                ),
+                contentDescription =
+                    stringResource(
+                        R.string.uploaded_signature_content_description,
+                    ),
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.Fit,
             )
         } ?: Text(
             stringResource(R.string.no_image_selected),
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
         )
     }
 }
@@ -173,23 +177,26 @@ private fun UploadActions(
     hasImage: Boolean,
     onSelectImage: () -> Unit,
     onCancel: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End // Align buttons to the end
+        horizontalArrangement = Arrangement.End, // Align buttons to the end
     ) {
         if (!hasImage) {
             // When no image, show Select Image and Cancel
             OutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.padding(end = dimensionResource(R.dimen.padding_small)),
-                border = BorderStroke(
-                    dimensionResource(R.dimen.border_width), MaterialTheme.colorScheme.primary
-                ),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
+                border =
+                    BorderStroke(
+                        dimensionResource(R.dimen.border_width),
+                        MaterialTheme.colorScheme.primary,
+                    ),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
             ) {
                 Text(stringResource(R.string.cancel_action))
             }
@@ -201,24 +208,30 @@ private fun UploadActions(
             OutlinedButton(
                 onClick = onSelectImage,
                 modifier = Modifier.padding(end = dimensionResource(R.dimen.padding_small)),
-                border = BorderStroke(
-                    dimensionResource(R.dimen.border_width), MaterialTheme.colorScheme.primary
-                ),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
+                border =
+                    BorderStroke(
+                        dimensionResource(R.dimen.border_width),
+                        MaterialTheme.colorScheme.primary,
+                    ),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
             ) {
                 Text(stringResource(R.string.back_action))
             }
             OutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.padding(end = dimensionResource(R.dimen.padding_small)),
-                border = BorderStroke(
-                    dimensionResource(R.dimen.border_width), MaterialTheme.colorScheme.primary
-                ),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
+                border =
+                    BorderStroke(
+                        dimensionResource(R.dimen.border_width),
+                        MaterialTheme.colorScheme.primary,
+                    ),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
             ) {
                 Text(stringResource(R.string.cancel_action))
             }

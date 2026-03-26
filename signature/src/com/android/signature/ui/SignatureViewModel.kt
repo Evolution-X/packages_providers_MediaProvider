@@ -25,6 +25,7 @@ import com.android.signature.data.SignatureFont
 import com.android.signature.data.SignatureRepository
 import com.android.signature.logging.SignatureEventLogger
 import com.android.signature.ui.create.PathState
+import com.android.signature.ui.util.scaleDownBitmap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.ByteArrayOutputStream
 import javax.inject.Inject
@@ -47,7 +48,7 @@ class SignatureViewModel
     @Inject
     constructor(
         private val repository: SignatureRepository,
-        val eventLogger: SignatureEventLogger
+        val eventLogger: SignatureEventLogger,
     ) : ViewModel() {
         companion object {
             const val MAX_SIGNATURES = 5
@@ -56,6 +57,7 @@ class SignatureViewModel
             private const val PARAM_FONT = "font"
             private const val PARAM_PATHS = "paths"
             private const val COMPRESSION_QUALITY = 100
+            private const val MAX_IMAGE_DIMENSION = 512f
         }
 
         private val creationTime = System.currentTimeMillis()
@@ -65,15 +67,19 @@ class SignatureViewModel
          * It is collected by the UI to display the signatures.
          */
         val signatures: StateFlow<List<Signature>> =
-            repository.getAllSignatures()
+            repository
+                .getAllSignatures()
                 .onEach {
                     // Log the duration to load the signatures for the first time
                     if (it.isNotEmpty() && _signatureToDelete.value == null) {
                         val duration = System.currentTimeMillis() - creationTime
-                        eventLogger.logSignaturesLoadDuration(duration, it.size, SignatureEventLogger.Screen.PICKER)
+                        eventLogger.logSignaturesLoadDuration(
+                            duration,
+                            it.size,
+                            SignatureEventLogger.Screen.PICKER,
+                        )
                     }
-                }
-                .stateIn(
+                }.stateIn(
                     scope = viewModelScope,
                     // Keep the flow active for 5 seconds after the last collector disappears.
                     started = SharingStarted.WhileSubscribed(5000L),
@@ -108,6 +114,13 @@ class SignatureViewModel
          * The currently selected font in the Type tab.
          */
         val selectedFont: StateFlow<SignatureFont?> = _selectedFont.asStateFlow()
+
+        private val _uploadedImage = MutableStateFlow<Bitmap?>(null)
+
+        /**
+         * The currently uploaded image in the Upload tab.
+         */
+        val uploadedImage: StateFlow<Bitmap?> = _uploadedImage.asStateFlow()
 
         // UI State for SignaturePickerScreen
         private val _newSignatureId = MutableStateFlow<String?>(null)
@@ -177,6 +190,13 @@ class SignatureViewModel
         }
 
         /**
+         * Sets the uploaded image.
+         */
+        fun setUploadedImage(bitmap: Bitmap?) {
+            _uploadedImage.value = bitmap
+        }
+
+        /**
          * Clears the state related to signature creation.
          */
         fun clearCreateSignatureState() {
@@ -184,6 +204,7 @@ class SignatureViewModel
             _drawingPaths.value = emptyList()
             _typedText.value = ""
             _selectedFont.value = null
+            _uploadedImage.value = null
         }
 
         /**
@@ -203,7 +224,10 @@ class SignatureViewModel
         /**
          * Deletes a signature from the repository.
          */
-        fun deleteSignature(signature: Signature, screen: SignatureEventLogger.Screen) {
+        fun deleteSignature(
+            signature: Signature,
+            screen: SignatureEventLogger.Screen,
+        ) {
             viewModelScope.launch {
                 val start = System.currentTimeMillis()
                 repository.deleteSignature(signature)
@@ -293,7 +317,8 @@ class SignatureViewModel
             val start = System.currentTimeMillis()
             checkSignatureLimit()
             val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.PNG, COMPRESSION_QUALITY, stream)
+            val scaledBitmap = scaleDownBitmap(bitmap, MAX_IMAGE_DIMENSION)
+            scaledBitmap.compress(Bitmap.CompressFormat.PNG, COMPRESSION_QUALITY, stream)
             val signature =
                 Signature(
                     type = Signature.TYPE_UPLOADED,

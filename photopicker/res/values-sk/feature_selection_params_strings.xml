@@ -17,16 +17,16 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá menšie ako <xliff:g id="SIZE">%2$s</xliff:g> kB"</string>
-    <string name="photopicker_selection_max_media_item_size_error_mb" msgid="5804873140280156101">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá menšie ako <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
-    <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá menšie ako <xliff:g id="SIZE">%2$s</xliff:g> GB"</string>
-    <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby boli videá kratšie ako <xliff:g id="DURATION">%2$s</xliff:g> sek."</string>
-    <string name="photopicker_selection_min_video_duration_error" msgid="5355208428974660073">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby boli videá dlhšie ako <xliff:g id="DURATION">%2$s</xliff:g> sek."</string>
-    <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá s nižším rozlíšením"</string>
-    <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá s vyšším rozlíšením"</string>
-    <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"<xliff:g id="APP_NAME">%1$s</xliff:g> nepodporuje tento typ súboru"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby celková veľkosť súboru bola menšia ako <xliff:g id="SIZE">%2$s</xliff:g> kB"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby bola celková veľkosť súboru menšia ako <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"<xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby bola celková veľkosť súboru menšia ako <xliff:g id="SIZE">%2$s</xliff:g> GB"</string>
+    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá menšie ako <xliff:g id="SIZE">%2$s</xliff:g> kB"</string>
+    <string name="photopicker_selection_max_media_item_size_error_mb" msgid="5804873140280156101">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá menšie ako <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
+    <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá menšie ako <xliff:g id="SIZE">%2$s</xliff:g> GB"</string>
+    <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby mali videá do <xliff:g id="DURATION">%2$s</xliff:g> sek."</string>
+    <string name="photopicker_selection_min_video_duration_error" msgid="5355208428974660073">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby mali videá viac ako <xliff:g id="DURATION">%2$s</xliff:g> sek."</string>
+    <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá s nižším rozlíšením"</string>
+    <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje fotky a videá s vyšším rozlíšením"</string>
+    <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> nepodporuje tento typ súboru"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby celková veľkosť súboru bola menšia ako <xliff:g id="SIZE">%2$s</xliff:g> kB"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby bola celková veľkosť súboru menšia ako <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"Aplikácia <xliff:g id="APP_NAME">%1$s</xliff:g> vyžaduje, aby bola celková veľkosť súboru menšia ako <xliff:g id="SIZE">%2$s</xliff:g> GB"</string>
     <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"Táto aplikácia"</string>
 </resources>

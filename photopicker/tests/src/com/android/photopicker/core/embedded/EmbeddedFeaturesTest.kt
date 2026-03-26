@@ -62,6 +62,7 @@ import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.unit.height
 import androidx.test.filters.SdkSuppress
 import com.android.modules.utils.build.SdkLevel
 import com.android.photopicker.R
@@ -218,6 +219,10 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     private val USER_HANDLE_MANAGED: UserHandle
     private val USER_ID_MANAGED: Int = 10
     private val MEDIA_ITEM_CONTENT_DESCRIPTION_SUBSTRING = "taken on"
+    private val SNACKBAR_TEST_MESSAGE = "This is a test message"
+    private val SNACKBAR_POSITION_THRESHOLD_COLLAPSED = 50f
+    private val SNACKBAR_POSITION_THRESHOLD_EXPANDED = 100f
+    private val SNACKBAR_POSITION_THRESHOLD_LANDSCAPE = 100f
 
     init {
         // Create a UserHandle for a managed profile.
@@ -566,7 +571,11 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
     }
 
     @Test
-    fun testSnackbarDisplaysOnEvent() =
+    @EnableFlags(
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_API,
+        Flags.FLAG_ENABLE_PHOTOPICKER_SELECTION_PARAMS_USAGE,
+    )
+    fun testSnackbarDisplaysOnEventInCollapsedMode() =
         testScope.runTest {
             composeTestRule.setContent {
                 CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateCollapsed) {
@@ -580,15 +589,65 @@ class EmbeddedFeaturesTest : EmbeddedPhotopickerFeatureBaseTest() {
             }
             // Advance the UI clock manually to control for the fade animations on the snackbar.
             composeTestRule.mainClock.autoAdvance = false
-            val TEST_MESSAGE = "This is a test message"
-            events.get().dispatch(Event.ShowSnackbarMessage(FeatureToken.CORE.token, TEST_MESSAGE))
+            events
+                .get()
+                .dispatch(Event.ShowSnackbarMessage(FeatureToken.CORE.token, SNACKBAR_TEST_MESSAGE))
             advanceTimeBy(500)
             // Advance ui clock to allow fade in
             composeTestRule.mainClock.advanceTimeBy(2000L)
-            composeTestRule.onNode(hasText(TEST_MESSAGE)).assertIsDisplayed()
+
+            val snackbarNode = composeTestRule.onNode(hasText(SNACKBAR_TEST_MESSAGE))
+            snackbarNode.assertIsDisplayed()
+
+            // In collapsed mode, snackbar should be at the top of the picker.
+            val pickerTop = composeTestRule.onRoot().getBoundsInRoot().top
+            val snackbarTop = snackbarNode.getBoundsInRoot().top
+            assertWithMessage("Snackbar should be at the top of the collapsed picker")
+                .that(snackbarTop.value)
+                .isWithin(SNACKBAR_POSITION_THRESHOLD_COLLAPSED)
+                .of(pickerTop.value)
+
             // Advance ui clock to allow fade out
             composeTestRule.mainClock.advanceTimeBy(10_000L)
-            composeTestRule.onNode(hasText(TEST_MESSAGE)).assertIsNotDisplayed()
+            composeTestRule.onNode(hasText(SNACKBAR_TEST_MESSAGE)).assertIsNotDisplayed()
+        }
+
+    @Test
+    fun testSnackbarDisplaysOnEventInExpandedMode() =
+        testScope.runTest {
+            composeTestRule.setContent {
+                CompositionLocalProvider(LocalEmbeddedState provides testEmbeddedStateExpanded) {
+                    callEmbeddedPhotopickerApp(
+                        embeddedLifecycle = embeddedLifecycle.get(),
+                        featureManager = featureManager.get(),
+                        selection = selection.get(),
+                        events = events.get(),
+                    )
+                }
+            }
+            // Advance the UI clock manually to control for the fade animations on the snackbar.
+            composeTestRule.mainClock.autoAdvance = false
+            events
+                .get()
+                .dispatch(Event.ShowSnackbarMessage(FeatureToken.CORE.token, SNACKBAR_TEST_MESSAGE))
+            advanceTimeBy(500)
+            // Advance ui clock to allow fade in
+            composeTestRule.mainClock.advanceTimeBy(2000L)
+
+            val snackbarNode = composeTestRule.onNode(hasText(SNACKBAR_TEST_MESSAGE))
+            snackbarNode.assertIsDisplayed()
+
+            // In expanded mode, snackbar should be at the bottom of the picker.
+            val rootHeight = composeTestRule.onRoot().getBoundsInRoot().height
+            val snackbarBottom = snackbarNode.getBoundsInRoot().bottom
+            assertWithMessage("Snackbar should be at the bottom of the expanded picker")
+                .that(snackbarBottom.value)
+                .isWithin(SNACKBAR_POSITION_THRESHOLD_EXPANDED)
+                .of(rootHeight.value)
+
+            // Advance ui clock to allow fade out
+            composeTestRule.mainClock.advanceTimeBy(10_000L)
+            composeTestRule.onNode(hasText(SNACKBAR_TEST_MESSAGE)).assertIsNotDisplayed()
         }
 
     @Test
