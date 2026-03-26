@@ -178,4 +178,20 @@
     <string name="favorites_album_display_name" msgid="3533041926539268094">"Omiljeno"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"Videi"</string>
     <string name="sd_card_album_display_name" msgid="8772277114579657928">"SD kartica"</string>
+    <string name="metadata_label_image" msgid="5542914517297217849">"slika"</string>
+    <string name="metadata_label_images" msgid="5769988966653750074">"slike"</string>
+    <string name="metadata_label_photo" msgid="752239560662183633">"slika"</string>
+    <string name="metadata_label_photos" msgid="5804059253018729171">"slike"</string>
+    <string name="metadata_label_video" msgid="1681011352511431442">"video"</string>
+    <string name="metadata_label_videos" msgid="8685150696667173929">"videi"</string>
+    <string name="metadata_label_audio" msgid="3724593785685001279">"audio snimak"</string>
+    <string name="metadata_label_audios" msgid="4943837840858009245">"audio snimci"</string>
+    <string name="metadata_label_document" msgid="5011954458510109081">"dokument"</string>
+    <string name="metadata_label_documents" msgid="9177717172035306794">"dokumenti"</string>
+    <string name="metadata_label_animated" msgid="4327015383258074850">"animirano"</string>
+    <string name="metadata_label_motion_photo" msgid="8159307110423547950">"slika u pokretu"</string>
+    <string name="metadata_label_favorite" msgid="2639980508687038282">"omiljena stavka"</string>
+    <string name="metadata_label_favorites" msgid="988700440602580910">"omiljene stavke"</string>
+    <string name="metadata_label_download" msgid="241656409839042219">"preuzeta stavka"</string>
+    <string name="metadata_label_downloads" msgid="2066270411527427600">"preuzete stavke"</string>
 </resources>

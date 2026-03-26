@@ -17,16 +17,16 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass Fotos und Videos kleiner als <xliff:g id="SIZE">%2$s</xliff:g> KB sind"</string>
-    <string name="photopicker_selection_max_media_item_size_error_mb" msgid="5804873140280156101">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass Fotos und Videos kleiner als <xliff:g id="SIZE">%2$s</xliff:g> MB sind"</string>
-    <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass Fotos und Videos kleiner als <xliff:g id="SIZE">%2$s</xliff:g> GB sind"</string>
-    <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass Videos kürzer als <xliff:g id="DURATION">%2$s</xliff:g> Sekunden sind"</string>
-    <string name="photopicker_selection_min_video_duration_error" msgid="5355208428974660073">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass Videos länger als <xliff:g id="DURATION">%2$s</xliff:g> Sekunden sind"</string>
-    <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert eine niedrige Auflösung der Fotos und Videos"</string>
-    <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert eine höhere Auflösung der Fotos und Videos"</string>
+    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Fotos und Videos kleiner als <xliff:g id="SIZE">%2$s</xliff:g> KB sein"</string>
+    <string name="photopicker_selection_max_media_item_size_error_mb" msgid="5804873140280156101">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Fotos und Videos kleiner als <xliff:g id="SIZE">%2$s</xliff:g> MB sein"</string>
+    <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Fotos und Videos kleiner als <xliff:g id="SIZE">%2$s</xliff:g> GB sein"</string>
+    <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Videos kürzer als <xliff:g id="DURATION">%2$s</xliff:g> Sekunden sein"</string>
+    <string name="photopicker_selection_min_video_duration_error" msgid="5355208428974660073">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Videos länger als <xliff:g id="DURATION">%2$s</xliff:g> Sekunden sein"</string>
+    <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Fotos und Videos eine niedrigere Auflösung haben"</string>
+    <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> müssen Fotos und Videos eine höhere Auflösung haben"</string>
     <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"Dieser Dateityp wird von <xliff:g id="APP_NAME">%1$s</xliff:g> nicht unterstützt"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass die Gesamtgröße der Dateien kleiner als <xliff:g id="SIZE">%2$s</xliff:g> KB ist"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass die Gesamtgröße der Dateien kleiner als <xliff:g id="SIZE">%2$s</xliff:g> MB ist"</string>
-    <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"<xliff:g id="APP_NAME">%1$s</xliff:g> erfordert, dass die Gesamtgröße der Dateien kleiner als <xliff:g id="SIZE">%2$s</xliff:g> GB ist"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> muss die Gesamtgröße der Dateien kleiner als <xliff:g id="SIZE">%2$s</xliff:g> KB sein"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> muss die Gesamtgröße der Dateien kleiner als <xliff:g id="SIZE">%2$s</xliff:g> MB sein"</string>
+    <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"Für <xliff:g id="APP_NAME">%1$s</xliff:g> muss die Gesamtgröße der Dateien kleiner als <xliff:g id="SIZE">%2$s</xliff:g> GB sein"</string>
     <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"Diese App"</string>
 </resources>
