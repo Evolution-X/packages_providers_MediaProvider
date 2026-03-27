@@ -28,7 +28,7 @@
     <string name="photopicker_search_disabled_hint" msgid="4049451515025551462">"搜索功能已停用。"</string>
     <string name="photopicker_search_result_empty_state_message_when_local_search_disabled" msgid="6417755971601455474">"试试搜索类似字词。\n\n只有已备份的照片和视频才会显示在搜索结果中。"</string>
     <string name="photopicker_search_result_empty_state_message_when_local_search_enabled" msgid="5992947606525069374">"试试搜索类似字词"</string>
-    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"在<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>中搜索"</string>
+    <string name="photopicker_search_provider_placeholder_text" msgid="1336430915166074865">"在“<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>”中搜索"</string>
     <string name="photopicker_search_with_provider_placeholder_text" msgid="1821869425999804589">"通过<xliff:g id="PROVIDER_NAME">%1$s</xliff:g>搜索"</string>
     <string name="photopicker_search_results_grid_content_description" msgid="5033811518404524691">"搜索结果网格"</string>
     <string name="photopicker_banner_search_result_no_network_connection" msgid="1769836145678523602">"关联后即可从“<xliff:g id="APP_NAME">%1$s</xliff:g>”中选择照片和视频"</string>

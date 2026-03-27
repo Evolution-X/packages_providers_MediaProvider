@@ -28,5 +28,5 @@
     <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"A(z) <xliff:g id="APP_NAME">%1$s</xliff:g> esetén a teljes fájlméret nem haladhatja meg a(z) <xliff:g id="SIZE">%2$s</xliff:g> kB-ot"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"A(z) <xliff:g id="APP_NAME">%1$s</xliff:g> esetén a teljes fájlméret nem haladhatja meg a(z) <xliff:g id="SIZE">%2$s</xliff:g> MB-ot"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"A(z) <xliff:g id="APP_NAME">%1$s</xliff:g> esetén a teljes fájlméret nem haladhatja meg a(z) <xliff:g id="SIZE">%2$s</xliff:g> GB-ot"</string>
-    <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"Ez az alkalmazás"</string>
+    <string name="photopicker_selection_param_generic_app_label" msgid="7183699800416571898">"jelen alkalmazás"</string>
 </resources>
