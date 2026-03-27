@@ -263,9 +263,9 @@ public class ModernMediaScanner implements MediaScanner {
     private final Set<String> mDrmMimeTypes = new ArraySet<>();
 
     /**
-     * Set of MIME types that should be considered for fetching OEM metadata.
+     * Set of Media types that should be considered for fetching OEM metadata.
      */
-    private Set<String> mOemSupportedMimeTypes;
+    private volatile Set<Integer> mOemSupportedMediaTypes;
 
     /**
      * Default OemMetadataService implementation package.
@@ -1064,11 +1064,8 @@ public class ModernMediaScanner implements MediaScanner {
                 }
 
                 if (enableOemMetadata()) {
-                    if (mOemSupportedMimeTypes == null) {
-                        mOemSupportedMimeTypes = getOemSupportedMimeTypes();
-                    }
-                    if (mOemSupportedMimeTypes.contains(actualMimeType)) {
-                        // If mime type is supported by OEM
+                    if (getOemSupportedMediaTypes().contains(actualMediaType)) {
+                        // If media type is supported by OEM
                         fetchOemMetadata(op, realFile, actualMimeType);
                     }
                 }
@@ -1077,6 +1074,24 @@ public class ModernMediaScanner implements MediaScanner {
                 maybeApplyPending();
             }
             return FileVisitResult.CONTINUE;
+        }
+
+        private Set<Integer> getOemSupportedMediaTypes() {
+            Set<Integer> result = mOemSupportedMediaTypes;
+            if (result == null) {
+                synchronized (this) {
+                    result = mOemSupportedMediaTypes;
+                    if (result == null) {
+                        Set<String> oemSupportedMimeTypes = getOemSupportedMimeTypes();
+                        result = new HashSet<>();
+                        for (String mimeType : oemSupportedMimeTypes) {
+                            result.add(MimeUtils.resolveMediaType(mimeType));
+                        }
+                        mOemSupportedMediaTypes = result;
+                    }
+                }
+            }
+            return result;
         }
 
         private void fetchOemMetadata(ContentProviderOperation.Builder op, File file,
