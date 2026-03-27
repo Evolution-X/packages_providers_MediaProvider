@@ -29,6 +29,7 @@ import static android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.database.Cursor.FIELD_TYPE_BLOB;
 import static android.provider.CloudMediaProviderContract.EXTRA_ASYNC_CONTENT_PROVIDER;
+import static android.provider.CloudMediaProviderContract.MANAGE_CLOUD_MEDIA_PROVIDERS_PERMISSION;
 import static android.provider.CloudMediaProviderContract.METHOD_GET_ASYNC_CONTENT_PROVIDER;
 import static android.provider.MediaStore.EXTRA_CALLING_PACKAGE_UID;
 import static android.provider.MediaStore.EXTRA_IS_STABLE_URIS_ENABLED;
@@ -1769,6 +1770,12 @@ public class MediaProvider extends ContentProvider {
 
     @VisibleForTesting
     protected void storageNativeBootPropertyChangeListener() {
+
+        // Notify the Photopicker that DeviceConfig has changed for T+ devices.
+        Intent intent = new Intent(Intent.ACTION_MAIN);
+        if (SdkLevel.isAtLeastT()) {
+            getContext().sendBroadcast(intent, MANAGE_CLOUD_MEDIA_PROVIDERS_PERMISSION);
+        }
 
         boolean isGetContentTakeoverEnabled = false;
 

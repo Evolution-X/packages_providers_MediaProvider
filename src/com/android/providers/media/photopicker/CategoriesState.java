@@ -18,6 +18,7 @@ package com.android.providers.media.photopicker;
 
 import android.content.Context;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.providers.media.ConfigStore;
 import com.android.providers.media.flags.Flags;
 import com.android.providers.media.photopicker.sync.PickerSearchProviderClient;
@@ -43,7 +44,8 @@ public class CategoriesState {
         PickerSearchProviderClient client = PickerSearchProviderClient.create(
                 context, authority);
 
-        return mConfigStore.isModernPickerEnabled()
+        return SdkLevel.isAtLeastT()
+                && mConfigStore.isModernPickerEnabled()
                 && Flags.enablePhotopickerSearch()
                 && Flags.enableCloudMediaProviderCapabilities()
                 && client.fetchCapabilities().isMediaCategoriesEnabled();
@@ -59,7 +61,8 @@ public class CategoriesState {
         PickerSearchProviderClient client = PickerSearchProviderClient.create(
                 context, authority);
 
-        return mConfigStore.isModernPickerEnabled()
+        return SdkLevel.isAtLeastT()
+                && mConfigStore.isModernPickerEnabled()
                 && Flags.enablePhotopickerSearch()
                 && Flags.enableCloudMediaProviderCapabilities()
                 && client.fetchCapabilities().isMediaCategoriesEnabled()

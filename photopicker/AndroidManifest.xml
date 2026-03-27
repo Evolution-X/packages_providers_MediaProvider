@@ -53,9 +53,9 @@
 
     <activity
       android:name="com.android.photopicker.MainActivity"
-      android:enabled="@bool/modern_picker_enabled"
+      android:enabled="false"
       android:enableOnBackInvokedCallback="false"
-      android:exported="@bool/modern_picker_enabled"
+      android:exported="true"
       android:theme="@style/Theme.Photopicker"
       android:label="@string/photopicker_application_label"
       android:windowSoftInputMode="adjustResize"
@@ -75,9 +75,9 @@
 
     <activity-alias
         android:name="com.android.photopicker.PhotopickerGetContentActivity"
-        android:enabled="@bool/modern_picker_enabled"
+        android:enabled="false"
         android:targetActivity="com.android.photopicker.MainActivity"
-        android:exported="@bool/modern_picker_enabled"
+        android:exported="true"
         android:excludeFromRecents="true">
         <intent-filter android:priority="110" >
             <action android:name="android.intent.action.GET_CONTENT"/>
@@ -92,8 +92,8 @@
         android:name="com.android.photopicker.PhotopickerUserSelectActivity"
         android:targetActivity="com.android.photopicker.MainActivity"
         android:permission="android.permission.GRANT_RUNTIME_PERMISSIONS"
-        android:exported="@bool/modern_picker_enabled"
-        android:enabled="@bool/modern_picker_enabled"
+        android:exported="true"
+        android:enabled="false"
         android:excludeFromRecents="true">
         <intent-filter android:priority="105">
             <action android:name="android.provider.action.USER_SELECT_IMAGES_FOR_APP" />
@@ -106,6 +106,26 @@
             <category android:name="android.intent.category.DEFAULT" />
         </intent-filter>
     </activity-alias>
+
+    <!--
+      Receiver that receives broadcasts from MediaProvider when the DeviceConfig is updated.
+      This is required because Photopicker does not have a persistent process of its own, but
+      needs to enable or disable various package components based on flag state. MediaProvider
+      sends broadcasts to Photopicker anytime the DeviceConfig is updated so that Photopicker
+      can wake up and evaluate its component state.
+
+      These broadcasts are scoped to the MANAGE_CLOUD_MEDIA_PROVIDERS permission so that other
+      apps are unable to eavesdrop on these broadcasts (though they contain no data and are just
+      a wake up signal).
+    -->
+    <receiver android:name="com.android.photopicker.PhotopickerDeviceConfigReceiver"
+              android:exported="true"
+              android:enabled="@bool/config_enablePhotopickerDeviceConfigReceiver"
+              android:permission="com.android.providers.media.permission.MANAGE_CLOUD_MEDIA_PROVIDERS">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+      </intent-filter>
+    </receiver>
 
     <!--
     The Embedded Photopicker service that allows external apps to launch an embedded photopicker
