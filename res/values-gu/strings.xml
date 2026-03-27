@@ -178,36 +178,20 @@
     <string name="favorites_album_display_name" msgid="3533041926539268094">"મનપસંદ"</string>
     <string name="videos_album_display_name" msgid="4274973715629315179">"વીડિયો"</string>
     <string name="sd_card_album_display_name" msgid="8772277114579657928">"SD કાર્ડ"</string>
-    <!-- no translation found for metadata_label_image (5542914517297217849) -->
-    <skip />
-    <!-- no translation found for metadata_label_images (5769988966653750074) -->
-    <skip />
-    <!-- no translation found for metadata_label_photo (752239560662183633) -->
-    <skip />
-    <!-- no translation found for metadata_label_photos (5804059253018729171) -->
-    <skip />
-    <!-- no translation found for metadata_label_video (1681011352511431442) -->
-    <skip />
-    <!-- no translation found for metadata_label_videos (8685150696667173929) -->
-    <skip />
-    <!-- no translation found for metadata_label_audio (3724593785685001279) -->
-    <skip />
-    <!-- no translation found for metadata_label_audios (4943837840858009245) -->
-    <skip />
-    <!-- no translation found for metadata_label_document (5011954458510109081) -->
-    <skip />
-    <!-- no translation found for metadata_label_documents (9177717172035306794) -->
-    <skip />
-    <!-- no translation found for metadata_label_animated (4327015383258074850) -->
-    <skip />
-    <!-- no translation found for metadata_label_motion_photo (8159307110423547950) -->
-    <skip />
-    <!-- no translation found for metadata_label_favorite (2639980508687038282) -->
-    <skip />
-    <!-- no translation found for metadata_label_favorites (988700440602580910) -->
-    <skip />
-    <!-- no translation found for metadata_label_download (241656409839042219) -->
-    <skip />
-    <!-- no translation found for metadata_label_downloads (2066270411527427600) -->
-    <skip />
+    <string name="metadata_label_image" msgid="5542914517297217849">"છબી"</string>
+    <string name="metadata_label_images" msgid="5769988966653750074">"છબીઓ"</string>
+    <string name="metadata_label_photo" msgid="752239560662183633">"ફોટો"</string>
+    <string name="metadata_label_photos" msgid="5804059253018729171">"ફોટા"</string>
+    <string name="metadata_label_video" msgid="1681011352511431442">"વીડિયો"</string>
+    <string name="metadata_label_videos" msgid="8685150696667173929">"વીડિયો"</string>
+    <string name="metadata_label_audio" msgid="3724593785685001279">"ઑડિયો"</string>
+    <string name="metadata_label_audios" msgid="4943837840858009245">"ઑડિયો"</string>
+    <string name="metadata_label_document" msgid="5011954458510109081">"દસ્તાવેજ"</string>
+    <string name="metadata_label_documents" msgid="9177717172035306794">"દસ્તાવેજો"</string>
+    <string name="metadata_label_animated" msgid="4327015383258074850">"ઍનિમેટ કરેલી"</string>
+    <string name="metadata_label_motion_photo" msgid="8159307110423547950">"મોશન ફોટો"</string>
+    <string name="metadata_label_favorite" msgid="2639980508687038282">"મનપસંદ"</string>
+    <string name="metadata_label_favorites" msgid="988700440602580910">"મનપસંદ"</string>
+    <string name="metadata_label_download" msgid="241656409839042219">"ડાઉનલોડ કરેલી"</string>
+    <string name="metadata_label_downloads" msgid="2066270411527427600">"ડાઉનલોડ કરેલી"</string>
 </resources>
