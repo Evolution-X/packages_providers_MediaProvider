@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Copyright (C) 2026 The Android Open Source Project
+<!-- Copyright (C) 2024 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
 -->
 
 <resources>
-    <!-- boolean to indicate if modern Photopicker Activity is enabled by default -->
-    <bool name="modern_picker_enabled">false</bool>
+    <!-- This allows overlays to prevent the kotlin picker from monitoring
+         device config updates, and disabling this will prevent the kotlin
+         picker from being enabled.
+    -->
+    <bool name="config_enablePhotopickerDeviceConfigReceiver">true</bool>
 </resources>

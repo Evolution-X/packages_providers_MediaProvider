@@ -64,6 +64,9 @@ public interface ConfigStore {
     boolean DEFAULT_TRANSCODE_ENABLED = true;
     boolean DEFAULT_TRANSCODE_OPT_OUT_STRATEGY_ENABLED = false;
     int DEFAULT_TRANSCODE_MAX_DURATION = 60 * 1000; // 1 minute
+
+    boolean DEFAULT_MODERN_PICKER_ENABLED = false;
+
     boolean DEFAULT_PICKER_GET_CONTENT_PRELOAD = true;
     boolean DEFAULT_PICKER_PICK_IMAGES_PRELOAD = true;
     boolean DEFAULT_PICKER_PICK_IMAGES_RESPECT_PRELOAD_ARG = false;
@@ -75,13 +78,13 @@ public interface ConfigStore {
     boolean DEFAULT_LOCAL_CATEGORIES_IN_PHOTO_PICKER_ENABLED = false;
     boolean DEFAULT_SD_CARD_CATEGORY_IN_PHOTO_PICKER_ENABLED = false;
 
+
     /**
      * @return if the modern photopicker experience is enabled.
      */
     default boolean isModernPickerEnabled() {
-        return SdkLevel.isAtLeastT();
+        return DEFAULT_MODERN_PICKER_ENABLED;
     }
-
 
     /**
      * @return if the Cloud-Media-in-Photo-Picker enabled (e.g. platform will recognize and
@@ -389,7 +392,14 @@ public interface ConfigStore {
             // The modern photopicker can only be enabled on T+ such that it can acquire all
             // of the necessary runtime permissions it needs. For devices running a platform
             // prior to T, the modern picker is always disabled.
-            return SdkLevel.isAtLeastT();
+            if (SdkLevel.isAtLeastT()) {
+                return getBooleanDeviceConfig(
+                                NAMESPACE_MEDIAPROVIDER,
+                                KEY_MODERN_PICKER_ENABLED,
+                                DEFAULT_MODERN_PICKER_ENABLED);
+            } else {
+                return false;
+            }
         }
 
         @Override

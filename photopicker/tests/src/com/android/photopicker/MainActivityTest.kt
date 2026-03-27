@@ -26,7 +26,6 @@ import android.content.pm.PackageManager
 import android.content.pm.UserProperties
 import android.net.ConnectivityManager
 import android.net.Uri
-import android.os.Build
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
@@ -34,7 +33,6 @@ import android.provider.MediaStore
 import android.test.mock.MockContentResolver
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ActivityScenario.launchActivityForResult
-import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
@@ -56,7 +54,6 @@ import com.android.photopicker.inject.PhotopickerTestModule
 import com.android.photopicker.util.test.StubProvider
 import com.android.photopicker.util.test.mockSystemService
 import com.android.photopicker.util.test.whenever
-import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import dagger.Lazy
 import dagger.Module
@@ -488,23 +485,6 @@ class MainActivityTest {
         while (matcher.find()) {
             device.executeShellCommand("am stack remove ${matcher.group("taskId")}")
         }
-    }
-
-    @Test
-    @SdkSuppress(minSdkVersion = Build.VERSION_CODES.TIRAMISU)
-    fun modernPickerResourceConfig_onTPlus_isEnabled() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val resources = instrumentation.getContext().getResources()
-        assertThat(resources.getBoolean(R.bool.modern_picker_enabled)).isTrue()
-    }
-
-    @Test
-    @SdkSuppress(maxSdkVersion = Build.VERSION_CODES.S_V2)
-    fun modernPickerResourceConfig_belowT_isDisabled() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val resources = instrumentation.getContext().getResources()
-
-        assertThat(resources.getBoolean(R.bool.modern_picker_enabled)).isFalse()
     }
 }
 
