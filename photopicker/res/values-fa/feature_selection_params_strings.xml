@@ -24,7 +24,7 @@
     <string name="photopicker_selection_min_video_duration_error" msgid="5355208428974660073">"‫<xliff:g id="APP_NAME">%1$s</xliff:g> به ویدیوهایی طولانی‌تر از <xliff:g id="DURATION">%2$s</xliff:g> ثانیه نیاز دارد"</string>
     <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"‫<xliff:g id="APP_NAME">%1$s</xliff:g> به عکس‌ها و ویدیوهایی با وضوح پایین‌تر نیاز دارد"</string>
     <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"‫<xliff:g id="APP_NAME">%1$s</xliff:g> به عکس‌ها و ویدیوهایی با وضوح بالاتر نیاز دارد"</string>
-    <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"<xliff:g id="APP_NAME">%1$s</xliff:g>از این نوع فایل پشتیبانی نمی‌کند"</string>
+    <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"<xliff:g id="APP_NAME">%1$s</xliff:g> از این نوع فایل پشتیبانی نمی‌کند"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"‫<xliff:g id="APP_NAME">%1$s</xliff:g> نیاز دارد که اندازه کل فایل کمتر از <xliff:g id="SIZE">%2$s</xliff:g> کیلوبایت باشد"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_mb" msgid="6553564213388278454">"‫<xliff:g id="APP_NAME">%1$s</xliff:g> نیاز دارد که اندازه کل فایل کمتر از <xliff:g id="SIZE">%2$s</xliff:g> مگابایت باشد"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_gb" msgid="8822825384335455169">"‫<xliff:g id="APP_NAME">%1$s</xliff:g> نیاز دارد که اندازه کل فایل کمتر از <xliff:g id="SIZE">%2$s</xliff:g> گیگابایت باشد"</string>
