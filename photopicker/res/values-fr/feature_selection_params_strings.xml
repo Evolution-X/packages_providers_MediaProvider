@@ -17,7 +17,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"Pour <xliff:g id="APP_NAME">%1$s</xliff:g>, les photos et vidéos doivent être inférieures à <xliff:g id="SIZE">%2$s</xliff:g> ko"</string>
+    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"<xliff:g id="APP_NAME">%1$s</xliff:g> nécessite que les photos et vidéos soient inférieures à <xliff:g id="SIZE">%2$s</xliff:g> ko"</string>
     <string name="photopicker_selection_max_media_item_size_error_mb" msgid="5804873140280156101">"Pour <xliff:g id="APP_NAME">%1$s</xliff:g>, les photos et vidéos doivent être inférieures à <xliff:g id="SIZE">%2$s</xliff:g> Mo"</string>
     <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"Pour <xliff:g id="APP_NAME">%1$s</xliff:g>, les photos et vidéos doivent être inférieures à <xliff:g id="SIZE">%2$s</xliff:g> Go"</string>
     <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"Pour <xliff:g id="APP_NAME">%1$s</xliff:g>, les vidéos doivent durer moins de <xliff:g id="DURATION">%2$s</xliff:g> seconde(s)"</string>

@@ -17,7 +17,7 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahtijeva da fotografije i videozapisi budu manji od <xliff:g id="SIZE">%2$s</xliff:g> kB"</string>
+    <string name="photopicker_selection_max_media_item_size_error_kb" msgid="5694225812214291415">"<xliff:g id="APP_NAME">%1$s</xliff:g> zahtijeva da fotografije i videozapisi budu manji od <xliff:g id="SIZE">%2$s</xliff:g> kB"</string>
     <string name="photopicker_selection_max_media_item_size_error_mb" msgid="5804873140280156101">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahtijeva da fotografije i videozapisi budu manji od <xliff:g id="SIZE">%2$s</xliff:g> MB"</string>
     <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahtijeva da fotografije i videozapisi budu manji od <xliff:g id="SIZE">%2$s</xliff:g> GB"</string>
     <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"Aplikacija <xliff:g id="APP_NAME">%1$s</xliff:g> zahtijeva da videozapisi budu kraći od <xliff:g id="DURATION">%2$s</xliff:g> s"</string>
