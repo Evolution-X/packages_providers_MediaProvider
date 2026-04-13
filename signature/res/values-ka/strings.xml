@@ -46,9 +46,7 @@
     <string name="select_image" msgid="2081090471909417669">"სურათის არჩევა"</string>
     <string name="no_image_selected" msgid="5939052790341353005">"სურათი არჩეული არ არის"</string>
     <string name="uploaded_signature_content_description" msgid="2850671857073378289">"ატვირთული ხელმოწერა"</string>
-    <!-- String.format failed for translation -->
-    <!-- no translation found for error_image_size_limit (3837718354299508167) -->
-    <skip />
+    <string name="error_image_size_limit" msgid="3837718354299508167">"სურათის ზომა აჭარბებს %1$d-მბაიტიან ლიმიტს"</string>
     <string name="error_image_load" msgid="6747174825121177117">"სურათი ვერ ჩაიტვირთა"</string>
     <string name="signature_draw_hint" msgid="1312226853855388293">"მოხაზეთ ხელმოწერა ამ არეში"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>

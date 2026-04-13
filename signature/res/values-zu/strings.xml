@@ -46,7 +46,7 @@
     <string name="select_image" msgid="2081090471909417669">"Khetha isithombe"</string>
     <string name="no_image_selected" msgid="5939052790341353005">"Asikho isithombe esikhethiwe"</string>
     <string name="uploaded_signature_content_description" msgid="2850671857073378289">"Isiginesha Elayishiwe"</string>
-    <string name="error_image_size_limit" msgid="3837718354299508167">"Ubungako besithombe beqa umkhawulo ongu-1$dMB"</string>
+    <string name="error_image_size_limit" msgid="3837718354299508167">"Ubungako besithombe beqa umkhawulo ongu-%1$dMB"</string>
     <string name="error_image_load" msgid="6747174825121177117">"Yehlulekile ukulayisha isithombe"</string>
     <string name="signature_draw_hint" msgid="1312226853855388293">"Dweba isiginesha yakho kule ndawo"</string>
     <string name="signature_x_mark" msgid="6929806098731463202">"X"</string>
