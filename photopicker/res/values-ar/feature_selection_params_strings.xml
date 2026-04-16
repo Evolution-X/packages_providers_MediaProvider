@@ -22,7 +22,7 @@
     <string name="photopicker_selection_max_media_item_size_error_gb" msgid="523446077608846420">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن تكون الصور والفيديوهات بحجم أقل من <xliff:g id="SIZE">%2$s</xliff:g> غيغابايت"</string>
     <string name="photopicker_selection_max_video_duration_error" msgid="6912979328866221467">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن تكون مدة الفيديوهات أقل من <xliff:g id="DURATION">%2$s</xliff:g> ثانية"</string>
     <string name="photopicker_selection_min_video_duration_error" msgid="5355208428974660073">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن تكون مدة الفيديوهات أطول من <xliff:g id="DURATION">%2$s</xliff:g> ثانية"</string>
-    <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن تكون دقة الصور والفيديوهات بدقة أقل"</string>
+    <string name="photopicker_selection_max_media_item_resolution_error" msgid="1979182459104491669">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن تكون الصور والفيديوهات بدقة أقل"</string>
     <string name="photopicker_selection_min_media_item_resolution_error" msgid="2885538856243040">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن تكون الصور والفيديوهات بدقة أعلى"</string>
     <string name="photopicker_selection_unsupported_mime_type_error" msgid="4212010710935921855">"لا يمكن لـ \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" استخدام هذا النوع من الملفات"</string>
     <string name="photopicker_selection_max_selection_batch_size_error_kb" msgid="2576318953901295569">"يتطلّب \"<xliff:g id="APP_NAME">%1$s</xliff:g>\" أن يكون إجمالي حجم الملفات أقل من <xliff:g id="SIZE">%2$s</xliff:g> كيلوبايت"</string>
