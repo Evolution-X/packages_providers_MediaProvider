@@ -442,11 +442,15 @@ public class PickerDbFacade {
                 if (qb.update(mDatabase, values, /* selection */ null, selectionArgs) > 0) {
                     return SUCCESS;
                 } else {
-                    Log.v(TAG, "Failed to update picker db media. ContentValues: " + values);
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "Failed to update picker db media. ContentValues: " + values);
+                    }
                     return FAIL;
                 }
             } catch (SQLiteConstraintException e) {
-                Log.v(TAG, "Failed to update picker db media. ContentValues: " + values, e);
+                if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                    Log.v(TAG, "Failed to update picker db media. ContentValues: " + values, e);
+                }
                 return RETRY;
             }
         }
@@ -644,11 +648,15 @@ public class PickerDbFacade {
                 if (QB_MATCH_ALL.insert(getDatabase(), values) > 0) {
                     return SUCCESS;
                 } else {
-                    Log.v(TAG, "Failed to insert picker db media. ContentValues: " + values);
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                        Log.v(TAG, "Failed to insert picker db media. ContentValues: " + values);
+                    }
                     return FAIL;
                 }
             } catch (SQLiteConstraintException e) {
-                Log.v(TAG, "Failed to insert picker db media. ContentValues: " + values, e);
+                if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                    Log.v(TAG, "Failed to insert picker db media. ContentValues: " + values, e);
+                }
                 return RETRY;
             }
         }
@@ -658,7 +666,9 @@ public class PickerDbFacade {
             int res = insertMedia(values);
             if (res == RETRY) {
                 // Attempt equivalent of CONFLICT_REPLACE resolution
-                Log.v(TAG, "Retrying failed insert as update. ContentValues: " + values);
+                if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                    Log.v(TAG, "Retrying failed insert as update. ContentValues: " + values);
+                }
                 res = updateMedia(qb, values, selectionArgs);
             }
 
@@ -1865,10 +1875,14 @@ public class PickerDbFacade {
                         if (qb.insert(getDatabase(), values) > 0) {
                             counter++;
                         } else {
-                            Log.v(TAG, "Failed to insert album_media. ContentValues: " + values);
+                            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                                Log.v(TAG, "Failed to insert album_media. ContentValues: " + values);
+                            }
                         }
                     } catch (SQLiteConstraintException e) {
-                        Log.v(TAG, "Failed to insert album_media. ContentValues: " + values, e);
+                        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                            Log.v(TAG, "Failed to insert album_media. ContentValues: " + values, e);
+                        }
                     }
 
                     // Check if a Cloud sync is running, and additionally insert this row to media
