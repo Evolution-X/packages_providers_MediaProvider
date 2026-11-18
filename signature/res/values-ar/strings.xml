@@ -55,4 +55,5 @@
     <!-- no translation found for error_max_signatures_reached (8996308394883219616) -->
     <skip />
     <string name="signature_preview_default" msgid="1502538040023384495">"التوقيع"</string>
+    <string name="error_max_signatures_reached">تم بلوغ الحد الأقصى لعدد التوقيعات (%1$d).</string>
 </resources>

@@ -194,4 +194,6 @@
     <string name="metadata_label_favorites" msgid="988700440602580910">"عناصر مفضّلة"</string>
     <string name="metadata_label_download" msgid="241656409839042219">"عنصر تم تنزيله"</string>
     <string name="metadata_label_downloads" msgid="2066270411527427600">"عناصر تم تنزيلها"</string>
+    <string name="picker_videos">@string/root_videos</string>
+    <string name="picker_category_videos">@string/root_videos</string>
 </resources>
